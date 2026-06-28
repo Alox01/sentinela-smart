@@ -1,0 +1,59 @@
+const { carregarEnvLocal } = require('./env');
+
+carregarEnvLocal();
+
+const express = require('express');
+const cors = require('cors');
+
+const simulador = require('./simulador');
+const db = require('./db');
+const { createAuthMiddleware } = require('./auth');
+const { createEstufaRouter } = require('./routes/estufa_routes');
+
+const app = express();
+const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
+const PORT = Number(process.env.PORT) || 3000;
+const authMiddleware = createAuthMiddleware(API_TOKEN);
+
+app.use(express.json());
+app.use(cors());
+app.use(
+  createEstufaRouter({
+    simulador,
+    db,
+    authMiddleware,
+  }),
+);
+
+console.log('>>> SERVIDOR DE ESTUFA INICIADO (MODO SIMULACAO) <<<');
+if (API_TOKEN.trim()) {
+  console.log('Autenticacao habilitada por token.');
+} else {
+  console.log('Autenticacao desabilitada (token nao configurado).');
+}
+if (db.estaHabilitado()) {
+  console.log('Persistencia PostgreSQL habilitada.');
+} else {
+  console.log(`Persistencia PostgreSQL desabilitada: ${db.motivoDesabilitado()}`);
+}
+
+async function iniciarServidor() {
+  if (db.estaHabilitado()) {
+    try {
+      const configPersistida = await db.carregarConfiguracao();
+      simulador.aplicarConfiguracaoPersistida(configPersistida);
+
+      const statusPersistido = await db.carregarUltimaLeitura();
+      simulador.aplicarStatusPersistido(statusPersistido);
+    } catch (error) {
+      console.error('Falha ao carregar estado persistido:', error.message);
+    }
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}!`);
+    console.log(`Teste de leitura: GET http://localhost:${PORT}/status`);
+  });
+}
+
+iniciarServidor();

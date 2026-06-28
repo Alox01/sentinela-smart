@@ -1,0 +1,130 @@
+Documentação de Arquitetura e Lógica de Sincronização - Estufa Inteligente
+1. Visão Geral da Arquitetura (Edge Computing)
+O sistema opera num modelo híbrido onde a inteligência é distribuída.
+
+Hardware (Borda): Responsável pela leitura de sensores e atuação imediata (ligar/desligar relés). Funciona independentemente da conexão com a internet. Possui a "verdade física".
+
+App/Servidor (Interface): Responsável pelo monitoramento remoto e definição de Metas (Setpoints).
+
+Conexão: O sistema prioriza conexão Local (Wi-Fi direto) e usa a Nuvem (Internet) como fallback.
+
+2. O Desafio da Sincronização
+Como o App e o Hardware podem ficar desconectados (falta de luz, internet ou usuário longe de casa), ambos podem sofrer alterações de configuração simultaneamente.
+
+Exemplo: Usuário muda a meta no App, mas alguém aperta um botão físico no Hardware.
+
+Solução: Algoritmo "Last Write Wins" (A Última Escrita Vence) baseado em Timestamps (Carimbo de Tempo).
+
+3. Estrutura de Dados (Classes)
+As classes abaixo definem como os dados devem ser estruturados na memória do Servidor e do Hardware.
+
+3.1. Telemetria (Leitura de Dados)
+Representa o estado atual físico da estufa. É gerado pelo Hardware e apenas lido pelo App.
+
+JavaScript
+
+class StatusEstufa {
+    constructor(idHardware) {
+        this.idHardware = idHardware; 
+        
+        // Momento exato da leitura dos sensores
+        this.timestampLeitura = Date.now(); 
+
+        // --- Sensores Ambientais ---
+        this.temperaturaAtual = 0.0; // Em graus °F
+        this.umidadeAtual = 0.0;     // Em porcentagem %
+        
+        // --- Status Críticos (Flags) ---
+        this.temEnergia = true;       // true = Rede Elétrica, false = Bateria
+        this.temInternet = true;      // true = Conectado à WAN
+        this.sinalWifi = 100;         // Força do sinal (0-100%)
+        
+        // --- Alarmes ---
+        this.alertaIncendio = false;  // Sensor de fumaça/chama
+        this.erroSensor = false;      // Falha de hardware
+        
+        // --- Estado dos Atuadores (Feedback) ---
+        // O Hardware informa se realmente ligou o equipamento
+        this.ventiladorLigado = false;
+        this.bombaAguaLigada = false;
+    }
+}
+3.2. Configuração e Metas (Controle)
+Representa o desejo do usuário. Pode ser alterado tanto pelo App quanto pelo Hardware (botões físicos). Regra: Cada variável de controle possui seu próprio Timestamp de atualização.
+
+JavaScript
+
+class ConfiguracaoAlvo {
+    constructor(idHardware) {
+        this.idHardware = idHardware;
+        
+        // --- Controle de Temperatura ---
+        this.temperaturaMeta = 25.0;      // O valor desejado
+        this.tempTimestamp = 0;           // Quando esse valor foi definido (ms)
+        
+        // --- Controle de Umidade ---
+        this.umidadeMeta = 60.0;          // O valor desejado
+        this.umidTimestamp = 0;           // Quando esse valor foi definido (ms)
+        
+        // --- Configurações Gerais ---
+        this.modoSilencioso = false;      // Silenciar bip de alarmes
+        this.modoSilenciosoTimestamp = 0; 
+    }
+
+    /**
+     * Tenta atualizar a temperatura.
+     * @param {number} novoValor - A nova temperatura desejada.
+     * @param {number} timestampOrigem - Hora em que a mudança foi feita (App ou Hardware).
+     * @returns {boolean} - True se atualizou, False se o dado era antigo.
+     */
+    atualizarTemperatura(novoValor, timestampOrigem) {
+        // Lógica "Last Write Wins"
+        if (timestampOrigem > this.tempTimestamp) {
+            this.temperaturaMeta = novoValor;
+            this.tempTimestamp = timestampOrigem;
+            return true; // Atualização aceita
+        }
+        return false; // Ignora, pois temos uma configuração mais recente
+    }
+}
+4. Algoritmo de Reconciliação (Sincronização)
+Este processo ocorre sempre que o App e o Hardware restabelecem conexão (seja via Rede Local ou Internet).
+
+Cenário: O App envia suas configurações para o Hardware.
+
+Passo 1: O Hardware recebe o pacote ConfiguracaoAlvo do App.
+
+Passo 2: Para cada propriedade (Temperatura, Umidade, etc.), o Hardware compara os Timestamps.
+
+Pseudocódigo da Lógica no Hardware:
+
+JavaScript
+
+function sincronizarConfiguracao(configDoApp) {
+    // Comparando Temperatura
+    if (configDoApp.tempTimestamp > configLocal.tempTimestamp) {
+        // O App tem uma ordem mais recente. Obedecer o App.
+        configLocal.temperaturaMeta = configDoApp.temperaturaMeta;
+        configLocal.tempTimestamp = configDoApp.tempTimestamp;
+        atualizarDisplayFisico(); // Atualiza a telinha LCD da estufa
+    } 
+    else if (configLocal.tempTimestamp > configDoApp.tempTimestamp) {
+        // O Hardware foi mexido manualmente depois que o App enviou.
+        // Ignora a ordem do App.
+        // O Hardware deve enviar sua config atual de volta para o App atualizar a tela.
+        enviarConfigParaApp(configLocal);
+    }
+    // Se os timestamps forem iguais, não faz nada (já estão sincronizados).
+}
+5. Fluxo de Decisão de Conexão (App)
+O App deve gerenciar inteligentemente como enviar esses dados.
+
+Verificar IP Local: Tentar ping ou GET /status no IP local do Hardware (ex: 192.168.0.50).
+
+Sucesso: Modo LOCAL ativado. Comunicação rápida, sem internet.
+
+Falha Local: Se timeout no IP local, tentar conectar ao Servidor na Nuvem.
+
+Sucesso: Modo REMOTO ativado. Dados passam pelo servidor web.
+
+Falha Total: Modo OFFLINE. App permite visualizar últimos dados conhecidos, mas avisa que não pode enviar comandos.
