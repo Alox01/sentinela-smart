@@ -1,0 +1,12 @@
+services:
+  estufa-server:
+    build:
+      context: ./estufa_server
+    container_name: sentinela-smart-server
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      ESTUFA_API_TOKEN: "${ESTUFA_API_TOKEN:-}"
+      DATABASE_URL: "${DATABASE_URL:-}"
+    restart: unless-stopped
