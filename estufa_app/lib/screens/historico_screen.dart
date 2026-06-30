@@ -235,10 +235,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           final duracao = fim.difference(inicio);
           final primeiraLeitura = leituras.first;
           final ultimaLeitura = leituras.last;
-          final temperaturaMetaInicial = primeiraLeitura.temperaturaMeta;
-          final temperaturaMetaFinal = ultimaLeitura.temperaturaMeta;
-          final umidadeMetaInicial = primeiraLeitura.umidadeMeta;
-          final umidadeMetaFinal = ultimaLeitura.umidadeMeta;
+          final temperaturaAjusteInicial = primeiraLeitura.temperaturaMeta;
+          final temperaturaAjusteFinal = ultimaLeitura.temperaturaMeta;
+          final umidadeAjusteInicial = primeiraLeitura.umidadeMeta;
+          final umidadeAjusteFinal = ultimaLeitura.umidadeMeta;
           final totalAlarmes = leituras.where((e) => e.alertaIncendio).length;
           _adiarExibicaoGrafico();
 
@@ -251,10 +251,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 const SizedBox(height: 20),
                 ResumoEstufadaCard(
                   duracao: duracao,
-                  temperaturaMetaInicial: temperaturaMetaInicial,
-                  temperaturaMetaFinal: temperaturaMetaFinal,
-                  umidadeMetaInicial: umidadeMetaInicial,
-                  umidadeMetaFinal: umidadeMetaFinal,
+                  temperaturaAjusteInicial: temperaturaAjusteInicial,
+                  temperaturaAjusteFinal: temperaturaAjusteFinal,
+                  umidadeAjusteInicial: umidadeAjusteInicial,
+                  umidadeAjusteFinal: umidadeAjusteFinal,
                   totalAlarmes: totalAlarmes,
                   tituloSecaoStyle: _tituloSecaoStyle,
                 ),

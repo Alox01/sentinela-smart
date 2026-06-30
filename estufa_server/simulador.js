@@ -107,6 +107,9 @@ setInterval(() => {
   statusFisico.faseAtual = analise.fase;
   statusFisico.corStatus = analise.corStatus;
   statusFisico.aviso = analise.aviso;
+  statusFisico.alarmeAtivo = analise.alarmeAtivo;
+  statusFisico.perigoChama = analise.perigoChama;
+  statusFisico.riscoIncendio = analise.riscoIncendio;
   statusFisico.alertaIncendio = analise.alertaIncendio;
 }, 1000);
 
@@ -151,6 +154,15 @@ module.exports = {
     if (typeof statusPersistido.umidadeAtual === 'number') {
       statusFisico.umidadeAtual = statusPersistido.umidadeAtual;
     }
+    if (typeof statusPersistido.alarmeAtivo === 'boolean') {
+      statusFisico.alarmeAtivo = statusPersistido.alarmeAtivo;
+    }
+    if (typeof statusPersistido.perigoChama === 'boolean') {
+      statusFisico.perigoChama = statusPersistido.perigoChama;
+    }
+    if (typeof statusPersistido.riscoIncendio === 'boolean') {
+      statusFisico.riscoIncendio = statusPersistido.riscoIncendio;
+    }
     if (typeof statusPersistido.alertaIncendio === 'boolean') {
       statusFisico.alertaIncendio = statusPersistido.alertaIncendio;
     }
@@ -192,10 +204,10 @@ module.exports = {
     const resultado = aplicarSincronizacao(configLocal, configDoApp);
 
     if (resultado.alteracoesAplicadas.includes('temperaturaMeta')) {
-      console.log(`Nova Meta Temp Aceita: ${configLocal.temperaturaMeta} F`);
+      console.log(`Novo ajuste de temperatura aceito: ${configLocal.temperaturaMeta} F`);
     }
     if (resultado.alteracoesAplicadas.includes('umidadeMeta')) {
-      console.log(`Nova Meta Umid Aceita: ${configLocal.umidadeMeta}%`);
+      console.log(`Novo ajuste de umidade aceito: ${configLocal.umidadeMeta}%`);
     }
     if (resultado.alteracoesAplicadas.includes('modoSilencioso')) {
       console.log(`Modo silencioso atualizado: ${configLocal.modoSilencioso}`);
@@ -209,7 +221,7 @@ module.exports = {
     if (tipo === 'temp') {
       configLocal.temperaturaMeta = valor;
       configLocal.tempTimestamp = agora;
-      console.log(`Botao fisico alterou meta de temperatura para ${valor} F`);
+      console.log(`Botao fisico alterou ajuste de temperatura para ${valor} F`);
     }
   },
 };

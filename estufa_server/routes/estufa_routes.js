@@ -7,11 +7,6 @@ function createEstufaRouter({ simulador, db, authMiddleware }) {
 
   router.get('/status', async (_req, res) => {
     const dadosCompletos = simulador.lerCompleto();
-    try {
-      await db.salvarSnapshot(dadosCompletos);
-    } catch (error) {
-      console.error('Falha ao salvar snapshot no banco:', error.message);
-    }
     res.json(dadosCompletos);
   });
 
@@ -37,9 +32,14 @@ function createEstufaRouter({ simulador, db, authMiddleware }) {
     res.json(resultado);
   });
 
-  router.post('/debug/botao-fisico', authMiddleware, (req, res) => {
+  router.post('/debug/botao-fisico', authMiddleware, async (req, res) => {
     const { tipo, valor } = req.body;
     simulador.simularBotaoFisico(tipo, valor);
+    try {
+      await db.salvarConfiguracaoSnapshot(simulador.lerCompleto());
+    } catch (error) {
+      console.error('Falha ao salvar ajuste fisico no banco:', error.message);
+    }
     res.json({ msg: `Simulado botao fisico: ${tipo} -> ${valor}` });
   });
 

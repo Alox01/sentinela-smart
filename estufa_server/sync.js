@@ -54,13 +54,13 @@ function validarPayloadSincronizacao(payload) {
   }
 
   if (temTemperatura !== temTempTimestamp) {
-    erros.push('temperaturaMeta e tempTimestamp devem ser enviados juntos.');
+    erros.push('Ajuste de temperatura e tempTimestamp devem ser enviados juntos.');
   }
   if (temTemperatura) {
     if (!isNumeroFinito(payload.temperaturaMeta)) {
-      erros.push('temperaturaMeta deve ser numero.');
+      erros.push('Ajuste de temperatura deve ser numero.');
     } else if (payload.temperaturaMeta < 0 || payload.temperaturaMeta > 999) {
-      erros.push('temperaturaMeta deve estar entre 0 e 999.');
+      erros.push('Ajuste de temperatura deve estar entre 0 e 999.');
     }
     if (!isTimestampValido(payload.tempTimestamp)) {
       erros.push('tempTimestamp deve ser inteiro positivo.');
@@ -68,13 +68,13 @@ function validarPayloadSincronizacao(payload) {
   }
 
   if (temUmidade !== temUmidTimestamp) {
-    erros.push('umidadeMeta e umidTimestamp devem ser enviados juntos.');
+    erros.push('Ajuste de umidade e umidTimestamp devem ser enviados juntos.');
   }
   if (temUmidade) {
     if (!isNumeroFinito(payload.umidadeMeta)) {
-      erros.push('umidadeMeta deve ser numero.');
+      erros.push('Ajuste de umidade deve ser numero.');
     } else if (payload.umidadeMeta < 0 || payload.umidadeMeta > 100) {
-      erros.push('umidadeMeta deve estar entre 0 e 100.');
+      erros.push('Ajuste de umidade deve estar entre 0 e 100.');
     }
     if (!isTimestampValido(payload.umidTimestamp)) {
       erros.push('umidTimestamp deve ser inteiro positivo.');

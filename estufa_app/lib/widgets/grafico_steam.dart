@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 class GraficoSteam extends StatelessWidget {
   final List<FlSpot> pontos;
-  final List<double> metas;
+  final List<double> ajustes;
   final List<Color> coresHistoricas;
   final Color corAtual;
   final String unidade;
@@ -17,7 +17,7 @@ class GraficoSteam extends StatelessWidget {
   const GraficoSteam({
     super.key,
     required this.pontos,
-    this.metas = const [],
+    this.ajustes = const [],
     required this.coresHistoricas,
     required this.corAtual,
     this.unidade = '\u00B0F',
@@ -54,7 +54,9 @@ class GraficoSteam extends StatelessWidget {
                 final date = DateTime.fromMillisecondsSinceEpoch(
                   pontos[index].x.toInt(),
                 );
-                final meta = index < metas.length ? metas[index].round() : null;
+                final ajuste = index < ajustes.length
+                    ? ajustes[index].round()
+                    : null;
                 final valorReal = pontos[index].y.round();
 
                 return LineTooltipItem(
@@ -65,7 +67,7 @@ class GraficoSteam extends StatelessWidget {
                     fontSize: 14,
                   ),
                   children: [
-                    if (meta != null)
+                    if (ajuste != null)
                       const TextSpan(
                         text: 'Ajuste: ',
                         style: TextStyle(
@@ -74,9 +76,9 @@ class GraficoSteam extends StatelessWidget {
                           fontSize: 11,
                         ),
                       ),
-                    if (meta != null)
+                    if (ajuste != null)
                       TextSpan(
-                        text: '$meta$unidade\n',
+                        text: '$ajuste$unidade\n',
                         style: TextStyle(
                           color: corAtual,
                           fontWeight: FontWeight.bold,
@@ -154,7 +156,7 @@ class GraficoSteam extends StatelessWidget {
               showTitles: true,
               interval: 1,
               reservedSize: 42,
-              getTitlesWidget: (value, meta) {
+              getTitlesWidget: (value, axisMeta) {
                 final valorInt = value.round();
 
                 if (!rotulosY.contains(valorInt)) {
@@ -177,11 +179,11 @@ class GraficoSteam extends StatelessWidget {
               showTitles: true,
               interval: escala.intervaloRotuloMs,
               reservedSize: 30,
-              getTitlesWidget: (value, meta) {
+              getTitlesWidget: (value, axisMeta) {
                 if (pontos.isEmpty) return const SizedBox();
 
-                if (value < meta.min + 1000 ||
-                    value > meta.max - 1000 ||
+                if (value < axisMeta.min + 1000 ||
+                    value > axisMeta.max - 1000 ||
                     value > escala.dadosMaxX + 1000) {
                   return const SizedBox();
                 }
@@ -375,9 +377,9 @@ class GraficoSteam extends StatelessWidget {
 
   bool _estaForaDaTolerancia(FlSpot spot) {
     final index = _indiceOriginalExato(spot.x);
-    if (index == null || index >= metas.length) return false;
+    if (index == null || index >= ajustes.length) return false;
 
-    return (pontos[index].y - metas[index]).abs() > 5;
+    return (pontos[index].y - ajustes[index]).abs() > 5;
   }
 
   double _limitarY(double valor) {

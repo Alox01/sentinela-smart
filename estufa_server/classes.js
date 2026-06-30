@@ -1,54 +1,57 @@
 // estufa_server/classes.js
 
-// CLASSE 1: O que está acontecendo fisicamente agora (Telemetria)
+// CLASSE 1: O que esta acontecendo fisicamente agora (Telemetria)
 class StatusEstufa {
     constructor(idHardware) {
-        this.idHardware = idHardware; 
-        this.timestampLeitura = Date.now(); 
+        this.idHardware = idHardware;
+        this.timestampLeitura = Date.now();
 
         // Sensores
-        this.temperaturaAtual = 20.0; // Começa ambiente
+        this.temperaturaAtual = 20.0; // Comeca ambiente
         this.umidadeAtual = 60.0;
-        
-        // Status Críticos
+
+        // Status criticos
         this.temEnergia = true;
         this.temInternet = true;
         this.sinalWifi = 100;
-        
-        // Alarmes e Atuadores
+
+        // Alarmes e atuadores
+        this.alarmeAtivo = false;
+        this.perigoChama = false;
+        this.riscoIncendio = false;
         this.alertaIncendio = false;
         this.ventiladorLigado = false;
-        this.aquecedorLigado = false; // Adicionei para simulação física
+        this.aquecedorLigado = false; // Simulacao fisica
         this.umidificadorLigado = false;
-        
-        // Logica de Negócio (Fases)
+
+        // Logica de negocio (fases)
         this.faseAtual = "Iniciando...";
         this.aviso = "";
         this.corStatus = "grey";
     }
 }
 
-// CLASSE 2: O que nós queremos que aconteça (Metas/Controle)
+// CLASSE 2: O que queremos que aconteca (Ajustes/Controle)
 class ConfiguracaoAlvo {
     constructor(idHardware) {
         this.idHardware = idHardware;
-        
-        // Controle de Temperatura
+
+        // Controle de temperatura
         this.temperaturaMeta = 25.0;
         this.tempTimestamp = 0; // 0 significa "nunca modificado"
-        
-        // Controle de Umidade
+
+        // Controle de umidade
         this.umidadeMeta = 60.0;
         this.umidTimestamp = 0;
-        
-        // Comandos Gerais
+
+        // Comandos gerais
         this.modoSilencioso = false;
         this.modoSilenciosoTimestamp = 0;
     }
 
-    // Método Utilitário para verificar quem ganha (App ou Hardware)
+    // Metodo utilitario para verificar quem ganha (App ou Hardware)
     atualizarSeMaisRecente(chave, novoValor, timestampOrigem) {
-        // Ex: chave = 'temperaturaMeta', timestampChave = 'tempTimestamp'
+        // Campos mantidos com nomes legados porque fazem parte do contrato da API.
         const mapTime = {
             'temperaturaMeta': 'tempTimestamp',
             'umidadeMeta': 'umidTimestamp',
@@ -56,7 +59,7 @@ class ConfiguracaoAlvo {
         };
 
         const chaveTime = mapTime[chave];
-        
+
         // Se a nova ordem for mais recente que a que eu tenho:
         if (timestampOrigem > this[chaveTime]) {
             this[chave] = novoValor;

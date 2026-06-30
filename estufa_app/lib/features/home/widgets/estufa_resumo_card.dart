@@ -111,7 +111,8 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
     final status = dados['status'] ?? {};
     final temp = double.parse((status['temperaturaAtual'] ?? 0).toString());
     final umid = double.parse((status['umidadeAtual'] ?? 0).toString());
-    final sireneLigada = status['alertaIncendio'] ?? false;
+    final sireneLigada =
+        status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
     final temAlerta = sireneLigada || (status['corStatus'] == 'red');
 
     return _buildLayoutOnline(temp, umid, temAlerta);

@@ -12,8 +12,8 @@ class MonitoramentoRepository {
     required String nomeEstufa,
     required double temperatura,
     required double umidade,
-    required double temperaturaMeta,
-    required double umidadeMeta,
+    required double temperaturaAjuste,
+    required double umidadeAjuste,
     required String aviso,
     required bool alertaIncendio,
   }) async {
@@ -22,8 +22,8 @@ class MonitoramentoRepository {
       nomeEstufa: nomeEstufa,
       temperatura: temperatura,
       umidade: umidade,
-      temperaturaMeta: temperaturaMeta,
-      umidadeMeta: umidadeMeta,
+      temperaturaMeta: temperaturaAjuste,
+      umidadeMeta: umidadeAjuste,
       aviso: aviso,
       alertaIncendio: alertaIncendio,
     );

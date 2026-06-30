@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 
 class ResumoEstufadaCard extends StatelessWidget {
   final Duration duracao;
-  final double temperaturaMetaInicial;
-  final double temperaturaMetaFinal;
-  final double umidadeMetaInicial;
-  final double umidadeMetaFinal;
+  final double temperaturaAjusteInicial;
+  final double temperaturaAjusteFinal;
+  final double umidadeAjusteInicial;
+  final double umidadeAjusteFinal;
   final int totalAlarmes;
   final TextStyle tituloSecaoStyle;
 
   const ResumoEstufadaCard({
     super.key,
     required this.duracao,
-    required this.temperaturaMetaInicial,
-    required this.temperaturaMetaFinal,
-    required this.umidadeMetaInicial,
-    required this.umidadeMetaFinal,
+    required this.temperaturaAjusteInicial,
+    required this.temperaturaAjusteFinal,
+    required this.umidadeAjusteInicial,
+    required this.umidadeAjusteFinal,
     required this.totalAlarmes,
     required this.tituloSecaoStyle,
   });
@@ -48,14 +48,14 @@ class ResumoEstufadaCard extends StatelessWidget {
               const SizedBox(width: 12),
               _ResumoCard(
                 'TEMP. IN\u00CDCIO',
-                '${temperaturaMetaInicial.toStringAsFixed(0)}\u00B0F',
+                '${temperaturaAjusteInicial.toStringAsFixed(0)}\u00B0F',
                 Colors.orangeAccent,
                 subtitulo: 'Ajuste inicial',
               ),
               const SizedBox(width: 12),
               _ResumoCard(
                 'TEMP. ATUAL',
-                '${temperaturaMetaFinal.toStringAsFixed(0)}\u00B0F',
+                '${temperaturaAjusteFinal.toStringAsFixed(0)}\u00B0F',
                 Colors.orangeAccent,
                 subtitulo: '\u00DAltimo ajuste',
               ),
@@ -72,14 +72,14 @@ class ResumoEstufadaCard extends StatelessWidget {
               const SizedBox(width: 12),
               _ResumoCard(
                 'UMID. IN\u00CDCIO',
-                '${umidadeMetaInicial.toStringAsFixed(0)}%',
+                '${umidadeAjusteInicial.toStringAsFixed(0)}%',
                 Colors.lightBlueAccent,
                 subtitulo: 'Ajuste inicial',
               ),
               const SizedBox(width: 12),
               _ResumoCard(
                 'UMID. ATUAL',
-                '${umidadeMetaFinal.toStringAsFixed(0)}%',
+                '${umidadeAjusteFinal.toStringAsFixed(0)}%',
                 Colors.lightBlueAccent,
                 subtitulo: '\u00DAltimo ajuste',
               ),

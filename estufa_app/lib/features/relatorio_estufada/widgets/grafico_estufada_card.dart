@@ -40,16 +40,16 @@ class GraficoEstufadaCard extends StatelessWidget {
           ),
         )
         .toList();
-    final metasTemperaturaGrafico = leituras
+    final ajustesTemperaturaGrafico = leituras
         .map((e) => e.temperaturaMeta)
         .toList();
-    final metasUmidadeGrafico = leituras.map((e) => e.umidadeMeta).toList();
+    final ajustesUmidadeGrafico = leituras.map((e) => e.umidadeMeta).toList();
     final pontosGrafico = graficoTemperatura
         ? pontosGraficoTemperatura
         : pontosGraficoUmidade;
-    final metasGrafico = graficoTemperatura
-        ? metasTemperaturaGrafico
-        : metasUmidadeGrafico;
+    final ajustesGrafico = graficoTemperatura
+        ? ajustesTemperaturaGrafico
+        : ajustesUmidadeGrafico;
     final corGrafico = graficoTemperatura
         ? Colors.orange
         : Colors.lightBlueAccent;
@@ -58,7 +58,7 @@ class GraficoEstufadaCard extends StatelessWidget {
         .map(
           (e) => _corPontoGrafico(
             atual: graficoTemperatura ? e.temperatura : e.umidade,
-            meta: graficoTemperatura ? e.temperaturaMeta : e.umidadeMeta,
+            ajuste: graficoTemperatura ? e.temperaturaMeta : e.umidadeMeta,
           ),
         )
         .toList();
@@ -81,7 +81,7 @@ class GraficoEstufadaCard extends StatelessWidget {
             height: alturaGrafico,
             child: GraficoSteam(
               pontos: pontosGrafico,
-              metas: metasGrafico,
+              ajustes: ajustesGrafico,
               coresHistoricas: coresHistoricas,
               corAtual: corGrafico,
               unidade: unidadeGrafico,
@@ -118,8 +118,8 @@ class GraficoEstufadaCard extends StatelessWidget {
     return largura.clamp(760.0, 1800.0);
   }
 
-  Color _corPontoGrafico({required double atual, required double meta}) {
-    final diferenca = atual - meta;
+  Color _corPontoGrafico({required double atual, required double ajuste}) {
+    final diferenca = atual - ajuste;
     const tolerancia = 5.0;
 
     if (graficoTemperatura) {

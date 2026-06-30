@@ -1,4 +1,4 @@
-const test = require('node:test');
+﻿const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ConfiguracaoAlvo } = require('../classes');
 const {
@@ -25,7 +25,7 @@ test('rejeita payload vazio ou com tipo invalido', () => {
 
   assert.equal(vazio.valido, false);
   assert.equal(invalido.valido, false);
-  assert.match(invalido.erros.join(' '), /temperaturaMeta deve ser numero/);
+  assert.match(invalido.erros.join(' '), /Ajuste de temperatura deve ser numero/);
 });
 
 test('aplica configuracao mais recente e ignora antiga', () => {

@@ -40,10 +40,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   double temperatura = 0.0;
   String avisoEmergencia = '';
   double umidade = 0.0;
-  double tempMeta = 0.0;
-  double umidMeta = 0.0;
-  double? _tempMetaPendente;
-  double? _umidMetaPendente;
+  double tempAjuste = 0.0;
+  double umidAjuste = 0.0;
+  double? _tempAjustePendente;
+  double? _umidAjustePendente;
 
   bool isFire = false;
   bool sireneLigada = false;
@@ -52,7 +52,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   String _modoConexao = 'OFFLINE';
   int _ultimoRegistroHistoricoMs = 0;
   CicloSecagemEntity? _cicloAtual;
-  double? _ultimaTempMetaServidor;
+  double? _ultimoTempAjusteServidor;
   bool? _ultimoAlertaIncendio;
   int? _offlineDesdeMs;
   bool _quedaConexaoRegistrada = false;
@@ -109,64 +109,71 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final status = dados['status'] ?? {};
     final config = dados['config'] ?? {};
 
-    final fogoDetectado = (status['corStatus'] ?? 'green') == 'red';
+    final fogoDetectado =
+        status['perigoChama'] == true || status['riscoIncendio'] == true;
     final novaTemperatura = double.parse(
       (status['temperaturaAtual'] ?? 0).toString(),
     );
     final novaUmidade = double.parse((status['umidadeAtual'] ?? 0).toString());
-    final novaTempMeta = double.parse(
+    final novoTempAjuste = double.parse(
       (config['temperaturaMeta'] ?? 0).toString(),
     );
-    final novaUmidMeta = double.parse((config['umidadeMeta'] ?? 0).toString());
+    final novoUmidAjuste = double.parse(
+      (config['umidadeMeta'] ?? 0).toString(),
+    );
     final novoAviso = status['aviso'] ?? '';
-    final novaSireneLigada = status['alertaIncendio'] ?? false;
-    final tempMetaAnterior = _ultimaTempMetaServidor;
+    final novaSireneLigada =
+        status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
+    final ajusteTempAnterior = _ultimoTempAjusteServidor;
     final deveSugerirFimCiclo =
         _cicloAtual != null &&
         !_sugestaoFimCicloExibida &&
-        tempMetaAnterior != null &&
-        tempMetaAnterior >= 140 &&
-        novaTempMeta < 100;
+        ajusteTempAnterior != null &&
+        ajusteTempAnterior >= 140 &&
+        novoTempAjuste < 100;
 
     _registrarHistoricoSeNecessario(
       temperaturaAtual: novaTemperatura,
       umidadeAtual: novaUmidade,
-      temperaturaMetaAtual: novaTempMeta,
-      umidadeMetaAtual: novaUmidMeta,
+      temperaturaAjusteAtual: novoTempAjuste,
+      umidadeAjusteAtual: novoUmidAjuste,
       avisoAtual: novoAviso,
       alertaIncendioAtual: novaSireneLigada,
     );
     _processarEventosDoCiclo(
       temperaturaAtual: novaTemperatura,
       umidadeAtual: novaUmidade,
-      temperaturaMetaAtual: novaTempMeta,
-      umidadeMetaAtual: novaUmidMeta,
+      temperaturaAjusteAtual: novoTempAjuste,
+      umidadeAjusteAtual: novoUmidAjuste,
       alertaIncendioAtual: novaSireneLigada,
+      riscoIncendioAtual: fogoDetectado,
       avisoAtual: novoAviso,
     );
 
     setState(() {
-      if (_tempMetaPendente != null && _tempMetaPendente == novaTempMeta) {
-        _tempMetaPendente = null;
+      if (_tempAjustePendente != null &&
+          _tempAjustePendente == novoTempAjuste) {
+        _tempAjustePendente = null;
       }
-      if (_umidMetaPendente != null && _umidMetaPendente == novaUmidMeta) {
-        _umidMetaPendente = null;
+      if (_umidAjustePendente != null &&
+          _umidAjustePendente == novoUmidAjuste) {
+        _umidAjustePendente = null;
       }
 
       temperatura = novaTemperatura;
       umidade = novaUmidade;
-      tempMeta = _tempMetaPendente ?? novaTempMeta;
-      umidMeta = _umidMetaPendente ?? novaUmidMeta;
+      tempAjuste = _tempAjustePendente ?? novoTempAjuste;
+      umidAjuste = _umidAjustePendente ?? novoUmidAjuste;
       avisoEmergencia = novoAviso;
       sireneLigada = novaSireneLigada;
       isFire = fogoDetectado;
       _modoConexao = api.modoConexao;
-      _ultimaTempMetaServidor = novaTempMeta;
+      _ultimoTempAjusteServidor = novoTempAjuste;
     });
 
     if (deveSugerirFimCiclo) {
       _sugestaoFimCicloExibida = true;
-      unawaited(_sugerirFinalizacaoPorQuedaMeta());
+      unawaited(_sugerirFinalizacaoPorQuedaAjuste());
     }
 
     unawaited(_sincronizarPendenciasSeNecessario());
@@ -175,8 +182,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   void _registrarHistoricoSeNecessario({
     required double temperaturaAtual,
     required double umidadeAtual,
-    required double temperaturaMetaAtual,
-    required double umidadeMetaAtual,
+    required double temperaturaAjusteAtual,
+    required double umidadeAjusteAtual,
     required String avisoAtual,
     required bool alertaIncendioAtual,
     bool forcar = false,
@@ -197,8 +204,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         nomeEstufa: widget.nomeEstufa,
         temperatura: temperaturaAtual,
         umidade: umidadeAtual,
-        temperaturaMeta: temperaturaMetaAtual,
-        umidadeMeta: umidadeMetaAtual,
+        temperaturaAjuste: temperaturaAjusteAtual,
+        umidadeAjuste: umidadeAjusteAtual,
         aviso: avisoAtual,
         alertaIncendio: alertaIncendioAtual,
       ),
@@ -210,7 +217,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final corFundo = isFire ? const Color(0xFF330000) : const Color(0xFF0E1012);
     final telaEstreita = MediaQuery.sizeOf(context).width < 430;
     final isSuperaquecimentoNaoIntencional =
-        temperatura >= 165.0 && temperatura > (tempMeta + 2.0);
+        temperatura >= 165.0 && temperatura > (tempAjuste + 2.0);
 
     return Scaffold(
       backgroundColor: corFundo,
@@ -295,30 +302,30 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 LeituraAparelhoCard(
                   temperatura: temperatura,
                   umidade: umidade,
-                  temperaturaMeta: tempMeta,
-                  umidadeMeta: umidMeta,
+                  temperaturaAjuste: tempAjuste,
+                  umidadeAjuste: umidAjuste,
                   sireneLigada: sireneLigada,
                   onSilenciarAlarme: api.silenciarAlarme,
                 ),
                 const SizedBox(height: 25),
                 PainelControle(
-                  tempMeta: tempMeta,
-                  umidMeta: umidMeta,
+                  tempAjuste: tempAjuste,
+                  umidAjuste: umidAjuste,
                   onMudarTemperatura: (novaTemp) {
-                    final metaAnterior = tempMeta;
+                    final ajusteAnterior = tempAjuste;
                     setState(() {
-                      tempMeta = novaTemp;
-                      _tempMetaPendente = novaTemp;
+                      tempAjuste = novaTemp;
+                      _tempAjustePendente = novaTemp;
                     });
-                    _agendarEnvioTemperatura(novaTemp, metaAnterior);
+                    _agendarEnvioTemperatura(novaTemp, ajusteAnterior);
                   },
                   onMudarUmidade: (novaUmid) {
-                    final metaAnterior = umidMeta;
+                    final ajusteAnterior = umidAjuste;
                     setState(() {
-                      umidMeta = novaUmid;
-                      _umidMetaPendente = novaUmid;
+                      umidAjuste = novaUmid;
+                      _umidAjustePendente = novaUmid;
                     });
-                    _agendarEnvioUmidade(novaUmid, metaAnterior);
+                    _agendarEnvioUmidade(novaUmid, ajusteAnterior);
                   },
                 ),
                 const SizedBox(height: 20),
@@ -410,8 +417,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     _registrarHistoricoSeNecessario(
       temperaturaAtual: temperatura,
       umidadeAtual: umidade,
-      temperaturaMetaAtual: tempMeta,
-      umidadeMetaAtual: umidMeta,
+      temperaturaAjusteAtual: tempAjuste,
+      umidadeAjusteAtual: umidAjuste,
       avisoAtual: avisoEmergencia,
       alertaIncendioAtual: sireneLigada,
       forcar: true,
@@ -453,7 +460,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     ).showSnackBar(const SnackBar(content: Text('Estufada finalizada.')));
   }
 
-  Future<void> _sugerirFinalizacaoPorQuedaMeta() async {
+  Future<void> _sugerirFinalizacaoPorQuedaAjuste() async {
     if (!mounted || _cicloAtual == null) return;
 
     final confirmar = await confirmarSugestaoFimEstufada(context);
@@ -494,9 +501,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   void _processarEventosDoCiclo({
     required double temperaturaAtual,
     required double umidadeAtual,
-    required double temperaturaMetaAtual,
-    required double umidadeMetaAtual,
+    required double temperaturaAjusteAtual,
+    required double umidadeAjusteAtual,
     required bool alertaIncendioAtual,
+    required bool riscoIncendioAtual,
     required String avisoAtual,
   }) {
     if (_cicloAtual == null) {
@@ -505,11 +513,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     }
 
     if (alertaIncendioAtual && _ultimoAlertaIncendio != true) {
-      final avisoNormalizado = avisoAtual.toLowerCase();
-      final ehIncendio =
-          avisoNormalizado.contains('inc\u00EAndio') ||
-          avisoNormalizado.contains('incendio') ||
-          avisoNormalizado.contains('chama');
+      final ehIncendio = riscoIncendioAtual;
       _registrarEventoCiclo(
         tipo: ehIncendio ? 'alerta_incendio' : 'alarme_processo',
         severidade: ehIncendio ? 'critico' : 'alerta',
@@ -518,8 +522,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             : 'Alarme acionado: ${_formatarAvisoAlarme(avisoAtual)}.',
         temperaturaAtual: temperaturaAtual,
         umidadeAtual: umidadeAtual,
-        temperaturaMetaAtual: temperaturaMetaAtual,
-        umidadeMetaAtual: umidadeMetaAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
         avisoAtual: avisoAtual,
         alertaIncendioAtual: alertaIncendioAtual,
       );
@@ -530,8 +534,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         descricao: 'Alarme normalizado.',
         temperaturaAtual: temperaturaAtual,
         umidadeAtual: umidadeAtual,
-        temperaturaMetaAtual: temperaturaMetaAtual,
-        umidadeMetaAtual: umidadeMetaAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
         avisoAtual: avisoAtual,
         alertaIncendioAtual: alertaIncendioAtual,
       );
@@ -541,16 +545,16 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     _processarOscilacaoTemperatura(
       temperaturaAtual: temperaturaAtual,
       umidadeAtual: umidadeAtual,
-      temperaturaMetaAtual: temperaturaMetaAtual,
-      umidadeMetaAtual: umidadeMetaAtual,
+      temperaturaAjusteAtual: temperaturaAjusteAtual,
+      umidadeAjusteAtual: umidadeAjusteAtual,
       avisoAtual: avisoAtual,
       alertaIncendioAtual: alertaIncendioAtual,
     );
     _processarOscilacaoUmidade(
       temperaturaAtual: temperaturaAtual,
       umidadeAtual: umidadeAtual,
-      temperaturaMetaAtual: temperaturaMetaAtual,
-      umidadeMetaAtual: umidadeMetaAtual,
+      temperaturaAjusteAtual: temperaturaAjusteAtual,
+      umidadeAjusteAtual: umidadeAjusteAtual,
       avisoAtual: avisoAtual,
       alertaIncendioAtual: alertaIncendioAtual,
     );
@@ -567,12 +571,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   void _processarOscilacaoTemperatura({
     required double temperaturaAtual,
     required double umidadeAtual,
-    required double temperaturaMetaAtual,
-    required double umidadeMetaAtual,
+    required double temperaturaAjusteAtual,
+    required double umidadeAjusteAtual,
     required String avisoAtual,
     required bool alertaIncendioAtual,
   }) {
-    final diferenca = temperaturaAtual - temperaturaMetaAtual;
+    final diferenca = temperaturaAtual - temperaturaAjusteAtual;
     final diferencaAbs = diferenca.abs();
     final estadoAlvo = diferencaAbs > 20
         ? 'critico'
@@ -593,8 +597,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           valorAtual: temperaturaAtual,
           temperaturaAtual: temperaturaAtual,
           umidadeAtual: umidadeAtual,
-          temperaturaMetaAtual: temperaturaMetaAtual,
-          umidadeMetaAtual: umidadeMetaAtual,
+          temperaturaAjusteAtual: temperaturaAjusteAtual,
+          umidadeAjusteAtual: umidadeAjusteAtual,
           avisoAtual: avisoAtual,
           alertaIncendioAtual: alertaIncendioAtual,
         );
@@ -625,12 +629,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         severidade: estadoAlvo == 'critico' ? 'critico' : 'alerta',
         descricao:
             'Temperatura ainda fora do ajuste (${diferencaAbs.toStringAsFixed(0)}\u00B0F de diferen\u00E7a).',
-        valorAnterior: temperaturaMetaAtual,
+        valorAnterior: temperaturaAjusteAtual,
         valorAtual: temperaturaAtual,
         temperaturaAtual: temperaturaAtual,
         umidadeAtual: umidadeAtual,
-        temperaturaMetaAtual: temperaturaMetaAtual,
-        umidadeMetaAtual: umidadeMetaAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
         avisoAtual: avisoAtual,
         alertaIncendioAtual: alertaIncendioAtual,
       );
@@ -647,12 +651,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       severidade: severidade,
       descricao:
           'Temperatura $direcao do ajuste por mais de $limiteTexto (${diferencaAbs.toStringAsFixed(0)}\u00B0F de diferen\u00E7a).',
-      valorAnterior: temperaturaMetaAtual,
+      valorAnterior: temperaturaAjusteAtual,
       valorAtual: temperaturaAtual,
       temperaturaAtual: temperaturaAtual,
       umidadeAtual: umidadeAtual,
-      temperaturaMetaAtual: temperaturaMetaAtual,
-      umidadeMetaAtual: umidadeMetaAtual,
+      temperaturaAjusteAtual: temperaturaAjusteAtual,
+      umidadeAjusteAtual: umidadeAjusteAtual,
       avisoAtual: avisoAtual,
       alertaIncendioAtual: alertaIncendioAtual,
     );
@@ -661,12 +665,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   void _processarOscilacaoUmidade({
     required double temperaturaAtual,
     required double umidadeAtual,
-    required double temperaturaMetaAtual,
-    required double umidadeMetaAtual,
+    required double temperaturaAjusteAtual,
+    required double umidadeAjusteAtual,
     required String avisoAtual,
     required bool alertaIncendioAtual,
   }) {
-    final diferenca = umidadeAtual - umidadeMetaAtual;
+    final diferenca = umidadeAtual - umidadeAjusteAtual;
     final diferencaAbs = diferenca.abs();
     final estadoAlvo = diferencaAbs > 20
         ? 'critico'
@@ -687,8 +691,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           valorAtual: umidadeAtual,
           temperaturaAtual: temperaturaAtual,
           umidadeAtual: umidadeAtual,
-          temperaturaMetaAtual: temperaturaMetaAtual,
-          umidadeMetaAtual: umidadeMetaAtual,
+          temperaturaAjusteAtual: temperaturaAjusteAtual,
+          umidadeAjusteAtual: umidadeAjusteAtual,
           avisoAtual: avisoAtual,
           alertaIncendioAtual: alertaIncendioAtual,
         );
@@ -719,12 +723,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         severidade: estadoAlvo == 'critico' ? 'critico' : 'alerta',
         descricao:
             'Umidade ainda fora do ajuste (${diferencaAbs.toStringAsFixed(0)}% de diferen\u00E7a).',
-        valorAnterior: umidadeMetaAtual,
+        valorAnterior: umidadeAjusteAtual,
         valorAtual: umidadeAtual,
         temperaturaAtual: temperaturaAtual,
         umidadeAtual: umidadeAtual,
-        temperaturaMetaAtual: temperaturaMetaAtual,
-        umidadeMetaAtual: umidadeMetaAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
         avisoAtual: avisoAtual,
         alertaIncendioAtual: alertaIncendioAtual,
       );
@@ -741,12 +745,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       severidade: severidade,
       descricao:
           'Umidade $direcao do ajuste por mais de $limiteTexto (${diferencaAbs.toStringAsFixed(0)}% de diferen\u00E7a).',
-      valorAnterior: umidadeMetaAtual,
+      valorAnterior: umidadeAjusteAtual,
       valorAtual: umidadeAtual,
       temperaturaAtual: temperaturaAtual,
       umidadeAtual: umidadeAtual,
-      temperaturaMetaAtual: temperaturaMetaAtual,
-      umidadeMetaAtual: umidadeMetaAtual,
+      temperaturaAjusteAtual: temperaturaAjusteAtual,
+      umidadeAjusteAtual: umidadeAjusteAtual,
       avisoAtual: avisoAtual,
       alertaIncendioAtual: alertaIncendioAtual,
     );
@@ -760,8 +764,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     double? valorAtual,
     double? temperaturaAtual,
     double? umidadeAtual,
-    double? temperaturaMetaAtual,
-    double? umidadeMetaAtual,
+    double? temperaturaAjusteAtual,
+    double? umidadeAjusteAtual,
     String? avisoAtual,
     bool? alertaIncendioAtual,
     bool registrarLeitura = true,
@@ -786,8 +790,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       _registrarHistoricoSeNecessario(
         temperaturaAtual: temperaturaAtual ?? temperatura,
         umidadeAtual: umidadeAtual ?? umidade,
-        temperaturaMetaAtual: temperaturaMetaAtual ?? tempMeta,
-        umidadeMetaAtual: umidadeMetaAtual ?? umidMeta,
+        temperaturaAjusteAtual: temperaturaAjusteAtual ?? tempAjuste,
+        umidadeAjusteAtual: umidadeAjusteAtual ?? umidAjuste,
         avisoAtual: avisoAtual ?? avisoEmergencia,
         alertaIncendioAtual: alertaIncendioAtual ?? sireneLigada,
         forcar: true,
@@ -844,7 +848,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     });
   }
 
-  void _agendarEnvioTemperatura(double novaTemp, double metaAnterior) {
+  void _agendarEnvioTemperatura(double novaTemp, double ajusteAnterior) {
     _debounceTemperatura?.cancel();
     _debounceTemperatura = Timer(const Duration(milliseconds: 1000), () {
       unawaited(
@@ -852,26 +856,26 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           'temperaturaMeta': novaTemp,
           'tempTimestamp': DateTime.now().millisecondsSinceEpoch,
         }).then((sucesso) {
-          if (novaTemp != metaAnterior) {
+          if (novaTemp != ajusteAnterior) {
             _registrarEventoCiclo(
-              tipo: 'meta_temperatura',
+              tipo: 'ajuste_temperatura',
               severidade: 'info',
               descricao:
                   'Ajuste de temperatura alterado para ${novaTemp.toStringAsFixed(0)}\u00B0F.',
-              valorAnterior: metaAnterior,
+              valorAnterior: ajusteAnterior,
               valorAtual: novaTemp,
             );
           }
-          if (!mounted || !sucesso || _tempMetaPendente != novaTemp) return;
+          if (!mounted || !sucesso || _tempAjustePendente != novaTemp) return;
           setState(() {
-            _tempMetaPendente = null;
+            _tempAjustePendente = null;
           });
         }),
       );
     });
   }
 
-  void _agendarEnvioUmidade(double novaUmid, double metaAnterior) {
+  void _agendarEnvioUmidade(double novaUmid, double ajusteAnterior) {
     _debounceUmidade?.cancel();
     _debounceUmidade = Timer(const Duration(milliseconds: 1000), () {
       unawaited(
@@ -879,19 +883,19 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           'umidadeMeta': novaUmid,
           'umidTimestamp': DateTime.now().millisecondsSinceEpoch,
         }).then((sucesso) {
-          if (novaUmid != metaAnterior) {
+          if (novaUmid != ajusteAnterior) {
             _registrarEventoCiclo(
-              tipo: 'meta_umidade',
+              tipo: 'ajuste_umidade',
               severidade: 'info',
               descricao:
                   'Ajuste de umidade alterado para ${novaUmid.toStringAsFixed(0)}%.',
-              valorAnterior: metaAnterior,
+              valorAnterior: ajusteAnterior,
               valorAtual: novaUmid,
             );
           }
-          if (!mounted || !sucesso || _umidMetaPendente != novaUmid) return;
+          if (!mounted || !sucesso || _umidAjustePendente != novaUmid) return;
           setState(() {
-            _umidMetaPendente = null;
+            _umidAjustePendente = null;
           });
         }),
       );

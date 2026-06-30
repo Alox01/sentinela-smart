@@ -260,10 +260,31 @@ class ApiService {
 
   static String _normalizarBaseUrl(String ipOuUrl) {
     final valor = ipOuUrl.trim();
-    if (valor.startsWith('http://') || valor.startsWith('https://')) {
-      return valor.endsWith('/') ? valor.substring(0, valor.length - 1) : valor;
+    if (valor.isEmpty) return '';
+
+    final temProtocolo =
+        valor.startsWith('http://') || valor.startsWith('https://');
+    final uri = Uri.tryParse(temProtocolo ? valor : 'http://$valor');
+
+    if (uri != null && uri.host.isNotEmpty) {
+      final porta = uri.hasPort
+          ? uri.port
+          : (uri.scheme == 'https' ? null : 3000);
+      final normalizada = Uri(
+        scheme: uri.scheme.isEmpty ? 'http' : uri.scheme,
+        host: uri.host,
+        port: porta,
+      ).toString();
+      return normalizada.endsWith('/')
+          ? normalizada.substring(0, normalizada.length - 1)
+          : normalizada;
     }
-    return 'http://$valor:3000';
+
+    final semBarra = valor.endsWith('/')
+        ? valor.substring(0, valor.length - 1)
+        : valor;
+    final temPorta = RegExp(r':\d+$').hasMatch(semBarra);
+    return 'http://$semBarra${temPorta ? '' : ':3000'}';
   }
 
   static String? _normalizarCloudUrl(String? cloudUrl) {

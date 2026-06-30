@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 class PainelControle extends StatelessWidget {
   final Function(double) onMudarTemperatura;
   final Function(double) onMudarUmidade;
-  final double tempMeta;
-  final double umidMeta;
+  final double tempAjuste;
+  final double umidAjuste;
 
   const PainelControle({
     super.key,
     required this.onMudarTemperatura,
     required this.onMudarUmidade,
-    required this.tempMeta,
-    required this.umidMeta,
+    required this.tempAjuste,
+    required this.umidAjuste,
   });
 
   @override
@@ -52,12 +52,12 @@ class PainelControle extends StatelessWidget {
                 Expanded(
                   child: _buildControleCard(
                     "TEMPERATURA\n(${String.fromCharCode(176)}F)",
-                    tempMeta,
+                    tempAjuste,
                     () {
-                      if (tempMeta < 999) onMudarTemperatura(tempMeta + 1);
+                      if (tempAjuste < 999) onMudarTemperatura(tempAjuste + 1);
                     },
                     () {
-                      if (tempMeta > 0) onMudarTemperatura(tempMeta - 1);
+                      if (tempAjuste > 0) onMudarTemperatura(tempAjuste - 1);
                     },
                     Colors.orangeAccent,
                   ),
@@ -66,12 +66,12 @@ class PainelControle extends StatelessWidget {
                 Expanded(
                   child: _buildControleCard(
                     "UMIDADE\n(%)",
-                    umidMeta,
+                    umidAjuste,
                     () {
-                      if (umidMeta < 100) onMudarUmidade(umidMeta + 1);
+                      if (umidAjuste < 100) onMudarUmidade(umidAjuste + 1);
                     },
                     () {
-                      if (umidMeta > 0) onMudarUmidade(umidMeta - 1);
+                      if (umidAjuste > 0) onMudarUmidade(umidAjuste - 1);
                     },
                     Colors.blueAccent,
                   ),

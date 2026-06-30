@@ -116,7 +116,7 @@ async function salvarLeitura(dispositivoId, status) {
       status.timestampLeitura,
       status.temperaturaAtual,
       status.umidadeAtual,
-      status.alertaIncendio,
+      status.alarmeAtivo ?? status.alertaIncendio,
       status.aviso || '',
       status.corStatus || 'green',
       status.faseAtual || '',
@@ -137,6 +137,15 @@ async function salvarSnapshot(dados) {
   const dispositivo = await buscarOuCriarDispositivo(status);
   await salvarConfiguracao(dispositivo.id, config);
   await salvarLeitura(dispositivo.id, status);
+  return true;
+}
+
+async function salvarConfiguracaoSnapshot(dados) {
+  if (!pool) return false;
+
+  const { status, config } = dados;
+  const dispositivo = await buscarOuCriarDispositivo(status);
+  await salvarConfiguracao(dispositivo.id, config);
   return true;
 }
 
@@ -245,6 +254,9 @@ async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2
     timestampLeitura: Number(row.timestamp_origem_ms) || Date.now(),
     temperaturaAtual: Number(row.temperatura),
     umidadeAtual: Number(row.umidade),
+    alarmeAtivo: row.alerta_incendio,
+    perigoChama: false,
+    riscoIncendio: false,
     alertaIncendio: row.alerta_incendio,
     aviso: row.aviso || '',
     corStatus: row.cor_status || 'green',
@@ -264,5 +276,6 @@ module.exports = {
   estaHabilitado,
   motivoDesabilitado,
   salvarComandoSync,
+  salvarConfiguracaoSnapshot,
   salvarSnapshot,
 };

@@ -6,8 +6,8 @@ import '../../../widgets/painel_controle.dart';
 class LeituraAparelhoCard extends StatelessWidget {
   final double temperatura;
   final double umidade;
-  final double temperaturaMeta;
-  final double umidadeMeta;
+  final double temperaturaAjuste;
+  final double umidadeAjuste;
   final bool sireneLigada;
   final VoidCallback onSilenciarAlarme;
 
@@ -15,8 +15,8 @@ class LeituraAparelhoCard extends StatelessWidget {
     super.key,
     required this.temperatura,
     required this.umidade,
-    required this.temperaturaMeta,
-    required this.umidadeMeta,
+    required this.temperaturaAjuste,
+    required this.umidadeAjuste,
     required this.sireneLigada,
     required this.onSilenciarAlarme,
   });
@@ -89,8 +89,8 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'TEMPERATURA',
                       icone: Icons.thermostat,
                       corIcone: Colors.orangeAccent,
-                      alta: temperatura > (temperaturaMeta + 2.0),
-                      baixa: temperatura < (temperaturaMeta - 2.0),
+                      alta: temperatura > (temperaturaAjuste + 2.0),
+                      baixa: temperatura < (temperaturaAjuste - 2.0),
                     ),
                   ),
                   const VerticalDivider(color: Colors.white10, thickness: 1),
@@ -99,8 +99,8 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'UMIDADE',
                       icone: Icons.water_drop,
                       corIcone: Colors.lightBlueAccent,
-                      alta: umidade > (umidadeMeta + 2.0),
-                      baixa: umidade < (umidadeMeta - 2.0),
+                      alta: umidade > (umidadeAjuste + 2.0),
+                      baixa: umidade < (umidadeAjuste - 2.0),
                     ),
                   ),
                 ],
