@@ -408,51 +408,107 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       barrierColor: Colors.black54,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1C1C1E),
-          title: const Text(
-            'Chave de acesso',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            obscureText: ocultarChave,
-            enableSuggestions: false,
-            autocorrect: false,
-            keyboardType: TextInputType.visiblePassword,
-            textCapitalization: TextCapitalization.none,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Ex: 123456',
-              helperText: 'Use a mesma chave configurada no aparelho.',
-              helperMaxLines: 2,
-              suffixIcon: IconButton(
-                tooltip: ocultarChave ? 'Mostrar chave' : 'Ocultar chave',
-                icon: Icon(
-                  ocultarChave
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: Colors.white54,
+        builder: (context, setDialogState) {
+          final media = MediaQuery.of(context);
+          final alturaDisponivel =
+              media.size.height - media.viewInsets.bottom - 24;
+          final modoCompacto = alturaDisponivel < 320;
+
+          return SafeArea(
+            child: Dialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: modoCompacto ? 18 : 40,
+                vertical: modoCompacto ? 8 : 24,
+              ),
+              backgroundColor: const Color(0xFF1C1C1E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 460,
+                  maxHeight: alturaDisponivel.clamp(140.0, 420.0).toDouble(),
                 ),
-                onPressed: () {
-                  setDialogState(() => ocultarChave = !ocultarChave);
-                },
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    modoCompacto ? 18 : 24,
+                    modoCompacto ? 14 : 22,
+                    modoCompacto ? 18 : 24,
+                    modoCompacto ? 8 : 14,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Chave de acesso',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: modoCompacto ? 20 : 24,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: modoCompacto ? 6 : 12),
+                      TextField(
+                        controller: controller,
+                        autofocus: true,
+                        obscureText: ocultarChave,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        keyboardType: TextInputType.visiblePassword,
+                        textCapitalization: TextCapitalization.none,
+                        scrollPadding: const EdgeInsets.only(bottom: 80),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Ex: 123456',
+                          helperText:
+                              'Use a mesma chave configurada no aparelho.',
+                          helperMaxLines: modoCompacto ? 1 : 2,
+                          suffixIcon: IconButton(
+                            tooltip: ocultarChave
+                                ? 'Mostrar chave'
+                                : 'Ocultar chave',
+                            icon: Icon(
+                              ocultarChave
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: Colors.white54,
+                            ),
+                            onPressed: () {
+                              setDialogState(
+                                () => ocultarChave = !ocultarChave,
+                              );
+                            },
+                          ),
+                        ),
+                        onSubmitted: (_) =>
+                            Navigator.pop(context, controller.text.trim()),
+                      ),
+                      SizedBox(height: modoCompacto ? 8 : 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('CANCELAR'),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(context, controller.text.trim()),
+                            child: const Text('SALVAR'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            onSubmitted: (_) => Navigator.pop(context, controller.text.trim()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CANCELAR'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('SALVAR'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
     controller.dispose();
