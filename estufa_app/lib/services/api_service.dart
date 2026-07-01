@@ -66,18 +66,27 @@ class ApiService {
   Future<Map<String, dynamic>?> buscarStatus() async {
     final response = await _getComFallback('/status');
     if (response?.statusCode == 200) {
-      final dados = jsonDecode(response!.body) as Map<String, dynamic>;
+      final dados = _decodificarMapa(response!.body);
+      if (dados == null) return null;
       final pendenciasSincronizadas = await sincronizarComandosPendentes();
 
       if (pendenciasSincronizadas > 0) {
         final responseAtualizada = await _getComFallback('/status');
         if (responseAtualizada?.statusCode == 200) {
-          return jsonDecode(responseAtualizada!.body) as Map<String, dynamic>;
+          return _decodificarMapa(responseAtualizada!.body);
         }
       }
 
       return dados;
     }
+
+    final responseRaiz = await _getComFallback('/');
+    if (responseRaiz?.statusCode == 200) {
+      final dadosRaiz = _decodificarMapa(responseRaiz!.body);
+      if (dadosRaiz == null) return null;
+      return _adaptarStatusRaizEsp32(dadosRaiz);
+    }
+
     return null;
   }
 
@@ -119,7 +128,7 @@ class ApiService {
         ipEstufa: localBaseUrl,
         payload: dadosParaAtualizar,
       );
-      debugPrint('Comando enfileirado para sincronização posterior.');
+      debugPrint('Comando enfileirado para sincronizacao posterior.');
     }
     return false;
   }
@@ -250,10 +259,80 @@ class ApiService {
       final response = await http
           .get(Uri.parse('$base/status'), headers: _headers())
           .timeout(const Duration(seconds: 2));
-      return response.statusCode == 200;
+      if (response.statusCode == 200) return true;
+    } catch (_) {
+      // Alguns prototipos ESP32 respondem o JSON diretamente na rota raiz.
+    }
+
+    try {
+      final response = await http
+          .get(Uri.parse('$base/'), headers: _headers())
+          .timeout(const Duration(seconds: 2));
+      return response.statusCode == 200 &&
+          _decodificarMapa(response.body) != null;
     } catch (_) {
       return false;
     }
+  }
+
+  Map<String, dynamic>? _decodificarMapa(String body) {
+    try {
+      final json = jsonDecode(body);
+      return json is Map<String, dynamic> ? json : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _adaptarStatusRaizEsp32(Map<String, dynamic> dados) {
+    final temperatura = _numero(dados['temperaturaF']) ?? 0;
+    final umidade = _numero(dados['umidade']) ?? 0;
+    final ajusteTemperatura = _numero(dados['temperaturaAlvoF']) ?? temperatura;
+    final alertaTemperatura = _booleano(dados['alertaTemperatura']);
+    final alertaLuz = _booleano(dados['alertaLuz']);
+    final leituraOk = _booleano(dados['leituraOk']);
+    final alertaLigado = alertaTemperatura || alertaLuz || !leituraOk;
+
+    return {
+      'status': {
+        'idHardware': 'ESP32_REAL',
+        'timestampLeitura': DateTime.now().millisecondsSinceEpoch,
+        'temperaturaAtual': temperatura,
+        'umidadeAtual': umidade,
+        'temEnergia': true,
+        'temInternet': true,
+        'sinalWifi': 100,
+        'alertaIncendio': alertaLigado,
+        'alertaIncendioLigado': alertaLigado,
+        'aquecedorLigado': _booleano(dados['ledControleLigado']),
+        'umidificadorLigado': _booleano(dados['mostrandoUmidade']),
+        'faseAtual': 'Leitura real',
+        'aviso': leituraOk ? 'ESP32 conectado' : 'Falha na leitura do sensor',
+        'corStatus': leituraOk ? 'green' : 'red',
+      },
+      'config': {
+        'idHardware': 'ESP32_REAL',
+        'tempMeta': ajusteTemperatura,
+        'tempTimestamp': DateTime.now().millisecondsSinceEpoch,
+        'umidadeMeta': umidade,
+        'umidTimestamp': DateTime.now().millisecondsSinceEpoch,
+        'modoSilencioso': _booleano(dados['buzzerSilenciado']),
+        'modoSilenciosoTimestamp': 0,
+      },
+    };
+  }
+
+  double? _numero(Object? valor) {
+    if (valor is num) return valor.toDouble();
+    if (valor is String) return double.tryParse(valor.replaceAll(',', '.'));
+    return null;
+  }
+
+  bool _booleano(Object? valor) {
+    if (valor is bool) return valor;
+    if (valor is num) return valor != 0;
+    if (valor is String) return valor.toLowerCase() == 'true';
+    return false;
   }
 
   List<String> _candidatas() {
