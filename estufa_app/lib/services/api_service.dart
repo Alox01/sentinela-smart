@@ -29,6 +29,7 @@ class ApiService {
   );
 
   final String localBaseUrl;
+  final String? localPort80FallbackUrl;
   final String? cloudBaseUrl;
   final String? authToken;
 
@@ -38,6 +39,7 @@ class ApiService {
 
   ApiService(String ip, {String? cloudUrl, String? token})
     : localBaseUrl = _normalizarBaseUrl(ip),
+      localPort80FallbackUrl = _normalizarFallbackPorta80(ip),
       cloudBaseUrl = _normalizarCloudUrl(cloudUrl ?? _cloudPadrao),
       authToken = _normalizarToken(
         token ?? (_tokenPadrao.isNotEmpty ? _tokenPadrao : _tokenLegado),
@@ -46,7 +48,9 @@ class ApiService {
   String get modoConexao {
     final ativa = _baseUrlAtiva;
     if (ativa == null) return 'OFFLINE';
-    if (ativa == localBaseUrl) return 'LOCAL';
+    if (ativa == localBaseUrl || ativa == localPort80FallbackUrl) {
+      return 'LOCAL';
+    }
     return 'NUVEM';
   }
 
@@ -133,7 +137,9 @@ class ApiService {
       probes.add(
         ApiConnectionProbe(
           baseUrl: base,
-          nome: base == localBaseUrl ? 'Local' : 'Nuvem',
+          nome: base == localBaseUrl || base == localPort80FallbackUrl
+              ? 'Local'
+              : 'Nuvem',
           online: await _estaOnline(base),
         ),
       );
@@ -252,7 +258,13 @@ class ApiService {
 
   List<String> _candidatas() {
     final lista = <String>[localBaseUrl];
-    if (cloudBaseUrl != null && cloudBaseUrl != localBaseUrl) {
+    if (localPort80FallbackUrl != null &&
+        localPort80FallbackUrl != localBaseUrl) {
+      lista.add(localPort80FallbackUrl!);
+    }
+    if (cloudBaseUrl != null &&
+        cloudBaseUrl != localBaseUrl &&
+        cloudBaseUrl != localPort80FallbackUrl) {
       lista.add(cloudBaseUrl!);
     }
     return lista;
@@ -285,6 +297,19 @@ class ApiService {
         : valor;
     final temPorta = RegExp(r':\d+$').hasMatch(semBarra);
     return 'http://$semBarra${temPorta ? '' : ':3000'}';
+  }
+
+  static String? _normalizarFallbackPorta80(String ipOuUrl) {
+    final valor = ipOuUrl.trim();
+    if (valor.isEmpty) return null;
+
+    final temProtocolo =
+        valor.startsWith('http://') || valor.startsWith('https://');
+    final uri = Uri.tryParse(temProtocolo ? valor : 'http://$valor');
+    if (uri == null || uri.host.isEmpty || uri.hasPort) return null;
+    if (uri.scheme == 'https') return null;
+
+    return 'http://${uri.host}:80';
   }
 
   static String? _normalizarCloudUrl(String? cloudUrl) {
