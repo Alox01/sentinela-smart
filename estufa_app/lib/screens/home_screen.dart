@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../features/home/models/modelo_estufa.dart';
@@ -8,6 +7,7 @@ import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
 import '../services/backup_file_service.dart';
 import '../services/isar_service.dart';
+import 'estufa_form_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,15 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _carregarEstufas() async {
-    var estufas = await _estufasRepository.listar();
-
-    if (estufas.isEmpty) {
-      await _estufasRepository.salvar(
-        nome: 'Estufa Principal',
-        ip: 'localhost',
-      );
-      estufas = await _estufasRepository.listar();
-    }
+    final estufas = await _estufasRepository.listar();
 
     if (!mounted) return;
     setState(() {
@@ -131,12 +123,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         if (index == minhasEstufas.length) {
                           return AdicionarEstufaCard(
-                            onTap: () => _mostrarDialogoCadastro(),
+                            onTap: () => _abrirFormularioEstufa(),
                           );
                         }
                         return EstufaResumoCard(
                           estufa: minhasEstufas[index],
-                          onEditar: () => _mostrarDialogoCadastro(
+                          onEditar: () => _abrirFormularioEstufa(
                             estufa: minhasEstufas[index],
                           ),
                           onRemover: () =>
@@ -151,368 +143,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _mostrarDialogoCadastro({ModeloEstufa? estufa}) {
-    const limiteNomeEstufa = 24;
-    final editando = estufa != null;
-    final nomeController = TextEditingController(text: estufa?.nome ?? '');
-    final ipController = TextEditingController(text: estufa?.ip ?? '');
-    final tokenController = TextEditingController(
-      text: estufa?.tokenAcesso ?? '',
+  Future<void> _abrirFormularioEstufa({ModeloEstufa? estufa}) async {
+    final salvo = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => EstufaFormScreen(estufa: estufa)),
     );
-    final nomeFocus = FocusNode();
-    final ipFocus = FocusNode();
 
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final media = MediaQuery.of(context);
-            final alturaMaxima = media.size.height * 0.88;
-            final chaveConfigurada = tokenController.text.trim().isNotEmpty;
+    if (salvo != true || !mounted) return;
+    await _carregarEstufas();
+    if (!mounted) return;
 
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                child: Align(
-                  alignment: Alignment.center,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: 520,
-                      maxHeight: alturaMaxima,
-                    ),
-                    child: Material(
-                      color: const Color(0xFF1C1C1E),
-                      borderRadius: BorderRadius.circular(28),
-                      child: SingleChildScrollView(
-                        keyboardDismissBehavior:
-                            ScrollViewKeyboardDismissBehavior.onDrag,
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 18),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              editando ? 'Editar Estufa' : 'Adicionar Estufa',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: nomeController,
-                              focusNode: nomeFocus,
-                              textInputAction: TextInputAction.next,
-                              onSubmitted: (_) => ipFocus.requestFocus(),
-                              maxLength: limiteNomeEstufa,
-                              maxLengthEnforcement:
-                                  MaxLengthEnforcement.enforced,
-                              scrollPadding: const EdgeInsets.only(bottom: 120),
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'Nome (ex: Galp\u00E3o 01)',
-                                helperText: 'Use at\u00E9 24 caracteres.',
-                                helperStyle: TextStyle(color: Colors.white38),
-                                counterStyle: TextStyle(color: Colors.white38),
-                                labelStyle: TextStyle(color: Colors.white54),
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white24),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: ipController,
-                              focusNode: ipFocus,
-                              textInputAction: TextInputAction.next,
-                              onSubmitted: (_) =>
-                                  FocusScope.of(context).unfocus(),
-                              keyboardType: TextInputType.url,
-                              textCapitalization: TextCapitalization.none,
-                              scrollPadding: const EdgeInsets.only(bottom: 120),
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'IP ou endere\u00E7o',
-                                hintText: 'Ex: 192.168.1.11',
-                                hintStyle: TextStyle(color: Colors.white30),
-                                labelStyle: TextStyle(color: Colors.white54),
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white24),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () async {
-                                FocusManager.instance.primaryFocus?.unfocus();
-                                final novaChave =
-                                    await _mostrarDialogoChaveAcesso(
-                                      context,
-                                      tokenController.text,
-                                    );
-                                if (novaChave == null) return;
-                                setDialogState(() {
-                                  tokenController.text = novaChave.trim();
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.03),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.vpn_key_outlined,
-                                      color: chaveConfigurada
-                                          ? Colors.greenAccent
-                                          : Colors.white38,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Chave de acesso',
-                                            style: TextStyle(
-                                              color: Colors.white70,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            chaveConfigurada
-                                                ? 'Configurada para esta estufa.'
-                                                : 'Opcional. Toque para definir.',
-                                            style: const TextStyle(
-                                              color: Colors.white38,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      chaveConfigurada ? 'ALTERAR' : 'DEFINIR',
-                                      style: const TextStyle(
-                                        color: Colors.greenAccent,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text(
-                                    'CANCELAR',
-                                    style: TextStyle(color: Colors.white54),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                TextButton(
-                                  onPressed: () async {
-                                    FocusManager.instance.primaryFocus
-                                        ?.unfocus();
-                                    final nome = nomeController.text.trim();
-                                    final ip = ipController.text.trim();
-                                    final tokenTexto = tokenController.text
-                                        .trim();
-                                    final token = tokenTexto.isEmpty
-                                        ? null
-                                        : tokenTexto;
-
-                                    if (nome.isEmpty || ip.isEmpty) return;
-
-                                    final messenger = ScaffoldMessenger.of(
-                                      context,
-                                    );
-                                    Navigator.of(context).pop();
-
-                                    if (editando) {
-                                      await _estufasRepository.atualizar(
-                                        id: estufa.id,
-                                        nome: nome,
-                                        ip: ip,
-                                        tokenAcesso: token,
-                                      );
-                                    } else {
-                                      await _estufasRepository.salvar(
-                                        nome: nome,
-                                        ip: ip,
-                                        tokenAcesso: token,
-                                      );
-                                    }
-
-                                    if (!mounted) return;
-                                    await _carregarEstufas();
-                                    if (!mounted) return;
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          token == null
-                                              ? 'Estufa salva sem chave de acesso.'
-                                              : 'Estufa salva com chave de acesso.',
-                                        ),
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text(
-                                    'SALVAR',
-                                    style: TextStyle(color: Colors.greenAccent),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<String?> _mostrarDialogoChaveAcesso(
-    BuildContext context,
-    String valorAtual,
-  ) async {
-    final controller = TextEditingController(text: valorAtual);
-    var ocultarChave = true;
-
-    final resultado = await showDialog<String>(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final media = MediaQuery.of(context);
-          final alturaDisponivel =
-              media.size.height - media.viewInsets.bottom - 24;
-          final modoCompacto = alturaDisponivel < 320;
-
-          return SafeArea(
-            child: Dialog(
-              insetPadding: EdgeInsets.symmetric(
-                horizontal: modoCompacto ? 18 : 40,
-                vertical: modoCompacto ? 8 : 24,
-              ),
-              backgroundColor: const Color(0xFF1C1C1E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: 460,
-                  maxHeight: alturaDisponivel.clamp(140.0, 420.0).toDouble(),
-                ),
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    modoCompacto ? 18 : 24,
-                    modoCompacto ? 14 : 22,
-                    modoCompacto ? 18 : 24,
-                    modoCompacto ? 8 : 14,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Chave de acesso',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: modoCompacto ? 20 : 24,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: modoCompacto ? 6 : 12),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        obscureText: ocultarChave,
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        keyboardType: TextInputType.visiblePassword,
-                        textCapitalization: TextCapitalization.none,
-                        scrollPadding: const EdgeInsets.only(bottom: 80),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Ex: 123456',
-                          helperText:
-                              'Use a mesma chave configurada no aparelho.',
-                          helperMaxLines: modoCompacto ? 1 : 2,
-                          suffixIcon: IconButton(
-                            tooltip: ocultarChave
-                                ? 'Mostrar chave'
-                                : 'Ocultar chave',
-                            icon: Icon(
-                              ocultarChave
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: Colors.white54,
-                            ),
-                            onPressed: () {
-                              setDialogState(
-                                () => ocultarChave = !ocultarChave,
-                              );
-                            },
-                          ),
-                        ),
-                        onSubmitted: (_) =>
-                            Navigator.pop(context, controller.text.trim()),
-                      ),
-                      SizedBox(height: modoCompacto ? 8 : 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('CANCELAR'),
-                          ),
-                          const SizedBox(width: 8),
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.pop(context, controller.text.trim()),
-                            child: const Text('SALVAR'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          estufa == null ? 'Estufa cadastrada.' : 'Estufa atualizada.',
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
-    controller.dispose();
-    return resultado;
   }
 
   Future<void> _confirmarRemocaoEstufa(ModeloEstufa estufa) async {
