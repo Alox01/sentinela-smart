@@ -6,7 +6,7 @@ const char* ssid = "NOME_DO_SEU_WIFI";
 const char* senha = "SENHA_DO_SEU_WIFI";
 
 // Use a mesma chave no cadastro da estufa no app. Deixe vazio para testes sem chave.
-const char* chaveAcesso = "123456";
+const char* chaveAcesso = "";
 
 const char* headerKeys[] = {"Authorization", "X-Device-Token"};
 const size_t headerCount = sizeof(headerKeys) / sizeof(char*);
