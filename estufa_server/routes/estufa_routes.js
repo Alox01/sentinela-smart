@@ -4,6 +4,7 @@ const {
   validarPayloadBotaoFisico,
   validarPayloadSincronizacao,
 } = require('../sync');
+const { criarPayloadEsp32 } = require('../esp32_payload');
 
 function createEstufaRouter({ simulador, db, authMiddleware }) {
   const router = express.Router();
@@ -11,6 +12,17 @@ function createEstufaRouter({ simulador, db, authMiddleware }) {
   router.get('/status', async (_req, res) => {
     const dadosCompletos = simulador.lerCompleto();
     res.json(dadosCompletos);
+  });
+
+
+  router.get('/', async (_req, res) => {
+    const dadosCompletos = simulador.lerCompleto();
+    res.json(criarPayloadEsp32(dadosCompletos));
+  });
+
+  router.get('/dados', async (_req, res) => {
+    const dadosCompletos = simulador.lerCompleto();
+    res.json(criarPayloadEsp32(dadosCompletos));
   });
 
   router.post('/sincronizar', authMiddleware, async (req, res) => {

@@ -7,13 +7,14 @@ Servidor local da estufa usado pelo aplicativo Sentinela Smart. Ele expõe a API
 ```powershell
 cd estufa_server
 npm install
-node server.js
+npm start
 ```
 
 Teste:
 
 ```text
 http://localhost:3000/status
+http://localhost:3000/dados
 ```
 
 ## Rodar com Docker
@@ -28,6 +29,7 @@ Teste:
 
 ```text
 http://localhost:3000/status
+http://localhost:3000/dados
 ```
 
 ## Variáveis opcionais
@@ -63,7 +65,7 @@ Quando `ESTUFA_API_TOKEN` está configurada, as rotas que alteram o equipamento 
 - `POST /sincronizar`, usado para alterar ajustes de temperatura, umidade e modo silencioso;
 - `POST /debug/botao-fisico`, usado apenas para simular alteração física durante testes.
 
-A leitura `GET /status` continua pública na rede local para facilitar monitoramento e diagnóstico. Os comandos também passam por validação de payload: temperatura aceita de 60°F a 200°F e umidade aceita de 0% a 100%.
+As leituras `GET /status`, `GET /` e `GET /dados` continuam publicas na rede local para facilitar monitoramento e diagnostico. A rota `/status` entrega o formato completo do simulador; `/` e `/dados` entregam um JSON simples compativel com o ESP32. Os comandos tambem passam por validacao de payload: temperatura aceita de 60 F a 200 F e umidade aceita de 0% a 100%.
 
 A variável `ALLOWED_ORIGINS` é opcional. Sem ela, o CORS fica liberado para facilitar testes locais. Com ela configurada, navegadores só conseguem chamar a API a partir das origens listadas.
 
