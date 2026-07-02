@@ -1,8 +1,9 @@
-﻿const test = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ConfiguracaoAlvo } = require('../classes');
 const {
   aplicarSincronizacao,
+  validarPayloadBotaoFisico,
   validarPayloadSincronizacao,
 } = require('../sync');
 
@@ -65,4 +66,35 @@ test('modo silencioso usa timestamp e tambem aceita comando legado', () => {
   assert.deepEqual(legado.alteracoesAplicadas, ['modoSilencioso']);
   assert.equal(config.modoSilencioso, true);
   assert.equal(config.modoSilenciosoTimestamp, 3000);
+});
+
+test('rejeita ajustes fora da faixa operacional', () => {
+  const temperaturaBaixa = validarPayloadSincronizacao({
+    temperaturaMeta: 40,
+    tempTimestamp: 1000,
+  });
+  const temperaturaAlta = validarPayloadSincronizacao({
+    temperaturaMeta: 250,
+    tempTimestamp: 1000,
+  });
+  const umidadeAlta = validarPayloadSincronizacao({
+    umidadeMeta: 120,
+    umidTimestamp: 1000,
+  });
+
+  assert.equal(temperaturaBaixa.valido, false);
+  assert.equal(temperaturaAlta.valido, false);
+  assert.equal(umidadeAlta.valido, false);
+  assert.match(temperaturaAlta.erros.join(' '), /entre 60 e 200/);
+  assert.match(umidadeAlta.erros.join(' '), /entre 0 e 100/);
+});
+
+test('valida payload do botao fisico simulado', () => {
+  const valido = validarPayloadBotaoFisico({ tipo: 'temp', valor: 110 });
+  const tipoInvalido = validarPayloadBotaoFisico({ tipo: 'umid', valor: 70 });
+  const valorInvalido = validarPayloadBotaoFisico({ tipo: 'temp', valor: 500 });
+
+  assert.equal(valido.valido, true);
+  assert.equal(tipoInvalido.valido, false);
+  assert.equal(valorInvalido.valido, false);
 });

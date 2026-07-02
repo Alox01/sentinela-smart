@@ -48,6 +48,25 @@ $env:DATABASE_URL="postgresql://usuario:senha@host:5432/postgres"
 docker compose up --build
 ```
 
+Com restrição de origem para o app web:
+
+```powershell
+$env:ALLOWED_ORIGINS="http://192.168.1.11:53312,http://localhost:53312"
+docker compose up --build
+```
+
+
+## Segurança da API
+
+Quando `ESTUFA_API_TOKEN` está configurada, as rotas que alteram o equipamento exigem a mesma chave de acesso enviada pelo app:
+
+- `POST /sincronizar`, usado para alterar ajustes de temperatura, umidade e modo silencioso;
+- `POST /debug/botao-fisico`, usado apenas para simular alteração física durante testes.
+
+A leitura `GET /status` continua pública na rede local para facilitar monitoramento e diagnóstico. Os comandos também passam por validação de payload: temperatura aceita de 60°F a 200°F e umidade aceita de 0% a 100%.
+
+A variável `ALLOWED_ORIGINS` é opcional. Sem ela, o CORS fica liberado para facilitar testes locais. Com ela configurada, navegadores só conseguem chamar a API a partir das origens listadas.
+
 ## Observação para o TCC
 
 O Docker padroniza o ambiente do servidor. Assim, a API pode ser executada da mesma forma em diferentes computadores, facilitando testes locais, demonstrações e futura implantação em nuvem ou em um servidor físico da propriedade.

@@ -9,14 +9,16 @@ const simulador = require('./simulador');
 const db = require('./db');
 const { createAuthMiddleware } = require('./auth');
 const { createEstufaRouter } = require('./routes/estufa_routes');
+const { createCorsOptions } = require('./security');
 
 const app = express();
 const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ?? '';
 const PORT = Number(process.env.PORT) || 3000;
 const authMiddleware = createAuthMiddleware(API_TOKEN);
 
 app.use(express.json());
-app.use(cors());
+app.use(cors(createCorsOptions(ALLOWED_ORIGINS)));
 app.use(
   createEstufaRouter({
     simulador,
@@ -30,6 +32,11 @@ if (API_TOKEN.trim()) {
   console.log('Autenticacao habilitada por token.');
 } else {
   console.log('Autenticacao desabilitada (token nao configurado).');
+}
+if (ALLOWED_ORIGINS.trim()) {
+  console.log(`CORS restrito para: ${ALLOWED_ORIGINS}`);
+} else {
+  console.log('CORS liberado para desenvolvimento local.');
 }
 if (db.estaHabilitado()) {
   console.log('Persistencia PostgreSQL habilitada.');

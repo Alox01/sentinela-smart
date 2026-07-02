@@ -1,6 +1,9 @@
 const express = require('express');
 
-const { validarPayloadSincronizacao } = require('../sync');
+const {
+  validarPayloadBotaoFisico,
+  validarPayloadSincronizacao,
+} = require('../sync');
 
 function createEstufaRouter({ simulador, db, authMiddleware }) {
   const router = express.Router();
@@ -34,6 +37,17 @@ function createEstufaRouter({ simulador, db, authMiddleware }) {
 
   router.post('/debug/botao-fisico', authMiddleware, async (req, res) => {
     const { tipo, valor } = req.body;
+    const validacao = validarPayloadBotaoFisico(req.body);
+
+    if (!validacao.valido) {
+      res.status(400).json({
+        sucesso: false,
+        erro: 'Payload invalido',
+        detalhes: validacao.erros,
+      });
+      return;
+    }
+
     simulador.simularBotaoFisico(tipo, valor);
     try {
       await db.salvarConfiguracaoSnapshot(simulador.lerCompleto());

@@ -8,6 +8,11 @@ const CAMPOS_PERMITIDOS = new Set([
   'comando',
 ]);
 
+const LIMITE_TEMPERATURA_MIN = 60;
+const LIMITE_TEMPERATURA_MAX = 200;
+const LIMITE_UMIDADE_MIN = 0;
+const LIMITE_UMIDADE_MAX = 100;
+
 function isObjetoPlano(valor) {
   return valor !== null && typeof valor === 'object' && !Array.isArray(valor);
 }
@@ -59,8 +64,13 @@ function validarPayloadSincronizacao(payload) {
   if (temTemperatura) {
     if (!isNumeroFinito(payload.temperaturaMeta)) {
       erros.push('Ajuste de temperatura deve ser numero.');
-    } else if (payload.temperaturaMeta < 0 || payload.temperaturaMeta > 999) {
-      erros.push('Ajuste de temperatura deve estar entre 0 e 999.');
+    } else if (
+      payload.temperaturaMeta < LIMITE_TEMPERATURA_MIN ||
+      payload.temperaturaMeta > LIMITE_TEMPERATURA_MAX
+    ) {
+      erros.push(
+        `Ajuste de temperatura deve estar entre ${LIMITE_TEMPERATURA_MIN} e ${LIMITE_TEMPERATURA_MAX}.`,
+      );
     }
     if (!isTimestampValido(payload.tempTimestamp)) {
       erros.push('tempTimestamp deve ser inteiro positivo.');
@@ -73,8 +83,13 @@ function validarPayloadSincronizacao(payload) {
   if (temUmidade) {
     if (!isNumeroFinito(payload.umidadeMeta)) {
       erros.push('Ajuste de umidade deve ser numero.');
-    } else if (payload.umidadeMeta < 0 || payload.umidadeMeta > 100) {
-      erros.push('Ajuste de umidade deve estar entre 0 e 100.');
+    } else if (
+      payload.umidadeMeta < LIMITE_UMIDADE_MIN ||
+      payload.umidadeMeta > LIMITE_UMIDADE_MAX
+    ) {
+      erros.push(
+        `Ajuste de umidade deve estar entre ${LIMITE_UMIDADE_MIN} e ${LIMITE_UMIDADE_MAX}.`,
+      );
     }
     if (!isTimestampValido(payload.umidTimestamp)) {
       erros.push('umidTimestamp deve ser inteiro positivo.');
@@ -97,6 +112,37 @@ function validarPayloadSincronizacao(payload) {
     temTemperatura || temUmidade || temModoSilencioso || ehComandoLegadoSilenciar;
   if (!temAlteracao && chaves.length > 0) {
     erros.push('Payload nao contem uma alteracao reconhecida.');
+  }
+
+  return {
+    valido: erros.length === 0,
+    erros,
+  };
+}
+
+function validarPayloadBotaoFisico(payload) {
+  const erros = [];
+
+  if (!isObjetoPlano(payload)) {
+    return {
+      valido: false,
+      erros: ['Payload deve ser um objeto JSON.'],
+    };
+  }
+
+  if (payload.tipo !== 'temp') {
+    erros.push('tipo deve ser "temp".');
+  }
+
+  if (!isNumeroFinito(payload.valor)) {
+    erros.push('valor deve ser numero.');
+  } else if (
+    payload.valor < LIMITE_TEMPERATURA_MIN ||
+    payload.valor > LIMITE_TEMPERATURA_MAX
+  ) {
+    erros.push(
+      `valor deve estar entre ${LIMITE_TEMPERATURA_MIN} e ${LIMITE_TEMPERATURA_MAX}.`,
+    );
   }
 
   return {
@@ -146,5 +192,6 @@ function aplicarSincronizacao(configLocal, payload, options = {}) {
 
 module.exports = {
   aplicarSincronizacao,
+  validarPayloadBotaoFisico,
   validarPayloadSincronizacao,
 };
