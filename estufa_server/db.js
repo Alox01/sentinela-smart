@@ -13,7 +13,13 @@ const pool = Pool && connectionString
       ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
     })
   : null;
+const {
+  criarRegistroLeitura,
+  deveSalvarLeitura,
+  statusParaLeituraPersistida,
+} = require('./storage_policy');
 
+const ultimasLeiturasSalvas = new Map();
 function estaHabilitado() {
   return Boolean(pool);
 }
@@ -136,8 +142,23 @@ async function salvarSnapshot(dados) {
   const { status, config } = dados;
   const dispositivo = await buscarOuCriarDispositivo(status);
   await salvarConfiguracao(dispositivo.id, config);
-  await salvarLeitura(dispositivo.id, status);
-  return true;
+
+  const agoraMs = Date.now();
+  const decisao = deveSalvarLeitura({
+    ultimaLeitura: ultimasLeiturasSalvas.get(dispositivo.id),
+    status,
+    config,
+    agoraMs,
+  });
+
+  if (!decisao.salvar) {
+    return { salvo: false, motivo: decisao.motivo };
+  }
+
+  const leituraPersistida = statusParaLeituraPersistida(status);
+  await salvarLeitura(dispositivo.id, leituraPersistida);
+  ultimasLeiturasSalvas.set(dispositivo.id, criarRegistroLeitura(status, config, agoraMs));
+  return { salvo: true, motivo: decisao.motivo };
 }
 
 async function salvarConfiguracaoSnapshot(dados) {
