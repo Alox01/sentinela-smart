@@ -35,5 +35,7 @@ test('converte leitura do simulador para formato simples do ESP32', () => {
     ledControleLigado: true,
     leituraOk: true,
     ip: 'localhost',
+    tokenConfigurado: false,
+    versaoFirmware: 'simulador-http-v1',
   });
 });

@@ -1,4 +1,4 @@
-function criarPayloadEsp32(dadosCompletos, origem = 'simulador') {
+function criarPayloadEsp32(dadosCompletos, origem = 'simulador', opcoes = {}) {
   const { status, config } = dadosCompletos;
 
   return {
@@ -15,6 +15,8 @@ function criarPayloadEsp32(dadosCompletos, origem = 'simulador') {
     ledControleLigado: Boolean(status.aquecedorLigado),
     leituraOk: true,
     ip: origem,
+    tokenConfigurado: Boolean(opcoes.tokenConfigurado),
+    versaoFirmware: opcoes.versaoFirmware ?? 'simulador-http-v1',
   };
 }
 

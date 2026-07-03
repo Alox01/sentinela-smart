@@ -31,6 +31,7 @@ app.use(
     simulador,
     db,
     authMiddleware,
+    tokenConfigurado: Boolean(API_TOKEN.trim()),
   }),
 );
 

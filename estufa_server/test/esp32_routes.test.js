@@ -33,6 +33,7 @@ function criarAppTeste() {
       simulador,
       db: {},
       authMiddleware: (_req, _res, next) => next(),
+      tokenConfigurado: true,
     }),
   );
 
@@ -66,6 +67,8 @@ test('rota raiz entrega payload compativel com ESP32', async () => {
   assert.equal(payload.umidadeAlvo, 65);
   assert.equal(payload.alertaTemperatura, true);
   assert.equal(payload.ledControleLigado, true);
+  assert.equal(payload.tokenConfigurado, true);
+  assert.equal(payload.versaoFirmware, 'simulador-http-v1');
 });
 
 test('rota /dados entrega payload compativel com ESP32', async () => {
