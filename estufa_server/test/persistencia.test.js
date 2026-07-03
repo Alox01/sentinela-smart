@@ -19,47 +19,48 @@ function criarBufferFake(registrosIniciais = []) {
 describe('reprocessarBuffer', () => {
   it('nao faz nada quando o buffer esta vazio', async () => {
     const buffer = criarBufferFake([]);
-    const db = {
-      async persistirLeituraBufferizada() {
+    const enviadas = await reprocessarBuffer({
+      buffer,
+      enviar() {
         throw new Error('nao deve ser chamado');
       },
-    };
-
-    const enviadas = await reprocessarBuffer({ db, buffer });
+    });
     assert.equal(enviadas, 0);
   });
 
   it('reenvia todas as leituras em ordem e esvazia o buffer', async () => {
     const buffer = criarBufferFake([{ n: 1 }, { n: 2 }, { n: 3 }]);
     const recebidas = [];
-    const db = {
-      async persistirLeituraBufferizada(registro) {
-        recebidas.push(registro.n);
-        return true;
-      },
-    };
 
-    const enviadas = await reprocessarBuffer({ db, buffer });
+    const enviadas = await reprocessarBuffer({
+      buffer,
+      async enviar(registro) {
+        recebidas.push(registro.n);
+      },
+    });
 
     assert.equal(enviadas, 3);
     assert.deepEqual(recebidas, [1, 2, 3]);
     assert.deepEqual(buffer.registros, []);
   });
 
-  it('mantem no buffer as leituras ainda nao enviadas quando a nuvem cai no meio', async () => {
+  it('mantem no buffer as leituras ainda nao enviadas quando o destino cai no meio', async () => {
     const buffer = criarBufferFake([{ n: 1 }, { n: 2 }, { n: 3 }]);
     let chamadas = 0;
-    const db = {
-      async persistirLeituraBufferizada() {
-        chamadas += 1;
-        if (chamadas === 2) {
-          throw new Error('nuvem indisponivel');
-        }
-        return true;
-      },
-    };
 
-    await assert.rejects(() => reprocessarBuffer({ db, buffer }), /nuvem indisponivel/);
+    await assert.rejects(
+      () =>
+        reprocessarBuffer({
+          buffer,
+          async enviar() {
+            chamadas += 1;
+            if (chamadas === 2) {
+              throw new Error('destino indisponivel');
+            }
+          },
+        }),
+      /destino indisponivel/,
+    );
 
     // Apenas a primeira foi confirmada; as duas seguintes permanecem no buffer.
     assert.deepEqual(buffer.registros, [{ n: 2 }, { n: 3 }]);

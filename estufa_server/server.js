@@ -2,6 +2,7 @@ const { carregarEnvLocal } = require('./env');
 
 carregarEnvLocal();
 
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
@@ -11,6 +12,7 @@ const { createAuthMiddleware } = require('./auth');
 const { createEstufaRouter } = require('./routes/estufa_routes');
 const { createCorsOptions } = require('./security');
 const { criarBufferLeituras } = require('./leitura_buffer');
+const { iniciarPushLeituras } = require('./esp32_virtual');
 const {
   iniciarPersistenciaPeriodica,
   lerIntervaloPersistencia,
@@ -23,10 +25,19 @@ const PORT = Number(process.env.PORT) || 3000;
 const PERSIST_READINGS_INTERVAL_MS = lerIntervaloPersistencia(
   process.env.PERSIST_READINGS_INTERVAL_MS,
 );
+// Modo "ESP32 virtual": quando PUSH_TARGET_URL esta configurado, este processo
+// deixa de depender do polling interno e passa a empurrar leituras por HTTP
+// para o servidor de nuvem, como o aparelho fisico fara.
+const PUSH_TARGET_URL = (process.env.PUSH_TARGET_URL ?? '').trim();
+const PUSH_TOKEN = process.env.PUSH_TOKEN ?? API_TOKEN;
+const PUSH_INTERVAL_MS = lerIntervaloPersistencia(process.env.PUSH_INTERVAL_MS);
 const authMiddleware = createAuthMiddleware(API_TOKEN);
 const bufferLeituras = criarBufferLeituras(
   process.env.LEITURA_BUFFER_PATH ? { caminho: process.env.LEITURA_BUFFER_PATH } : {},
 );
+const bufferPush = criarBufferLeituras({
+  caminho: process.env.PUSH_BUFFER_PATH || path.join(__dirname, '.buffer_push.jsonl'),
+});
 
 app.use(express.json());
 app.use(cors(createCorsOptions(ALLOWED_ORIGINS)));
@@ -59,6 +70,15 @@ if (db.estaHabilitado()) {
 } else {
   console.log(`Persistencia PostgreSQL desabilitada: ${db.motivoDesabilitado()}`);
 }
+if (PUSH_TARGET_URL) {
+  console.log(
+    `ESP32 virtual: empurrando leituras para ${PUSH_TARGET_URL} a cada ${Math.round(
+      PUSH_INTERVAL_MS / 1000,
+    )}s.`,
+  );
+} else {
+  console.log('ESP32 virtual (push HTTP) desabilitado: PUSH_TARGET_URL nao configurada.');
+}
 
 async function iniciarServidor() {
   if (db.estaHabilitado()) {
@@ -84,6 +104,16 @@ async function iniciarServidor() {
     intervaloMs: PERSIST_READINGS_INTERVAL_MS,
     buffer: bufferLeituras,
   });
+
+  if (PUSH_TARGET_URL) {
+    iniciarPushLeituras({
+      lerStatus: () => simulador.lerCompleto().status,
+      alvoUrl: PUSH_TARGET_URL,
+      token: PUSH_TOKEN,
+      intervaloMs: PUSH_INTERVAL_MS,
+      buffer: bufferPush,
+    });
+  }
 }
 
 iniciarServidor();

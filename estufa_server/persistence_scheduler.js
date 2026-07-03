@@ -31,7 +31,10 @@ function iniciarPersistenciaPeriodica({
     // 1. Tenta reenviar leituras que ficaram no buffer durante uma queda da nuvem.
     if (buffer) {
       try {
-        const reenviadas = await reprocessarBuffer({ db, buffer });
+        const reenviadas = await reprocessarBuffer({
+          buffer,
+          enviar: (registro) => db.persistirLeituraBufferizada(registro),
+        });
         if (reenviadas > 0) {
           logger.log?.(`Buffer offline reenviado: ${reenviadas} leitura(s).`);
         }

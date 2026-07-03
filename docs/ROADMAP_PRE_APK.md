@@ -87,6 +87,9 @@ Deixar o simulador e o servidor o mais proximos possivel do comportamento do ESP
 
 Assim, quando o ESP32 fisico estiver disponivel, a adaptacao do firmware deve exigir poucas mudancas no app.
 
+O modo "ESP32 virtual" (push HTTP via `POST /leitura`, com buffer offline
+proprio) ja esta implementado. Detalhes e topologia: `docs/ESP32_VIRTUAL.md`.
+
 ### 3. Banco de dados
 
 O banco deve guardar apenas informacoes uteis para relatorio, auditoria e sincronizacao. Evitar salvar leitura a cada segundo sem necessidade.
