@@ -36,8 +36,8 @@ Representa a leitura atual do dispositivo no formato completo usado pelo simulad
   "ventiladorLigado": false,
   "aquecedorLigado": true,
   "umidificadorLigado": false,
-  "faseAtual": "1. Amarelacao",
-  "aviso": "Estavel",
+  "faseAtual": "1. Amarelação",
+  "aviso": "Estável",
   "corStatus": "green"
 }
 ```
@@ -62,7 +62,7 @@ Campos recomendados:
 
 ### ConfiguracaoAlvo
 
-Representa os ajustes desejados pelo usuário ou pelo hardware. Os nomes dos campos ainda usam `Meta` porque fazem parte do contrato interno já implementado, mas na interface do app o termo exibido ao usuário é “ajuste”.
+Representa os ajustes desejados pelo usuário ou pelo hardware. Os nomes dos campos ainda usam `Meta` porque fazem parte do contrato interno já implementado, mas na interface do app o termo exibido ao usuário é "ajuste".
 
 ```json
 {
@@ -139,8 +139,8 @@ Retorna o estado atual da estufa e a configuração atual no formato completo.
     "umidadeAtual": 80.0,
     "alertaIncendio": false,
     "corStatus": "green",
-    "aviso": "Estavel",
-    "faseAtual": "1. Amarelacao",
+    "aviso": "Estável",
+    "faseAtual": "1. Amarelação",
     "aquecedorLigado": true,
     "ventiladorLigado": false,
     "umidificadorLigado": false
@@ -224,9 +224,9 @@ Deve ser usada quando o payload for inválido.
 ```json
 {
   "sucesso": false,
-  "erro": "Payload invalido",
+  "erro": "Payload inválido",
   "detalhes": [
-    "temperaturaMeta deve ser numero",
+    "temperaturaMeta deve ser número",
     "tempTimestamp deve ser inteiro positivo"
   ]
 }
