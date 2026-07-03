@@ -89,6 +89,8 @@ Assim, quando o ESP32 fisico estiver disponivel, a adaptacao do firmware deve ex
 
 O banco deve guardar apenas informacoes uteis para relatorio, auditoria e sincronizacao. Evitar salvar leitura a cada segundo sem necessidade.
 
+Detalhamento tecnico: `docs/PLANO_BANCO_DADOS.md`.
+
 Itens planejados:
 
 - Estufas cadastradas: nome, endereco/IP, modo de conexao, ultimo status conhecido e datas basicas.
