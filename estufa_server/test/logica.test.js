@@ -29,7 +29,7 @@ test('dispara alarme de processo quando temperatura foge da tolerancia', () => {
   assert.equal(resultado.alertaIncendio, true);
   assert.equal(resultado.perigoChama, false);
   assert.equal(resultado.riscoIncendio, false);
-  assert.match(resultado.aviso, /Temp Alta/i);
+  assert.match(resultado.aviso, /Temperatura Alta/i);
 });
 
 test('respeita silencio recente e desliga sirene', () => {
@@ -39,3 +39,4 @@ test('respeita silencio recente e desliga sirene', () => {
   assert.equal(resultado.alarmeAtivo, false);
   assert.equal(resultado.alertaIncendio, false);
 });
+

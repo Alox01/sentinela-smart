@@ -1,4 +1,4 @@
-// --- LOGICA DE NEGOCIO E SEGURANCA ---
+﻿// --- LOGICA DE NEGOCIO E SEGURANCA ---
 
 // --- CONFIGURACOES DE TOLERANCIA ---
 const TOLERANCIA_TEMP = 2.0; // Margem de erro de 2 F
@@ -63,17 +63,17 @@ module.exports = {
 
                 if (erroTemp > 0) {
                     corStatus = "orange";
-                    aviso = `Temp Alta (+${erroTemp.toFixed(0)}F)`;
+                    aviso = "Temperatura Alta";
                 } else {
                     corStatus = "purple";
-                    aviso = `Temp Baixa (${erroTemp.toFixed(0)}F)`;
+                    aviso = "Temperatura Baixa";
                 }
             }
 
             if (Math.abs(erroUmid) > TOLERANCIA_UMID) {
                 let msgUmid = "";
-                if (erroUmid > 0) msgUmid = `Umidade Alta (+${erroUmid.toFixed(0)}%)`;
-                else msgUmid = `Umidade Baixa (${erroUmid.toFixed(0)}%)`;
+                if (erroUmid > 0) msgUmid = "Umidade Alta";
+                else msgUmid = "Umidade Baixa";
 
                 if (aviso !== "") aviso += ` | ${msgUmid}`;
                 else aviso = msgUmid;
