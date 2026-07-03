@@ -51,6 +51,14 @@ Se o alvo estiver inacessivel (queda de internet), as leituras vao para um
 buffer local (`.buffer_push.jsonl`) e sao reenviadas em ordem quando a conexao
 volta — o mesmo comportamento que o ESP32 real precisaria ter no campo.
 
+### Evitando gravacao duplicada
+
+Quando `PUSH_TARGET_URL` esta ligado, o processo entra em "modo aparelho" e
+**desliga automaticamente a persistencia local** (o agendador que grava direto
+no banco). Assim, mesmo que o `.env` do aparelho ainda tenha um `DATABASE_URL`,
+quem grava o historico e a nuvem (via `POST /leitura`), sem escrita duplicada.
+Para forcar o contrario, use `PERSISTIR_LOCAL=true` ou `PERSISTIR_LOCAL=false`.
+
 ## Testar os dois papeis na mesma maquina
 
 1. **Servidor de nuvem** (com banco), na porta 3000:

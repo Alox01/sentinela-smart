@@ -31,6 +31,13 @@ const PERSIST_READINGS_INTERVAL_MS = lerIntervaloPersistencia(
 const PUSH_TARGET_URL = (process.env.PUSH_TARGET_URL ?? '').trim();
 const PUSH_TOKEN = process.env.PUSH_TOKEN ?? API_TOKEN;
 const PUSH_INTERVAL_MS = lerIntervaloPersistencia(process.env.PUSH_INTERVAL_MS);
+// Persistencia local (agendador que grava direto no banco). Por padrao fica
+// ligada quando ha banco, MAS desliga sozinha em modo aparelho (push ligado),
+// para nao gravar duplicado ja que a nuvem persiste o que recebe. Pode ser
+// forcada com PERSISTIR_LOCAL=true/false.
+const PERSISTIR_LOCAL = process.env.PERSISTIR_LOCAL != null
+  ? process.env.PERSISTIR_LOCAL.trim().toLowerCase() !== 'false'
+  : !PUSH_TARGET_URL;
 const authMiddleware = createAuthMiddleware(API_TOKEN);
 const bufferLeituras = criarBufferLeituras(
   process.env.LEITURA_BUFFER_PATH ? { caminho: process.env.LEITURA_BUFFER_PATH } : {},
@@ -63,10 +70,16 @@ if (ALLOWED_ORIGINS.trim()) {
   console.log('CORS liberado para desenvolvimento local.');
 }
 if (db.estaHabilitado()) {
-  console.log('Persistencia PostgreSQL habilitada.');
-  console.log(
-    `Leituras periodicas a cada ${Math.round(PERSIST_READINGS_INTERVAL_MS / 1000)}s.`,
-  );
+  console.log('Banco PostgreSQL conectado.');
+  if (PERSISTIR_LOCAL) {
+    console.log(
+      `Persistencia local ligada: leituras periodicas a cada ${Math.round(
+        PERSIST_READINGS_INTERVAL_MS / 1000,
+      )}s.`,
+    );
+  } else {
+    console.log('Persistencia local desligada (modo aparelho): a nuvem grava via /leitura.');
+  }
 } else {
   console.log(`Persistencia PostgreSQL desabilitada: ${db.motivoDesabilitado()}`);
 }
@@ -98,12 +111,14 @@ async function iniciarServidor() {
     console.log(`Teste de leitura: GET http://localhost:${PORT}/status`);
   });
 
-  iniciarPersistenciaPeriodica({
-    db,
-    simulador,
-    intervaloMs: PERSIST_READINGS_INTERVAL_MS,
-    buffer: bufferLeituras,
-  });
+  if (PERSISTIR_LOCAL) {
+    iniciarPersistenciaPeriodica({
+      db,
+      simulador,
+      intervaloMs: PERSIST_READINGS_INTERVAL_MS,
+      buffer: bufferLeituras,
+    });
+  }
 
   if (PUSH_TARGET_URL) {
     iniciarPushLeituras({
