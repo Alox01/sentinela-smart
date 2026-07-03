@@ -1,0 +1,23 @@
+# Blueprint de deploy do servidor de nuvem no Render.
+# Sobe apenas o estufa_server (papel de nuvem/persistencia). O "aparelho"
+# (ESP32 real ou o ESP32 virtual/simulador) continua rodando na rede local,
+# para preservar a demonstracao de Edge Computing.
+#
+# Os valores marcados com "sync: false" NAO ficam no Git: voce os preenche no
+# painel do Render ao criar o Blueprint.
+services:
+  - type: web
+    name: estufa-server
+    runtime: docker
+    rootDir: estufa_server
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /status
+    envVars:
+      # String de conexao do Supabase. Use o "Session pooler" (IPv4),
+      # nao a "Direct connection" (IPv6, que o Render nao alcanca).
+      - key: DATABASE_URL
+        sync: false
+      # Mesma chave de acesso usada no app e no ESP32 virtual.
+      - key: ESTUFA_API_TOKEN
+        sync: false
