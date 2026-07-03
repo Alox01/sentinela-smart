@@ -1,4 +1,4 @@
-﻿# Roadmap pre-APK
+# Roadmap pre-APK
 
 Este documento guarda o plano de trabalho antes de gerar uma versao APK de teste do Sentinela Smart.
 
@@ -113,6 +113,8 @@ Revisar o servidor para virar a ponte oficial da arquitetura:
 ### 5. Configuracao de rede do ESP32
 
 O ESP32 deve ter mais de uma forma de ser encontrado na rede local, porque em ambiente rural pode haver queda de energia, troca de roteador ou falta de acesso administrativo ao roteador.
+
+Detalhamento tecnico: `docs/CONFIGURACAO_ESP32.md`.
 
 Estratégia planejada:
 
