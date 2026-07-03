@@ -232,6 +232,64 @@ Deve ser usada quando o payload for inválido.
 }
 ```
 
+### POST /leitura
+
+Rota de ingestão de telemetria. Serve para o hardware (ou uma ponte) enviar
+uma leitura para ser persistida no histórico em nuvem. Enquanto o ESP32 físico
+não existe, o simulador continua alimentando o histórico pelo agendador
+periódico; esta rota deixa a arquitetura pronta para o aparelho real sem
+depender desse polling.
+
+Exige token quando o servidor estiver configurado com `ESTUFA_API_TOKEN`.
+
+#### Body
+
+```json
+{
+  "idHardware": "ESP32_CAMPO_01",
+  "timestampLeitura": 1710000000000,
+  "temperaturaAtual": 142.5,
+  "umidadeAtual": 38.0,
+  "alarmeAtivo": false,
+  "faseAtual": "3. Secagem da lamina",
+  "fonte": "hardware"
+}
+```
+
+Campos mínimos: `temperaturaAtual` (number) e `umidadeAtual` (number, 0 a 100).
+`fonte` é opcional e assume `hardware` quando ausente. Um objeto `config`
+opcional pode acompanhar a leitura para atualizar os ajustes do dispositivo.
+
+#### Respostas
+
+- Gravou na nuvem:
+
+```json
+{ "sucesso": true, "persistido": true }
+```
+
+- Nuvem indisponível no momento (a leitura foi guardada no buffer offline local
+  e será reenviada quando a conexão voltar):
+
+```json
+{ "sucesso": true, "persistido": false, "motivo": "bufferizado" }
+```
+
+- Persistência desabilitada (servidor sem `DATABASE_URL`, modo demonstração):
+
+```json
+{ "sucesso": true, "persistido": false, "motivo": "persistencia_desabilitada" }
+```
+
+- Payload inválido: `400` no mesmo formato de `POST /sincronizar`.
+
+#### Buffer offline de leituras
+
+Quando o banco em nuvem está configurado mas fica temporariamente inacessível,
+as leituras são gravadas em um arquivo local (`.buffer_leituras.jsonl`) e
+reenviadas em ordem cronológica assim que a conexão volta. É o espelho, para o
+lado das leituras, da fila offline que o app já mantém para os comandos.
+
 ## Validações recomendadas
 
 - `temperaturaMeta`: number entre 60 e 200.

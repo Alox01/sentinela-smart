@@ -10,6 +10,7 @@ const db = require('./db');
 const { createAuthMiddleware } = require('./auth');
 const { createEstufaRouter } = require('./routes/estufa_routes');
 const { createCorsOptions } = require('./security');
+const { criarBufferLeituras } = require('./leitura_buffer');
 const {
   iniciarPersistenciaPeriodica,
   lerIntervaloPersistencia,
@@ -23,6 +24,9 @@ const PERSIST_READINGS_INTERVAL_MS = lerIntervaloPersistencia(
   process.env.PERSIST_READINGS_INTERVAL_MS,
 );
 const authMiddleware = createAuthMiddleware(API_TOKEN);
+const bufferLeituras = criarBufferLeituras(
+  process.env.LEITURA_BUFFER_PATH ? { caminho: process.env.LEITURA_BUFFER_PATH } : {},
+);
 
 app.use(express.json());
 app.use(cors(createCorsOptions(ALLOWED_ORIGINS)));
@@ -32,6 +36,7 @@ app.use(
     db,
     authMiddleware,
     tokenConfigurado: Boolean(API_TOKEN.trim()),
+    buffer: bufferLeituras,
   }),
 );
 
@@ -77,6 +82,7 @@ async function iniciarServidor() {
     db,
     simulador,
     intervaloMs: PERSIST_READINGS_INTERVAL_MS,
+    buffer: bufferLeituras,
   });
 }
 

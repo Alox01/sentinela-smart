@@ -2,11 +2,18 @@ const express = require('express');
 
 const {
   validarPayloadBotaoFisico,
+  validarPayloadLeitura,
   validarPayloadSincronizacao,
 } = require('../sync');
 const { criarPayloadEsp32 } = require('../esp32_payload');
 
-function createEstufaRouter({ simulador, db, authMiddleware, tokenConfigurado = false }) {
+function createEstufaRouter({
+  simulador,
+  db,
+  authMiddleware,
+  tokenConfigurado = false,
+  buffer = null,
+}) {
   const router = express.Router();
 
   router.get('/status', async (_req, res) => {
@@ -45,6 +52,58 @@ function createEstufaRouter({ simulador, db, authMiddleware, tokenConfigurado = 
       console.error('Falha ao salvar comando no banco:', error.message);
     }
     res.json(resultado);
+  });
+
+  // Ingestao de telemetria vinda do hardware (ou de outra ponte). Persiste na
+  // nuvem quando disponivel; se a nuvem estiver fora, guarda no buffer offline
+  // para reenvio posterior. Assim a arquitetura fica pronta para o ESP32 real
+  // sem depender do polling do simulador.
+  router.post('/leitura', authMiddleware, async (req, res) => {
+    const status = { ...req.body };
+    delete status.config;
+    const validacao = validarPayloadLeitura(status);
+
+    if (!validacao.valido) {
+      res.status(400).json({
+        sucesso: false,
+        erro: 'Payload invalido',
+        detalhes: validacao.erros,
+      });
+      return;
+    }
+
+    status.fonte = status.fonte || 'hardware';
+    const dados = { status, config: req.body.config };
+
+    if (!db.estaHabilitado()) {
+      res.json({ sucesso: true, persistido: false, motivo: 'persistencia_desabilitada' });
+      return;
+    }
+
+    try {
+      await db.persistirLeituraBufferizada(dados);
+      res.json({ sucesso: true, persistido: true });
+    } catch (error) {
+      if (!buffer) {
+        res.status(503).json({
+          sucesso: false,
+          erro: 'Persistencia indisponivel',
+          detalhe: error.message,
+        });
+        return;
+      }
+
+      try {
+        await buffer.adicionar(dados);
+        res.json({ sucesso: true, persistido: false, motivo: 'bufferizado' });
+      } catch (erroBuffer) {
+        res.status(500).json({
+          sucesso: false,
+          erro: 'Falha ao guardar leitura no buffer',
+          detalhe: erroBuffer.message,
+        });
+      }
+    }
   });
 
   router.post('/debug/botao-fisico', authMiddleware, async (req, res) => {

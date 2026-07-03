@@ -10,6 +10,8 @@ de alarme.
 - `GET /` e `GET /dados` continuam liberados para leitura no formato simples compatível com ESP32.
 - `POST /sincronizar` exige token quando o servidor estiver configurado com
   `ESTUFA_API_TOKEN`.
+- `POST /leitura` (ingestão de telemetria do hardware) exige token quando
+  configurado.
 - `POST /debug/botao-fisico` também exige token quando configurado.
 
 Se `ESTUFA_API_TOKEN` não estiver configurado, o servidor roda em modo de

@@ -156,13 +156,13 @@ async function salvarLeitura(dispositivoId, status) {
       status.timestampLeitura,
       status.temperaturaAtual,
       status.umidadeAtual,
-      status.alarmeAtivo ?? status.alertaIncendio,
+      status.alarmeAtivo ?? status.alertaIncendio ?? false,
       status.aviso || '',
       status.corStatus || 'green',
       status.faseAtual || '',
-      status.temEnergia,
-      status.temInternet,
-      status.sinalWifi,
+      status.temEnergia ?? null,
+      status.temInternet ?? null,
+      status.sinalWifi ?? null,
       status.aquecedorLigado,
       status.ventiladorLigado,
       status.umidificadorLigado,
@@ -194,6 +194,27 @@ async function salvarSnapshot(dados) {
   await salvarLeitura(dispositivo.id, leituraPersistida);
   ultimasLeiturasSalvas.set(dispositivo.id, criarRegistroLeitura(status, config, agoraMs));
   return { salvo: true, motivo: decisao.motivo };
+}
+
+// Insere uma leitura ja decidida (sem passar pela politica de deduplicacao),
+// usada para reenviar leituras do buffer offline e para a ingestao direta do
+// hardware via POST /leitura. A config e opcional porque o hardware pode
+// enviar apenas a telemetria. Lanca se a nuvem estiver indisponivel, para que
+// o chamador possa guardar a leitura no buffer.
+async function persistirLeituraBufferizada(dados) {
+  if (!pool) {
+    throw new Error('Persistencia desabilitada: banco nao configurado.');
+  }
+
+  const { status, config } = dados;
+  const dispositivo = await buscarOuCriarDispositivo(status);
+  if (config) {
+    await salvarConfiguracao(dispositivo.id, config);
+  }
+
+  const leituraPersistida = statusParaLeituraPersistida(status);
+  await salvarLeitura(dispositivo.id, leituraPersistida);
+  return true;
 }
 
 async function salvarConfiguracaoSnapshot(dados) {
@@ -331,6 +352,7 @@ module.exports = {
   carregarUltimaLeitura,
   estaHabilitado,
   motivoDesabilitado,
+  persistirLeituraBufferizada,
   salvarComandoSync,
   salvarConfiguracaoSnapshot,
   salvarSnapshot,

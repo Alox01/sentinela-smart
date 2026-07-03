@@ -4,6 +4,9 @@
 .env
 .env.*
 
+# Buffer offline de leituras (gerado em runtime)
+.buffer_leituras.jsonl
+
 # Dependencies
 node_modules/
 

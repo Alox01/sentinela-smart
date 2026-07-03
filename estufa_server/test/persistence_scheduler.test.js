@@ -84,6 +84,84 @@ test('salva imediatamente e agenda novas leituras quando banco esta habilitado',
   assert.equal(logger.errors.length, 0);
 });
 
+test('guarda leitura no buffer quando a nuvem falha', async () => {
+  const bufferizadas = [];
+  const buffer = {
+    async listar() {
+      return [];
+    },
+    async remover() {},
+    async adicionar(dados) {
+      bufferizadas.push(dados);
+    },
+  };
+  let callbackAgendado = null;
+
+  iniciarPersistenciaPeriodica({
+    db: {
+      estaHabilitado: () => true,
+      async salvarSnapshot() {
+        throw new Error('nuvem fora');
+      },
+    },
+    simulador: { lerCompleto: () => ({ status: 'leitura-atual' }) },
+    setIntervalFn(callback) {
+      callbackAgendado = callback;
+      return { unref() {} };
+    },
+    logger: { log() {}, error() {} },
+    buffer,
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(bufferizadas.length, 1);
+  assert.deepEqual(bufferizadas[0], { status: 'leitura-atual' });
+
+  await callbackAgendado();
+  assert.equal(bufferizadas.length, 2);
+});
+
+test('reenvia o buffer antes de salvar quando a nuvem volta', async () => {
+  const pendentes = [{ status: 'antiga-1' }, { status: 'antiga-2' }];
+  const reenviadas = [];
+  let removidas = 0;
+  const buffer = {
+    async listar() {
+      return [...pendentes];
+    },
+    async remover(qtd) {
+      removidas += qtd;
+      pendentes.splice(0, qtd);
+    },
+    async adicionar() {
+      throw new Error('nao deveria bufferizar');
+    },
+  };
+
+  iniciarPersistenciaPeriodica({
+    db: {
+      estaHabilitado: () => true,
+      async persistirLeituraBufferizada(registro) {
+        reenviadas.push(registro.status);
+        return true;
+      },
+      async salvarSnapshot() {
+        return { salvo: true, motivo: 'intervalo' };
+      },
+    },
+    simulador: { lerCompleto: () => ({ status: 'nova' }) },
+    setIntervalFn: () => ({ unref() {} }),
+    logger: { log() {}, error() {} },
+    buffer,
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(reenviadas, ['antiga-1', 'antiga-2']);
+  assert.equal(removidas, 2);
+});
+
 test('registra erro sem derrubar o agendador', async () => {
   const logger = {
     errors: [],

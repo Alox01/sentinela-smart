@@ -151,6 +151,47 @@ function validarPayloadBotaoFisico(payload) {
   };
 }
 
+const FONTES_LEITURA_VALIDAS = new Set(['hardware', 'simulador', 'manual']);
+
+// Valida uma leitura de telemetria recebida pela rota de ingestao (POST /leitura).
+// Exige apenas os campos minimos; os demais sao opcionais para nao travar
+// prototipos de hardware que enviem menos informacao.
+function validarPayloadLeitura(payload) {
+  const erros = [];
+
+  if (!isObjetoPlano(payload)) {
+    return {
+      valido: false,
+      erros: ['Payload deve ser um objeto JSON.'],
+    };
+  }
+
+  if (!isNumeroFinito(payload.temperaturaAtual)) {
+    erros.push('temperaturaAtual deve ser numero.');
+  }
+  if (!isNumeroFinito(payload.umidadeAtual)) {
+    erros.push('umidadeAtual deve ser numero.');
+  } else if (payload.umidadeAtual < 0 || payload.umidadeAtual > 100) {
+    erros.push('umidadeAtual deve estar entre 0 e 100.');
+  }
+
+  if (
+    Object.hasOwn(payload, 'timestampLeitura')
+    && !isTimestampValido(payload.timestampLeitura)
+  ) {
+    erros.push('timestampLeitura deve ser inteiro positivo.');
+  }
+
+  if (Object.hasOwn(payload, 'fonte') && !FONTES_LEITURA_VALIDAS.has(payload.fonte)) {
+    erros.push('fonte deve ser hardware, simulador ou manual.');
+  }
+
+  return {
+    valido: erros.length === 0,
+    erros,
+  };
+}
+
 function aplicarSincronizacao(configLocal, payload, options = {}) {
   const now = options.now ?? Date.now;
   const alteracoesAplicadas = [];
@@ -193,5 +234,6 @@ function aplicarSincronizacao(configLocal, payload, options = {}) {
 module.exports = {
   aplicarSincronizacao,
   validarPayloadBotaoFisico,
+  validarPayloadLeitura,
   validarPayloadSincronizacao,
 };
