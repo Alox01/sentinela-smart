@@ -2,6 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class PainelControle extends StatelessWidget {
+  // Faixa aceita pelo servidor (ver validacao em estufa_server/sync.js).
+  // Manter alinhado para o ajuste nao ser recusado com 400.
+  static const double temperaturaMinima = 60;
+  static const double temperaturaMaxima = 200;
+
   final Function(double) onMudarTemperatura;
   final Function(double) onMudarUmidade;
   final double tempAjuste;
@@ -54,10 +59,22 @@ class PainelControle extends StatelessWidget {
                     "TEMPERATURA\n(${String.fromCharCode(176)}F)",
                     tempAjuste,
                     () {
-                      if (tempAjuste < 999) onMudarTemperatura(tempAjuste + 1);
+                      if (tempAjuste < temperaturaMaxima) {
+                        onMudarTemperatura(
+                          (tempAjuste + 1)
+                              .clamp(temperaturaMinima, temperaturaMaxima)
+                              .toDouble(),
+                        );
+                      }
                     },
                     () {
-                      if (tempAjuste > 0) onMudarTemperatura(tempAjuste - 1);
+                      if (tempAjuste > temperaturaMinima) {
+                        onMudarTemperatura(
+                          (tempAjuste - 1)
+                              .clamp(temperaturaMinima, temperaturaMaxima)
+                              .toDouble(),
+                        );
+                      }
                     },
                     Colors.orangeAccent,
                   ),

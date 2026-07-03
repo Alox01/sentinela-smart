@@ -83,6 +83,13 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível salvar a estufa. Tente novamente.'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
