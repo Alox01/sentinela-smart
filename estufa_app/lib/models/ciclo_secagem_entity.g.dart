@@ -16,10 +16,18 @@ extension GetCicloSecagemEntityCollection on Isar {
 
 const CicloSecagemEntitySchema = CollectionSchema(
   name: r'CicloSecagemEntity',
-  id: -1999433397147366,
+  id: -1999433397147366231,
   properties: {
-    r'fim': PropertySchema(id: 0, name: r'fim', type: IsarType.dateTime),
-    r'inicio': PropertySchema(id: 1, name: r'inicio', type: IsarType.dateTime),
+    r'fim': PropertySchema(
+      id: 0,
+      name: r'fim',
+      type: IsarType.dateTime,
+    ),
+    r'inicio': PropertySchema(
+      id: 1,
+      name: r'inicio',
+      type: IsarType.dateTime,
+    ),
     r'ipEstufa': PropertySchema(
       id: 2,
       name: r'ipEstufa',
@@ -35,7 +43,11 @@ const CicloSecagemEntitySchema = CollectionSchema(
       name: r'observacao',
       type: IsarType.string,
     ),
-    r'status': PropertySchema(id: 5, name: r'status', type: IsarType.string),
+    r'status': PropertySchema(
+      id: 5,
+      name: r'status',
+      type: IsarType.string,
+    )
   },
   estimateSize: _cicloSecagemEntityEstimateSize,
   serialize: _cicloSecagemEntitySerialize,
@@ -44,7 +56,7 @@ const CicloSecagemEntitySchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'ipEstufa': IndexSchema(
-      id: 6742162026097778,
+      id: 6742162026097778419,
       name: r'ipEstufa',
       unique: false,
       replace: false,
@@ -53,9 +65,9 @@ const CicloSecagemEntitySchema = CollectionSchema(
           name: r'ipEstufa',
           type: IndexType.hash,
           caseSensitive: true,
-        ),
+        )
       ],
-    ),
+    )
   },
   links: {},
   embeddedSchemas: {},
@@ -138,16 +150,12 @@ Id _cicloSecagemEntityGetId(CicloSecagemEntity object) {
 }
 
 List<IsarLinkBase<dynamic>> _cicloSecagemEntityGetLinks(
-  CicloSecagemEntity object,
-) {
+    CicloSecagemEntity object) {
   return [];
 }
 
 void _cicloSecagemEntityAttach(
-  IsarCollection<dynamic> col,
-  Id id,
-  CicloSecagemEntity object,
-) {
+    IsarCollection<dynamic> col, Id id, CicloSecagemEntity object) {
   object.id = id;
 }
 
@@ -163,14 +171,17 @@ extension CicloSecagemEntityQueryWhereSort
 extension CicloSecagemEntityQueryWhere
     on QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QWhereClause> {
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  idEqualTo(Id id) {
+      idEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  idNotEqualTo(Id id) {
+      idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -193,7 +204,7 @@ extension CicloSecagemEntityQueryWhere
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  idGreaterThan(Id id, {bool include = false}) {
+      idGreaterThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -202,7 +213,7 @@ extension CicloSecagemEntityQueryWhere
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  idLessThan(Id id, {bool include = false}) {
+      idLessThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -211,72 +222,63 @@ extension CicloSecagemEntityQueryWhere
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  idBetween(
+      idBetween(
     Id lowerId,
     Id upperId, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IdWhereClause.between(
-          lower: lowerId,
-          includeLower: includeLower,
-          upper: upperId,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  ipEstufaEqualTo(String ipEstufa) {
+      ipEstufaEqualTo(String ipEstufa) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IndexWhereClause.equalTo(indexName: r'ipEstufa', value: [ipEstufa]),
-      );
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'ipEstufa',
+        value: [ipEstufa],
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterWhereClause>
-  ipEstufaNotEqualTo(String ipEstufa) {
+      ipEstufaNotEqualTo(String ipEstufa) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [],
-                upper: [ipEstufa],
-                includeUpper: false,
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [ipEstufa],
-                includeLower: false,
-                upper: [],
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [],
+              upper: [ipEstufa],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [ipEstufa],
+              includeLower: false,
+              upper: [],
+            ));
       } else {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [ipEstufa],
-                includeLower: false,
-                upper: [],
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [],
-                upper: [ipEstufa],
-                includeUpper: false,
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [ipEstufa],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [],
+              upper: [ipEstufa],
+              includeUpper: false,
+            ));
       }
     });
   }
@@ -285,239 +287,239 @@ extension CicloSecagemEntityQueryWhere
 extension CicloSecagemEntityQueryFilter
     on QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QFilterCondition> {
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  fimIsNull() {
+      fimIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'fim'),
-      );
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'fim',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  fimIsNotNull() {
+      fimIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'fim'),
-      );
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'fim',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  fimEqualTo(DateTime? value) {
+      fimEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'fim', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'fim',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  fimGreaterThan(DateTime? value, {bool include = false}) {
+      fimGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'fim',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'fim',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  fimLessThan(DateTime? value, {bool include = false}) {
+      fimLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'fim',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'fim',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  fimBetween(
+      fimBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'fim',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'fim',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  idEqualTo(Id value) {
+      idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'id', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  idGreaterThan(Id value, {bool include = false}) {
+      idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'id',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  idLessThan(Id value, {bool include = false}) {
+      idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'id',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  idBetween(
+      idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'id',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  inicioEqualTo(DateTime value) {
+      inicioEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'inicio', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'inicio',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  inicioGreaterThan(DateTime value, {bool include = false}) {
+      inicioGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'inicio',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'inicio',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  inicioLessThan(DateTime value, {bool include = false}) {
+      inicioLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'inicio',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'inicio',
+        value: value,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  inicioBetween(
+      inicioBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'inicio',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'inicio',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaEqualTo(String value, {bool caseSensitive = true}) {
+      ipEstufaEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaGreaterThan(
+      ipEstufaGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaLessThan(
+      ipEstufaLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaBetween(
+      ipEstufaBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -525,140 +527,135 @@ extension CicloSecagemEntityQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'ipEstufa',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'ipEstufa',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaStartsWith(String value, {bool caseSensitive = true}) {
+      ipEstufaStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaEndsWith(String value, {bool caseSensitive = true}) {
+      ipEstufaEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaContains(String value, {bool caseSensitive = true}) {
+      ipEstufaContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaMatches(String pattern, {bool caseSensitive = true}) {
+      ipEstufaMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'ipEstufa',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'ipEstufa',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaIsEmpty() {
+      ipEstufaIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'ipEstufa', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ipEstufa',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  ipEstufaIsNotEmpty() {
+      ipEstufaIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'ipEstufa', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'ipEstufa',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaEqualTo(String value, {bool caseSensitive = true}) {
+      nomeEstufaEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'nomeEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'nomeEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaGreaterThan(
+      nomeEstufaGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'nomeEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'nomeEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaLessThan(
+      nomeEstufaLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'nomeEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'nomeEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaBetween(
+      nomeEstufaBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -666,140 +663,135 @@ extension CicloSecagemEntityQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'nomeEstufa',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'nomeEstufa',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaStartsWith(String value, {bool caseSensitive = true}) {
+      nomeEstufaStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'nomeEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'nomeEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaEndsWith(String value, {bool caseSensitive = true}) {
+      nomeEstufaEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'nomeEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'nomeEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaContains(String value, {bool caseSensitive = true}) {
+      nomeEstufaContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'nomeEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'nomeEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaMatches(String pattern, {bool caseSensitive = true}) {
+      nomeEstufaMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'nomeEstufa',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'nomeEstufa',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaIsEmpty() {
+      nomeEstufaIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'nomeEstufa', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'nomeEstufa',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  nomeEstufaIsNotEmpty() {
+      nomeEstufaIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'nomeEstufa', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'nomeEstufa',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoEqualTo(String value, {bool caseSensitive = true}) {
+      observacaoEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'observacao',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'observacao',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoGreaterThan(
+      observacaoGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'observacao',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'observacao',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoLessThan(
+      observacaoLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'observacao',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'observacao',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoBetween(
+      observacaoBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -807,140 +799,135 @@ extension CicloSecagemEntityQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'observacao',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'observacao',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoStartsWith(String value, {bool caseSensitive = true}) {
+      observacaoStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'observacao',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'observacao',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoEndsWith(String value, {bool caseSensitive = true}) {
+      observacaoEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'observacao',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'observacao',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoContains(String value, {bool caseSensitive = true}) {
+      observacaoContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'observacao',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'observacao',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoMatches(String pattern, {bool caseSensitive = true}) {
+      observacaoMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'observacao',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'observacao',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoIsEmpty() {
+      observacaoIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'observacao', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'observacao',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  observacaoIsNotEmpty() {
+      observacaoIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'observacao', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'observacao',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusEqualTo(String value, {bool caseSensitive = true}) {
+      statusEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'status',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'status',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusGreaterThan(
+      statusGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'status',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'status',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusLessThan(
+      statusLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'status',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'status',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusBetween(
+      statusBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -948,86 +935,84 @@ extension CicloSecagemEntityQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'status',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'status',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusStartsWith(String value, {bool caseSensitive = true}) {
+      statusStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'status',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'status',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusEndsWith(String value, {bool caseSensitive = true}) {
+      statusEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'status',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'status',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusContains(String value, {bool caseSensitive = true}) {
+      statusContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'status',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'status',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusMatches(String pattern, {bool caseSensitive = true}) {
+      statusMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'status',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'status',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusIsEmpty() {
+      statusIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'status', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'status',
+        value: '',
+      ));
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterFilterCondition>
-  statusIsNotEmpty() {
+      statusIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'status', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'status',
+        value: '',
+      ));
     });
   }
 }
@@ -1041,84 +1026,84 @@ extension CicloSecagemEntityQueryLinks
 extension CicloSecagemEntityQuerySortBy
     on QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QSortBy> {
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByFim() {
+      sortByFim() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'fim', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByFimDesc() {
+      sortByFimDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'fim', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByInicio() {
+      sortByInicio() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'inicio', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByInicioDesc() {
+      sortByInicioDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'inicio', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByIpEstufa() {
+      sortByIpEstufa() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByIpEstufaDesc() {
+      sortByIpEstufaDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByNomeEstufa() {
+      sortByNomeEstufa() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'nomeEstufa', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByNomeEstufaDesc() {
+      sortByNomeEstufaDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'nomeEstufa', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByObservacao() {
+      sortByObservacao() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'observacao', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByObservacaoDesc() {
+      sortByObservacaoDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'observacao', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByStatus() {
+      sortByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  sortByStatusDesc() {
+      sortByStatusDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.desc);
     });
@@ -1128,98 +1113,98 @@ extension CicloSecagemEntityQuerySortBy
 extension CicloSecagemEntityQuerySortThenBy
     on QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QSortThenBy> {
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByFim() {
+      thenByFim() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'fim', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByFimDesc() {
+      thenByFimDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'fim', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenById() {
+      thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByIdDesc() {
+      thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByInicio() {
+      thenByInicio() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'inicio', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByInicioDesc() {
+      thenByInicioDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'inicio', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByIpEstufa() {
+      thenByIpEstufa() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByIpEstufaDesc() {
+      thenByIpEstufaDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByNomeEstufa() {
+      thenByNomeEstufa() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'nomeEstufa', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByNomeEstufaDesc() {
+      thenByNomeEstufaDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'nomeEstufa', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByObservacao() {
+      thenByObservacao() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'observacao', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByObservacaoDesc() {
+      thenByObservacaoDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'observacao', Sort.desc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByStatus() {
+      thenByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.asc);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QAfterSortBy>
-  thenByStatusDesc() {
+      thenByStatusDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.desc);
     });
@@ -1229,42 +1214,42 @@ extension CicloSecagemEntityQuerySortThenBy
 extension CicloSecagemEntityQueryWhereDistinct
     on QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct> {
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct>
-  distinctByFim() {
+      distinctByFim() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'fim');
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct>
-  distinctByInicio() {
+      distinctByInicio() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'inicio');
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct>
-  distinctByIpEstufa({bool caseSensitive = true}) {
+      distinctByIpEstufa({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'ipEstufa', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct>
-  distinctByNomeEstufa({bool caseSensitive = true}) {
+      distinctByNomeEstufa({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'nomeEstufa', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct>
-  distinctByObservacao({bool caseSensitive = true}) {
+      distinctByObservacao({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'observacao', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<CicloSecagemEntity, CicloSecagemEntity, QDistinct>
-  distinctByStatus({bool caseSensitive = true}) {
+      distinctByStatus({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'status', caseSensitive: caseSensitive);
     });
@@ -1286,28 +1271,28 @@ extension CicloSecagemEntityQueryProperty
   }
 
   QueryBuilder<CicloSecagemEntity, DateTime, QQueryOperations>
-  inicioProperty() {
+      inicioProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'inicio');
     });
   }
 
   QueryBuilder<CicloSecagemEntity, String, QQueryOperations>
-  ipEstufaProperty() {
+      ipEstufaProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'ipEstufa');
     });
   }
 
   QueryBuilder<CicloSecagemEntity, String, QQueryOperations>
-  nomeEstufaProperty() {
+      nomeEstufaProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'nomeEstufa');
     });
   }
 
   QueryBuilder<CicloSecagemEntity, String, QQueryOperations>
-  observacaoProperty() {
+      observacaoProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'observacao');
     });

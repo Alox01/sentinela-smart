@@ -16,7 +16,7 @@ extension GetPendingSyncCommandEntityCollection on Isar {
 
 const PendingSyncCommandEntitySchema = CollectionSchema(
   name: r'PendingSyncCommandEntity',
-  id: 5044675138016500,
+  id: 5044675138016500576,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -32,7 +32,7 @@ const PendingSyncCommandEntitySchema = CollectionSchema(
       id: 2,
       name: r'payloadJson',
       type: IsarType.string,
-    ),
+    )
   },
   estimateSize: _pendingSyncCommandEntityEstimateSize,
   serialize: _pendingSyncCommandEntitySerialize,
@@ -41,7 +41,7 @@ const PendingSyncCommandEntitySchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'ipEstufa': IndexSchema(
-      id: 6742162026097778,
+      id: 6742162026097778419,
       name: r'ipEstufa',
       unique: false,
       replace: false,
@@ -50,9 +50,9 @@ const PendingSyncCommandEntitySchema = CollectionSchema(
           name: r'ipEstufa',
           type: IndexType.hash,
           caseSensitive: true,
-        ),
+        )
       ],
-    ),
+    )
   },
   links: {},
   embeddedSchemas: {},
@@ -121,58 +121,39 @@ Id _pendingSyncCommandEntityGetId(PendingSyncCommandEntity object) {
 }
 
 List<IsarLinkBase<dynamic>> _pendingSyncCommandEntityGetLinks(
-  PendingSyncCommandEntity object,
-) {
+    PendingSyncCommandEntity object) {
   return [];
 }
 
 void _pendingSyncCommandEntityAttach(
-  IsarCollection<dynamic> col,
-  Id id,
-  PendingSyncCommandEntity object,
-) {
+    IsarCollection<dynamic> col, Id id, PendingSyncCommandEntity object) {
   object.id = id;
 }
 
-extension PendingSyncCommandEntityQueryWhereSort
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QWhere
-        > {
+extension PendingSyncCommandEntityQueryWhereSort on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QWhere> {
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterWhere>
-  anyId() {
+      anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
     });
   }
 }
 
-extension PendingSyncCommandEntityQueryWhere
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QWhereClause
-        > {
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  idEqualTo(Id id) {
+extension PendingSyncCommandEntityQueryWhere on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QWhereClause> {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> idEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  idNotEqualTo(Id id) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -194,12 +175,8 @@ extension PendingSyncCommandEntityQueryWhere
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  idGreaterThan(Id id, {bool include = false}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> idGreaterThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -207,12 +184,8 @@ extension PendingSyncCommandEntityQueryWhere
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  idLessThan(Id id, {bool include = false}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> idLessThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -220,306 +193,231 @@ extension PendingSyncCommandEntityQueryWhere
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  idBetween(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> idBetween(
     Id lowerId,
     Id upperId, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IdWhereClause.between(
-          lower: lowerId,
-          includeLower: includeLower,
-          upper: upperId,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  ipEstufaEqualTo(String ipEstufa) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> ipEstufaEqualTo(String ipEstufa) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IndexWhereClause.equalTo(indexName: r'ipEstufa', value: [ipEstufa]),
-      );
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'ipEstufa',
+        value: [ipEstufa],
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterWhereClause
-  >
-  ipEstufaNotEqualTo(String ipEstufa) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterWhereClause> ipEstufaNotEqualTo(String ipEstufa) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [],
-                upper: [ipEstufa],
-                includeUpper: false,
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [ipEstufa],
-                includeLower: false,
-                upper: [],
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [],
+              upper: [ipEstufa],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [ipEstufa],
+              includeLower: false,
+              upper: [],
+            ));
       } else {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [ipEstufa],
-                includeLower: false,
-                upper: [],
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'ipEstufa',
-                lower: [],
-                upper: [ipEstufa],
-                includeUpper: false,
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [ipEstufa],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ipEstufa',
+              lower: [],
+              upper: [ipEstufa],
+              includeUpper: false,
+            ));
       }
     });
   }
 }
 
-extension PendingSyncCommandEntityQueryFilter
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QFilterCondition
-        > {
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  createdAtEqualTo(DateTime value) {
+extension PendingSyncCommandEntityQueryFilter on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QFilterCondition> {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> createdAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'createdAt', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'createdAt',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  createdAtGreaterThan(DateTime value, {bool include = false}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> createdAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'createdAt',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  createdAtLessThan(DateTime value, {bool include = false}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> createdAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'createdAt',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  createdAtBetween(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> createdAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'createdAt',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'createdAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  idEqualTo(Id value) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'id', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  idGreaterThan(Id value, {bool include = false}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'id',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  idLessThan(Id value, {bool include = false}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'id',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  idBetween(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'id',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaEqualTo(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaGreaterThan(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaLessThan(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaBetween(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -527,180 +425,137 @@ extension PendingSyncCommandEntityQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'ipEstufa',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'ipEstufa',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaStartsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaEndsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+          QAfterFilterCondition>
+      ipEstufaContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'ipEstufa',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'ipEstufa',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+          QAfterFilterCondition>
+      ipEstufaMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'ipEstufa',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'ipEstufa',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaIsEmpty() {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'ipEstufa', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ipEstufa',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  ipEstufaIsNotEmpty() {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> ipEstufaIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'ipEstufa', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'ipEstufa',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonEqualTo(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'payloadJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'payloadJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonGreaterThan(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'payloadJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'payloadJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonLessThan(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'payloadJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'payloadJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonBetween(
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -708,280 +563,226 @@ extension PendingSyncCommandEntityQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'payloadJson',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'payloadJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonStartsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'payloadJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'payloadJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonEndsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'payloadJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'payloadJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+          QAfterFilterCondition>
+      payloadJsonContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'payloadJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'payloadJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+          QAfterFilterCondition>
+      payloadJsonMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'payloadJson',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'payloadJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonIsEmpty() {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'payloadJson', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'payloadJson',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    PendingSyncCommandEntity,
-    PendingSyncCommandEntity,
-    QAfterFilterCondition
-  >
-  payloadJsonIsNotEmpty() {
+  QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity,
+      QAfterFilterCondition> payloadJsonIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'payloadJson', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'payloadJson',
+        value: '',
+      ));
     });
   }
 }
 
-extension PendingSyncCommandEntityQueryObject
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QFilterCondition
-        > {}
+extension PendingSyncCommandEntityQueryObject on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QFilterCondition> {}
 
-extension PendingSyncCommandEntityQueryLinks
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QFilterCondition
-        > {}
+extension PendingSyncCommandEntityQueryLinks on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QFilterCondition> {}
 
-extension PendingSyncCommandEntityQuerySortBy
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QSortBy
-        > {
+extension PendingSyncCommandEntityQuerySortBy on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QSortBy> {
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  sortByCreatedAt() {
+      sortByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  sortByCreatedAtDesc() {
+      sortByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  sortByIpEstufa() {
+      sortByIpEstufa() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  sortByIpEstufaDesc() {
+      sortByIpEstufaDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.desc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  sortByPayloadJson() {
+      sortByPayloadJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'payloadJson', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  sortByPayloadJsonDesc() {
+      sortByPayloadJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'payloadJson', Sort.desc);
     });
   }
 }
 
-extension PendingSyncCommandEntityQuerySortThenBy
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QSortThenBy
-        > {
+extension PendingSyncCommandEntityQuerySortThenBy on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QSortThenBy> {
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByCreatedAt() {
+      thenByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByCreatedAtDesc() {
+      thenByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenById() {
+      thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByIdDesc() {
+      thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByIpEstufa() {
+      thenByIpEstufa() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByIpEstufaDesc() {
+      thenByIpEstufaDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ipEstufa', Sort.desc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByPayloadJson() {
+      thenByPayloadJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'payloadJson', Sort.asc);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QAfterSortBy>
-  thenByPayloadJsonDesc() {
+      thenByPayloadJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'payloadJson', Sort.desc);
     });
   }
 }
 
-extension PendingSyncCommandEntityQueryWhereDistinct
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QDistinct
-        > {
+extension PendingSyncCommandEntityQueryWhereDistinct on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QDistinct> {
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QDistinct>
-  distinctByCreatedAt() {
+      distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdAt');
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QDistinct>
-  distinctByIpEstufa({bool caseSensitive = true}) {
+      distinctByIpEstufa({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'ipEstufa', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, PendingSyncCommandEntity, QDistinct>
-  distinctByPayloadJson({bool caseSensitive = true}) {
+      distinctByPayloadJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'payloadJson', caseSensitive: caseSensitive);
     });
   }
 }
 
-extension PendingSyncCommandEntityQueryProperty
-    on
-        QueryBuilder<
-          PendingSyncCommandEntity,
-          PendingSyncCommandEntity,
-          QQueryProperty
-        > {
+extension PendingSyncCommandEntityQueryProperty on QueryBuilder<
+    PendingSyncCommandEntity, PendingSyncCommandEntity, QQueryProperty> {
   QueryBuilder<PendingSyncCommandEntity, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
@@ -989,21 +790,21 @@ extension PendingSyncCommandEntityQueryProperty
   }
 
   QueryBuilder<PendingSyncCommandEntity, DateTime, QQueryOperations>
-  createdAtProperty() {
+      createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, String, QQueryOperations>
-  ipEstufaProperty() {
+      ipEstufaProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'ipEstufa');
     });
   }
 
   QueryBuilder<PendingSyncCommandEntity, String, QQueryOperations>
-  payloadJsonProperty() {
+      payloadJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'payloadJson');
     });

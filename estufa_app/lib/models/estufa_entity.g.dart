@@ -15,7 +15,7 @@ extension GetEstufaEntityCollection on Isar {
 
 const EstufaEntitySchema = CollectionSchema(
   name: r'EstufaEntity',
-  id: 4053660982038359,
+  id: 4053660982038359951,
   properties: {
     r'chave': PropertySchema(
       id: 0,
@@ -50,7 +50,7 @@ const EstufaEntitySchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'chave': IndexSchema(
-      id: -6375079618054803,
+      id: -6375079618054803693,
       name: r'chave',
       unique: true,
       replace: true,
