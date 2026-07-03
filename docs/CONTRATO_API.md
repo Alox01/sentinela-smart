@@ -1,26 +1,27 @@
-# Contrato da API - Estufa Smart
+﻿# Contrato da API - Sentinela Smart
 
-Este documento define o contrato entre tres partes do projeto:
+Este documento define o contrato entre três partes do projeto:
 
 - App Flutter
-- Simulador JavaScript
-- Futuro aparelho fisico/controlador da estufa
+- Simulador JavaScript/servidor local
+- Aparelho físico ESP32 ou controlador equivalente
 
-O simulador pode ser removido no futuro desde que o aparelho real, ou uma API intermediaria ligada ao aparelho real, responda os mesmos endpoints e campos definidos aqui.
+O simulador pode ser removido no futuro desde que o aparelho real, ou uma API intermediária ligada ao aparelho real, responda os mesmos endpoints e campos definidos aqui.
 
-## Principios
+## Princípios
 
-- A comunicacao local deve ser priorizada.
-- A nuvem deve funcionar como apoio para monitoramento remoto e persistencia.
-- Configuracoes usam a regra Last Write Wins (LWW), baseada em timestamp por campo.
-- Leituras de sensores representam o estado fisico atual e devem ser tratadas como dados gerados pelo dispositivo.
-- Dados simulados e dados reais devem ser identificaveis no banco.
+- A comunicação local deve ser priorizada quando app e aparelho estiverem na mesma rede.
+- A nuvem deve funcionar como apoio para monitoramento remoto e persistência.
+- Ajustes usam a regra Last Write Wins (LWW), baseada em timestamp por campo.
+- Leituras de sensores representam o estado físico atual e devem ser tratadas como dados gerados pelo dispositivo.
+- Dados simulados e dados reais devem ser identificáveis no banco.
+- Comandos de controle devem ser validados antes de alterar o equipamento.
 
-## Tipos Comuns
+## Formato completo do servidor
 
 ### StatusEstufa
 
-Representa a leitura atual do dispositivo.
+Representa a leitura atual do dispositivo no formato completo usado pelo simulador e pelo servidor local.
 
 ```json
 {
@@ -41,7 +42,7 @@ Representa a leitura atual do dispositivo.
 }
 ```
 
-Campos minimos exigidos pelo app hoje:
+Campos mínimos exigidos pelo app hoje:
 
 - `temperaturaAtual`: number
 - `umidadeAtual`: number
@@ -52,16 +53,16 @@ Campos minimos exigidos pelo app hoje:
 Campos recomendados:
 
 - `idHardware`: string
-- `timestampLeitura`: integer em milissegundos Unix
+- `timestampLeitura`: inteiro em milissegundos Unix
 - `temEnergia`: boolean
 - `temInternet`: boolean
-- `sinalWifi`: integer de 0 a 100
+- `sinalWifi`: inteiro de 0 a 100
 - estados dos atuadores: boolean
 - `faseAtual`: string
 
 ### ConfiguracaoAlvo
 
-Representa as metas/configuracoes desejadas pelo usuario ou pelo hardware.
+Representa os ajustes desejados pelo usuário ou pelo hardware. Os nomes dos campos ainda usam `Meta` porque fazem parte do contrato interno já implementado, mas na interface do app o termo exibido ao usuário é “ajuste”.
 
 ```json
 {
@@ -77,16 +78,54 @@ Representa as metas/configuracoes desejadas pelo usuario ou pelo hardware.
 
 Regras:
 
-- `temperaturaMeta` so deve sobrescrever o valor atual se `tempTimestamp` for maior que o timestamp armazenado.
-- `umidadeMeta` so deve sobrescrever o valor atual se `umidTimestamp` for maior que o timestamp armazenado.
+- `temperaturaMeta` só deve sobrescrever o valor atual se `tempTimestamp` for maior que o timestamp armazenado.
+- `umidadeMeta` só deve sobrescrever o valor atual se `umidTimestamp` for maior que o timestamp armazenado.
 - `modoSilencioso` deve seguir a mesma regra usando `modoSilenciosoTimestamp`.
-- Timestamps iguais nao devem alterar o estado.
+- Timestamps iguais não devem alterar o estado.
+
+## Formato simples compatível com ESP32
+
+O protótipo ESP32 testado respondeu um JSON simples na raiz do endereço, por exemplo `http://192.168.1.21/`. O servidor/simulador também expõe esse formato em `GET /` e `GET /dados` para facilitar testes sem o aparelho físico.
+
+```json
+{
+  "temperaturaF": 95.2,
+  "umidade": 65.0,
+  "temperaturaAlvoF": 95,
+  "margemF": 8,
+  "alertaTemperatura": false,
+  "alertaLuz": false,
+  "mostrandoUmidade": false,
+  "modoAjuste": false,
+  "buzzerSilenciado": false,
+  "ledControleLigado": true,
+  "leituraOk": true,
+  "ip": "192.168.1.21"
+}
+```
+
+Campos mínimos para leitura no app:
+
+- `temperaturaF`: number
+- `umidade`: number
+- `temperaturaAlvoF`: number
+- `alertaTemperatura`: boolean
+- `alertaLuz`: boolean
+- `leituraOk`: boolean
+
+Campos recomendados para próxima versão do firmware:
+
+- `umidadeAlvo`: number, para o app diferenciar umidade lida e ajuste de umidade.
+- `tokenConfigurado`: boolean, para indicar se o aparelho exige chave de acesso.
+- `versaoFirmware`: string, para diagnóstico.
+
+Enquanto o ESP32 não enviar `umidadeAlvo`, o app usa a umidade lida como referência visual. Isso mantém o protótipo funcionando sem bloquear a evolução futura.
 
 ## Endpoints
 
 ### GET /status
 
-Retorna o estado atual da estufa e a configuracao atual.
+Retorna o estado atual da estufa e a configuração atual no formato completo.
 
 #### Resposta 200
 
@@ -117,9 +156,17 @@ Retorna o estado atual da estufa e a configuracao atual.
 }
 ```
 
+### GET /
+
+Retorna o formato simples compatível com o ESP32. No aparelho físico, essa foi a rota usada no teste inicial.
+
+### GET /dados
+
+Também retorna o formato simples compatível com o ESP32. No simulador, ela existe para deixar explícito que a resposta é uma leitura simples do dispositivo.
+
 ### POST /sincronizar
 
-Recebe alteracoes de configuracao feitas pelo app ou por outro cliente autorizado.
+Recebe alterações de ajuste feitas pelo app ou por outro cliente autorizado.
 
 #### Body para alterar temperatura
 
@@ -171,7 +218,7 @@ Formato recomendado para substituir o formato antigo `{"comando":"silenciar"}`:
 
 #### Resposta 400
 
-Deve ser usada quando o payload for invalido.
+Deve ser usada quando o payload for inválido.
 
 ```json
 {
@@ -184,16 +231,16 @@ Deve ser usada quando o payload for invalido.
 }
 ```
 
-## Validacoes Recomendadas
+## Validações recomendadas
 
-- `temperaturaMeta`: number entre 0 e 999.
+- `temperaturaMeta`: number entre 60 e 200.
 - `umidadeMeta`: number entre 0 e 100.
 - `tempTimestamp`, `umidTimestamp`, `modoSilenciosoTimestamp`: inteiro positivo.
 - `modoSilencioso`: boolean.
 - Rejeitar payload vazio.
-- Rejeitar campos desconhecidos em modo estrito, ou ignora-los com log em modo tolerante.
+- Rejeitar campos desconhecidos em modo estrito, ou ignorá-los com log em modo tolerante.
 
-## Autenticacao
+## Autenticação
 
 Quando `ESTUFA_API_TOKEN` estiver configurado, clientes devem enviar:
 
@@ -213,35 +260,35 @@ ou:
 X-Device-Token: <token>
 ```
 
-No app, esse token pode ser configurado por estufa. Se a estufa nao tiver token
-proprio, o app usa o token global informado no build, quando existir.
+No app, essa chave pode ser configurada por estufa. Se a estufa não tiver chave própria, o app usa a chave global informada no build, quando existir.
 
-Para apresentacao local, a autenticacao pode ficar desabilitada. Para nuvem, deve ficar habilitada.
+Para apresentação local, a autenticação pode ficar desabilitada. Para nuvem ou rede exposta, deve ficar habilitada.
 
-## Simulador vs Hardware Real
+## Simulador vs hardware real
 
 O banco e a API devem diferenciar a origem dos dados:
 
 - `simulador`: leitura gerada pelo simulador JS.
-- `hardware`: leitura gerada por aparelho fisico.
+- `hardware`: leitura gerada por aparelho físico.
 - `manual`: registro ou comando criado manualmente para teste/admin.
 
-O app nao deve depender da origem. Ele deve depender apenas deste contrato.
+O app não deve depender da origem. Ele deve depender apenas deste contrato.
 
-## Fluxo Hibrido Pretendido
+## Fluxo híbrido pretendido
 
-1. App tenta `GET /status` no endereco local do aparelho/API local.
-2. Se falhar, app tenta a API em nuvem.
-3. Se ambos falharem, app entra em modo offline.
-4. Comandos feitos offline ficam em fila local.
-5. Ao reconectar, app envia a fila via `POST /sincronizar`.
-6. O destino aplica LWW por campo e retorna a configuracao vencedora.
+1. App tenta `GET /status` no endereço local do aparelho/API local.
+2. Se `/status` não existir, app tenta ler o JSON simples da raiz (`GET /`).
+3. Se falhar localmente, app tenta a API em nuvem quando ela estiver configurada.
+4. Se ambos falharem, app entra em modo offline.
+5. Comandos feitos offline ficam em fila local.
+6. Ao reconectar, app envia a fila via `POST /sincronizar`.
+7. O destino aplica LWW por campo e retorna a configuração vencedora.
 
-## Criterio Para Remover o Simulador
+## Critério para remover o simulador
 
-O simulador pode ser substituido pelo hardware real quando:
+O simulador pode ser substituído pelo hardware real quando:
 
-- O hardware/API real responder `GET /status` no formato acima.
-- O hardware/API real aceitar `POST /sincronizar`.
+- O hardware/API real responder `GET /status` ou `GET /` em um dos formatos aceitos.
+- O hardware/API real aceitar comandos equivalentes aos de `POST /sincronizar`, ou existir uma API intermediária que traduza os comandos para o aparelho.
 - As regras de LWW estiverem testadas.
-- O app conseguir operar sem alteracao de codigo, apenas trocando o endereco da estufa.
+- O app conseguir operar sem alteração de código, apenas trocando o endereço da estufa.
