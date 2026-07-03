@@ -1,4 +1,4 @@
-﻿const test = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { criarPayloadEsp32 } = require('../esp32_payload');
@@ -16,6 +16,7 @@ test('converte leitura do simulador para formato simples do ESP32', () => {
     },
     config: {
       temperaturaMeta: 96,
+      umidadeMeta: 65,
       modoSilencioso: false,
     },
   }, 'localhost');
@@ -24,6 +25,7 @@ test('converte leitura do simulador para formato simples do ESP32', () => {
     temperaturaF: 95.2,
     umidade: 64.8,
     temperaturaAlvoF: 96,
+    umidadeAlvo: 65,
     margemF: 5,
     alertaTemperatura: true,
     alertaLuz: false,

@@ -1,4 +1,4 @@
-﻿# Sentinela Smart Server
+# Sentinela Smart Server
 
 Servidor local da estufa usado pelo aplicativo Sentinela Smart. Ele expõe a API HTTP, roda o simulador e, quando configurado, salva dados em PostgreSQL/Supabase.
 
@@ -70,7 +70,7 @@ docker compose up --build
 ## Endpoints principais
 
 - `GET /status`: formato completo usado pelo simulador e pelo servidor local.
-- `GET /` e `GET /dados`: formato simples compatível com o protótipo ESP32.
+- `GET /` e `GET /dados`: formato simples compatível com o protótipo ESP32, incluindo `umidadeAlvo` no simulador para aproximar o teste do contrato final.
 - `POST /sincronizar`: recebe comandos de ajuste enviados pelo aplicativo.
 - `POST /debug/botao-fisico`: usado apenas em testes para simular comando físico.
 

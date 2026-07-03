@@ -1,10 +1,11 @@
-﻿function criarPayloadEsp32(dadosCompletos, origem = 'simulador') {
+function criarPayloadEsp32(dadosCompletos, origem = 'simulador') {
   const { status, config } = dadosCompletos;
 
   return {
     temperaturaF: arredondar(status.temperaturaAtual),
     umidade: arredondar(status.umidadeAtual),
     temperaturaAlvoF: Math.round(config.temperaturaMeta),
+    umidadeAlvo: Math.round(config.umidadeMeta),
     margemF: 5,
     alertaTemperatura: Boolean(status.alarmeAtivo),
     alertaLuz: Boolean(status.perigoChama || status.riscoIncendio),

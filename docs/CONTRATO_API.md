@@ -1,4 +1,4 @@
-﻿# Contrato da API - Sentinela Smart
+# Contrato da API - Sentinela Smart
 
 Este documento define o contrato entre três partes do projeto:
 
@@ -92,6 +92,7 @@ O protótipo ESP32 testado respondeu um JSON simples na raiz do endereço, por e
   "temperaturaF": 95.2,
   "umidade": 65.0,
   "temperaturaAlvoF": 95,
+  "umidadeAlvo": 65,
   "margemF": 8,
   "alertaTemperatura": false,
   "alertaLuz": false,
@@ -113,13 +114,13 @@ Campos mínimos para leitura no app:
 - `alertaLuz`: boolean
 - `leituraOk`: boolean
 
-Campos recomendados para próxima versão do firmware:
+Campos opcionais recomendados:
 
-- `umidadeAlvo`: number, para o app diferenciar umidade lida e ajuste de umidade.
+- `umidadeAlvo`: number, para o app diferenciar umidade lida e ajuste de umidade. O simulador local já envia esse campo; o ESP32 atual ainda pode omitir.
 - `tokenConfigurado`: boolean, para indicar se o aparelho exige chave de acesso.
 - `versaoFirmware`: string, para diagnóstico.
 
-Enquanto o ESP32 não enviar `umidadeAlvo`, o app usa a umidade lida como referência visual. Isso mantém o protótipo funcionando sem bloquear a evolução futura.
+Quando o ESP32 não enviar `umidadeAlvo`, o app usa a umidade lida como referência visual. Isso mantém o protótipo funcionando sem bloquear a evolução futura.
 
 ## Endpoints
 

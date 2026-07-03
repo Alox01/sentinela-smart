@@ -288,6 +288,10 @@ class ApiService {
     final temperatura = _numero(dados['temperaturaF']) ?? 0;
     final umidade = _numero(dados['umidade']) ?? 0;
     final ajusteTemperatura = _numero(dados['temperaturaAlvoF']) ?? temperatura;
+    final ajusteUmidade =
+        _numero(dados['umidadeAlvo']) ??
+        _numero(dados['umidadeMeta']) ??
+        umidade;
     final alertaTemperatura = _booleano(dados['alertaTemperatura']);
     final alertaLuz = _booleano(dados['alertaLuz']);
     final leituraOk = _booleano(dados['leituraOk']);
@@ -314,7 +318,7 @@ class ApiService {
         'idHardware': 'ESP32_REAL',
         'tempMeta': ajusteTemperatura,
         'tempTimestamp': DateTime.now().millisecondsSinceEpoch,
-        'umidadeMeta': umidade,
+        'umidadeMeta': ajusteUmidade,
         'umidTimestamp': DateTime.now().millisecondsSinceEpoch,
         'modoSilencioso': _booleano(dados['buzzerSilenciado']),
         'modoSilenciosoTimestamp': 0,

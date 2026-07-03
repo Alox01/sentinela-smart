@@ -63,6 +63,7 @@ test('rota raiz entrega payload compativel com ESP32', async () => {
   assert.equal(payload.temperaturaF, 97.4);
   assert.equal(payload.umidade, 63.8);
   assert.equal(payload.temperaturaAlvoF, 100);
+  assert.equal(payload.umidadeAlvo, 65);
   assert.equal(payload.alertaTemperatura, true);
   assert.equal(payload.ledControleLigado, true);
 });
