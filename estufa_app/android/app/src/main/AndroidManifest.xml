@@ -1,8 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Necessario para o app acessar rede no build release (o Flutter so
+         adiciona INTERNET automaticamente em debug/profile). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="estufa_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
