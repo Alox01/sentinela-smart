@@ -20,6 +20,33 @@ const {
 } = require('./storage_policy');
 
 const ultimasLeiturasSalvas = new Map();
+
+const ID_SIMULADOR_PADRAO = 'ESP32_REALISTIC_V2';
+
+function normalizarTipoDispositivo(status = {}) {
+  const tipoInformado = status.tipoDispositivo || status.tipo_dispositivo;
+  if (tipoInformado === 'hardware' || tipoInformado === 'simulador') {
+    return tipoInformado;
+  }
+
+  return status.idHardware === ID_SIMULADOR_PADRAO || !status.idHardware
+    ? 'simulador'
+    : 'hardware';
+}
+
+function normalizarFonteLeitura(status = {}) {
+  const fonteInformada = status.fonte;
+  if (fonteInformada === 'hardware' || fonteInformada === 'simulador' || fonteInformada === 'manual') {
+    return fonteInformada;
+  }
+
+  return normalizarTipoDispositivo(status);
+}
+
+function normalizarIpLocal(status = {}) {
+  return status.ipLocal || status.ip || null;
+}
+
 function estaHabilitado() {
   return Boolean(pool);
 }
@@ -31,8 +58,10 @@ function motivoDesabilitado() {
 }
 
 async function buscarOuCriarDispositivo(status) {
-  const identificador = status.idHardware || 'ESP32_REALISTIC_V2';
-  const nome = identificador === 'ESP32_REALISTIC_V2'
+  const identificador = status.idHardware || ID_SIMULADOR_PADRAO;
+  const tipoDispositivo = normalizarTipoDispositivo(status);
+  const ipLocal = normalizarIpLocal(status);
+  const nome = identificador === ID_SIMULADOR_PADRAO
     ? 'Estufa Simulada'
     : `Dispositivo ${identificador}`;
 
@@ -45,12 +74,15 @@ async function buscarOuCriarDispositivo(status) {
         ip_local,
         updated_at
       )
-      values ($1, $2, 'simulador', 'localhost', now())
+      values ($1, $2, $3, $4, now())
       on conflict (identificador_hardware)
-      do update set updated_at = now()
+      do update set
+        tipo_dispositivo = excluded.tipo_dispositivo,
+        ip_local = coalesce(excluded.ip_local, dispositivos.ip_local),
+        updated_at = now()
       returning id
     `,
-    [nome, identificador],
+    [nome, identificador, tipoDispositivo, ipLocal],
   );
 
   return {
@@ -96,6 +128,8 @@ async function salvarConfiguracao(dispositivoId, config) {
 }
 
 async function salvarLeitura(dispositivoId, status) {
+  const fonte = normalizarFonteLeitura(status);
+
   await pool.query(
     `
       insert into leituras (
@@ -115,7 +149,7 @@ async function salvarLeitura(dispositivoId, status) {
         umidificador_ligado,
         fonte
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'simulador')
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `,
     [
       dispositivoId,
@@ -132,6 +166,7 @@ async function salvarLeitura(dispositivoId, status) {
       status.aquecedorLigado,
       status.ventiladorLigado,
       status.umidificadorLigado,
+      fonte,
     ],
   );
 }
@@ -299,4 +334,10 @@ module.exports = {
   salvarComandoSync,
   salvarConfiguracaoSnapshot,
   salvarSnapshot,
+  __testables: {
+    normalizarFonteLeitura,
+    normalizarIpLocal,
+    normalizarTipoDispositivo,
+  },
 };
+
