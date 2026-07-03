@@ -27,6 +27,8 @@ Verificar e corrigir somente problemas de baixo risco:
 
 ### 3. Testes antes do APK
 
+Guia de execução local e demonstração: docs/EXECUCAO_LOCAL.md.
+
 Executar:
 
 - `flutter analyze`
