@@ -13,6 +13,7 @@ const { createEstufaRouter } = require('./routes/estufa_routes');
 const { createCorsOptions } = require('./security');
 const { criarBufferLeituras } = require('./leitura_buffer');
 const { iniciarPushLeituras } = require('./esp32_virtual');
+const { iniciarKeepAlive } = require('./keep_alive');
 const {
   iniciarPersistenciaPeriodica,
   lerIntervaloPersistencia,
@@ -29,6 +30,11 @@ const PERSIST_READINGS_INTERVAL_MS = lerIntervaloPersistencia(
 // deixa de depender do polling interno e passa a empurrar leituras por HTTP
 // para o servidor de nuvem, como o aparelho fisico fara.
 const PUSH_TARGET_URL = (process.env.PUSH_TARGET_URL ?? '').trim();
+// URL publica deste servidor para o auto-ping que evita a hibernacao do plano
+// gratuito. No Render, RENDER_EXTERNAL_URL ja vem preenchida automaticamente.
+const KEEP_ALIVE_URL = (
+  process.env.KEEP_ALIVE_URL ?? process.env.RENDER_EXTERNAL_URL ?? ''
+).trim();
 const PUSH_TOKEN = process.env.PUSH_TOKEN ?? API_TOKEN;
 const PUSH_INTERVAL_MS = lerIntervaloPersistencia(process.env.PUSH_INTERVAL_MS);
 // Persistencia local (agendador que grava direto no banco). Por padrao fica
@@ -128,6 +134,11 @@ async function iniciarServidor() {
       intervaloMs: PUSH_INTERVAL_MS,
       buffer: bufferPush,
     });
+  }
+
+  if (KEEP_ALIVE_URL) {
+    iniciarKeepAlive({ url: KEEP_ALIVE_URL });
+    console.log(`Keep-alive ativo para ${KEEP_ALIVE_URL}.`);
   }
 }
 
