@@ -28,6 +28,12 @@ class ApiService {
     defaultValue: '',
   );
 
+  // Ultima conexao que funcionou por estufa, compartilhada entre as telas
+  // (card da home, monitoramento). Evita re-sondar tudo do zero a cada
+  // instancia e reduz o tempo ate a primeira leitura.
+  static final Map<String, _ResolucaoConexao> _ultimaConexaoBoa = {};
+  static const Duration _validadeResolucaoCompartilhada = Duration(seconds: 30);
+
   final String localBaseUrl;
   final String? localPort80FallbackUrl;
   final String? cloudBaseUrl;
@@ -43,7 +49,28 @@ class ApiService {
       cloudBaseUrl = _normalizarCloudUrl(cloudUrl ?? _cloudPadrao),
       authToken = _normalizarToken(
         token ?? (_tokenPadrao.isNotEmpty ? _tokenPadrao : _tokenLegado),
-      );
+      ) {
+    final lembrada = _ultimaConexaoBoa[localBaseUrl];
+    if (lembrada != null &&
+        DateTime.now().difference(lembrada.quando) <
+            _validadeResolucaoCompartilhada) {
+      _baseUrlAtiva = lembrada.base;
+      _ultimaResolucao = lembrada.quando;
+    }
+  }
+
+  // A nuvem (Render + internet movel) responde mais devagar que a rede local;
+  // usar o mesmo timeout curto derrubava a conexao remota sem necessidade.
+  bool _ehNuvem(String base) => base == cloudBaseUrl;
+
+  Duration _timeoutSonda(String base) =>
+      _ehNuvem(base) ? const Duration(seconds: 6) : const Duration(seconds: 2);
+
+  Duration _timeoutGet(String base) =>
+      _ehNuvem(base) ? const Duration(seconds: 8) : const Duration(seconds: 3);
+
+  Duration _timeoutPost(String base) =>
+      _ehNuvem(base) ? const Duration(seconds: 10) : const Duration(seconds: 4);
 
   String get modoConexao {
     final ativa = _baseUrlAtiva;
@@ -102,6 +129,12 @@ class ApiService {
     );
 
     if (response != null && _respostaSucesso(response.statusCode)) {
+      // A conexao esta boa: aproveita para drenar comandos pendentes antigos.
+      // So quando for um comando direto do usuario, para nao recursar quando o
+      // proprio drenador chama este metodo (enfileirarSeOffline: false).
+      if (enfileirarSeOffline) {
+        unawaited(sincronizarComandosPendentes());
+      }
       return true;
     }
 
@@ -141,19 +174,25 @@ class ApiService {
   }
 
   Future<List<ApiConnectionProbe>> verificarConexoes() async {
-    final probes = <ApiConnectionProbe>[];
-    for (final base in _candidatas()) {
-      probes.add(
-        ApiConnectionProbe(
-          baseUrl: base,
-          nome: base == localBaseUrl || base == localPort80FallbackUrl
-              ? 'Local'
-              : 'Nuvem',
-          online: await _estaOnline(base),
-        ),
-      );
+    String nomeDaBase(String base) {
+      if (base == localBaseUrl) return 'Local';
+      if (base == localPort80FallbackUrl) return 'Local (porta 80, ESP32)';
+      return 'Nuvem';
     }
-    return probes;
+
+    final candidatas = _candidatas();
+    final resultados = await Future.wait(
+      candidatas.map((base) async => MapEntry(base, await _estaOnline(base))),
+    );
+
+    return [
+      for (final resultado in resultados)
+        ApiConnectionProbe(
+          baseUrl: resultado.key,
+          nome: nomeDaBase(resultado.key),
+          online: resultado.value,
+        ),
+    ];
   }
 
   Future<int> sincronizarComandosPendentes({int limite = 100}) async {
@@ -190,7 +229,7 @@ class ApiService {
     try {
       return await http
           .get(Uri.parse('$ativa$path'), headers: _headers())
-          .timeout(const Duration(seconds: 2));
+          .timeout(_timeoutGet(ativa));
     } catch (_) {
       _baseUrlAtiva = null;
       final fallback = await _resolverBaseAtiva(force: true);
@@ -199,7 +238,7 @@ class ApiService {
       try {
         return await http
             .get(Uri.parse('$fallback$path'), headers: _headers())
-            .timeout(const Duration(seconds: 2));
+            .timeout(_timeoutGet(fallback));
       } catch (_) {
         return null;
       }
@@ -217,7 +256,7 @@ class ApiService {
     try {
       return await http
           .post(Uri.parse('$ativa$path'), headers: headers, body: body)
-          .timeout(const Duration(seconds: 3));
+          .timeout(_timeoutPost(ativa));
     } catch (_) {
       _baseUrlAtiva = null;
       final fallback = await _resolverBaseAtiva(force: true);
@@ -226,7 +265,7 @@ class ApiService {
       try {
         return await http
             .post(Uri.parse('$fallback$path'), headers: headers, body: body)
-            .timeout(const Duration(seconds: 3));
+            .timeout(_timeoutPost(fallback));
       } catch (_) {
         return null;
       }
@@ -241,24 +280,39 @@ class ApiService {
       return _baseUrlAtiva;
     }
 
-    for (final base in _candidatas()) {
-      if (await _estaOnline(base)) {
-        _baseUrlAtiva = base;
-        _ultimaResolucao = agora;
-        return base;
+    // Sonda todas as candidatas em paralelo: o tempo total vira o da mais
+    // lenta, em vez da soma dos timeouts (local morto + porta 80 + nuvem).
+    final candidatas = _candidatas();
+    final respostas = await Future.wait(
+      candidatas.map((base) async => MapEntry(base, await _estaOnline(base))),
+    );
+    final online = {
+      for (final resposta in respostas) resposta.key: resposta.value,
+    };
+
+    // Prioridade: local primeiro; nuvem so quando o local nao responde.
+    String? escolhida;
+    for (final base in candidatas) {
+      if (online[base] == true) {
+        escolhida = base;
+        break;
       }
     }
 
-    _baseUrlAtiva = null;
+    _baseUrlAtiva = escolhida;
     _ultimaResolucao = agora;
-    return null;
+    if (escolhida != null) {
+      _ultimaConexaoBoa[localBaseUrl] = _ResolucaoConexao(escolhida, agora);
+    }
+    return escolhida;
   }
 
   Future<bool> _estaOnline(String base) async {
+    final timeout = _timeoutSonda(base);
     try {
       final response = await http
           .get(Uri.parse('$base/status'), headers: _headers())
-          .timeout(const Duration(seconds: 2));
+          .timeout(timeout);
       if (response.statusCode == 200) return true;
     } catch (_) {
       // Alguns prototipos ESP32 respondem o JSON diretamente na rota raiz.
@@ -267,7 +321,7 @@ class ApiService {
     try {
       final response = await http
           .get(Uri.parse('$base/'), headers: _headers())
-          .timeout(const Duration(seconds: 2));
+          .timeout(timeout);
       return response.statusCode == 200 &&
           _decodificarMapa(response.body) != null;
     } catch (_) {
@@ -446,4 +500,11 @@ class ApiConnectionProbe {
     required this.baseUrl,
     required this.online,
   });
+}
+
+class _ResolucaoConexao {
+  final String base;
+  final DateTime quando;
+
+  const _ResolucaoConexao(this.base, this.quando);
 }
