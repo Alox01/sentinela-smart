@@ -9,6 +9,7 @@ import '../models/historico_leitura_entity.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
 import '../features/relatorio_estufada/services/relatorio_csv_service.dart';
+import '../services/api_service.dart';
 import '../services/csv_exporter.dart';
 import '../services/isar_service.dart';
 import '../features/relatorio_estufada/widgets/eventos_estufada_card.dart';
@@ -39,6 +40,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   static const _csvService = RelatorioCsvService();
   final RelatorioEstufadaRepository _relatorioRepository =
       RelatorioEstufadaRepository(IsarService.instance);
+  late final ApiService _api = ApiService(widget.ipEstufa);
 
   late Future<_DadosRelatorioEstufada> _dadosFuture;
   List<HistoricoLeituraEntity> _leiturasBrutas = [];
@@ -88,14 +90,55 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
         fim: fimCiclo,
       ),
       _relatorioRepository.listarEventosPorCiclo(cicloSelecionado.id),
+      _api.buscarHistorico(inicio: cicloSelecionado.inicio, fim: fimCiclo),
     ]);
 
+    final leiturasLocais = resultados[0] as List<HistoricoLeituraEntity>;
+    final leiturasNuvem = (resultados[2] as List<Map<String, dynamic>>)
+        .map(_leituraDaNuvem)
+        .toList();
+
     return _DadosRelatorioEstufada(
-      leituras: resultados[0] as List<HistoricoLeituraEntity>,
+      leituras: _mesclarHistoricos(leiturasLocais, leiturasNuvem),
       ciclos: ciclos,
       eventos: resultados[1] as List<EventoCicloEntity>,
       cicloSelecionado: cicloSelecionado,
     );
+  }
+
+  HistoricoLeituraEntity _leituraDaNuvem(Map<String, dynamic> m) {
+    final temperatura = (m['temperaturaAtual'] as num?)?.toDouble() ?? 0;
+    final umidade = (m['umidadeAtual'] as num?)?.toDouble() ?? 0;
+    return HistoricoLeituraEntity()
+      ..ipEstufa = widget.ipEstufa
+      ..nomeEstufa = widget.nomeEstufa
+      ..timestamp = DateTime.fromMillisecondsSinceEpoch(
+        (m['timestampLeitura'] as num?)?.toInt() ?? 0,
+      )
+      ..temperatura = temperatura
+      ..umidade = umidade
+      // Leituras antigas da nuvem podem nao ter o ajuste: cai no proprio valor
+      // para nao distorcer a cor e a linha de meta do grafico.
+      ..temperaturaMeta = (m['temperaturaMeta'] as num?)?.toDouble() ?? temperatura
+      ..umidadeMeta = (m['umidadeMeta'] as num?)?.toDouble() ?? umidade
+      ..aviso = (m['aviso'] as String?) ?? ''
+      ..alertaIncendio = m['alertaIncendio'] == true;
+  }
+
+  // Une historico local e da nuvem, deduplicando por minuto (o local, gravado
+  // com o ajuste real visto pelo app, vence em caso de empate).
+  List<HistoricoLeituraEntity> _mesclarHistoricos(
+    List<HistoricoLeituraEntity> local,
+    List<HistoricoLeituraEntity> nuvem,
+  ) {
+    final porMinuto = <int, HistoricoLeituraEntity>{};
+    for (final leitura in [...nuvem, ...local]) {
+      final chave = leitura.timestamp.millisecondsSinceEpoch ~/ 60000;
+      porMinuto[chave] = leitura;
+    }
+    final lista = porMinuto.values.toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return lista;
   }
 
   CicloSecagemEntity? _escolherCicloInicial(

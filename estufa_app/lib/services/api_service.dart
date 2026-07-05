@@ -117,6 +117,24 @@ class ApiService {
     return null;
   }
 
+  // Busca o historico persistido na nuvem/servidor para o periodo. Serve para
+  // preencher, no relatorio, os trechos gravados enquanto o app estava fechado
+  // (o registro local so acontece com a tela de monitoramento aberta).
+  Future<List<Map<String, dynamic>>> buscarHistorico({
+    required DateTime inicio,
+    required DateTime fim,
+  }) async {
+    final ini = inicio.millisecondsSinceEpoch;
+    final f = fim.millisecondsSinceEpoch;
+    final response = await _getComFallback('/historico?inicio=$ini&fim=$f');
+    if (response?.statusCode != 200) return const [];
+
+    final dados = _decodificarMapa(response!.body);
+    final lista = dados?['leituras'];
+    if (lista is! List) return const [];
+    return lista.whereType<Map<String, dynamic>>().toList();
+  }
+
   Future<bool> enviarSincronizacao(
     Map<String, dynamic> dadosParaAtualizar, {
     bool enfileirarSeOffline = true,
