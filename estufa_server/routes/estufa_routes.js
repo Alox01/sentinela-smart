@@ -32,6 +32,33 @@ function createEstufaRouter({
     res.json(criarPayloadEsp32(dadosCompletos, 'simulador', { tokenConfigurado }));
   });
 
+  // Historico persistido na nuvem, para o relatorio remoto preencher os
+  // periodos em que o app esteve fechado. Leitura publica (mesmo criterio de
+  // GET /status). Parametros opcionais: inicio, fim (ms Unix), idHardware.
+  router.get('/historico', async (req, res) => {
+    if (!db.estaHabilitado?.()) {
+      res.json({ leituras: [], persistencia: false });
+      return;
+    }
+
+    const inicioMs = Number(req.query.inicio);
+    const fimMs = Number(req.query.fim);
+    const idHardware = req.query.idHardware || undefined;
+
+    try {
+      const leituras = await db.carregarHistorico(idHardware, {
+        inicioMs: Number.isFinite(inicioMs) ? inicioMs : undefined,
+        fimMs: Number.isFinite(fimMs) ? fimMs : undefined,
+      });
+      res.json({ leituras, persistencia: true });
+    } catch (error) {
+      res.status(500).json({
+        erro: 'Falha ao carregar historico',
+        detalhe: error.message,
+      });
+    }
+  });
+
   router.post('/sincronizar', authMiddleware, async (req, res) => {
     const configDoApp = req.body;
     const validacao = validarPayloadSincronizacao(configDoApp);

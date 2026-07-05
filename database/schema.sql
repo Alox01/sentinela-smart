@@ -47,6 +47,10 @@ create table if not exists leituras (
   timestamp_origem_ms bigint,
   temperatura numeric(6,2) not null,
   umidade numeric(5,2) not null,
+  -- Ajuste (setpoint) vigente no momento da leitura, para o relatorio remoto
+  -- reconstruir a linha de meta e as cores por ponto.
+  temperatura_meta numeric(6,2),
+  umidade_meta numeric(5,2),
   alerta_incendio boolean not null default false,
   aviso text not null default '',
   cor_status text not null default 'green',

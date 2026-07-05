@@ -128,7 +128,16 @@ async function iniciarServidor() {
 
   if (PUSH_TARGET_URL) {
     iniciarPushLeituras({
-      lerStatus: () => simulador.lerCompleto().status,
+      lerStatus: () => {
+        const { status, config } = simulador.lerCompleto();
+        // Empurra o ajuste vigente junto da leitura para a nuvem registrar o
+        // setpoint por ponto (linha de meta e cores no relatorio).
+        return {
+          ...status,
+          temperaturaMeta: config.temperaturaMeta,
+          umidadeMeta: config.umidadeMeta,
+        };
+      },
       alvoUrl: PUSH_TARGET_URL,
       token: PUSH_TOKEN,
       intervaloMs: PUSH_INTERVAL_MS,

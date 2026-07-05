@@ -137,6 +137,8 @@ async function salvarLeitura(dispositivoId, status) {
         timestamp_origem_ms,
         temperatura,
         umidade,
+        temperatura_meta,
+        umidade_meta,
         alerta_incendio,
         aviso,
         cor_status,
@@ -149,13 +151,15 @@ async function salvarLeitura(dispositivoId, status) {
         umidificador_ligado,
         fonte
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     `,
     [
       dispositivoId,
       status.timestampLeitura,
       status.temperaturaAtual,
       status.umidadeAtual,
+      status.temperaturaMeta ?? null,
+      status.umidadeMeta ?? null,
       status.alarmeAtivo ?? status.alertaIncendio ?? false,
       status.aviso || '',
       status.corStatus || 'green',
@@ -190,7 +194,11 @@ async function salvarSnapshot(dados) {
     return { salvo: false, motivo: decisao.motivo };
   }
 
-  const leituraPersistida = statusParaLeituraPersistida(status);
+  const leituraPersistida = {
+    ...statusParaLeituraPersistida(status),
+    temperaturaMeta: config?.temperaturaMeta ?? status.temperaturaMeta ?? null,
+    umidadeMeta: config?.umidadeMeta ?? status.umidadeMeta ?? null,
+  };
   await salvarLeitura(dispositivo.id, leituraPersistida);
   ultimasLeiturasSalvas.set(dispositivo.id, criarRegistroLeitura(status, config, agoraMs));
   return { salvo: true, motivo: decisao.motivo };
@@ -212,7 +220,11 @@ async function persistirLeituraBufferizada(dados) {
     await salvarConfiguracao(dispositivo.id, config);
   }
 
-  const leituraPersistida = statusParaLeituraPersistida(status);
+  const leituraPersistida = {
+    ...statusParaLeituraPersistida(status),
+    temperaturaMeta: status.temperaturaMeta ?? config?.temperaturaMeta ?? null,
+    umidadeMeta: status.umidadeMeta ?? config?.umidadeMeta ?? null,
+  };
   await salvarLeitura(dispositivo.id, leituraPersistida);
   return true;
 }
@@ -347,8 +359,69 @@ async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2
   };
 }
 
+// Lista as leituras persistidas de um dispositivo dentro de um periodo, para
+// o relatorio remoto preencher o historico gravado enquanto o app estava
+// fechado. Ordenado do mais antigo para o mais recente.
+async function carregarHistorico(
+  identificadorHardware = 'ESP32_REALISTIC_V2',
+  { inicioMs, fimMs, limite = 5000 } = {},
+) {
+  if (!pool) return [];
+
+  const condicoes = ['d.identificador_hardware = $1'];
+  const parametros = [identificadorHardware];
+
+  if (Number.isFinite(inicioMs)) {
+    parametros.push(Math.round(inicioMs));
+    condicoes.push(`l.timestamp_origem_ms >= $${parametros.length}`);
+  }
+  if (Number.isFinite(fimMs)) {
+    parametros.push(Math.round(fimMs));
+    condicoes.push(`l.timestamp_origem_ms <= $${parametros.length}`);
+  }
+  parametros.push(Math.min(Math.max(Number(limite) || 5000, 1), 20000));
+  const limiteParam = `$${parametros.length}`;
+
+  const result = await pool.query(
+    `
+      select
+        l.timestamp_origem_ms,
+        l.timestamp_leitura,
+        l.temperatura,
+        l.umidade,
+        l.temperatura_meta,
+        l.umidade_meta,
+        l.alerta_incendio,
+        l.aviso,
+        l.cor_status,
+        l.fonte
+      from dispositivos d
+      join leituras l on l.dispositivo_id = d.id
+      where ${condicoes.join(' and ')}
+      order by coalesce(l.timestamp_origem_ms, extract(epoch from l.timestamp_leitura) * 1000) asc
+      limit ${limiteParam}
+    `,
+    parametros,
+  );
+
+  return result.rows.map((row) => ({
+    timestampLeitura:
+      Number(row.timestamp_origem_ms)
+      || new Date(row.timestamp_leitura).getTime(),
+    temperaturaAtual: Number(row.temperatura),
+    umidadeAtual: Number(row.umidade),
+    temperaturaMeta: row.temperatura_meta == null ? null : Number(row.temperatura_meta),
+    umidadeMeta: row.umidade_meta == null ? null : Number(row.umidade_meta),
+    alertaIncendio: row.alerta_incendio,
+    aviso: row.aviso || '',
+    corStatus: row.cor_status || 'green',
+    fonte: row.fonte,
+  }));
+}
+
 module.exports = {
   carregarConfiguracao,
+  carregarHistorico,
   carregarUltimaLeitura,
   estaHabilitado,
   motivoDesabilitado,
