@@ -222,20 +222,28 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     return Scaffold(
       backgroundColor: corFundo,
       appBar: AppBar(
+        leading: IconButton(
+          iconSize: 20,
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Voltar',
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        // Titulo alinhado a esquerda: nomes longos ganham o espaco livre e
+        // cortam com reticencias, em vez de encolher espremidos entre a seta
+        // e o indicador de conexao.
         title: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                widget.nomeEstufa.toUpperCase(),
-                maxLines: 1,
-                softWrap: false,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: telaEstreita ? 17 : 18,
-                  letterSpacing: telaEstreita ? 0.7 : 1,
-                ),
+            Text(
+              widget.nomeEstufa.toUpperCase(),
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: telaEstreita ? 17 : 18,
+                letterSpacing: telaEstreita ? 0.7 : 1,
               ),
             ),
             Text(
@@ -251,8 +259,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         ),
         backgroundColor: const Color(0xFF1C1C1E),
         foregroundColor: Colors.white,
-        centerTitle: true,
-        titleSpacing: telaEstreita ? 4 : null,
+        centerTitle: false,
+        titleSpacing: 0,
         elevation: 0,
         actions: [
           IndicadorConexao(
