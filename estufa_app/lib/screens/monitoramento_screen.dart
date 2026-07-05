@@ -32,6 +32,10 @@ class MonitoramentoScreen extends StatefulWidget {
 
 class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   static const int _intervaloRegistroHistoricoMs = 10 * 60 * 1000;
+  // Intervalo minimo entre um registro periodico e um registro disparado por
+  // evento (mudanca de ajuste, alarme, desvio). Evita marcar pontos redundantes
+  // colados no grafico quando varios eventos acontecem em sequencia.
+  static const int _cooldownEventoMs = 3 * 60 * 1000;
   static const int _tempoQuedaConexaoMs = 2 * 60 * 1000;
   static const int _tempoOscilacaoAtencaoMs = 10 * 60 * 1000;
   static const int _tempoOscilacaoCriticaMs = 5 * 60 * 1000;
@@ -187,14 +191,20 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     required String avisoAtual,
     required bool alertaIncendioAtual,
     bool forcar = false,
+    bool porEvento = false,
   }) {
     if (_cicloAtual == null) return;
 
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    if (!forcar &&
-        (agoraMs - _ultimoRegistroHistoricoMs) <
-            _intervaloRegistroHistoricoMs) {
-      return;
+    // forcar: sempre grava (ex: inicio da estufada). porEvento: grava so se
+    // passou o cooldown. Caso normal: grava no intervalo periodico (10 min).
+    if (!forcar) {
+      final intervaloMinimo = porEvento
+          ? _cooldownEventoMs
+          : _intervaloRegistroHistoricoMs;
+      if ((agoraMs - _ultimoRegistroHistoricoMs) < intervaloMinimo) {
+        return;
+      }
     }
 
     _ultimoRegistroHistoricoMs = agoraMs;
@@ -815,7 +825,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         umidadeAjusteAtual: umidadeAjusteAtual ?? umidAjuste,
         avisoAtual: avisoAtual ?? avisoEmergencia,
         alertaIncendioAtual: alertaIncendioAtual ?? sireneLigada,
-        forcar: true,
+        porEvento: true,
       );
     }
   }

@@ -31,7 +31,11 @@ class GraficoSteam extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final escala = _calcularEscala();
-    final pontosDesenho = _montarPontosParaDesenho(escala);
+    final pontosDesenho = _montarSerie(escala, (i) => pontos[i].y);
+    final pontosAjusteDesenho =
+        (ajustes.length == pontos.length && pontos.isNotEmpty)
+        ? _montarSerie(escala, (i) => ajustes[i])
+        : const <FlSpot>[];
 
     return LineChart(
       LineChartData(
@@ -44,6 +48,9 @@ class GraficoSteam extends StatelessWidget {
             fitInsideVertically: true,
             getTooltipItems: (touchedBarSpots) {
               return touchedBarSpots.map((barSpot) {
+                // So a linha de leitura (indice 0) mostra tooltip; a linha
+                // tracejada do ajuste nao.
+                if (barSpot.barIndex != 0) return null;
                 final index = _indiceOriginalExato(barSpot.x);
                 if (index == null) return null;
 
@@ -99,6 +106,17 @@ class GraficoSteam extends StatelessWidget {
             },
           ),
           getTouchedSpotIndicator: (barData, spotIndexes) {
+            // A linha do ajuste (tracejada) nao recebe destaque de toque.
+            if (barData.dashArray != null) {
+              return spotIndexes
+                  .map(
+                    (_) => TouchedSpotIndicatorData(
+                      const FlLine(color: Colors.transparent, strokeWidth: 0),
+                      const FlDotData(show: false),
+                    ),
+                  )
+                  .toList();
+            }
             return spotIndexes.map((index) {
               final indiceOriginal = index < pontosDesenho.length
                   ? _indiceOriginalExato(pontosDesenho[index].x)
@@ -206,8 +224,10 @@ class GraficoSteam extends StatelessWidget {
         lineBarsData: [
           LineChartBarData(
             spots: pontosDesenho,
-            isCurved: true,
-            curveSmoothness: 0.3,
+            // Degraus (nao curva): o valor e constante entre leituras. Evita
+            // as "alcas" que a curva spline criava com pontos proximos.
+            isCurved: false,
+            isStepLineChart: true,
             barWidth: 3,
             color: corAtual,
             dotData: FlDotData(
@@ -238,6 +258,18 @@ class GraficoSteam extends StatelessWidget {
               ),
             ),
           ),
+          // Linha do ajuste (setpoint) em degraus tracejados, para comparar a
+          // leitura com o alvo. Sem pontos e sem tooltip proprio.
+          if (pontosAjusteDesenho.isNotEmpty)
+            LineChartBarData(
+              spots: pontosAjusteDesenho,
+              isCurved: false,
+              isStepLineChart: true,
+              barWidth: 1.4,
+              color: Colors.white.withValues(alpha: 0.45),
+              dashArray: const [6, 5],
+              dotData: const FlDotData(show: false),
+            ),
         ],
       ),
     );
@@ -305,27 +337,35 @@ class GraficoSteam extends StatelessWidget {
     );
   }
 
-  List<FlSpot> _montarPontosParaDesenho(_EscalaGrafico escala) {
-    if (pontos.isEmpty) return pontos;
+  // Monta uma serie de pontos (leitura ou ajuste) recortada na janela visivel,
+  // com pontos de entrada/saida nas bordas para a linha nao "flutuar".
+  List<FlSpot> _montarSerie(
+    _EscalaGrafico escala,
+    double Function(int i) valorDe,
+  ) {
+    if (pontos.isEmpty) return const [];
 
-    final visiveis = pontos
-        .where(
-          (spot) => spot.x >= escala.dadosMinX && spot.x <= escala.dadosMaxX,
-        )
-        .toList();
-    if (visiveis.isEmpty) return pontos;
-    if (visiveis.length == 1) return visiveis;
+    final indices = <int>[];
+    for (var i = 0; i < pontos.length; i++) {
+      if (pontos[i].x >= escala.dadosMinX && pontos[i].x <= escala.dadosMaxX) {
+        indices.add(i);
+      }
+    }
+    if (indices.isEmpty) return const [];
+    if (indices.length == 1) {
+      final i = indices.first;
+      return [FlSpot(pontos[i].x, _limitarY(valorDe(i)))];
+    }
 
-    final existeLeituraAntesDaJanela = pontos.any(
-      (spot) => spot.x < visiveis.first.x,
-    );
-    final pontoEntrada = existeLeituraAntesDaJanela
-        ? FlSpot(escala.minX, _limitarY(visiveis.first.y))
+    final primeiro = indices.first;
+    final ultimo = indices.last;
+    final pontoEntrada = primeiro > 0
+        ? FlSpot(escala.minX, _limitarY(valorDe(primeiro)))
         : null;
-    final pontoSaida = FlSpot(escala.maxX, _limitarY(visiveis.last.y));
+    final pontoSaida = FlSpot(escala.maxX, _limitarY(valorDe(ultimo)));
     return [
       if (pontoEntrada != null) pontoEntrada,
-      ...visiveis.map((spot) => FlSpot(spot.x, _limitarY(spot.y))),
+      for (final i in indices) FlSpot(pontos[i].x, _limitarY(valorDe(i))),
       pontoSaida,
     ];
   }

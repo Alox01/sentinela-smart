@@ -24,7 +24,11 @@ class GraficoEstufadaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pontosGraficoTemperatura = leituras
+    // Ordena por horario para a linha nunca "voltar no tempo" e para manter
+    // leitura, ajuste e cor alinhados pelo mesmo indice.
+    final leiturasOrdenadas = [...leituras]
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final pontosGraficoTemperatura = leiturasOrdenadas
         .map(
           (leitura) => FlSpot(
             leitura.timestamp.millisecondsSinceEpoch.toDouble(),
@@ -32,7 +36,7 @@ class GraficoEstufadaCard extends StatelessWidget {
           ),
         )
         .toList();
-    final pontosGraficoUmidade = leituras
+    final pontosGraficoUmidade = leiturasOrdenadas
         .map(
           (leitura) => FlSpot(
             leitura.timestamp.millisecondsSinceEpoch.toDouble(),
@@ -40,10 +44,12 @@ class GraficoEstufadaCard extends StatelessWidget {
           ),
         )
         .toList();
-    final ajustesTemperaturaGrafico = leituras
+    final ajustesTemperaturaGrafico = leiturasOrdenadas
         .map((e) => e.temperaturaMeta)
         .toList();
-    final ajustesUmidadeGrafico = leituras.map((e) => e.umidadeMeta).toList();
+    final ajustesUmidadeGrafico = leiturasOrdenadas
+        .map((e) => e.umidadeMeta)
+        .toList();
     final pontosGrafico = graficoTemperatura
         ? pontosGraficoTemperatura
         : pontosGraficoUmidade;
@@ -54,7 +60,7 @@ class GraficoEstufadaCard extends StatelessWidget {
         ? Colors.orange
         : Colors.lightBlueAccent;
     final unidadeGrafico = graficoTemperatura ? '°F' : '%';
-    final coresHistoricas = leituras
+    final coresHistoricas = leiturasOrdenadas
         .map(
           (e) => _corPontoGrafico(
             atual: graficoTemperatura ? e.temperatura : e.umidade,
