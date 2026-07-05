@@ -152,16 +152,16 @@ class _AlarmeStatus extends StatelessWidget {
               Icon(
                 Icons.warning_amber_rounded,
                 color: Colors.redAccent,
-                size: 14,
+                size: 13,
               ),
               SizedBox(width: 4),
               Text(
                 'ALARME',
                 style: TextStyle(
                   color: Colors.white70,
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.6,
                 ),
               ),
             ],
@@ -240,9 +240,18 @@ class _IndicadoresGrandeza extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        LedItem(label: 'Alta', isAtivo: alta, cor: Colors.orangeAccent),
-        const SizedBox(height: 8),
-        LedItem(label: 'Baixa', isAtivo: baixa, cor: Colors.cyanAccent),
+        // Bloco centralizado, mas com os leds alinhados a esquerda entre si:
+        // sem isso, "Alta" (mais curta) fica com o led deslocado em relacao
+        // ao led de "Baixa".
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LedItem(label: 'Alta', isAtivo: alta, cor: Colors.orangeAccent),
+            const SizedBox(height: 8),
+            LedItem(label: 'Baixa', isAtivo: baixa, cor: Colors.cyanAccent),
+          ],
+        ),
       ],
     );
   }
