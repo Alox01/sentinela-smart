@@ -117,7 +117,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             maxCrossAxisExtent: 280,
                             crossAxisSpacing: 15,
                             mainAxisSpacing: 15,
-                            childAspectRatio: 1.1,
+                            // Cartao um pouco mais alto para caber ate 3 linhas
+                            // de nome (limite de 24 caracteres) em celulares
+                            // com card estreito (2 colunas).
+                            childAspectRatio: 0.92,
                           ),
                       itemCount: minhasEstufas.length + 1,
                       itemBuilder: (context, index) {

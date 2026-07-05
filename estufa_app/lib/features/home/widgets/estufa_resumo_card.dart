@@ -155,10 +155,10 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
         ),
       ],
       child: const SizedBox(
-        width: 32,
-        height: 32,
+        width: 26,
+        height: 26,
         child: Center(
-          child: Icon(Icons.more_vert, color: Colors.white70, size: 18),
+          child: Icon(Icons.more_vert, color: Colors.white70, size: 16),
         ),
       ),
     );
@@ -213,16 +213,16 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 34),
+                      padding: const EdgeInsets.only(right: 28),
                       child: Text(
                         widget.estufa.nome,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          height: 1.15,
+                          fontSize: 12,
+                          height: 1.1,
                         ),
-                        maxLines: 2,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -341,16 +341,16 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
               const SizedBox(width: 8),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 34),
+                  padding: const EdgeInsets.only(right: 28),
                   child: Text(
                     widget.estufa.nome,
                     style: const TextStyle(
                       color: Colors.white38,
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      height: 1.15,
+                      fontSize: 12,
+                      height: 1.1,
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
