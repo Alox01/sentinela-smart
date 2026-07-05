@@ -185,24 +185,29 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                // Nome pode ocupar duas linhas; o led acompanha a primeira.
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: temAlerta
-                          ? Colors.redAccent
-                          : const Color(0xFF00FF00),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: temAlerta
-                              ? Colors.redAccent.withValues(alpha: 0.6)
-                              : Colors.greenAccent.withValues(alpha: 0.4),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: temAlerta
+                            ? Colors.redAccent
+                            : const Color(0xFF00FF00),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: temAlerta
+                                ? Colors.redAccent.withValues(alpha: 0.6)
+                                : Colors.greenAccent.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -214,9 +219,10 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 13,
+                          height: 1.15,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -312,20 +318,24 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.redAccent,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.redAccent.withValues(alpha: 0.4),
-                      blurRadius: 6,
-                      spreadRadius: 1,
-                    ),
-                  ],
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.redAccent.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -337,9 +347,10 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                     style: const TextStyle(
                       color: Colors.white38,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 13,
+                      height: 1.15,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

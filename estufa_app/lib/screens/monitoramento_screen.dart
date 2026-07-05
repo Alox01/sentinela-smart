@@ -242,8 +242,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: telaEstreita ? 17 : 18,
-                letterSpacing: telaEstreita ? 0.7 : 1,
+                fontSize: telaEstreita ? 15 : 17,
+                letterSpacing: telaEstreita ? 0.6 : 1,
               ),
             ),
             Text(
