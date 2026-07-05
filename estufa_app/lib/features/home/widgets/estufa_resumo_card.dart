@@ -213,7 +213,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 28),
+                      padding: const EdgeInsets.only(right: 20),
                       child: Text(
                         widget.estufa.nome,
                         style: const TextStyle(
@@ -222,7 +222,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                           fontSize: 12,
                           height: 1.1,
                         ),
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -341,7 +341,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
               const SizedBox(width: 8),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 28),
+                  padding: const EdgeInsets.only(right: 20),
                   child: Text(
                     widget.estufa.nome,
                     style: const TextStyle(
@@ -350,7 +350,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                       fontSize: 12,
                       height: 1.1,
                     ),
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

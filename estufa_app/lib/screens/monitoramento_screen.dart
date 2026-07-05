@@ -235,15 +235,28 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.nomeEstufa.toUpperCase(),
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: telaEstreita ? 15 : 17,
-                letterSpacing: telaEstreita ? 0.6 : 1,
+            // Tocar no nome abreviado mostra o nome completo num balao, que
+            // some ao tocar fora ou apos alguns segundos.
+            Tooltip(
+              message: widget.nomeEstufa,
+              triggerMode: TooltipTriggerMode.tap,
+              showDuration: const Duration(seconds: 3),
+              preferBelow: true,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A2D35),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              textStyle: const TextStyle(color: Colors.white, fontSize: 13),
+              child: Text(
+                widget.nomeEstufa.toUpperCase(),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: telaEstreita ? 15 : 17,
+                  letterSpacing: telaEstreita ? 0.6 : 1,
+                ),
               ),
             ),
             Text(
