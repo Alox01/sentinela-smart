@@ -269,6 +269,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     final telaEstreita = MediaQuery.sizeOf(context).width < 430;
     final isSuperaquecimentoNaoIntencional =
         temperatura >= 165.0 && temperatura > (tempAjuste + 2.0);
+    final agoraLedMs = DateTime.now().millisecondsSinceEpoch;
+    final tempEmAcomodacao = agoraLedMs < _acomodacaoTempAteMs;
+    final umidEmAcomodacao = agoraLedMs < _acomodacaoUmidAteMs;
 
     return Scaffold(
       backgroundColor: corFundo,
@@ -377,6 +380,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
                   temperaturaAjuste: tempAjuste,
                   umidadeAjuste: umidAjuste,
                   sireneLigada: sireneLigada,
+                  temperaturaEmAcomodacao: tempEmAcomodacao,
+                  umidadeEmAcomodacao: umidEmAcomodacao,
                   onSilenciarAlarme: api.silenciarAlarme,
                 ),
                 const SizedBox(height: 25),

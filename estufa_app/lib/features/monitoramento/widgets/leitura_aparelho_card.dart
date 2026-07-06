@@ -9,6 +9,8 @@ class LeituraAparelhoCard extends StatelessWidget {
   final double temperaturaAjuste;
   final double umidadeAjuste;
   final bool sireneLigada;
+  final bool temperaturaEmAcomodacao;
+  final bool umidadeEmAcomodacao;
   final VoidCallback onSilenciarAlarme;
 
   const LeituraAparelhoCard({
@@ -18,8 +20,15 @@ class LeituraAparelhoCard extends StatelessWidget {
     required this.temperaturaAjuste,
     required this.umidadeAjuste,
     required this.sireneLigada,
+    this.temperaturaEmAcomodacao = false,
+    this.umidadeEmAcomodacao = false,
     required this.onSilenciarAlarme,
   });
+
+  // Acende com 5 de diferenca do ajuste. Durante a acomodacao (logo apos mudar
+  // o ajuste), so o nivel critico (20) acende, para nao confundir a estufa
+  // "perseguindo" o novo alvo com uma oscilacao de clima.
+  static double _limiarLed(bool emAcomodacao) => emAcomodacao ? 20.0 : 5.0;
 
   @override
   Widget build(BuildContext context) {
@@ -89,8 +98,10 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'TEMPERATURA',
                       icone: Icons.thermostat,
                       corIcone: Colors.orangeAccent,
-                      alta: temperatura > (temperaturaAjuste + 2.0),
-                      baixa: temperatura < (temperaturaAjuste - 2.0),
+                      alta: temperatura >
+                          temperaturaAjuste + _limiarLed(temperaturaEmAcomodacao),
+                      baixa: temperatura <
+                          temperaturaAjuste - _limiarLed(temperaturaEmAcomodacao),
                     ),
                   ),
                   const VerticalDivider(color: Colors.white10, thickness: 1),
@@ -99,8 +110,10 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'UMIDADE',
                       icone: Icons.water_drop,
                       corIcone: Colors.lightBlueAccent,
-                      alta: umidade > (umidadeAjuste + 2.0),
-                      baixa: umidade < (umidadeAjuste - 2.0),
+                      alta: umidade >
+                          umidadeAjuste + _limiarLed(umidadeEmAcomodacao),
+                      baixa: umidade <
+                          umidadeAjuste - _limiarLed(umidadeEmAcomodacao),
                     ),
                   ),
                 ],
