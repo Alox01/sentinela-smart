@@ -41,6 +41,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   static const int _tempoOscilacaoAtencaoMs = 10 * 60 * 1000;
   static const int _tempoOscilacaoCriticaMs = 5 * 60 * 1000;
   static const double _toleranciaOscilacao = 5;
+  // Janela de acomodacao apos mudar o ajuste: a leitura leva tempo para
+  // alcancar o novo alvo, entao esse periodo nao conta como oscilacao de clima
+  // (evita falsos eventos causados pela propria mudanca do ajuste).
+  static const int _tempoAcomodacaoAjusteMs = 20 * 60 * 1000;
 
   double temperatura = 0.0;
   String avisoEmergencia = '';
@@ -58,6 +62,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   int _ultimoRegistroHistoricoMs = 0;
   CicloSecagemEntity? _cicloAtual;
   double? _ultimoTempAjusteServidor;
+  double? _ultimoUmidAjusteServidor;
+  int _acomodacaoTempAteMs = 0;
+  int _acomodacaoUmidAteMs = 0;
   bool? _ultimoAlertaIncendio;
   int? _offlineDesdeMs;
   bool _quedaConexaoRegistrada = false;
@@ -149,6 +156,19 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     final novaSireneLigada =
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
     final ajusteTempAnterior = _ultimoTempAjusteServidor;
+    final ajusteUmidAnterior = _ultimoUmidAjusteServidor;
+    // Ao detectar uma mudanca de ajuste (feita no app ou no aparelho), abre a
+    // janela de acomodacao para nao confundir a leitura "perseguindo" o novo
+    // alvo com uma oscilacao causada pelo clima/fogo.
+    final agoraAjusteMs = DateTime.now().millisecondsSinceEpoch;
+    if (ajusteTempAnterior != null &&
+        (novoTempAjuste - ajusteTempAnterior).abs() > 0.5) {
+      _acomodacaoTempAteMs = agoraAjusteMs + _tempoAcomodacaoAjusteMs;
+    }
+    if (ajusteUmidAnterior != null &&
+        (novoUmidAjuste - ajusteUmidAnterior).abs() > 0.5) {
+      _acomodacaoUmidAteMs = agoraAjusteMs + _tempoAcomodacaoAjusteMs;
+    }
     final deveSugerirFimCiclo =
         _cicloAtual != null &&
         !_sugestaoFimCicloExibida &&
@@ -193,6 +213,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       isFire = fogoDetectado;
       _modoConexao = api.modoConexao;
       _ultimoTempAjusteServidor = novoTempAjuste;
+      _ultimoUmidAjusteServidor = novoUmidAjuste;
     });
 
     if (deveSugerirFimCiclo) {
@@ -658,6 +679,14 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     }
 
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
+    // Durante a acomodacao apos mudar o ajuste, a diferenca de "atencao" e
+    // esperada (estufa indo ate o novo alvo): zera o relogio e nao gera evento.
+    // O nivel critico (>20) segue valendo como alarme.
+    if (estadoAlvo == 'atencao' && agoraMs < _acomodacaoTempAteMs) {
+      _estadoOscilacaoTemperaturaPendente = 'atencao';
+      _oscilacaoTemperaturaDesdeMs = agoraMs;
+      return;
+    }
     if (_estadoOscilacaoTemperaturaPendente != estadoAlvo) {
       _estadoOscilacaoTemperaturaPendente = estadoAlvo;
       _oscilacaoTemperaturaDesdeMs = agoraMs;
@@ -752,6 +781,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     }
 
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
+    // Mesma regra da temperatura: deviacao de "atencao" logo apos mudar o
+    // ajuste de umidade nao conta como oscilacao de clima.
+    if (estadoAlvo == 'atencao' && agoraMs < _acomodacaoUmidAteMs) {
+      _estadoOscilacaoUmidadePendente = 'atencao';
+      _oscilacaoUmidadeDesdeMs = agoraMs;
+      return;
+    }
     if (_estadoOscilacaoUmidadePendente != estadoAlvo) {
       _estadoOscilacaoUmidadePendente = estadoAlvo;
       _oscilacaoUmidadeDesdeMs = agoraMs;
