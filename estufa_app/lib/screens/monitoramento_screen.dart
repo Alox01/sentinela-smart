@@ -30,7 +30,8 @@ class MonitoramentoScreen extends StatefulWidget {
   State<MonitoramentoScreen> createState() => _MonitoramentoScreenState();
 }
 
-class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
+class _MonitoramentoScreenState extends State<MonitoramentoScreen>
+    with WidgetsBindingObserver {
   static const int _intervaloRegistroHistoricoMs = 10 * 60 * 1000;
   // Intervalo minimo entre um registro periodico e um registro disparado por
   // evento (mudanca de ajuste, alarme, desvio). Evita marcar pontos redundantes
@@ -80,19 +81,38 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     api = ApiService(widget.ipEstufa, token: widget.tokenAcesso);
     unawaited(_carregarCicloAtual());
     unawaited(_atualizarPendencias());
-    unawaited(atualizarTela());
-    timer = Timer.periodic(const Duration(seconds: 1), (_) => atualizarTela());
+    _iniciarAtualizacaoPeriodica();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     timer?.cancel();
     _debounceTemperatura?.cancel();
     _debounceUmidade?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pausa o polling de 1s quando o app sai da frente (economia de bateria e
+    // dados) e retoma assim que volta.
+    if (state == AppLifecycleState.resumed) {
+      _iniciarAtualizacaoPeriodica();
+    } else {
+      timer?.cancel();
+      timer = null;
+    }
+  }
+
+  void _iniciarAtualizacaoPeriodica() {
+    timer?.cancel();
+    unawaited(atualizarTela());
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => atualizarTela());
   }
 
   Future<void> atualizarTela() async {
