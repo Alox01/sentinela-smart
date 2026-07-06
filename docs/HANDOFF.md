@@ -25,14 +25,11 @@ inglês, sem menção a ferramentas de IA, `main` = produção, não usar
 
 ## Pendências
 
-1. **Terminar o relatório em PDF (em andamento).** O serviço
-   `estufa_app/lib/features/relatorio_estufada/services/relatorio_pdf_service.dart`
-   já está pronto (cabeçalho, resumo, gráficos de temperatura/umidade, eventos,
-   tabela de leituras). Falta: trocar o botão de download da
-   `historico_screen.dart` por um menu **PDF / CSV**, e no "PDF" gerar via o
-   serviço e compartilhar com `Printing.sharePdf(...)` (pacote `printing`, já
-   adicionado no `pubspec`). Manter o CSV como opção. Depois: `flutter analyze`,
-   `flutter test`, rebuild do APK release.
+1. **Relatório em PDF — concluído.** O botão de download da
+   `historico_screen.dart` virou um menu **PDF / CSV**. O PDF
+   (`relatorio_pdf_service.dart`) traz cabeçalho, resumo, gráficos de
+   temperatura/umidade, eventos e tabela de leituras, e é compartilhado via
+   `Printing.sharePdf` (share sheet: WhatsApp, imprimir, salvar). CSV mantido.
 
 2. **Observar o teste da nuvem.** Confirmar que, ao fechar o app e reabrir o
    relatório, o histórico gravado pela nuvem preenche os "buracos".

@@ -8,7 +8,10 @@ import '../models/evento_ciclo_entity.dart';
 import '../models/historico_leitura_entity.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
+import 'package:printing/printing.dart';
+
 import '../features/relatorio_estufada/services/relatorio_csv_service.dart';
+import '../features/relatorio_estufada/services/relatorio_pdf_service.dart';
 import '../services/api_service.dart';
 import '../services/csv_exporter.dart';
 import '../services/isar_service.dart';
@@ -38,6 +41,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     letterSpacing: 1,
   );
   static const _csvService = RelatorioCsvService();
+  static const _pdfService = RelatorioPdfService();
   final RelatorioEstufadaRepository _relatorioRepository =
       RelatorioEstufadaRepository(IsarService.instance);
   late final ApiService _api = ApiService(widget.ipEstufa);
@@ -204,10 +208,39 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
         backgroundColor: const Color(0xFF1C1C1E),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.download, color: Colors.greenAccent),
-            onPressed: _exportarCsv,
-            tooltip: 'Exportar CSV',
+            tooltip: 'Baixar relatório',
+            color: const Color(0xFF252830),
+            onSelected: (valor) {
+              if (valor == 'pdf') {
+                _exportarPdf();
+              } else if (valor == 'csv') {
+                _exportarCsv();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 18, color: Colors.white70),
+                    SizedBox(width: 8),
+                    Text('Baixar PDF'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'csv',
+                child: Row(
+                  children: [
+                    Icon(Icons.table_chart, size: 18, color: Colors.white70),
+                    SizedBox(width: 8),
+                    Text('Baixar CSV (dados)'),
+                  ],
+                ),
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.green),
@@ -507,6 +540,46 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
         ? 'em andamento'
         : DateFormat('dd/MM HH:mm').format(ciclo.fim!);
     return '#${ciclo.id} | $inicio - $fim';
+  }
+
+  Future<void> _exportarPdf() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final leiturasFiltradas = _aplicarFiltro(_leiturasBrutas);
+
+    if (leiturasFiltradas.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Sem dados para gerar o relatório.')),
+      );
+      return;
+    }
+
+    CicloSecagemEntity? cicloSelecionado;
+    for (final ciclo in _ciclos) {
+      if (ciclo.id == _cicloSelecionadoId) {
+        cicloSelecionado = ciclo;
+        break;
+      }
+    }
+    final eventosFiltrados = _aplicarFiltroEventos(_eventos);
+    final nomeArquivo = _csvService.nomeArquivo(
+      widget.nomeEstufa,
+      leiturasFiltradas,
+    );
+
+    try {
+      final pdf = await _pdfService.gerarPdf(
+        nomeEstufa: widget.nomeEstufa,
+        ciclo: cicloSelecionado,
+        leituras: leiturasFiltradas,
+        eventos: eventosFiltrados,
+      );
+      await Printing.sharePdf(bytes: pdf, filename: '$nomeArquivo.pdf');
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Falha ao gerar o PDF: $e')),
+      );
+    }
   }
 
   Future<void> _exportarCsv() async {
