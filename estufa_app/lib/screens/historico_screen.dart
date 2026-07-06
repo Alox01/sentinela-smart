@@ -48,6 +48,11 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
   late Future<_DadosRelatorioEstufada> _dadosFuture;
   List<HistoricoLeituraEntity> _leiturasBrutas = [];
+  // Histórico já mesclado com a nuvem (preenchido em segundo plano) e controle
+  // de qual ciclo já foi buscado, para não travar a tela esperando a rede.
+  List<HistoricoLeituraEntity>? _leiturasNuvem;
+  int? _cicloNuvemCarregadoId;
+  int? _cicloNuvemEmProgresso;
   List<CicloSecagemEntity> _ciclos = [];
   List<EventoCicloEntity> _eventos = [];
   int? _cicloSelecionadoId;
@@ -72,6 +77,11 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   Future<_DadosRelatorioEstufada> _carregarDadosRelatorio({
     int? cicloPreferidoId,
   }) async {
+    // Reinicia o estado da busca da nuvem a cada (re)carregamento.
+    _leiturasNuvem = null;
+    _cicloNuvemCarregadoId = null;
+    _cicloNuvemEmProgresso = null;
+
     final ciclos = await _relatorioRepository.listarCiclosPorIp(
       widget.ipEstufa,
     );
@@ -94,20 +104,44 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
         fim: fimCiclo,
       ),
       _relatorioRepository.listarEventosPorCiclo(cicloSelecionado.id),
-      _api.buscarHistorico(inicio: cicloSelecionado.inicio, fim: fimCiclo),
     ]);
 
     final leiturasLocais = resultados[0] as List<HistoricoLeituraEntity>;
-    final leiturasNuvem = (resultados[2] as List<Map<String, dynamic>>)
-        .map(_leituraDaNuvem)
-        .toList();
+    // Renderiza ja com o local (instantaneo) e busca a nuvem em segundo plano.
+    unawaited(_carregarHistoricoNuvem(cicloSelecionado, fimCiclo, leiturasLocais));
 
     return _DadosRelatorioEstufada(
-      leituras: _mesclarHistoricos(leiturasLocais, leiturasNuvem),
+      leituras: leiturasLocais,
       ciclos: ciclos,
       eventos: resultados[1] as List<EventoCicloEntity>,
       cicloSelecionado: cicloSelecionado,
     );
+  }
+
+  Future<void> _carregarHistoricoNuvem(
+    CicloSecagemEntity ciclo,
+    DateTime fim,
+    List<HistoricoLeituraEntity> locais,
+  ) async {
+    if (_cicloNuvemEmProgresso == ciclo.id ||
+        _cicloNuvemCarregadoId == ciclo.id) {
+      return;
+    }
+    _cicloNuvemEmProgresso = ciclo.id;
+
+    final nuvem = (await _api.buscarHistorico(inicio: ciclo.inicio, fim: fim))
+        .map(_leituraDaNuvem)
+        .toList();
+
+    if (!mounted) {
+      _cicloNuvemEmProgresso = null;
+      return;
+    }
+    setState(() {
+      _leiturasNuvem = _mesclarHistoricos(locais, nuvem);
+      _cicloNuvemCarregadoId = ciclo.id;
+      _cicloNuvemEmProgresso = null;
+    });
   }
 
   HistoricoLeituraEntity _leituraDaNuvem(Map<String, dynamic> m) {
@@ -263,11 +297,17 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           }
 
           final dados = snapshot.data ?? _DadosRelatorioEstufada.vazio();
-          _leiturasBrutas = dados.leituras;
           _ciclos = dados.ciclos;
           _eventos = dados.eventos;
           final cicloSelecionado = dados.cicloSelecionado;
           _cicloSelecionadoId = cicloSelecionado?.id;
+          // Usa o histórico mesclado com a nuvem quando já disponível para este
+          // ciclo; senão, o local (renderiza na hora e completa em seguida).
+          _leiturasBrutas =
+              (_cicloNuvemCarregadoId == cicloSelecionado?.id &&
+                  _leiturasNuvem != null)
+              ? _leiturasNuvem!
+              : dados.leituras;
           final leituras = _aplicarFiltro(_leiturasBrutas);
 
           if (_leiturasBrutas.isEmpty) {
