@@ -1,5 +1,10 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
@@ -208,7 +213,20 @@ class _HomeScreenState extends State<HomeScreen> {
         jsonContent: json,
       );
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Backup salvo: $destino')));
+
+      if (kIsWeb) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Backup exportado.')),
+        );
+        return;
+      }
+      // Abre o compartilhamento nativo: o produtor pode salvar no Drive,
+      // mandar por WhatsApp, e-mail, etc.
+      await Share.shareXFiles(
+        [XFile(destino, mimeType: 'application/json')],
+        subject: 'Backup Sentinela Smart',
+        text: 'Backup das estufas ($fileName).',
+      );
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -219,8 +237,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _importarBackup() async {
     final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
-    final jsonContent = await showDialog<String>(
+
+    final selecionado = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      withData: true,
+    );
+    if (selecionado == null || selecionado.files.isEmpty) {
+      return; // usuário cancelou
+    }
+    final bytes = selecionado.files.single.bytes;
+    if (bytes == null) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Não foi possível ler o arquivo.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
@@ -228,41 +264,29 @@ class _HomeScreenState extends State<HomeScreen> {
           'Importar backup',
           style: TextStyle(color: Colors.white),
         ),
-        content: SizedBox(
-          width: 520,
-          child: TextField(
-            controller: controller,
-            minLines: 8,
-            maxLines: 14,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Cole aqui o JSON do backup',
-              hintStyle: TextStyle(color: Colors.white38),
-              border: OutlineInputBorder(),
-            ),
-          ),
+        content: const Text(
+          'Isso vai substituir os dados atuais do app pelos do backup. Continuar?',
+          style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Importar'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Importar',
+              style: TextStyle(color: Colors.greenAccent),
+            ),
           ),
         ],
       ),
     );
-
-    if (jsonContent == null || jsonContent.trim().isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Importação cancelada.')),
-      );
-      return;
-    }
+    if (confirmar != true) return;
 
     try {
+      final jsonContent = utf8.decode(bytes);
       final resultado = await IsarService.instance.importarBackupJson(
         jsonContent,
         substituirTudo: true,
