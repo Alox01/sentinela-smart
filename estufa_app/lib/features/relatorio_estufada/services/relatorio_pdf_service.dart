@@ -44,26 +44,6 @@ class RelatorioPdfService {
             totalAlarmes: totalAlarmes,
           ),
           pw.SizedBox(height: 18),
-          _tituloSecao('Temperatura (leitura x ajuste)'),
-          _grafico(
-            leituras,
-            (l) => l.temperatura,
-            (l) => l.temperaturaMeta,
-            PdfColors.orange,
-            60,
-            200,
-          ),
-          pw.SizedBox(height: 14),
-          _tituloSecao('Umidade (leitura x ajuste)'),
-          _grafico(
-            leituras,
-            (l) => l.umidade,
-            (l) => l.umidadeMeta,
-            PdfColors.blue,
-            0,
-            100,
-          ),
-          pw.SizedBox(height: 18),
           _tituloSecao('Eventos da estufada'),
           _tabelaEventos(eventos, horaFmt),
           pw.SizedBox(height: 18),
@@ -214,65 +194,6 @@ class RelatorioPdfService {
       child: pw.Text(
         texto,
         style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
-      ),
-    );
-  }
-
-  pw.Widget _grafico(
-    List<HistoricoLeituraEntity> leituras,
-    double Function(HistoricoLeituraEntity) valorDe,
-    double Function(HistoricoLeituraEntity) ajusteDe,
-    PdfColor cor,
-    double minY,
-    double maxY,
-  ) {
-    if (leituras.length < 2) {
-      return pw.Text(
-        'Dados insuficientes para o grafico.',
-        style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
-      );
-    }
-
-    final dadosLeitura = <pw.PointChartValue>[];
-    final dadosAjuste = <pw.PointChartValue>[];
-    for (var i = 0; i < leituras.length; i++) {
-      final x = i.toDouble();
-      dadosLeitura.add(pw.PointChartValue(x, valorDe(leituras[i]).clamp(minY, maxY)));
-      dadosAjuste.add(pw.PointChartValue(x, ajusteDe(leituras[i]).clamp(minY, maxY)));
-    }
-    final maxX = (leituras.length - 1).toDouble();
-    final meioY = (minY + maxY) / 2;
-
-    return pw.Container(
-      height: 150,
-      child: pw.Chart(
-        grid: pw.CartesianGrid(
-          xAxis: pw.FixedAxis([0, maxX], divisions: false, textStyle: const pw.TextStyle(fontSize: 0)),
-          yAxis: pw.FixedAxis(
-            [minY, meioY, maxY],
-            divisions: true,
-            textStyle: const pw.TextStyle(fontSize: 8),
-          ),
-        ),
-        datasets: [
-          pw.LineDataSet(
-            data: dadosAjuste,
-            color: PdfColors.grey500,
-            isCurved: false,
-            drawSurface: false,
-            drawPoints: false,
-            lineWidth: 1,
-          ),
-          pw.LineDataSet(
-            data: dadosLeitura,
-            color: cor,
-            isCurved: false,
-            drawSurface: true,
-            surfaceOpacity: 0.12,
-            drawPoints: false,
-            lineWidth: 2,
-          ),
-        ],
       ),
     );
   }
