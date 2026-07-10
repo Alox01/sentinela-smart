@@ -6,8 +6,8 @@ import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
 import '../features/monitoramento/services/monitoramento_repository.dart';
 import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
-import '../features/monitoramento/widgets/indicador_conexao.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
+import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../models/ciclo_secagem_entity.dart';
 import '../services/api_service.dart';
 import '../services/isar_service.dart';
@@ -266,7 +266,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   @override
   Widget build(BuildContext context) {
     final corFundo = isFire ? const Color(0xFF330000) : const Color(0xFF0E1012);
-    final telaEstreita = MediaQuery.sizeOf(context).width < 430;
     final isSuperaquecimentoNaoIntencional =
         temperatura >= 165.0 && temperatura > (tempAjuste + 2.0);
     final agoraLedMs = DateTime.now().millisecondsSinceEpoch;
@@ -275,91 +274,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
 
     return Scaffold(
       backgroundColor: corFundo,
-      appBar: AppBar(
-        leading: IconButton(
-          iconSize: 20,
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Voltar',
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        // Titulo alinhado a esquerda: nomes longos ganham o espaco livre e
-        // cortam com reticencias, em vez de encolher espremidos entre a seta
-        // e o indicador de conexao.
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tocar no nome abreviado mostra o nome completo num balao, que
-            // some ao tocar fora ou apos alguns segundos.
-            Tooltip(
-              message: widget.nomeEstufa,
-              triggerMode: TooltipTriggerMode.tap,
-              showDuration: const Duration(seconds: 3),
-              preferBelow: true,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A2D35),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              textStyle: const TextStyle(color: Colors.white, fontSize: 13),
-              child: Text(
-                widget.nomeEstufa.toUpperCase(),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: telaEstreita ? 15 : 17,
-                  letterSpacing: telaEstreita ? 0.6 : 1,
-                ),
-              ),
-            ),
-            Text(
-              'MONITORAMENTO',
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: telaEstreita ? 9 : 12,
-                color: Colors.white70,
-                letterSpacing: telaEstreita ? 1.4 : 2,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF1C1C1E),
-        foregroundColor: Colors.white,
-        centerTitle: false,
-        titleSpacing: 0,
-        elevation: 0,
-        actions: [
-          IndicadorConexao(
-            modoConexao: _modoConexao,
-            sincronizando: _sincronizandoPendencias,
-            pendencias: _pendenciasSincronizacao,
-          ),
-          IconButton(
-            visualDensity: telaEstreita ? VisualDensity.compact : null,
-            iconSize: telaEstreita ? 20 : 24,
-            constraints: telaEstreita
-                ? const BoxConstraints.tightFor(width: 32, height: 48)
-                : null,
-            onPressed: _mostrarDetalhesConexao,
-            icon: const Icon(Icons.info_outline_rounded),
-            tooltip: 'Detalhes da conex\u00E3o',
-          ),
-          IconButton(
-            visualDensity: telaEstreita ? VisualDensity.compact : null,
-            iconSize: telaEstreita ? 20 : 24,
-            constraints: telaEstreita
-                ? const BoxConstraints.tightFor(width: 32, height: 48)
-                : null,
-            onPressed: _sincronizandoPendencias
-                ? null
-                : () => _sincronizarPendenciasSeNecessario(forcar: true),
-            icon: Icon(
-              _sincronizandoPendencias ? Icons.sync : Icons.sync_problem,
-            ),
-            tooltip: 'Sincronizar pend\u00EAncias',
-          ),
-        ],
+      appBar: MonitoramentoAppBar(
+        nomeEstufa: widget.nomeEstufa,
+        modoConexao: _modoConexao,
+        sincronizando: _sincronizandoPendencias,
+        pendencias: _pendenciasSincronizacao,
+        onDetalhesConexao: _mostrarDetalhesConexao,
+        onSincronizar: () => _sincronizarPendenciasSeNecessario(forcar: true),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
