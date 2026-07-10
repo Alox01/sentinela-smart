@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../features/monitoramento/dialogs/detalhes_conexao_dialog.dart';
 import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
+import '../features/monitoramento/services/detector_oscilacao.dart';
 import '../features/monitoramento/services/monitoramento_repository.dart';
 import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
@@ -38,13 +39,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   // colados no grafico quando varios eventos acontecem em sequencia.
   static const int _cooldownEventoMs = 3 * 60 * 1000;
   static const int _tempoQuedaConexaoMs = 2 * 60 * 1000;
-  static const int _tempoOscilacaoAtencaoMs = 10 * 60 * 1000;
-  static const int _tempoOscilacaoCriticaMs = 5 * 60 * 1000;
-  static const double _toleranciaOscilacao = 5;
-  // Janela de acomodacao apos mudar o ajuste: a leitura leva tempo para
-  // alcancar o novo alvo, entao esse periodo nao conta como oscilacao de clima
-  // (evita falsos eventos causados pela propria mudanca do ajuste).
-  static const int _tempoAcomodacaoAjusteMs = 20 * 60 * 1000;
 
   double temperatura = 0.0;
   String avisoEmergencia = '';
@@ -63,19 +57,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   CicloSecagemEntity? _cicloAtual;
   double? _ultimoTempAjusteServidor;
   double? _ultimoUmidAjusteServidor;
-  int _acomodacaoTempAteMs = 0;
-  int _acomodacaoUmidAteMs = 0;
   bool? _ultimoAlertaIncendio;
   int? _offlineDesdeMs;
   bool _quedaConexaoRegistrada = false;
-  String _estadoOscilacaoTemperatura = 'normal';
-  String? _estadoOscilacaoTemperaturaPendente;
-  int? _oscilacaoTemperaturaDesdeMs;
-  int _ultimoRegistroOscilacaoTemperaturaMs = 0;
-  String _estadoOscilacaoUmidade = 'normal';
-  String? _estadoOscilacaoUmidadePendente;
-  int? _oscilacaoUmidadeDesdeMs;
-  int _ultimoRegistroOscilacaoUmidadeMs = 0;
+  final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
   bool _sugestaoFimCicloExibida = false;
 
   Timer? timer;
@@ -163,11 +148,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     final agoraAjusteMs = DateTime.now().millisecondsSinceEpoch;
     if (ajusteTempAnterior != null &&
         (novoTempAjuste - ajusteTempAnterior).abs() > 0.5) {
-      _acomodacaoTempAteMs = agoraAjusteMs + _tempoAcomodacaoAjusteMs;
+      _detectorOscilacao.registrarMudancaAjusteTemperatura(agoraAjusteMs);
     }
     if (ajusteUmidAnterior != null &&
         (novoUmidAjuste - ajusteUmidAnterior).abs() > 0.5) {
-      _acomodacaoUmidAteMs = agoraAjusteMs + _tempoAcomodacaoAjusteMs;
+      _detectorOscilacao.registrarMudancaAjusteUmidade(agoraAjusteMs);
     }
     final deveSugerirFimCiclo =
         _cicloAtual != null &&
@@ -269,8 +254,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     final isSuperaquecimentoNaoIntencional =
         temperatura >= 165.0 && temperatura > (tempAjuste + 2.0);
     final agoraLedMs = DateTime.now().millisecondsSinceEpoch;
-    final tempEmAcomodacao = agoraLedMs < _acomodacaoTempAteMs;
-    final umidEmAcomodacao = agoraLedMs < _acomodacaoUmidAteMs;
+    final tempEmAcomodacao = _detectorOscilacao.temperaturaEmAcomodacao(
+      agoraLedMs,
+    );
+    final umidEmAcomodacao = _detectorOscilacao.umidadeEmAcomodacao(agoraLedMs);
 
     return Scaffold(
       backgroundColor: corFundo,
@@ -394,14 +381,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       _cicloAtual = ciclo;
       _sugestaoFimCicloExibida = false;
       _ultimoRegistroHistoricoMs = 0;
-      _estadoOscilacaoTemperatura = 'normal';
-      _estadoOscilacaoTemperaturaPendente = null;
-      _oscilacaoTemperaturaDesdeMs = null;
-      _ultimoRegistroOscilacaoTemperaturaMs = 0;
-      _estadoOscilacaoUmidade = 'normal';
-      _estadoOscilacaoUmidadePendente = null;
-      _oscilacaoUmidadeDesdeMs = null;
-      _ultimoRegistroOscilacaoUmidadeMs = 0;
+      _detectorOscilacao.reiniciar();
     });
     _registrarEventoCiclo(
       tipo: 'inicio_estufada',
@@ -444,14 +424,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     setState(() {
       _cicloAtual = null;
       _sugestaoFimCicloExibida = false;
-      _estadoOscilacaoTemperatura = 'normal';
-      _estadoOscilacaoTemperaturaPendente = null;
-      _oscilacaoTemperaturaDesdeMs = null;
-      _ultimoRegistroOscilacaoTemperaturaMs = 0;
-      _estadoOscilacaoUmidade = 'normal';
-      _estadoOscilacaoUmidadePendente = null;
-      _oscilacaoUmidadeDesdeMs = null;
-      _ultimoRegistroOscilacaoUmidadeMs = 0;
+      _detectorOscilacao.reiniciar();
     });
     ScaffoldMessenger.of(
       context,
@@ -540,15 +513,56 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     }
     _ultimoAlertaIncendio = alertaIncendioAtual;
 
-    _processarOscilacaoTemperatura(
-      temperaturaAtual: temperaturaAtual,
-      umidadeAtual: umidadeAtual,
-      temperaturaAjusteAtual: temperaturaAjusteAtual,
-      umidadeAjusteAtual: umidadeAjusteAtual,
-      avisoAtual: avisoAtual,
-      alertaIncendioAtual: alertaIncendioAtual,
+    final agoraOscMs = DateTime.now().millisecondsSinceEpoch;
+    final eventoTemp = _detectorOscilacao.avaliarTemperatura(
+      leitura: temperaturaAtual,
+      ajuste: temperaturaAjusteAtual,
+      nowMs: agoraOscMs,
     );
-    _processarOscilacaoUmidade(
+    if (eventoTemp != null) {
+      _registrarEventoOscilacao(
+        eventoTemp,
+        temperaturaAtual: temperaturaAtual,
+        umidadeAtual: umidadeAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
+        avisoAtual: avisoAtual,
+        alertaIncendioAtual: alertaIncendioAtual,
+      );
+    }
+    final eventoUmid = _detectorOscilacao.avaliarUmidade(
+      leitura: umidadeAtual,
+      ajuste: umidadeAjusteAtual,
+      nowMs: agoraOscMs,
+    );
+    if (eventoUmid != null) {
+      _registrarEventoOscilacao(
+        eventoUmid,
+        temperaturaAtual: temperaturaAtual,
+        umidadeAtual: umidadeAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
+        avisoAtual: avisoAtual,
+        alertaIncendioAtual: alertaIncendioAtual,
+      );
+    }
+  }
+
+  void _registrarEventoOscilacao(
+    EventoOscilacao evento, {
+    required double temperaturaAtual,
+    required double umidadeAtual,
+    required double temperaturaAjusteAtual,
+    required double umidadeAjusteAtual,
+    required String avisoAtual,
+    required bool alertaIncendioAtual,
+  }) {
+    _registrarEventoCiclo(
+      tipo: evento.tipo,
+      severidade: evento.severidade,
+      descricao: evento.descricao,
+      valorAnterior: evento.valorAnterior,
+      valorAtual: evento.valorAtual,
       temperaturaAtual: temperaturaAtual,
       umidadeAtual: umidadeAtual,
       temperaturaAjusteAtual: temperaturaAjusteAtual,
@@ -564,209 +578,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
         .replaceAll('Temp ', 'Temperatura ')
         .replaceAll('Umid ', 'Umidade ')
         .trim();
-  }
-
-  void _processarOscilacaoTemperatura({
-    required double temperaturaAtual,
-    required double umidadeAtual,
-    required double temperaturaAjusteAtual,
-    required double umidadeAjusteAtual,
-    required String avisoAtual,
-    required bool alertaIncendioAtual,
-  }) {
-    final diferenca = temperaturaAtual - temperaturaAjusteAtual;
-    final diferencaAbs = diferenca.abs();
-    final estadoAlvo = diferencaAbs > 20
-        ? 'critico'
-        : diferencaAbs > _toleranciaOscilacao
-        ? 'atencao'
-        : 'normal';
-
-    if (estadoAlvo == 'normal') {
-      _estadoOscilacaoTemperaturaPendente = null;
-      _oscilacaoTemperaturaDesdeMs = null;
-      _ultimoRegistroOscilacaoTemperaturaMs = 0;
-      if (_estadoOscilacaoTemperatura != 'normal') {
-        _estadoOscilacaoTemperatura = 'normal';
-        _registrarEventoCiclo(
-          tipo: 'oscilacao_temperatura_normalizada',
-          severidade: 'info',
-          descricao: 'Temperatura voltou para a faixa proxima do ajuste.',
-          valorAtual: temperaturaAtual,
-          temperaturaAtual: temperaturaAtual,
-          umidadeAtual: umidadeAtual,
-          temperaturaAjusteAtual: temperaturaAjusteAtual,
-          umidadeAjusteAtual: umidadeAjusteAtual,
-          avisoAtual: avisoAtual,
-          alertaIncendioAtual: alertaIncendioAtual,
-        );
-      }
-      return;
-    }
-
-    final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    // Durante a acomodacao apos mudar o ajuste, a diferenca de "atencao" e
-    // esperada (estufa indo ate o novo alvo): zera o relogio e nao gera evento.
-    // O nivel critico (>20) segue valendo como alarme.
-    if (estadoAlvo == 'atencao' && agoraMs < _acomodacaoTempAteMs) {
-      _estadoOscilacaoTemperaturaPendente = 'atencao';
-      _oscilacaoTemperaturaDesdeMs = agoraMs;
-      return;
-    }
-    if (_estadoOscilacaoTemperaturaPendente != estadoAlvo) {
-      _estadoOscilacaoTemperaturaPendente = estadoAlvo;
-      _oscilacaoTemperaturaDesdeMs = agoraMs;
-      return;
-    }
-
-    final tempoMinimo = estadoAlvo == 'critico'
-        ? _tempoOscilacaoCriticaMs
-        : _tempoOscilacaoAtencaoMs;
-    final desdeMs = _oscilacaoTemperaturaDesdeMs ?? agoraMs;
-    if ((agoraMs - desdeMs) < tempoMinimo) return;
-    if (_estadoOscilacaoTemperatura == estadoAlvo) {
-      if ((agoraMs - _ultimoRegistroOscilacaoTemperaturaMs) <
-          _intervaloRegistroHistoricoMs) {
-        return;
-      }
-      _ultimoRegistroOscilacaoTemperaturaMs = agoraMs;
-      _registrarEventoCiclo(
-        tipo: 'oscilacao_temperatura_continua',
-        severidade: estadoAlvo == 'critico' ? 'critico' : 'alerta',
-        descricao:
-            'Temperatura ainda fora do ajuste (${diferencaAbs.toStringAsFixed(0)}\u00B0F de diferen\u00E7a).',
-        valorAnterior: temperaturaAjusteAtual,
-        valorAtual: temperaturaAtual,
-        temperaturaAtual: temperaturaAtual,
-        umidadeAtual: umidadeAtual,
-        temperaturaAjusteAtual: temperaturaAjusteAtual,
-        umidadeAjusteAtual: umidadeAjusteAtual,
-        avisoAtual: avisoAtual,
-        alertaIncendioAtual: alertaIncendioAtual,
-      );
-      return;
-    }
-
-    _estadoOscilacaoTemperatura = estadoAlvo;
-    _ultimoRegistroOscilacaoTemperaturaMs = agoraMs;
-    final direcao = diferenca > 0 ? 'acima' : 'abaixo';
-    final severidade = estadoAlvo == 'critico' ? 'critico' : 'alerta';
-    final limiteTexto = estadoAlvo == 'critico' ? '20\u00B0F' : '10\u00B0F';
-    _registrarEventoCiclo(
-      tipo: 'oscilacao_temperatura',
-      severidade: severidade,
-      descricao:
-          'Temperatura $direcao do ajuste por mais de $limiteTexto (${diferencaAbs.toStringAsFixed(0)}\u00B0F de diferen\u00E7a).',
-      valorAnterior: temperaturaAjusteAtual,
-      valorAtual: temperaturaAtual,
-      temperaturaAtual: temperaturaAtual,
-      umidadeAtual: umidadeAtual,
-      temperaturaAjusteAtual: temperaturaAjusteAtual,
-      umidadeAjusteAtual: umidadeAjusteAtual,
-      avisoAtual: avisoAtual,
-      alertaIncendioAtual: alertaIncendioAtual,
-    );
-  }
-
-  void _processarOscilacaoUmidade({
-    required double temperaturaAtual,
-    required double umidadeAtual,
-    required double temperaturaAjusteAtual,
-    required double umidadeAjusteAtual,
-    required String avisoAtual,
-    required bool alertaIncendioAtual,
-  }) {
-    final diferenca = umidadeAtual - umidadeAjusteAtual;
-    final diferencaAbs = diferenca.abs();
-    final estadoAlvo = diferencaAbs > 20
-        ? 'critico'
-        : diferencaAbs > _toleranciaOscilacao
-        ? 'atencao'
-        : 'normal';
-
-    if (estadoAlvo == 'normal') {
-      _estadoOscilacaoUmidadePendente = null;
-      _oscilacaoUmidadeDesdeMs = null;
-      _ultimoRegistroOscilacaoUmidadeMs = 0;
-      if (_estadoOscilacaoUmidade != 'normal') {
-        _estadoOscilacaoUmidade = 'normal';
-        _registrarEventoCiclo(
-          tipo: 'oscilacao_umidade_normalizada',
-          severidade: 'info',
-          descricao: 'Umidade voltou para a faixa proxima do ajuste.',
-          valorAtual: umidadeAtual,
-          temperaturaAtual: temperaturaAtual,
-          umidadeAtual: umidadeAtual,
-          temperaturaAjusteAtual: temperaturaAjusteAtual,
-          umidadeAjusteAtual: umidadeAjusteAtual,
-          avisoAtual: avisoAtual,
-          alertaIncendioAtual: alertaIncendioAtual,
-        );
-      }
-      return;
-    }
-
-    final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    // Mesma regra da temperatura: deviacao de "atencao" logo apos mudar o
-    // ajuste de umidade nao conta como oscilacao de clima.
-    if (estadoAlvo == 'atencao' && agoraMs < _acomodacaoUmidAteMs) {
-      _estadoOscilacaoUmidadePendente = 'atencao';
-      _oscilacaoUmidadeDesdeMs = agoraMs;
-      return;
-    }
-    if (_estadoOscilacaoUmidadePendente != estadoAlvo) {
-      _estadoOscilacaoUmidadePendente = estadoAlvo;
-      _oscilacaoUmidadeDesdeMs = agoraMs;
-      return;
-    }
-
-    final tempoMinimo = estadoAlvo == 'critico'
-        ? _tempoOscilacaoCriticaMs
-        : _tempoOscilacaoAtencaoMs;
-    final desdeMs = _oscilacaoUmidadeDesdeMs ?? agoraMs;
-    if ((agoraMs - desdeMs) < tempoMinimo) return;
-    if (_estadoOscilacaoUmidade == estadoAlvo) {
-      if ((agoraMs - _ultimoRegistroOscilacaoUmidadeMs) <
-          _intervaloRegistroHistoricoMs) {
-        return;
-      }
-      _ultimoRegistroOscilacaoUmidadeMs = agoraMs;
-      _registrarEventoCiclo(
-        tipo: 'oscilacao_umidade_continua',
-        severidade: estadoAlvo == 'critico' ? 'critico' : 'alerta',
-        descricao:
-            'Umidade ainda fora do ajuste (${diferencaAbs.toStringAsFixed(0)}% de diferen\u00E7a).',
-        valorAnterior: umidadeAjusteAtual,
-        valorAtual: umidadeAtual,
-        temperaturaAtual: temperaturaAtual,
-        umidadeAtual: umidadeAtual,
-        temperaturaAjusteAtual: temperaturaAjusteAtual,
-        umidadeAjusteAtual: umidadeAjusteAtual,
-        avisoAtual: avisoAtual,
-        alertaIncendioAtual: alertaIncendioAtual,
-      );
-      return;
-    }
-
-    _estadoOscilacaoUmidade = estadoAlvo;
-    _ultimoRegistroOscilacaoUmidadeMs = agoraMs;
-    final direcao = diferenca > 0 ? 'acima' : 'abaixo';
-    final severidade = estadoAlvo == 'critico' ? 'critico' : 'alerta';
-    final limiteTexto = estadoAlvo == 'critico' ? '20%' : '5%';
-    _registrarEventoCiclo(
-      tipo: 'oscilacao_umidade',
-      severidade: severidade,
-      descricao:
-          'Umidade $direcao do ajuste por mais de $limiteTexto (${diferencaAbs.toStringAsFixed(0)}% de diferen\u00E7a).',
-      valorAnterior: umidadeAjusteAtual,
-      valorAtual: umidadeAtual,
-      temperaturaAtual: temperaturaAtual,
-      umidadeAtual: umidadeAtual,
-      temperaturaAjusteAtual: temperaturaAjusteAtual,
-      umidadeAjusteAtual: umidadeAjusteAtual,
-      avisoAtual: avisoAtual,
-      alertaIncendioAtual: alertaIncendioAtual,
-    );
   }
 
   void _registrarEventoCiclo({
