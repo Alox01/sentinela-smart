@@ -23,7 +23,7 @@ test('dispara risco de incendio quando temperatura passa do limite seguro', () =
 });
 
 test('dispara alarme de processo quando temperatura foge da tolerancia', () => {
-  const resultado = analisarEstado(95, 90, 60, 60, 0, false);
+  const resultado = analisarEstado(97, 90, 60, 60, 0, false);
 
   assert.equal(resultado.alarmeAtivo, true);
   assert.equal(resultado.alertaIncendio, true);
@@ -34,7 +34,7 @@ test('dispara alarme de processo quando temperatura foge da tolerancia', () => {
 
 test('respeita silencio recente e desliga sirene', () => {
   const agora = Date.now();
-  const resultado = analisarEstado(95, 90, 60, 60, agora, false);
+  const resultado = analisarEstado(97, 90, 60, 60, agora, false);
 
   assert.equal(resultado.alarmeAtivo, false);
   assert.equal(resultado.alertaIncendio, false);

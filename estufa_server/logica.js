@@ -1,7 +1,7 @@
 ﻿// --- LOGICA DE NEGOCIO E SEGURANCA ---
 
 // --- CONFIGURACOES DE TOLERANCIA ---
-const TOLERANCIA_TEMP = 2.0; // Margem de erro de 2 F
+const TOLERANCIA_TEMP = 5.0; // Margem de erro de 5 F (alinhada com LEDs/eventos)
 const TOLERANCIA_UMID = 2.0; // Margem de erro de 2%
 const TEMPO_SILENCIO = 10 * 60 * 1000;
 
