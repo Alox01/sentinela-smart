@@ -61,6 +61,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   double? _ultimoTempAjusteServidor;
   double? _ultimoUmidAjusteServidor;
   bool? _ultimoAlertaIncendio;
+  bool _semEnergia = false;
+  bool? _ultimoTemEnergia;
   final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
   final RastreadorConexao _rastreadorConexao = RastreadorConexao();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -143,6 +145,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     final novoAviso = status['aviso'] ?? '';
     final novaSireneLigada =
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
+    // Sem o campo, assume que ha energia (nao alarma a toa). So false = sem energia.
+    final novoTemEnergia = status['temEnergia'] != false;
     final ajusteTempAnterior = _ultimoTempAjusteServidor;
     final ajusteUmidAnterior = _ultimoUmidAjusteServidor;
     // Ao detectar uma mudanca de ajuste (feita no app ou no aparelho), abre a
@@ -179,6 +183,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       umidadeAjusteAtual: novoUmidAjuste,
       alertaIncendioAtual: novaSireneLigada,
       riscoIncendioAtual: fogoDetectado,
+      temEnergiaAtual: novoTemEnergia,
       avisoAtual: novoAviso,
     );
 
@@ -199,6 +204,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       avisoEmergencia = novoAviso;
       sireneLigada = novaSireneLigada;
       isFire = fogoDetectado;
+      _semEnergia = !novoTemEnergia;
       _modoConexao = api.modoConexao;
       _ultimoTempAjusteServidor = novoTempAjuste;
       _ultimoUmidAjusteServidor = novoUmidAjuste;
@@ -285,6 +291,42 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
                     incendioDetectado: isFire,
                     temperaturaAtual: temperatura,
                     avisoEmergencia: avisoEmergencia,
+                  ),
+                if (_semEnergia)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.amberAccent.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.power_off_rounded,
+                          color: Colors.amberAccent,
+                          size: 20,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Estufa sem energia elétrica. O sistema está na '
+                            'bateria/gerador — verifique a alimentação.',
+                            style: TextStyle(
+                              color: Colors.amberAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 LeituraAparelhoCard(
                   temperatura: temperatura,
@@ -657,12 +699,41 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     required double umidadeAjusteAtual,
     required bool alertaIncendioAtual,
     required bool riscoIncendioAtual,
+    required bool temEnergiaAtual,
     required String avisoAtual,
   }) {
     if (_cicloAtual == null) {
       _ultimoAlertaIncendio = alertaIncendioAtual;
+      _ultimoTemEnergia = temEnergiaAtual;
       return;
     }
+
+    if (!temEnergiaAtual && _ultimoTemEnergia != false) {
+      _registrarEventoCiclo(
+        tipo: 'queda_energia',
+        severidade: 'alerta',
+        descricao: 'A estufa ficou sem energia elétrica.',
+        temperaturaAtual: temperaturaAtual,
+        umidadeAtual: umidadeAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
+        avisoAtual: avisoAtual,
+        alertaIncendioAtual: alertaIncendioAtual,
+      );
+    } else if (temEnergiaAtual && _ultimoTemEnergia == false) {
+      _registrarEventoCiclo(
+        tipo: 'retorno_energia',
+        severidade: 'info',
+        descricao: 'A energia elétrica foi restabelecida.',
+        temperaturaAtual: temperaturaAtual,
+        umidadeAtual: umidadeAtual,
+        temperaturaAjusteAtual: temperaturaAjusteAtual,
+        umidadeAjusteAtual: umidadeAjusteAtual,
+        avisoAtual: avisoAtual,
+        alertaIncendioAtual: alertaIncendioAtual,
+      );
+    }
+    _ultimoTemEnergia = temEnergiaAtual;
 
     if (alertaIncendioAtual && _ultimoAlertaIncendio != true) {
       final ehIncendio = riscoIncendioAtual;
