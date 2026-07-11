@@ -23,4 +23,12 @@ class RelatorioEstufadaRepository {
   Future<List<EventoCicloEntity>> listarEventosPorCiclo(int cicloId) {
     return _isar.listarEventosPorCiclo(cicloId);
   }
+
+  Future<void> apagarCiclo(int cicloId) {
+    return _isar.apagarCiclo(cicloId);
+  }
+
+  Future<void> apagarCiclos(List<int> cicloIds) {
+    return _isar.apagarCiclos(cicloIds);
+  }
 }

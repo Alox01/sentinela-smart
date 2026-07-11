@@ -15,6 +15,7 @@ import '../services/api_service.dart';
 import '../services/isar_service.dart';
 import '../widgets/painel_controle.dart';
 import 'historico_screen.dart';
+import '../features/relatorio_estufada/screens/gerenciar_estufadas_screen.dart';
 
 class MonitoramentoScreen extends StatefulWidget {
   final String nomeEstufa;
@@ -468,6 +469,31 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
               onTap: () {
                 Navigator.of(context).pop();
                 _prepararNovaEstufada();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_sweep_outlined,
+                color: Colors.redAccent,
+              ),
+              title: const Text(
+                'Apagar estufadas',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: const Text(
+                'Remove relatórios antigos ou de teste',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => GerenciarEstufadasScreen(
+                      nomeEstufa: widget.nomeEstufa,
+                      ipEstufa: widget.ipEstufa,
+                    ),
+                  ),
+                );
               },
             ),
           ],

@@ -54,6 +54,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   int? _cicloNuvemCarregadoId;
   int? _cicloNuvemEmProgresso;
   List<CicloSecagemEntity> _ciclos = [];
+  // Posicao sequencial (1, 2, 3...) por ordem de inicio, desacoplada do id do
+  // banco, para o rotulo nao ter "buracos" quando uma estufada e apagada.
+  final Map<int, int> _posicaoPorCiclo = {};
   List<EventoCicloEntity> _eventos = [];
   int? _cicloSelecionadoId;
   DateTime? _inicioFiltro;
@@ -317,6 +320,11 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             ],
           ),
           IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            onPressed: _cicloSelecionadoId == null ? null : _apagarCicloSelecionado,
+            tooltip: 'Apagar esta estufada',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh, color: Colors.green),
             onPressed: () {
               setState(() {
@@ -338,6 +346,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
           final dados = snapshot.data ?? _DadosRelatorioEstufada.vazio();
           _ciclos = dados.ciclos;
+          _recalcularPosicoes();
           _eventos = dados.eventos;
           final cicloSelecionado = dados.cicloSelecionado;
           _cicloSelecionadoId = cicloSelecionado?.id;
@@ -470,6 +479,60 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       _inicioFiltro = null;
       _fimFiltro = null;
       _dadosFuture = _carregarDadosRelatorio(cicloPreferidoId: cicloId);
+    });
+  }
+
+  Future<void> _apagarCicloSelecionado() async {
+    final id = _cicloSelecionadoId;
+    if (id == null) return;
+    CicloSecagemEntity? ciclo;
+    for (final c in _ciclos) {
+      if (c.id == id) {
+        ciclo = c;
+        break;
+      }
+    }
+    if (ciclo == null) return;
+    final rotulo = _rotuloCiclo(ciclo);
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF252830),
+        title: const Text(
+          'Apagar estufada?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Estufada $rotulo\n\nIsto remove o relatório, os eventos e as '
+          'leituras deste ciclo. Não dá para desfazer.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    await _relatorioRepository.apagarCiclo(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Estufada apagada.')),
+    );
+    setState(() {
+      _resetarExibicaoGrafico();
+      _cicloSelecionadoId = null;
+      _dadosFuture = _carregarDadosRelatorio();
     });
   }
 
@@ -614,12 +677,25 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     return null;
   }
 
+  // Reordena as estufadas por data de inicio (mais antiga = 1) e guarda a
+  // posicao de cada uma. Assim o numero exibido acompanha a ordem cronologica
+  // e nunca fica com buraco, mesmo depois de apagar uma estufada.
+  void _recalcularPosicoes() {
+    final ordenados = [..._ciclos]
+      ..sort((a, b) => a.inicio.compareTo(b.inicio));
+    _posicaoPorCiclo.clear();
+    for (var i = 0; i < ordenados.length; i++) {
+      _posicaoPorCiclo[ordenados[i].id] = i + 1;
+    }
+  }
+
   String _rotuloCiclo(CicloSecagemEntity ciclo) {
     final inicio = DateFormat('dd/MM HH:mm').format(ciclo.inicio);
     final fim = ciclo.fim == null
         ? 'em andamento'
         : DateFormat('dd/MM HH:mm').format(ciclo.fim!);
-    return '#${ciclo.id} | $inicio - $fim';
+    final posicao = _posicaoPorCiclo[ciclo.id] ?? _ciclos.length;
+    return '$posicao | $inicio - $fim';
   }
 
   Future<void> _exportarPdf() async {

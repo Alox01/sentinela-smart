@@ -360,6 +360,59 @@ class IsarService {
     return itens;
   }
 
+  /// Apaga uma estufada por completo: o ciclo, seus eventos e as leituras
+  /// gravadas dentro do periodo dele (inicio..fim). Irreversivel.
+  Future<void> apagarCiclo(int cicloId) async {
+    if (kIsWeb) {
+      CicloSecagemEntity? ciclo;
+      for (final c in _webCiclos) {
+        if (c.id == cicloId) {
+          ciclo = c;
+          break;
+        }
+      }
+      if (ciclo == null) return;
+      final fim = ciclo.fim ?? DateTime.now();
+      _webEventos.removeWhere((e) => e.cicloId == cicloId);
+      _webHistorico.removeWhere(
+        (h) =>
+            h.ipEstufa == ciclo!.ipEstufa &&
+            !h.timestamp.isBefore(ciclo.inicio) &&
+            !h.timestamp.isAfter(fim),
+      );
+      _webCiclos.removeWhere((c) => c.id == cicloId);
+      return;
+    }
+
+    final isar = await database;
+    final ciclo = await isar.collection<CicloSecagemEntity>().get(cicloId);
+    if (ciclo == null) return;
+    final fim = ciclo.fim ?? DateTime.now();
+
+    await isar.writeTxn(() async {
+      await isar
+          .collection<EventoCicloEntity>()
+          .filter()
+          .cicloIdEqualTo(cicloId)
+          .deleteAll();
+      await isar
+          .collection<HistoricoLeituraEntity>()
+          .filter()
+          .ipEstufaEqualTo(ciclo.ipEstufa)
+          .and()
+          .timestampBetween(ciclo.inicio, fim)
+          .deleteAll();
+      await isar.collection<CicloSecagemEntity>().delete(cicloId);
+    });
+  }
+
+  /// Apaga varias estufadas em sequencia (limpeza em lote).
+  Future<void> apagarCiclos(List<int> cicloIds) async {
+    for (final id in cicloIds) {
+      await apagarCiclo(id);
+    }
+  }
+
   Future<List<HistoricoLeituraEntity>> listarHistoricoPorIp(
     String ipEstufa,
   ) async {
