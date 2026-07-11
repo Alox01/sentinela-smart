@@ -163,8 +163,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       ..alertaIncendio = m['alertaIncendio'] == true;
   }
 
+  // Espacamento minimo entre pontos do grafico e o quanto o valor precisa mudar
+  // para um ponto ser mantido mesmo perto do anterior.
+  static const int _espacamentoMinGraficoMs = 5 * 60 * 1000;
+  static const double _mudancaRelevanteGrafico = 5;
+
   // Une historico local e da nuvem, deduplicando por minuto (o local, gravado
-  // com o ajuste real visto pelo app, vence em caso de empate).
+  // com o ajuste real visto pelo app, vence em caso de empate), e afina os
+  // pontos para o grafico nao ficar denso com fontes de cadencia diferente.
   List<HistoricoLeituraEntity> _mesclarHistoricos(
     List<HistoricoLeituraEntity> local,
     List<HistoricoLeituraEntity> nuvem,
@@ -174,9 +180,38 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       final chave = leitura.timestamp.millisecondsSinceEpoch ~/ 60000;
       porMinuto[chave] = leitura;
     }
-    final lista = porMinuto.values.toList()
+    final ordenadas = porMinuto.values.toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    return lista;
+    return _afinarPontos(ordenadas);
+  }
+
+  // Mantem o primeiro e o ultimo ponto e, no meio, so mantem um ponto se ja
+  // passou o espacamento minimo desde o ultimo mantido OU se o valor mudou de
+  // forma relevante (para nao perder mudancas reais). Deixa o grafico limpo
+  // independente da cadencia das fontes.
+  List<HistoricoLeituraEntity> _afinarPontos(
+    List<HistoricoLeituraEntity> pontos,
+  ) {
+    if (pontos.length <= 2) return pontos;
+
+    final resultado = <HistoricoLeituraEntity>[pontos.first];
+    for (var i = 1; i < pontos.length; i++) {
+      final atual = pontos[i];
+      final ultimo = resultado.last;
+      final ehUltimo = i == pontos.length - 1;
+      final tempoDesde =
+          atual.timestamp.millisecondsSinceEpoch -
+          ultimo.timestamp.millisecondsSinceEpoch;
+      final mudou =
+          (atual.temperatura - ultimo.temperatura).abs() >=
+              _mudancaRelevanteGrafico ||
+          (atual.umidade - ultimo.umidade).abs() >= _mudancaRelevanteGrafico;
+
+      if (ehUltimo || tempoDesde >= _espacamentoMinGraficoMs || mudou) {
+        resultado.add(atual);
+      }
+    }
+    return resultado;
   }
 
   CicloSecagemEntity? _escolherCicloInicial(
