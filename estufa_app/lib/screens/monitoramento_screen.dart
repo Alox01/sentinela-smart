@@ -5,6 +5,7 @@ import '../features/monitoramento/dialogs/detalhes_conexao_dialog.dart';
 import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
 import '../features/monitoramento/services/detector_oscilacao.dart';
 import '../features/monitoramento/services/monitoramento_repository.dart';
+import '../features/monitoramento/services/rastreador_conexao.dart';
 import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
@@ -38,7 +39,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   // evento (mudanca de ajuste, alarme, desvio). Evita marcar pontos redundantes
   // colados no grafico quando varios eventos acontecem em sequencia.
   static const int _cooldownEventoMs = 3 * 60 * 1000;
-  static const int _tempoQuedaConexaoMs = 2 * 60 * 1000;
 
   double temperatura = 0.0;
   String avisoEmergencia = '';
@@ -58,9 +58,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   double? _ultimoTempAjusteServidor;
   double? _ultimoUmidAjusteServidor;
   bool? _ultimoAlertaIncendio;
-  int? _offlineDesdeMs;
-  bool _quedaConexaoRegistrada = false;
   final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
+  final RastreadorConexao _rastreadorConexao = RastreadorConexao();
   bool _sugestaoFimCicloExibida = false;
 
   Timer? timer;
@@ -442,31 +441,25 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   }
 
   void _registrarQuedaConexaoSeNecessario() {
-    final ciclo = _cicloAtual;
-    if (ciclo == null || _quedaConexaoRegistrada) return;
-
+    if (_cicloAtual == null) return;
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    _offlineDesdeMs ??= agoraMs;
-    if ((agoraMs - _offlineDesdeMs!) < _tempoQuedaConexaoMs) return;
-
-    _quedaConexaoRegistrada = true;
-    _registrarEventoCiclo(
-      tipo: 'queda_conexao',
-      severidade: 'alerta',
-      descricao: 'A estufa ficou sem conex\u00E3o por mais de 2 minutos.',
-    );
+    if (_rastreadorConexao.avaliarQueda(agoraMs)) {
+      _registrarEventoCiclo(
+        tipo: 'queda_conexao',
+        severidade: 'alerta',
+        descricao: 'A estufa ficou sem conex\u00E3o por mais de 2 minutos.',
+      );
+    }
   }
 
   void _registrarRetornoConexaoSeNecessario() {
-    if (_quedaConexaoRegistrada) {
+    if (_rastreadorConexao.avaliarRetorno()) {
       _registrarEventoCiclo(
         tipo: 'retorno_conexao',
         severidade: 'info',
         descricao: 'A conex\u00E3o da estufa foi restabelecida.',
       );
     }
-    _offlineDesdeMs = null;
-    _quedaConexaoRegistrada = false;
   }
 
   void _processarEventosDoCiclo({
