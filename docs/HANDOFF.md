@@ -39,7 +39,13 @@ inglês, sem menção a ferramentas de IA, `main` = produção, não usar
    fase 2 (histórico na nuvem via app-ponte) em `docs/TESTE_ESP32_REAL.md`.
    Implementar a fase 2 quando o aparelho chegar.
 
-4. **Revisão geral do código (solicitada).** Passar o projeto inteiro buscando
+4. **Menu da estufa — Fase B (aguardando o ESP32).** A gaveta "Ações da estufa"
+   (endDrawer no monitoramento) já tem "Preparar nova estufada" (Fase A). Falta,
+   com o aparelho: desligar a ventoinha (direto e agendado) e agendar mudancas
+   de temperatura/umidade. Agendamento confiavel deve ser feito no aparelho (nao
+   app-only), especialmente o da ventoinha (seguranca/fogo).
+
+5. **Revisão geral do código (solicitada).** Passar o projeto inteiro buscando
    melhorias viáveis sem alterar comportamento: quebrar arquivos grandes
    (`monitoramento_screen.dart`, `isar_service.dart`), simplificações, remoção
    de código morto, consistência. Fazer em passos pequenos e testáveis.

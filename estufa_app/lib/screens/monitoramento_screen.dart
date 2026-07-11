@@ -39,6 +39,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   // evento (mudanca de ajuste, alarme, desvio). Evita marcar pontos redundantes
   // colados no grafico quando varios eventos acontecem em sequencia.
   static const int _cooldownEventoMs = 3 * 60 * 1000;
+  // Valores iniciais de uma nova estufada (inicio da amarelacao). Ajustaveis.
+  static const double _tempNovaEstufada = 90.0;
+  static const double _umidNovaEstufada = 100.0;
 
   double temperatura = 0.0;
   String avisoEmergencia = '';
@@ -60,6 +63,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   bool? _ultimoAlertaIncendio;
   final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
   final RastreadorConexao _rastreadorConexao = RastreadorConexao();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _sugestaoFimCicloExibida = false;
 
   Timer? timer;
@@ -259,14 +263,15 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     final umidEmAcomodacao = _detectorOscilacao.umidadeEmAcomodacao(agoraLedMs);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: corFundo,
+      endDrawer: _buildMenuEstufa(),
       appBar: MonitoramentoAppBar(
         nomeEstufa: widget.nomeEstufa,
         modoConexao: _modoConexao,
         sincronizando: _sincronizandoPendencias,
         pendencias: _pendenciasSincronizacao,
-        onDetalhesConexao: _mostrarDetalhesConexao,
-        onSincronizar: () => _sincronizarPendenciasSeNecessario(forcar: true),
+        onAbrirMenu: () => _scaffoldKey.currentState?.openEndDrawer(),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -334,6 +339,181 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildMenuEstufa() {
+    return Drawer(
+      backgroundColor: const Color(0xFF17191D),
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'AÇÕES',
+                    style: TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.nomeEstufa,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white12, height: 1),
+            _tituloMenu('CONEXÃO'),
+            ListTile(
+              leading: const Icon(
+                Icons.info_outline_rounded,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Detalhes da conexão',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                _mostrarDetalhesConexao();
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                _sincronizandoPendencias ? Icons.sync : Icons.sync_problem,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Sincronizar pendências',
+                style: TextStyle(color: Colors.white),
+              ),
+              trailing: _pendenciasSincronizacao > 0
+                  ? _contadorMenu(_pendenciasSincronizacao)
+                  : null,
+              enabled: !_sincronizandoPendencias,
+              onTap: () {
+                Navigator.of(context).pop();
+                _sincronizarPendenciasSeNecessario(forcar: true);
+              },
+            ),
+            const Divider(color: Colors.white12, height: 1),
+            _tituloMenu('AÇÕES RÁPIDAS'),
+            ListTile(
+              leading: const Icon(Icons.eco_rounded, color: Colors.greenAccent),
+              title: const Text(
+                'Preparar nova estufada',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: Text(
+                'Ajusta para ${_tempNovaEstufada.toStringAsFixed(0)}°F e '
+                '${_umidNovaEstufada.toStringAsFixed(0)}%',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                _prepararNovaEstufada();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tituloMenu(String texto) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Text(
+        texto,
+        style: const TextStyle(
+          color: Colors.white38,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.0,
+        ),
+      ),
+    );
+  }
+
+  Widget _contadorMenu(int valor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.amberAccent.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$valor',
+        style: const TextStyle(
+          color: Colors.amberAccent,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _prepararNovaEstufada() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text(
+          'Preparar nova estufada',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Ajustar para ${_tempNovaEstufada.toStringAsFixed(0)}°F e '
+          '${_umidNovaEstufada.toStringAsFixed(0)}% para iniciar uma nova '
+          'estufada?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Ajustar',
+              style: TextStyle(color: Colors.greenAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    final tempAnterior = tempAjuste;
+    final umidAnterior = umidAjuste;
+    final agoraMs = DateTime.now().millisecondsSinceEpoch;
+    _detectorOscilacao.registrarMudancaAjusteTemperatura(agoraMs);
+    _detectorOscilacao.registrarMudancaAjusteUmidade(agoraMs);
+    setState(() {
+      tempAjuste = _tempNovaEstufada;
+      umidAjuste = _umidNovaEstufada;
+      _tempAjustePendente = _tempNovaEstufada;
+      _umidAjustePendente = _umidNovaEstufada;
+    });
+    // Usa o caminho normal de comando: a queda para <100 dispara a mesma
+    // sugestao de "quer terminar a estufada?" quando ha um ciclo ativo.
+    _agendarEnvioTemperatura(_tempNovaEstufada, tempAnterior);
+    _agendarEnvioUmidade(_umidNovaEstufada, umidAnterior);
   }
 
   void _abrirRelatorioEstufada() {

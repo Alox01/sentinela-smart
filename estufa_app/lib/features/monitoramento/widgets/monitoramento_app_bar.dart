@@ -9,8 +9,7 @@ class MonitoramentoAppBar extends StatelessWidget implements PreferredSizeWidget
   final String modoConexao;
   final bool sincronizando;
   final int pendencias;
-  final VoidCallback onDetalhesConexao;
-  final VoidCallback onSincronizar;
+  final VoidCallback onAbrirMenu;
 
   const MonitoramentoAppBar({
     super.key,
@@ -18,8 +17,7 @@ class MonitoramentoAppBar extends StatelessWidget implements PreferredSizeWidget
     required this.modoConexao,
     required this.sincronizando,
     required this.pendencias,
-    required this.onDetalhesConexao,
-    required this.onSincronizar,
+    required this.onAbrirMenu,
   });
 
   @override
@@ -91,23 +89,13 @@ class MonitoramentoAppBar extends StatelessWidget implements PreferredSizeWidget
         ),
         IconButton(
           visualDensity: telaEstreita ? VisualDensity.compact : null,
-          iconSize: telaEstreita ? 20 : 24,
+          iconSize: telaEstreita ? 22 : 26,
           constraints: telaEstreita
-              ? const BoxConstraints.tightFor(width: 32, height: 48)
+              ? const BoxConstraints.tightFor(width: 36, height: 48)
               : null,
-          onPressed: onDetalhesConexao,
-          icon: const Icon(Icons.info_outline_rounded),
-          tooltip: 'Detalhes da conexão',
-        ),
-        IconButton(
-          visualDensity: telaEstreita ? VisualDensity.compact : null,
-          iconSize: telaEstreita ? 20 : 24,
-          constraints: telaEstreita
-              ? const BoxConstraints.tightFor(width: 32, height: 48)
-              : null,
-          onPressed: sincronizando ? null : onSincronizar,
-          icon: Icon(sincronizando ? Icons.sync : Icons.sync_problem),
-          tooltip: 'Sincronizar pendências',
+          onPressed: onAbrirMenu,
+          icon: const Icon(Icons.menu_rounded),
+          tooltip: 'Ações da estufa',
         ),
       ],
     );
