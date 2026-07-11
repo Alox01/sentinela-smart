@@ -207,7 +207,12 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
               _mudancaRelevanteGrafico ||
           (atual.umidade - ultimo.umidade).abs() >= _mudancaRelevanteGrafico;
 
-      if (ehUltimo || tempoDesde >= _espacamentoMinGraficoMs || mudou) {
+      final passouEspacamento = tempoDesde >= _espacamentoMinGraficoMs;
+      if (ehUltimo && !passouEspacamento && !mudou && resultado.length > 1) {
+        // O ponto final esta colado no ultimo mantido e sem mudanca relevante:
+        // substitui em vez de criar um par colado no fim do grafico.
+        resultado[resultado.length - 1] = atual;
+      } else if (ehUltimo || passouEspacamento || mudou) {
         resultado.add(atual);
       }
     }

@@ -66,6 +66,17 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       return;
     }
 
+    if (!_enderecoValido(ip)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Endereço inválido. Use algo como 192.168.1.9 ou 192.168.1.9:80.',
+          ),
+        ),
+      );
+      return;
+    }
+
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _salvando = true);
 
@@ -93,6 +104,31 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
+  }
+
+  // Validacao leve do endereco: aceita IP, nome de host (inclusive mDNS como
+  // "sentinela.local"), com ou sem "http://" e com porta opcional. Rejeita so o
+  // que e claramente invalido (espacos, caracteres estranhos, porta fora da
+  // faixa). O ApiService ainda normaliza, entao isso e so um aviso amigavel.
+  bool _enderecoValido(String enderecoBruto) {
+    var valor = enderecoBruto.trim();
+    if (valor.isEmpty) return false;
+
+    valor = valor.replaceFirst(RegExp(r'^https?://', caseSensitive: false), '');
+    valor = valor.split('/').first; // ignora caminho apos o host
+    if (valor.isEmpty || valor.contains(' ')) return false;
+
+    final partes = valor.split(':');
+    if (partes.length > 2) return false; // mais de um ":"
+
+    final host = partes[0];
+    if (!RegExp(r'^[a-zA-Z0-9.\-]+$').hasMatch(host)) return false;
+
+    if (partes.length == 2) {
+      final porta = int.tryParse(partes[1]);
+      if (porta == null || porta < 1 || porta > 65535) return false;
+    }
+    return true;
   }
 
   Future<void> _editarTextoNativo({
