@@ -34,7 +34,12 @@ inglês, sem menção a ferramentas de IA, `main` = produção, não usar
 2. **Observar o teste da nuvem.** Confirmar que, ao fechar o app e reabrir o
    relatório, o histórico gravado pela nuvem preenche os "buracos".
 
-3. **Revisão geral do código (solicitada).** Passar o projeto inteiro buscando
+3. **Teste com o ESP32 real (aguardando o aparelho).** O app já lê/controla o
+   ESP32 na rede local sem mudança de código (contrato conferido). Checklist e a
+   fase 2 (histórico na nuvem via app-ponte) em `docs/TESTE_ESP32_REAL.md`.
+   Implementar a fase 2 quando o aparelho chegar.
+
+4. **Revisão geral do código (solicitada).** Passar o projeto inteiro buscando
    melhorias viáveis sem alterar comportamento: quebrar arquivos grandes
    (`monitoramento_screen.dart`, `isar_service.dart`), simplificações, remoção
    de código morto, consistência. Fazer em passos pequenos e testáveis.
