@@ -297,6 +297,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
                   umidAjuste: umidAjuste,
                   onMudarTemperatura: (novaTemp) {
                     final ajusteAnterior = tempAjuste;
+                    // Abre a acomodacao ja no toque, para o LED nao piscar antes
+                    // de o servidor confirmar a mudanca.
+                    _detectorOscilacao.registrarMudancaAjusteTemperatura(
+                      DateTime.now().millisecondsSinceEpoch,
+                    );
                     setState(() {
                       tempAjuste = novaTemp;
                       _tempAjustePendente = novaTemp;
@@ -305,6 +310,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
                   },
                   onMudarUmidade: (novaUmid) {
                     final ajusteAnterior = umidAjuste;
+                    _detectorOscilacao.registrarMudancaAjusteUmidade(
+                      DateTime.now().millisecondsSinceEpoch,
+                    );
                     setState(() {
                       umidAjuste = novaUmid;
                       _umidAjustePendente = novaUmid;
