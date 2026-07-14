@@ -273,6 +273,13 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0E1012),
       appBar: AppBar(
+        leading: IconButton(
+          iconSize: 20,
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Voltar',
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        titleSpacing: 0,
         title: const FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
@@ -286,6 +293,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
         foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
+            iconSize: 22,
+            padding: EdgeInsets.zero,
             icon: const Icon(Icons.download, color: Colors.greenAccent),
             tooltip: 'Baixar relatório',
             color: const Color(0xFF252830),
@@ -320,11 +329,15 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             ],
           ),
           IconButton(
+            iconSize: 22,
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: _cicloSelecionadoId == null ? null : _apagarCicloSelecionado,
             tooltip: 'Apagar esta estufada',
           ),
           IconButton(
+            iconSize: 22,
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.refresh, color: Colors.green),
             onPressed: () {
               setState(() {
