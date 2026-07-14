@@ -14,9 +14,11 @@ de alarme.
   configurado.
 - `POST /debug/botao-fisico` também exige token quando configurado.
 
-Se `ESTUFA_API_TOKEN` não estiver configurado, o servidor roda em modo de
-desenvolvimento e não bloqueia os comandos. Isso facilita os testes locais com
-o simulador e com protótipos do ESP32 que ainda não possuem chave.
+O servidor **exige um `ESTUFA_API_TOKEN` forte** (>= 8 caracteres, não trivial —
+a checagem está em `token_policy.js`) para iniciar. Sem um token válido, ele
+**recusa o boot**, evitando que a API suba aberta por engano. Para testes locais
+sem token, defina explicitamente `PERMITIR_SEM_TOKEN=true` — aí o servidor sobe
+sem proteção e avisa no log (usar só em desenvolvimento).
 
 No aplicativo, a chave pode ser configurada no cadastro/edição da estufa. Assim
 cada aparelho pode ter uma chave própria. Se a chave da estufa ficar vazia, o
@@ -60,6 +62,48 @@ Ou cadastre a estufa no app e preencha o campo
 
 Se o token do aplicativo estiver diferente do token do servidor, os comandos de
 controle retornam `401 Não autorizado`.
+
+## Provisionamento e recuperação do token (ESP32 — planejado)
+
+Ponto de usabilidade: o usuário-alvo é um produtor rural, não um técnico. Ele
+**não deve inventar nem decorar** o token — a segurança forte é responsabilidade
+de quem instala e do servidor na nuvem, não da rotina dele. O produtor apenas
+**emparelha** o app com o aparelho, e precisa conseguir se recuperar caso perca a
+chave. Como o visor típico do aparelho é de 4 dígitos (7 segmentos, feito para
+mostrar temperatura), ele não exibe token nem QR. Dois modelos resolvem isso:
+
+### Modelo A — token fixo em etiqueta (mais simples)
+
+O aparelho tem um token permanente de fábrica, impresso num adesivo/cartão que o
+acompanha (como a senha embaixo de um roteador). O produtor lê e digita uma vez
+no app. Perdeu? Lê o adesivo de novo. O "reset" limpa a configuração, mas **não**
+troca o token (ele é a identidade do aparelho). O visor não participa.
+
+### Modelo B — PIN de 4 dígitos no visor (recomendado)
+
+Aproveita o visor de 4 dígitos que o aparelho já tem, usando-o como **PIN de
+emparelhamento** (não como token):
+
+1. O produtor aperta um botão → o aparelho entra em modo de emparelhamento e
+   mostra um **PIN de 4 dígitos** no visor.
+2. No app, ele digita esses 4 números.
+3. O app conecta ao aparelho pela rede local e os dois **trocam o token forte
+   automaticamente** — o token longo nunca é visto nem digitado pelo produtor.
+4. Perdeu o token? Aperta o botão → novo PIN no visor → digita → reemparelhado.
+
+O produtor lida só com 4 dígitos, e o token real continua forte porque é gerado
+pela máquina e trocado sozinho.
+
+**Por que 4 dígitos são seguros aqui:** o PIN é apenas um segredo temporário de
+emparelhamento, protegido como no pareamento de Bluetooth/TV:
+
+- vale só numa **janela curta** (ex.: 2 min após apertar o botão);
+- **limite de tentativas** (bloqueia após poucos erros);
+- só funciona na **rede local**.
+
+Isso é firmware do ESP32, portanto fica para quando o aparelho chegar. O Modelo B
+é o recomendado; o Modelo A serve de alternativa se não houver botão/rotina de
+emparelhamento no protótipo inicial.
 
 ## Limite desta camada
 
