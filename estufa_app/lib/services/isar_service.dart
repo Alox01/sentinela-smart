@@ -9,6 +9,7 @@ import '../models/ciclo_secagem_entity.dart';
 import '../models/evento_ciclo_entity.dart';
 import '../models/historico_leitura_entity.dart';
 import '../models/pending_sync_command_entity.dart';
+import 'coalescencia_comando.dart';
 
 class BackupImportResult {
   final int estufasImportadas;
@@ -911,27 +912,11 @@ class IsarService {
     return DateTime.tryParse(value.toString()) ?? DateTime.now();
   }
 
-  String? _chaveCoalescenciaPayloadJson(String payloadJson) {
-    try {
-      final decoded = jsonDecode(payloadJson);
-      if (decoded is Map<String, dynamic>) {
-        return _chaveCoalescenciaComando(decoded);
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
+  String? _chaveCoalescenciaPayloadJson(String payloadJson) =>
+      chaveCoalescenciaPayloadJson(payloadJson);
 
-  String? _chaveCoalescenciaComando(Map<String, dynamic> payload) {
-    if (payload.containsKey('temperaturaMeta')) return 'temperaturaMeta';
-    if (payload.containsKey('umidadeMeta')) return 'umidadeMeta';
-    if (payload.containsKey('modoSilencioso') ||
-        payload['comando'] == 'silenciar') {
-      return 'modoSilencioso';
-    }
-    return null;
-  }
+  String? _chaveCoalescenciaComando(Map<String, dynamic> payload) =>
+      chaveCoalescenciaComando(payload);
 
   void _recalcularIdsWeb() {
     final maxEstufa = _webEstufas.fold<int>(0, (m, e) => e.id > m ? e.id : m);
