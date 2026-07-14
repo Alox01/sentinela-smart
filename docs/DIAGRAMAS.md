@@ -137,3 +137,74 @@ sequenceDiagram
     C-->>A: estado atualizado
     A->>F: marca como sincronizado
 ```
+
+## 4. Modelo do banco local (Isar, NoSQL) — complementar ao DER
+
+Não é um DER: o Isar não usa tabelas nem chaves estrangeiras. São **coleções de
+objetos**, e as ligações são **referência lógica por id** (o app casa os ids;
+o banco não impõe integridade). `PK` = id automático, `IDX` = `@Index`,
+`UQ` = índice único. Fontes: `estufa_app/lib/models/*_entity.dart`.
+
+```mermaid
+classDiagram
+    class EstufaEntity {
+        Id id
+        String chave
+        String nome
+        String ip
+        String tokenAcesso
+        DateTime criadaEm
+    }
+    class CicloSecagemEntity {
+        Id id
+        String ipEstufa
+        String nomeEstufa
+        DateTime inicio
+        DateTime fim
+        String status
+        String observacao
+    }
+    class EventoCicloEntity {
+        Id id
+        String ipEstufa
+        int cicloId
+        String nomeEstufa
+        DateTime timestamp
+        String tipo
+        String severidade
+        String descricao
+        double valorAnterior
+        double valorAtual
+    }
+    class HistoricoLeituraEntity {
+        Id id
+        String ipEstufa
+        String nomeEstufa
+        DateTime timestamp
+        double temperatura
+        double umidade
+        double temperaturaMeta
+        double umidadeMeta
+        String aviso
+        bool alertaIncendio
+    }
+    class PendingSyncCommandEntity {
+        Id id
+        String ipEstufa
+        String payloadJson
+        DateTime createdAt
+    }
+
+    EstufaEntity ..> CicloSecagemEntity : ip = ipEstufa
+    EstufaEntity ..> HistoricoLeituraEntity : ip = ipEstufa
+    EstufaEntity ..> PendingSyncCommandEntity : ip = ipEstufa
+    CicloSecagemEntity ..> EventoCicloEntity : id = cicloId
+    CicloSecagemEntity ..> HistoricoLeituraEntity : ip + intervalo
+```
+
+Índices por coleção: `EstufaEntity.chave` (único); `ipEstufa` é indexado em
+`CicloSecagemEntity`, `EventoCicloEntity`, `HistoricoLeituraEntity` e
+`PendingSyncCommandEntity`; `cicloId` é indexado em `EventoCicloEntity`.
+Ligações: as demais coleções apontam para a estufa por `ip = ipEstufa`; o evento
+aponta para o ciclo por `cicloId`; a leitura associa-se ao ciclo por `ipEstufa`
+mais o intervalo de tempo (`inicio..fim`), não por id direto.
