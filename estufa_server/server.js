@@ -9,6 +9,7 @@ const cors = require('cors');
 const simulador = require('./simulador');
 const db = require('./db');
 const { createAuthMiddleware } = require('./auth');
+const { avaliarTokenApi } = require('./token_policy');
 const { createEstufaRouter } = require('./routes/estufa_routes');
 const { createCorsOptions } = require('./security');
 const { criarBufferLeituras } = require('./leitura_buffer');
@@ -21,6 +22,30 @@ const {
 
 const app = express();
 const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
+
+// Exige um token forte para subir. Sem isso a API ficaria aberta a qualquer um
+// que alcance o servidor. Para desenvolvimento local sem token, defina
+// explicitamente PERMITIR_SEM_TOKEN=true.
+const PERMITIR_SEM_TOKEN =
+  (process.env.PERMITIR_SEM_TOKEN ?? '').trim().toLowerCase() === 'true';
+const politicaToken = avaliarTokenApi(API_TOKEN);
+if (!politicaToken.ok) {
+  if (PERMITIR_SEM_TOKEN) {
+    console.warn(
+      `ATENCAO: ${politicaToken.motivo}. Servidor subindo SEM protecao de ` +
+        'token (PERMITIR_SEM_TOKEN=true). Use apenas em desenvolvimento local.',
+    );
+  } else {
+    console.error(
+      `ERRO: ${politicaToken.motivo}. Configure ESTUFA_API_TOKEN com um token ` +
+        'forte (>= 8 caracteres, nao trivial) antes de iniciar o servidor.',
+    );
+    console.error(
+      'Para desenvolvimento local sem token, defina PERMITIR_SEM_TOKEN=true.',
+    );
+    process.exit(1);
+  }
+}
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ?? '';
 const PORT = Number(process.env.PORT) || 3000;
 const PERSIST_READINGS_INTERVAL_MS = lerIntervaloPersistencia(

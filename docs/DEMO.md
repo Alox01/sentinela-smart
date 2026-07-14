@@ -34,6 +34,11 @@ chave cadastrada em cada estufa.
    ```
    Confirme no log: `Persistencia local desligada (modo aparelho)` e
    `ESP32 virtual: empurrando leituras para https://estufa-server.onrender.com`.
+
+   > O servidor agora **exige um `ESTUFA_API_TOKEN` forte** (>= 8 caracteres, não
+   > trivial) para subir. Se rodar sem token só para teste local, defina
+   > `PERMITIR_SEM_TOKEN=true`. Na nuvem (Render), configure o token nas variáveis
+   > de ambiente e use o mesmo valor na chave de acesso do app.
 4. **Rode/instale o app** apontando a nuvem como fallback:
    ```powershell
    flutter run --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
@@ -41,7 +46,7 @@ chave cadastrada em cada estufa.
    (ou `flutter build apk --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com`)
 5. **Cadastre a estufa** no app:
    - Endereço/IP: `192.168.1.11:3000` (o IP do PC do passo 2)
-   - Chave de acesso: `123456` (mesma do `ESTUFA_API_TOKEN`)
+   - Chave de acesso: o mesmo valor do `ESTUFA_API_TOKEN` (token forte)
 
 ## Cenário 1 — Local-first (Edge)
 
