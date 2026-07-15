@@ -13,6 +13,7 @@ function createEstufaRouter({
   authMiddleware,
   tokenConfigurado = false,
   buffer = null,
+  modoReceptor = false,
 }) {
   const router = express.Router();
 
@@ -101,6 +102,13 @@ function createEstufaRouter({
 
     status.fonte = status.fonte || 'hardware';
     const dados = { status, config: req.body.config };
+
+    // Modo receptor: a leitura real do aparelho vira o estado servido em
+    // /status (a nuvem reflete o hardware em vez de simular).
+    if (modoReceptor) {
+      simulador.aplicarStatusPersistido(status);
+      simulador.aplicarConfiguracaoPersistida(req.body.config);
+    }
 
     if (!db.estaHabilitado()) {
       res.json({ sucesso: true, persistido: false, motivo: 'persistencia_desabilitada' });

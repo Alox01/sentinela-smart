@@ -5,15 +5,16 @@ const express = require('express');
 
 const { createEstufaRouter } = require('../routes/estufa_routes');
 
-function criarApp({ db, buffer = null } = {}) {
+function criarApp({ db, buffer = null, simulador, modoReceptor = false } = {}) {
   const app = express();
   app.use(express.json());
   app.use(
     createEstufaRouter({
-      simulador: { lerCompleto: () => ({}) },
+      simulador: simulador || { lerCompleto: () => ({}) },
       db,
       authMiddleware: (_req, _res, next) => next(),
       buffer,
+      modoReceptor,
     }),
   );
   return app;
@@ -117,6 +118,46 @@ test('quando a persistencia esta desabilitada apenas confirma sem gravar', async
     persistido: false,
     motivo: 'persistencia_desabilitada',
   });
+});
+
+test('modo receptor alimenta o simulador com a leitura real', async () => {
+  const recebidos = [];
+  const simulador = {
+    lerCompleto: () => ({}),
+    aplicarStatusPersistido: (s) => recebidos.push(s),
+    aplicarConfiguracaoPersistida: () => {},
+  };
+  const app = criarApp({
+    simulador,
+    modoReceptor: true,
+    db: { estaHabilitado: () => false },
+  });
+
+  const { status } = await postLeitura(app, {
+    temperaturaAtual: 142.5,
+    umidadeAtual: 38,
+    config: { temperaturaMeta: 140 },
+  });
+
+  assert.equal(status, 200);
+  assert.equal(recebidos.length, 1);
+  assert.equal(recebidos[0].temperaturaAtual, 142.5);
+  assert.equal(recebidos[0].fonte, 'hardware');
+});
+
+test('sem modo receptor nao alimenta o simulador', async () => {
+  let chamou = false;
+  const simulador = {
+    lerCompleto: () => ({}),
+    aplicarStatusPersistido: () => {
+      chamou = true;
+    },
+    aplicarConfiguracaoPersistida: () => {},
+  };
+  const app = criarApp({ simulador, db: { estaHabilitado: () => false } });
+
+  await postLeitura(app, { temperaturaAtual: 90, umidadeAtual: 50 });
+  assert.equal(chamou, false);
 });
 
 async function getHistorico(app, query) {

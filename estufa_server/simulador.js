@@ -18,7 +18,12 @@ let ultimoEventoTempo = Date.now();
 const INTERVALO_MIN_EVENTO = 2 * 60 * 1000;
 const CHANCE_EVENTO = 0.0085;
 
+// Em modo receptor, a nuvem para de simular e passa a refletir a ultima leitura
+// real recebida via POST /leitura. A evolucao automatica fica pausada.
+let evolucaoPausada = false;
+
 setInterval(() => {
+  if (evolucaoPausada) return;
   statusFisico.timestampLeitura = Date.now();
   const agora = Date.now();
 
@@ -116,6 +121,12 @@ setInterval(() => {
 module.exports = {
   lerCompleto: () => ({ status: statusFisico, config: configLocal }),
 
+  // Liga/desliga o modo receptor: quando pausado, a estufa nao evolui sozinha e
+  // o estado so muda por leituras reais (aplicarStatusPersistido) ou comandos.
+  pausarEvolucao: (pausar = true) => {
+    evolucaoPausada = Boolean(pausar);
+  },
+
   aplicarConfiguracaoPersistida: (configPersistida) => {
     if (!configPersistida) return false;
 
@@ -148,6 +159,9 @@ module.exports = {
   aplicarStatusPersistido: (statusPersistido) => {
     if (!statusPersistido) return false;
 
+    if (Number.isFinite(statusPersistido.timestampLeitura)) {
+      statusFisico.timestampLeitura = statusPersistido.timestampLeitura;
+    }
     if (typeof statusPersistido.temperaturaAtual === 'number') {
       statusFisico.temperaturaAtual = statusPersistido.temperaturaAtual;
     }

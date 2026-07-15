@@ -66,9 +66,14 @@ const PUSH_INTERVAL_MS = lerIntervaloPersistencia(process.env.PUSH_INTERVAL_MS);
 // ligada quando ha banco, MAS desliga sozinha em modo aparelho (push ligado),
 // para nao gravar duplicado ja que a nuvem persiste o que recebe. Pode ser
 // forcada com PERSISTIR_LOCAL=true/false.
+// Modo receptor: a nuvem para de simular e passa a refletir a ultima leitura
+// real que o aparelho empurra via POST /leitura. Desliga a persistencia local
+// (o proprio /leitura persiste).
+const MODO_RECEPTOR =
+  (process.env.MODO_RECEPTOR ?? '').trim().toLowerCase() === 'true';
 const PERSISTIR_LOCAL = process.env.PERSISTIR_LOCAL != null
   ? process.env.PERSISTIR_LOCAL.trim().toLowerCase() !== 'false'
-  : !PUSH_TARGET_URL;
+  : (!PUSH_TARGET_URL && !MODO_RECEPTOR);
 const authMiddleware = createAuthMiddleware(API_TOKEN);
 const bufferLeituras = criarBufferLeituras(
   process.env.LEITURA_BUFFER_PATH ? { caminho: process.env.LEITURA_BUFFER_PATH } : {},
@@ -86,6 +91,7 @@ app.use(
     authMiddleware,
     tokenConfigurado: Boolean(API_TOKEN.trim()),
     buffer: bufferLeituras,
+    modoReceptor: MODO_RECEPTOR,
   }),
 );
 
@@ -135,6 +141,14 @@ async function iniciarServidor() {
     } catch (error) {
       console.error('Falha ao carregar estado persistido:', error.message);
     }
+  }
+
+  if (MODO_RECEPTOR) {
+    simulador.pausarEvolucao(true);
+    console.log(
+      'Modo receptor ligado: simulacao pausada; /status reflete a ultima ' +
+        'leitura real (POST /leitura).',
+    );
   }
 
   app.listen(PORT, () => {
