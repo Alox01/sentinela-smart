@@ -25,6 +25,8 @@
 
 #include <WiFi.h>
 #include <WebServer.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <time.h>
 #include <DHT.h>
 #include <TM1637Display.h>
@@ -38,6 +40,11 @@ const char* WIFI_PASS       = "SUA_SENHA_WIFI";
 const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 const char* ID_HARDWARE     = "ESP32_CAMPO_01";
 const char* VERSAO_FIRMWARE = "1.0.0";
+// URL da nuvem para onde o aparelho empurra as leituras (historico + acesso
+// remoto). Deixe "" para nao empurrar. Precisa que o servidor esteja em
+// MODO_RECEPTOR para o /status remoto refletir o aparelho real.
+const char* CLOUD_URL = "https://estufa-server.onrender.com";
+const unsigned long PUSH_INTERVAL_MS = 60000;  // envia uma leitura a cada 1 min
 // =============================================================
 
 // ---- Pinos (mapa de referencia) ----
@@ -120,6 +127,7 @@ long long modoSilenciosoTimestamp = 0;
 
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
+unsigned long ultimoPushNuvem = 0;
 
 // ============================================================
 //  SETUP
@@ -177,6 +185,11 @@ void loop() {
   server.handleClient();
   manterWifi();
 
+  if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
+    ultimoPushNuvem = millis();
+    empurrarLeituraNuvem();
+  }
+
   verificarSensorLuz();
   verificarBotoes();
   verificarTempos();
@@ -224,6 +237,59 @@ void manterWifi() {
   if (millis() - ultimaTentativaWifi < intervaloReconexaoWifi) return;
   ultimaTentativaWifi = millis();
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+}
+
+// Empurra a leitura atual para a nuvem (POST /leitura). O servidor em
+// MODO_RECEPTOR usa isso para o /status remoto refletir o aparelho real, em vez
+// de simular. Bloqueia o loop por ~1-2 s durante o handshake HTTPS; como so roda
+// a cada PUSH_INTERVAL_MS, nao atrapalha o controle local.
+void empurrarLeituraNuvem() {
+  if (strlen(CLOUD_URL) == 0) return;
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  JsonDocument doc;
+  doc["idHardware"] = ID_HARDWARE;
+  doc["timestampLeitura"] = nowMs();
+  doc["temperaturaAtual"] = temperaturaF;
+  doc["umidadeAtual"] = umidade;
+  doc["temEnergia"] = true;
+  doc["temInternet"] = true;
+  doc["sinalWifi"] = wifiSinalPercent();
+  doc["alarmeAtivo"] = alarmeAtivoAgora();
+  doc["alertaIncendio"] = (alertaLuz || riscoIncendioAgora());
+  doc["perigoChama"] = alertaLuz;
+  doc["riscoIncendio"] = riscoIncendioAgora();
+  doc["aquecedorLigado"] = ledControleLigado;
+  doc["ventiladorLigado"] = false;
+  doc["umidificadorLigado"] = false;
+  doc["faseAtual"] = fasePorAlvo(temperaturaAlvoF);
+  doc["aviso"] = avisoAtual();
+  doc["corStatus"] = corStatusAtual();
+  doc["fonte"] = "hardware";
+
+  JsonObject config = doc["config"].to<JsonObject>();
+  config["idHardware"] = ID_HARDWARE;
+  config["temperaturaMeta"] = temperaturaAlvoF;
+  config["tempTimestamp"] = tempTimestamp;
+  config["umidadeMeta"] = umidadeAlvo;
+  config["umidTimestamp"] = umidTimestamp;
+  config["modoSilencioso"] = buzzerSilenciado;
+  config["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
+
+  String corpo;
+  serializeJson(doc, corpo);
+
+  WiFiClientSecure cliente;
+  cliente.setInsecure();  // nao valida certificado (simplifica; ok para o TCC)
+  HTTPClient http;
+  String url = String(CLOUD_URL) + "/leitura";
+  if (!http.begin(cliente, url)) return;
+  http.addHeader("Content-Type", "application/json");
+  if (strlen(DEVICE_TOKEN) > 0) http.addHeader("X-Device-Token", DEVICE_TOKEN);
+  int codigo = http.POST(corpo);
+  Serial.print("Push nuvem -> HTTP ");
+  Serial.println(codigo);
+  http.end();
 }
 
 // epoch em milissegundos quando o NTP sincronizou; senao, fallback para millis().
