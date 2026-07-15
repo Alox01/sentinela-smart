@@ -12,6 +12,39 @@ de acesso administrativo ao roteador.
 
 A ideia e ter mais de uma forma de encontrar e recuperar o aparelho.
 
+## Mapa de pinos (montagem de referencia)
+
+Pinagem de uma montagem de referencia do ESP32 (prototipo de monitoramento,
+indicacao e alarme). Serve de base para o firmware quando o aparelho chegar.
+
+| Componente | Sinal | GPIO | Observacao |
+|---|---|---|---|
+| DHT22 / AM2302 (temp + umidade) | DATA | 32 | pull-up de 4,7 kOhm entre DATA e 3V3; le em Celsius, converter para Fahrenheit no firmware |
+| Sensor de luz | D0 | 35 | GPIO35 e entrada-apenas (sem pull-up interno); ver nota do sensor de chama abaixo |
+| Display TM1637 (4 digitos) | CLK / DIO | 18 / 19 | 4 digitos: mostra temperatura e serve para o PIN de emparelhamento (ver `SEGURANCA_COMANDOS.md`) |
+| Botao do buzzer | — | 13 | INPUT_PULLUP, botao para GND — silenciar alarme |
+| Botao verde | — | 4 | INPUT_PULLUP, botao para GND |
+| Botao vermelho | — | 33 | INPUT_PULLUP, botao para GND |
+| LED vermelho (alerta geral) | — | 26 | resistor de 220 Ohm |
+| LED verde (umidade) | — | 27 | resistor de 220 Ohm |
+| LED de temperatura | — | 14 | resistor de 220 Ohm |
+| Buzzer (sirene fisica) | + | 25 | negativo no GND |
+
+Notas de firmware:
+
+- **Fahrenheit:** o DHT22 entrega Celsius; converter para Fahrenheit, pois todo
+  o sistema usa Fahrenheit de proposito.
+- **Sensor de chama:** a logica de alarme espera um sinal `sensorChamaAtivado`
+  (ver `logica.js`). Este mapa so lista um "sensor de luz" (D0 no GPIO35).
+  Confirmar se ele faz o papel de deteccao de chama ou se falta um sensor de
+  chama dedicado (um LDR comum e fraco para detectar fogo).
+- **LEDs e botoes** ja batem com a interface do app: LED de alerta geral,
+  LED de umidade e LED de temperatura; botao do buzzer = silenciar. Confirmar o
+  papel dos botoes verde/vermelho (ajuste +/- ou entrar em modo de config).
+- **Atuacao:** o mapa tem LEDs (indicacao) e buzzer, mas nao tras reles para
+  ligar aquecedor/ventilador reais. Coerente com "hardware e projeto
+  complementar" — este prototipo monitora, indica e alarma.
+
 ## Estrategia de rede
 
 ### 1. DHCP com reserva no roteador
