@@ -130,6 +130,9 @@ module.exports = {
   aplicarConfiguracaoPersistida: (configPersistida) => {
     if (!configPersistida) return false;
 
+    if (typeof configPersistida.idHardware === 'string') {
+      configLocal.idHardware = configPersistida.idHardware;
+    }
     if (typeof configPersistida.temperaturaMeta === 'number') {
       configLocal.temperaturaMeta = configPersistida.temperaturaMeta;
     }
@@ -159,6 +162,9 @@ module.exports = {
   aplicarStatusPersistido: (statusPersistido) => {
     if (!statusPersistido) return false;
 
+    if (typeof statusPersistido.idHardware === 'string') {
+      statusFisico.idHardware = statusPersistido.idHardware;
+    }
     if (Number.isFinite(statusPersistido.timestampLeitura)) {
       statusFisico.timestampLeitura = statusPersistido.timestampLeitura;
     }
