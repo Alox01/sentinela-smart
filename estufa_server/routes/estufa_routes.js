@@ -104,9 +104,15 @@ function createEstufaRouter({
     const dados = { status, config: req.body.config };
 
     // Modo receptor: a leitura real do aparelho vira o estado servido em
-    // /status (a nuvem reflete o hardware em vez de simular).
+    // /status (a nuvem reflete o hardware em vez de simular). O timestamp
+    // servido usa a hora de recebimento (Date.now()), para o app medir ha
+    // quanto tempo o aparelho nao reporta sem depender do relogio do ESP. O
+    // historico (dados) mantem o timestamp original do aparelho.
     if (modoReceptor) {
-      simulador.aplicarStatusPersistido(status);
+      simulador.aplicarStatusPersistido({
+        ...status,
+        timestampLeitura: Date.now(),
+      });
       simulador.aplicarConfiguracaoPersistida(req.body.config);
     }
 

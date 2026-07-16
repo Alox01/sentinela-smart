@@ -64,6 +64,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   bool? _ultimoAlertaIncendio;
   bool _semEnergia = false;
   bool? _ultimoTemEnergia;
+  // Aparelho "sem comunicacao": no modo nuvem, quando a ultima leitura recebida
+  // fica velha demais (o aparelho parou de reportar por falta de luz/internet),
+  // o app mostra isso em vez de fingir que esta tudo ao vivo.
+  static const int _limiarSemComunicacaoMs = 3 * 60 * 1000;
+  bool _semComunicacaoAparelho = false;
+  int? _ultimaLeituraMs;
   final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
   final RastreadorConexao _rastreadorConexao = RastreadorConexao();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -148,6 +154,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
     // Sem o campo, assume que ha energia (nao alarma a toa). So false = sem energia.
     final novoTemEnergia = status['temEnergia'] != false;
+    final tsLeitura = (status['timestampLeitura'] as num?)?.toInt();
     final ajusteTempAnterior = _ultimoTempAjusteServidor;
     final ajusteUmidAnterior = _ultimoUmidAjusteServidor;
     // Ao detectar uma mudanca de ajuste (feita no app ou no aparelho), abre a
@@ -206,6 +213,14 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       sireneLigada = novaSireneLigada;
       isFire = fogoDetectado;
       _semEnergia = !novoTemEnergia;
+      // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
+      // recebida ja significa que o aparelho esta vivo agora.
+      _ultimaLeituraMs = tsLeitura;
+      _semComunicacaoAparelho =
+          api.modoConexao == 'NUVEM' &&
+          tsLeitura != null &&
+          (DateTime.now().millisecondsSinceEpoch - tsLeitura) >
+              _limiarSemComunicacaoMs;
       _modoConexao = api.modoConexao;
       _ultimoTempAjusteServidor = novoTempAjuste;
       _ultimoUmidAjusteServidor = novoUmidAjuste;
@@ -329,6 +344,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
                       ],
                     ),
                   ),
+                if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
                 LeituraAparelhoCard(
                   temperatura: temperatura,
                   umidade: umidade,
@@ -500,6 +516,48 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildBannerSemComunicacao() {
+    final ms = _ultimaLeituraMs;
+    final texto = ms == null
+        ? 'Aparelho sem comunicação com a nuvem.'
+        : 'Aparelho sem comunicação há ${_formatarTempoDecorrido(ms)}. '
+              'Pode ser falta de energia ou de internet na estufa — verifique.';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: Colors.redAccent, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              texto,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatarTempoDecorrido(int desdeMs) {
+    final minutos = (DateTime.now().millisecondsSinceEpoch - desdeMs) ~/ 60000;
+    if (minutos < 1) return 'menos de 1 min';
+    if (minutos < 60) return '$minutos min';
+    final horas = minutos ~/ 60;
+    final resto = minutos % 60;
+    return resto == 0 ? '${horas}h' : '${horas}h ${resto}min';
   }
 
   Widget _tituloMenu(String texto) {
