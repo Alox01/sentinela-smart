@@ -5,19 +5,32 @@ const express = require('express');
 
 const { createEstufaRouter } = require('../routes/estufa_routes');
 
-function criarApp({ db, buffer = null, simulador, modoReceptor = false } = {}) {
+function criarApp({ db, buffer = null, simulador } = {}) {
   const app = express();
   app.use(express.json());
   app.use(
     createEstufaRouter({
-      simulador: simulador || { lerCompleto: () => ({}) },
+      simulador: simulador || { lerCompleto: () => ({ simulador: true }) },
       db,
       authMiddleware: (_req, _res, next) => next(),
       buffer,
-      modoReceptor,
     }),
   );
   return app;
+}
+
+async function getStatus(app, query = '') {
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    const resposta = await fetch(`http://127.0.0.1:${port}/status${query}`);
+    return { status: resposta.status, body: await resposta.json() };
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((erro) => (erro ? reject(erro) : resolve()));
+    });
+  }
 }
 
 async function postLeitura(app, corpo) {
@@ -120,44 +133,34 @@ test('quando a persistencia esta desabilitada apenas confirma sem gravar', async
   });
 });
 
-test('modo receptor alimenta o simulador com a leitura real', async () => {
-  const recebidos = [];
-  const simulador = {
-    lerCompleto: () => ({}),
-    aplicarStatusPersistido: (s) => recebidos.push(s),
-    aplicarConfiguracaoPersistida: () => {},
-  };
-  const app = criarApp({
-    simulador,
-    modoReceptor: true,
-    db: { estaHabilitado: () => false },
-  });
+test('POST /leitura alimenta o /status daquele aparelho', async () => {
+  const app = criarApp({ db: { estaHabilitado: () => false } });
 
-  const { status } = await postLeitura(app, {
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
     temperaturaAtual: 142.5,
     umidadeAtual: 38,
-    config: { temperaturaMeta: 140 },
+    config: { idHardware: 'ESP32_CAMPO_01', temperaturaMeta: 140 },
   });
 
+  const { status, body } = await getStatus(app, '?idHardware=ESP32_CAMPO_01');
   assert.equal(status, 200);
-  assert.equal(recebidos.length, 1);
-  assert.equal(recebidos[0].temperaturaAtual, 142.5);
-  assert.equal(recebidos[0].fonte, 'hardware');
+  assert.equal(body.status.idHardware, 'ESP32_CAMPO_01');
+  assert.equal(body.status.temperaturaAtual, 142.5);
+  assert.equal(body.config.temperaturaMeta, 140);
 });
 
-test('sem modo receptor nao alimenta o simulador', async () => {
-  let chamou = false;
-  const simulador = {
-    lerCompleto: () => ({}),
-    aplicarStatusPersistido: () => {
-      chamou = true;
-    },
-    aplicarConfiguracaoPersistida: () => {},
-  };
-  const app = criarApp({ simulador, db: { estaHabilitado: () => false } });
+test('GET /status sem idHardware devolve o simulador', async () => {
+  const app = criarApp({ db: { estaHabilitado: () => false } });
+  const { status, body } = await getStatus(app, '');
+  assert.equal(status, 200);
+  assert.equal(body.simulador, true);
+});
 
-  await postLeitura(app, { temperaturaAtual: 90, umidadeAtual: 50 });
-  assert.equal(chamou, false);
+test('GET /status de aparelho desconhecido responde 404', async () => {
+  const app = criarApp({ db: { estaHabilitado: () => false } });
+  const { status } = await getStatus(app, '?idHardware=NAO_EXISTE');
+  assert.equal(status, 404);
 });
 
 async function getHistorico(app, query) {

@@ -7,19 +7,57 @@ const {
 } = require('../sync');
 const { criarPayloadEsp32 } = require('../esp32_payload');
 
+const ID_SIMULADOR = 'ESP32_REALISTIC_V2';
+
 function createEstufaRouter({
   simulador,
   db,
   authMiddleware,
   tokenConfigurado = false,
   buffer = null,
-  modoReceptor = false,
 }) {
   const router = express.Router();
 
-  router.get('/status', async (_req, res) => {
-    const dadosCompletos = simulador.lerCompleto();
-    res.json(dadosCompletos);
+  // Estado ao vivo por aparelho (idHardware -> { status, config, recebidoMs }),
+  // alimentado pelos POST /leitura dos aparelhos reais. O simulador continua
+  // sendo o aparelho ESP32_REALISTIC_V2, servido do seu proprio modelo, sem se
+  // misturar com os reais.
+  const dispositivosAoVivo = new Map();
+
+  async function lerDispositivo(idHardware) {
+    if (!idHardware || idHardware === ID_SIMULADOR) {
+      return simulador.lerCompleto();
+    }
+    const emMemoria = dispositivosAoVivo.get(idHardware);
+    if (emMemoria) {
+      return { status: emMemoria.status, config: emMemoria.config };
+    }
+    // Sob demanda: ultima leitura/config do banco (aparelho que ainda nao
+    // empurrou nesta sessao do servidor).
+    if (db.carregarUltimaLeitura) {
+      const status = await db.carregarUltimaLeitura(idHardware);
+      if (status) {
+        const config = db.carregarConfiguracao
+          ? await db.carregarConfiguracao(idHardware)
+          : null;
+        const registro = { status, config: config || {}, recebidoMs: 0 };
+        dispositivosAoVivo.set(idHardware, registro);
+        return { status, config: registro.config };
+      }
+    }
+    return null;
+  }
+
+  router.get('/status', async (req, res) => {
+    const dados = await lerDispositivo(req.query.idHardware);
+    if (!dados) {
+      res.status(404).json({
+        erro: 'Aparelho sem leituras',
+        idHardware: req.query.idHardware || null,
+      });
+      return;
+    }
+    res.json(dados);
   });
 
 
@@ -103,17 +141,17 @@ function createEstufaRouter({
     status.fonte = status.fonte || 'hardware';
     const dados = { status, config: req.body.config };
 
-    // Modo receptor: a leitura real do aparelho vira o estado servido em
-    // /status (a nuvem reflete o hardware em vez de simular). O timestamp
-    // servido usa a hora de recebimento (Date.now()), para o app medir ha
-    // quanto tempo o aparelho nao reporta sem depender do relogio do ESP. O
-    // historico (dados) mantem o timestamp original do aparelho.
-    if (modoReceptor) {
-      simulador.aplicarStatusPersistido({
-        ...status,
-        timestampLeitura: Date.now(),
+    // Alimenta o estado ao vivo DAQUELE aparelho (nao mistura com o simulador).
+    // O timestamp servido usa a hora de recebimento (Date.now()) para o app
+    // medir a staleness sem depender do relogio do ESP; o historico (dados)
+    // mantem o timestamp original do aparelho.
+    const idHw = status.idHardware;
+    if (idHw && idHw !== ID_SIMULADOR) {
+      dispositivosAoVivo.set(idHw, {
+        status: { ...status, timestampLeitura: Date.now() },
+        config: req.body.config || dispositivosAoVivo.get(idHw)?.config || {},
+        recebidoMs: Date.now(),
       });
-      simulador.aplicarConfiguracaoPersistida(req.body.config);
     }
 
     if (!db.estaHabilitado()) {
