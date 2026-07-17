@@ -23,12 +23,12 @@ Preencha no topo do `.ino`:
 - `DEVICE_TOKEN` — **o mesmo** token do app (campo "Chave de acesso") e do
   `ESTUFA_API_TOKEN`. Deixe `""` só para liberar comandos sem token em rede local
   confiável;
-- `ID_HARDWARE` — identificador do aparelho;
 - `CLOUD_URL` — URL da nuvem para onde o aparelho empurra as leituras (histórico
   e acesso remoto). Deixe `""` para não empurrar.
 
-Ao ligar, o Serial (115200) mostra o **IP** do aparelho — é esse endereço que se
-cadastra no app.
+O **id do aparelho é gerado automaticamente do chip (MAC)** — único por ESP, sem
+configurar nada. Ao ligar, o Serial (115200) mostra o **id** (ex.:
+`ESP32_A1B2C3`) e o **IP** do aparelho — o IP é o que se cadastra no app.
 
 ## O que o firmware expõe
 
@@ -39,11 +39,11 @@ cadastra no app.
 | `POST /sincronizar` | ajustes com **token** e **Last-Write-Wins** por campo |
 
 Além de servir esses endpoints, o aparelho **empurra a leitura atual para a
-nuvem** (`POST CLOUD_URL/leitura`) a cada `PUSH_INTERVAL_MS`. Para o `/status`
-remoto refletir o aparelho real (em vez do simulador), o servidor deve rodar em
-**modo receptor** — defina `MODO_RECEPTOR=true` nas variáveis de ambiente do
-servidor (Render). Aí, quando o aparelho é desligado, a nuvem para de receber e
-a última leitura vai ficando velha, em vez de fingir que está tudo ativo.
+nuvem** (`POST CLOUD_URL/leitura`) a cada `PUSH_INTERVAL_MS`. A nuvem guarda o
+estado **por aparelho** (pelo id do MAC): cada estufa no app puxa o `/status` do
+seu aparelho, e o simulador continua sendo um aparelho de teste à parte. Quando
+o aparelho é desligado, a nuvem para de receber e o app avisa "sem comunicação"
+com a última leitura, em vez de fingir que está tudo ativo.
 
 A lógica local continua funcionando **sem Wi-Fi** (edge-first): botões, display,
 LEDs e buzzer operam offline; a rede é uma camada adicional.

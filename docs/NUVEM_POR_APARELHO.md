@@ -1,7 +1,17 @@
-# Plano: nuvem por aparelho (status ao vivo multi-dispositivo)
+# Nuvem por aparelho (status ao vivo multi-dispositivo)
 
-Documento de projeto — desenho da evolução para cada aparelho ter o **seu**
-estado ao vivo na nuvem. Ainda não implementado.
+Cada aparelho tem o **seu** estado ao vivo na nuvem. **Implementado** — este doc
+registra o desenho. Resumo do que ficou pronto:
+
+- **Servidor:** `GET /status?idHardware=X` devolve o estado daquele aparelho
+  (mapa por `idHardware`, carga sob demanda do banco). O simulador segue sendo o
+  aparelho `ESP32_REALISTIC_V2`, à parte dos reais. O `MODO_RECEPTOR` deixou de
+  ser necessário (foi removido).
+- **App:** `EstufaEntity.idHardware`, capturado na 1ª conexão local (do `/status`
+  do ESP) e enviado ao ler a nuvem. Cada estufa puxa o seu.
+- **Firmware:** id único por aparelho, gerado do MAC do chip.
+
+Desenho original abaixo.
 
 ## O problema (hoje)
 

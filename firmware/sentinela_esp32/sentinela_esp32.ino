@@ -38,7 +38,9 @@ const char* WIFI_PASS       = "SUA_SENHA_WIFI";
 // Mesma chave usada no app (campo "Chave de acesso") e no ESTUFA_API_TOKEN.
 // Deixe "" para liberar comandos sem token (apenas em rede local confiavel).
 const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
-const char* ID_HARDWARE     = "ESP32_CAMPO_01";
+// O id do aparelho e gerado do chip (MAC) no setup -> unico por ESP, sem
+// precisar configurar nada. Cada aparelho vira o seu na nuvem (status por
+// aparelho). Ex.: "ESP32_A1B2C3".
 const char* VERSAO_FIRMWARE = "1.0.0";
 // URL da nuvem para onde o aparelho empurra as leituras (historico + acesso
 // remoto). Deixe "" para nao empurrar. Precisa que o servidor esteja em
@@ -128,6 +130,7 @@ long long modoSilenciosoTimestamp = 0;
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
 unsigned long ultimoPushNuvem = 0;
+String idHardware;  // definido no setup a partir do chip (unico por ESP)
 
 // ============================================================
 //  SETUP
@@ -135,6 +138,14 @@ unsigned long ultimoPushNuvem = 0;
 void setup() {
   Serial.begin(115200);
   delay(1000);
+
+  // Id unico do aparelho a partir do MAC do chip (6 hex do final).
+  uint64_t chipMac = ESP.getEfuseMac();
+  char idBuf[16];
+  snprintf(idBuf, sizeof(idBuf), "ESP32_%06X", (unsigned)(chipMac & 0xFFFFFF));
+  idHardware = idBuf;
+  Serial.print("ID do aparelho: ");
+  Serial.println(idHardware);
 
   dht.begin();
 
@@ -248,7 +259,7 @@ void empurrarLeituraNuvem() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   JsonDocument doc;
-  doc["idHardware"] = ID_HARDWARE;
+  doc["idHardware"] = idHardware;
   doc["timestampLeitura"] = nowMs();
   doc["temperaturaAtual"] = temperaturaF;
   doc["umidadeAtual"] = umidade;
@@ -268,7 +279,7 @@ void empurrarLeituraNuvem() {
   doc["fonte"] = "hardware";
 
   JsonObject config = doc["config"].to<JsonObject>();
-  config["idHardware"] = ID_HARDWARE;
+  config["idHardware"] = idHardware;
   config["temperaturaMeta"] = temperaturaAlvoF;
   config["tempTimestamp"] = tempTimestamp;
   config["umidadeMeta"] = umidadeAlvo;
@@ -373,7 +384,7 @@ void handleStatus() {
   JsonDocument doc;
 
   JsonObject status = doc["status"].to<JsonObject>();
-  status["idHardware"] = ID_HARDWARE;
+  status["idHardware"] = idHardware;
   status["timestampLeitura"] = nowMs();
   status["temperaturaAtual"] = temperaturaF;
   status["umidadeAtual"] = umidade;
@@ -392,7 +403,7 @@ void handleStatus() {
   status["corStatus"] = corStatusAtual();
 
   JsonObject config = doc["config"].to<JsonObject>();
-  config["idHardware"] = ID_HARDWARE;
+  config["idHardware"] = idHardware;
   config["temperaturaMeta"] = temperaturaAlvoF;
   config["tempTimestamp"] = tempTimestamp;
   config["umidadeMeta"] = umidadeAlvo;
@@ -498,7 +509,7 @@ void handleSincronizar() {
 
   resp["sucesso"] = true;
   JsonObject cfg = resp["configAtualizada"].to<JsonObject>();
-  cfg["idHardware"] = ID_HARDWARE;
+  cfg["idHardware"] = idHardware;
   cfg["temperaturaMeta"] = temperaturaAlvoF;
   cfg["tempTimestamp"] = tempTimestamp;
   cfg["umidadeMeta"] = umidadeAlvo;
