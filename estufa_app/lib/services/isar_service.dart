@@ -463,6 +463,31 @@ class IsarService {
     return itens;
   }
 
+  // Guarda o idHardware capturado na conexao local, para as leituras remotas
+  // puxarem o estado do aparelho certo (status por aparelho na nuvem).
+  Future<void> definirIdHardwarePorIp(String ip, String idHardware) async {
+    if (kIsWeb) {
+      for (final e in _webEstufas) {
+        if (e.ip == ip) e.idHardware = idHardware;
+      }
+      return;
+    }
+    final isar = await database;
+    await isar.writeTxn(() async {
+      final estufas = await isar
+          .collection<EstufaEntity>()
+          .filter()
+          .ipEqualTo(ip)
+          .findAll();
+      for (final e in estufas) {
+        if (e.idHardware != idHardware) {
+          e.idHardware = idHardware;
+          await isar.collection<EstufaEntity>().put(e);
+        }
+      }
+    });
+  }
+
   Future<void> adicionarComandoPendente({
     required String ipEstufa,
     required Map<String, dynamic> payload,

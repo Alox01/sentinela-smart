@@ -30,7 +30,11 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
   @override
   void initState() {
     super.initState();
-    _api = ApiService(widget.estufa.ip, token: widget.estufa.tokenAcesso);
+    _api = ApiService(
+      widget.estufa.ip,
+      token: widget.estufa.tokenAcesso,
+      idHardware: widget.estufa.idHardware,
+    );
     unawaited(_atualizarResumo());
     _timerResumo = Timer.periodic(
       const Duration(seconds: 3),
@@ -42,8 +46,13 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
   void didUpdateWidget(covariant EstufaResumoCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.estufa.ip != widget.estufa.ip ||
-        oldWidget.estufa.tokenAcesso != widget.estufa.tokenAcesso) {
-      _api = ApiService(widget.estufa.ip, token: widget.estufa.tokenAcesso);
+        oldWidget.estufa.tokenAcesso != widget.estufa.tokenAcesso ||
+        oldWidget.estufa.idHardware != widget.estufa.idHardware) {
+      _api = ApiService(
+        widget.estufa.ip,
+        token: widget.estufa.tokenAcesso,
+        idHardware: widget.estufa.idHardware,
+      );
       _dadosResumo = null;
       unawaited(_atualizarResumo());
     }
@@ -76,6 +85,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                 nomeEstufa: widget.estufa.nome,
                 ipEstufa: widget.estufa.ip,
                 tokenAcesso: widget.estufa.tokenAcesso,
+                idHardware: widget.estufa.idHardware,
               ),
             ),
           ).then((_) => _atualizarResumo());

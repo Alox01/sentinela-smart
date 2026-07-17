@@ -12,5 +12,8 @@ class EstufaEntity {
   late String nome;
   late String ip;
   String? tokenAcesso;
+  // Identificador do aparelho na nuvem (capturado na 1a conexao local, do
+  // /status do ESP). Deixa cada estufa puxar o SEU estado remoto por aparelho.
+  String? idHardware;
   late DateTime criadaEm;
 }

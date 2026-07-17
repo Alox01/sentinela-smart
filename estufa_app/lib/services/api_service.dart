@@ -34,17 +34,22 @@ class ApiService {
   static final Map<String, _ResolucaoConexao> _ultimaConexaoBoa = {};
   static const Duration _validadeResolucaoCompartilhada = Duration(seconds: 30);
 
+  final String ipOriginal;
   final String localBaseUrl;
   final String? localPort80FallbackUrl;
   final String? cloudBaseUrl;
   final String? authToken;
+  // Identificador do aparelho na nuvem. Enviado no /status remoto para puxar o
+  // estado do aparelho certo; capturado na 1a conexao local (do /status do ESP).
+  String? idHardware;
 
   String? _baseUrlAtiva;
   DateTime _ultimaResolucao = DateTime.fromMillisecondsSinceEpoch(0);
   ApiCommandFailure _ultimaFalhaComando = ApiCommandFailure.none;
 
-  ApiService(String ip, {String? cloudUrl, String? token})
-    : localBaseUrl = _normalizarBaseUrl(ip),
+  ApiService(String ip, {String? cloudUrl, String? token, this.idHardware})
+    : ipOriginal = ip,
+      localBaseUrl = _normalizarBaseUrl(ip),
       localPort80FallbackUrl = _normalizarFallbackPorta80(ip),
       cloudBaseUrl = _normalizarCloudUrl(cloudUrl ?? _cloudPadrao),
       authToken = _normalizarToken(
@@ -91,14 +96,18 @@ class ApiService {
       cloudBaseUrl != null && cloudBaseUrl!.isNotEmpty;
 
   Future<Map<String, dynamic>?> buscarStatus() async {
-    final response = await _getComFallback('/status');
+    final caminhoStatus = (idHardware != null && idHardware!.isNotEmpty)
+        ? '/status?idHardware=${Uri.encodeComponent(idHardware!)}'
+        : '/status';
+    final response = await _getComFallback(caminhoStatus);
     if (response?.statusCode == 200) {
       final dados = _decodificarMapa(response!.body);
       if (dados == null) return null;
+      _capturarIdHardwareLocal(dados);
       final pendenciasSincronizadas = await sincronizarComandosPendentes();
 
       if (pendenciasSincronizadas > 0) {
-        final responseAtualizada = await _getComFallback('/status');
+        final responseAtualizada = await _getComFallback(caminhoStatus);
         if (responseAtualizada?.statusCode == 200) {
           return _decodificarMapa(responseAtualizada!.body);
         }
@@ -115,6 +124,19 @@ class ApiService {
     }
 
     return null;
+  }
+
+  // Na conexao local (lendo o ESP direto), guarda o idHardware do aparelho para
+  // as leituras remotas puxarem o estado dele na nuvem. So captura em LOCAL: no
+  // modo nuvem o id vem do proprio parametro enviado.
+  void _capturarIdHardwareLocal(Map<String, dynamic> dados) {
+    if (modoConexao != 'LOCAL') return;
+    final status = dados['status'];
+    final idLido = status is Map ? status['idHardware'] : null;
+    if (idLido is String && idLido.isNotEmpty && idLido != idHardware) {
+      idHardware = idLido;
+      unawaited(IsarService.instance.definirIdHardwarePorIp(ipOriginal, idLido));
+    }
   }
 
   // Busca o historico persistido na nuvem/servidor para o periodo. Serve para

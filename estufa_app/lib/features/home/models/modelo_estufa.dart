@@ -5,12 +5,14 @@ class ModeloEstufa {
   final String nome;
   final String ip;
   final String? tokenAcesso;
+  final String? idHardware;
 
   const ModeloEstufa({
     required this.id,
     required this.nome,
     required this.ip,
     this.tokenAcesso,
+    this.idHardware,
   });
 
   factory ModeloEstufa.fromEntity(EstufaEntity entity) {
@@ -19,6 +21,7 @@ class ModeloEstufa {
       nome: entity.nome,
       ip: entity.ip,
       tokenAcesso: entity.tokenAcesso,
+      idHardware: entity.idHardware,
     );
   }
 }

@@ -27,18 +27,23 @@ const EstufaEntitySchema = CollectionSchema(
       name: r'criadaEm',
       type: IsarType.dateTime,
     ),
-    r'ip': PropertySchema(
+    r'idHardware': PropertySchema(
       id: 2,
+      name: r'idHardware',
+      type: IsarType.string,
+    ),
+    r'ip': PropertySchema(
+      id: 3,
       name: r'ip',
       type: IsarType.string,
     ),
     r'nome': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'nome',
       type: IsarType.string,
     ),
     r'tokenAcesso': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'tokenAcesso',
       type: IsarType.string,
     )
@@ -78,6 +83,12 @@ int _estufaEntityEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.chave.length * 3;
+  {
+    final value = object.idHardware;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.ip.length * 3;
   bytesCount += 3 + object.nome.length * 3;
   {
@@ -97,9 +108,10 @@ void _estufaEntitySerialize(
 ) {
   writer.writeString(offsets[0], object.chave);
   writer.writeDateTime(offsets[1], object.criadaEm);
-  writer.writeString(offsets[2], object.ip);
-  writer.writeString(offsets[3], object.nome);
-  writer.writeString(offsets[4], object.tokenAcesso);
+  writer.writeString(offsets[2], object.idHardware);
+  writer.writeString(offsets[3], object.ip);
+  writer.writeString(offsets[4], object.nome);
+  writer.writeString(offsets[5], object.tokenAcesso);
 }
 
 EstufaEntity _estufaEntityDeserialize(
@@ -112,9 +124,10 @@ EstufaEntity _estufaEntityDeserialize(
   object.chave = reader.readString(offsets[0]);
   object.criadaEm = reader.readDateTime(offsets[1]);
   object.id = id;
-  object.ip = reader.readString(offsets[2]);
-  object.nome = reader.readString(offsets[3]);
-  object.tokenAcesso = reader.readStringOrNull(offsets[4]);
+  object.idHardware = reader.readStringOrNull(offsets[2]);
+  object.ip = reader.readString(offsets[3]);
+  object.nome = reader.readString(offsets[4]);
+  object.tokenAcesso = reader.readStringOrNull(offsets[5]);
   return object;
 }
 
@@ -130,10 +143,12 @@ P _estufaEntityDeserializeProp<P>(
     case 1:
       return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readString(offset)) as P;
+    case 5:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -573,6 +588,160 @@ extension EstufaEntityQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'idHardware',
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'idHardware',
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'idHardware',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'idHardware',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'idHardware',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'idHardware',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'idHardware',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'idHardware',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'idHardware',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'idHardware',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'idHardware',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterFilterCondition>
+      idHardwareIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'idHardware',
+        value: '',
       ));
     });
   }
@@ -1029,6 +1198,19 @@ extension EstufaEntityQuerySortBy
     });
   }
 
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterSortBy> sortByIdHardware() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'idHardware', Sort.asc);
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterSortBy>
+      sortByIdHardwareDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'idHardware', Sort.desc);
+    });
+  }
+
   QueryBuilder<EstufaEntity, EstufaEntity, QAfterSortBy> sortByIp() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ip', Sort.asc);
@@ -1105,6 +1287,19 @@ extension EstufaEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterSortBy> thenByIdHardware() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'idHardware', Sort.asc);
+    });
+  }
+
+  QueryBuilder<EstufaEntity, EstufaEntity, QAfterSortBy>
+      thenByIdHardwareDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'idHardware', Sort.desc);
+    });
+  }
+
   QueryBuilder<EstufaEntity, EstufaEntity, QAfterSortBy> thenByIp() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ip', Sort.asc);
@@ -1158,6 +1353,13 @@ extension EstufaEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<EstufaEntity, EstufaEntity, QDistinct> distinctByIdHardware(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'idHardware', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<EstufaEntity, EstufaEntity, QDistinct> distinctByIp(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1197,6 +1399,12 @@ extension EstufaEntityQueryProperty
   QueryBuilder<EstufaEntity, DateTime, QQueryOperations> criadaEmProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'criadaEm');
+    });
+  }
+
+  QueryBuilder<EstufaEntity, String?, QQueryOperations> idHardwareProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'idHardware');
     });
   }
 

@@ -21,12 +21,14 @@ class MonitoramentoScreen extends StatefulWidget {
   final String nomeEstufa;
   final String ipEstufa;
   final String? tokenAcesso;
+  final String? idHardware;
 
   const MonitoramentoScreen({
     super.key,
     required this.nomeEstufa,
     required this.ipEstufa,
     this.tokenAcesso,
+    this.idHardware,
   });
 
   @override
@@ -86,7 +88,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    api = ApiService(widget.ipEstufa, token: widget.tokenAcesso);
+    api = ApiService(
+      widget.ipEstufa,
+      token: widget.tokenAcesso,
+      idHardware: widget.idHardware,
+    );
     unawaited(_carregarCicloAtual());
     unawaited(_atualizarPendencias());
     _iniciarAtualizacaoPeriodica();
