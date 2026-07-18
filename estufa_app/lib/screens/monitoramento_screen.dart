@@ -58,7 +58,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   bool sireneLigada = false;
   int _pendenciasSincronizacao = 0;
   bool _sincronizandoPendencias = false;
-  String _modoConexao = 'OFFLINE';
+  // Comeca em CONECTANDO: antes da 1a resposta nao da para afirmar que esta
+  // offline, e mostrar vermelho na abertura assustava a toa.
+  String _modoConexao = 'CONECTANDO';
+  bool _buscandoStatus = false;
   int _ultimoRegistroHistoricoMs = 0;
   CicloSecagemEntity? _cicloAtual;
   double? _ultimoTempAjusteServidor;
@@ -122,11 +125,22 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   void _iniciarAtualizacaoPeriodica() {
     timer?.cancel();
     unawaited(atualizarTela());
-    timer = Timer.periodic(const Duration(seconds: 1), (_) => atualizarTela());
+    // 3s em vez de 1s: uma leitura pela nuvem leva mais que 1s, entao o timer
+    // antigo empilhava requisicoes sobre a mesma ApiService.
+    timer = Timer.periodic(const Duration(seconds: 3), (_) => atualizarTela());
   }
 
   Future<void> atualizarTela() async {
-    final dados = await api.buscarStatus();
+    // Trava de reentrada: sem ela as respostas chegavam fora de ordem e uma
+    // leitura lenta derrubava a conexao que outra tinha acabado de resolver.
+    if (_buscandoStatus) return;
+    _buscandoStatus = true;
+    final Map<String, dynamic>? dados;
+    try {
+      dados = await api.buscarStatus();
+    } finally {
+      _buscandoStatus = false;
+    }
     if (dados == null) {
       if (mounted) {
         setState(() {
@@ -296,7 +310,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       endDrawer: _buildMenuEstufa(),
       appBar: MonitoramentoAppBar(
         nomeEstufa: widget.nomeEstufa,
-        modoConexao: _modoConexao,
+        // O aparelho parado pesa mais que o meio de leitura: de nada adianta
+        // dizer "NUVEM" em azul quando os dados na tela sao antigos.
+        modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
         sincronizando: _sincronizandoPendencias,
         pendencias: _pendenciasSincronizacao,
         onAbrirMenu: () => _scaffoldKey.currentState?.openEndDrawer(),
@@ -555,6 +571,21 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
         ],
       ),
     );
+  }
+
+  String _descreverEstadoAparelho() {
+    if (_semComunicacaoAparelho) {
+      final ms = _ultimaLeituraMs;
+      return ms == null
+          ? 'Sem comunicação'
+          : 'Sem comunicação há ${_formatarTempoDecorrido(ms)}';
+    }
+    return switch (_modoConexao) {
+      'CONECTANDO' => 'Verificando...',
+      'OFFLINE' => 'Não alcançado',
+      'LOCAL' => 'Reportando (rede local)',
+      _ => 'Reportando (via nuvem)',
+    };
   }
 
   String _formatarTempoDecorrido(int desdeMs) {
@@ -975,7 +1006,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
 
     await mostrarDetalhesConexaoDialog(
       context: context,
-      modoConexao: _modoConexao,
+      // Mesmo rotulo do indicador na AppBar, para o menu nao dizer "NUVEM"
+      // enquanto a tela avisa que o aparelho esta mudo.
+      modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
+      estadoAparelho: _descreverEstadoAparelho(),
       baseUrlAtiva: api.baseUrlAtiva,
       localBaseUrl: api.localBaseUrl,
       cloudBaseUrl: api.cloudBaseUrl,

@@ -20,6 +20,11 @@ class IndicadorConexao extends StatelessWidget {
       'LOCAL' => Colors.greenAccent,
       'NUVEM' => Colors.lightBlueAccent,
       'SINCRONIZANDO' => Colors.amberAccent,
+      // O app alcanca a nuvem, mas o aparelho parou de reportar: nao e o mesmo
+      // que OFFLINE (esse e o celular sem internet).
+      'SEM SINAL' => Colors.orangeAccent,
+      // Ainda tentando a 1a leitura: neutro, nem online nem offline.
+      'CONECTANDO' => Colors.white54,
       _ => Colors.redAccent,
     };
     final textoPendencias = pendencias > 0 ? ' | $pendencias' : '';
@@ -42,6 +47,10 @@ class IndicadorConexao extends StatelessWidget {
                   ? Icons.wifi_off_rounded
                   : modo == 'SINCRONIZANDO'
                   ? Icons.sync_rounded
+                  : modo == 'SEM SINAL'
+                  ? Icons.sensors_off_rounded
+                  : modo == 'CONECTANDO'
+                  ? Icons.wifi_find_rounded
                   : Icons.wifi_rounded,
               color: cor,
               size: telaEstreita ? 11 : 13,

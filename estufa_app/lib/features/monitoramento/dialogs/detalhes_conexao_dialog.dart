@@ -8,6 +8,9 @@ import '../../../services/api_service.dart';
 Future<void> mostrarDetalhesConexaoDialog({
   required BuildContext context,
   required String modoConexao,
+  // Estado do aparelho (esta reportando ou nao), separado do alcance dos
+  // servidores: a nuvem pode estar de pe e o aparelho, mudo.
+  required String estadoAparelho,
   required String? baseUrlAtiva,
   required String localBaseUrl,
   required String? cloudBaseUrl,
@@ -58,6 +61,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _LinhaDetalhe('Modo atual', modoConexao),
+                        _LinhaDetalhe('Aparelho', estadoAparelho),
                         _LinhaDetalhe('Ativo', baseUrlAtiva ?? '-'),
                         _LinhaDetalhe('Local', localBaseUrl),
                         _LinhaDetalhe(
@@ -73,13 +77,19 @@ Future<void> mostrarDetalhesConexaoDialog({
                         _LinhaDetalhe('Pend\u00EAncias', '$totalPendencias'),
                         const SizedBox(height: 14),
                         const Text(
-                          'TESTE DE ALCANCE',
+                          'TESTE DE ALCANCE (SERVIDORES)',
                           style: TextStyle(
                             color: Colors.white54,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.8,
                           ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Diz se o celular alcança cada endereço — '
+                          'não se o aparelho está reportando.',
+                          style: TextStyle(color: Colors.white38, fontSize: 11),
                         ),
                         const SizedBox(height: 8),
                         FutureBuilder<List<ApiConnectionProbe>>(

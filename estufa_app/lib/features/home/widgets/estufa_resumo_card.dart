@@ -23,9 +23,19 @@ class EstufaResumoCard extends StatefulWidget {
 }
 
 class _EstufaResumoCardState extends State<EstufaResumoCard> {
+  // Mesmo limiar da tela de monitoramento: no modo nuvem, uma leitura velha
+  // demais significa que o aparelho parou de reportar (sem luz ou sem internet).
+  static const int _limiarSemComunicacaoMs = 3 * 60 * 1000;
+
   late ApiService _api;
   Timer? _timerResumo;
   Map<String, dynamic>? _dadosResumo;
+  bool _semComunicacao = false;
+  // Uma leitura pela nuvem pode demorar mais que o intervalo do timer; sem esta
+  // trava as requisicoes se acumulam e as respostas chegam fora de ordem.
+  bool _buscando = false;
+  // Antes da 1a resposta nao da para dizer que esta offline: so nao se sabe.
+  bool _primeiraRespostaRecebida = false;
 
   @override
   void initState() {
@@ -54,6 +64,8 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
         idHardware: widget.estufa.idHardware,
       );
       _dadosResumo = null;
+      _primeiraRespostaRecebida = false;
+      _semComunicacao = false;
       unawaited(_atualizarResumo());
     }
   }
@@ -65,10 +77,30 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
   }
 
   Future<void> _atualizarResumo() async {
-    final dados = await _api.buscarStatus();
+    if (_buscando) return;
+    _buscando = true;
+    final Map<String, dynamic>? dados;
+    try {
+      dados = await _api.buscarStatus();
+    } finally {
+      _buscando = false;
+    }
     if (!mounted) return;
+    final status = dados?['status'];
+    final tsLeitura = status is Map
+        ? (status['timestampLeitura'] as num?)?.toInt()
+        : null;
     setState(() {
       _dadosResumo = dados;
+      _primeiraRespostaRecebida = true;
+      // So vale no modo nuvem: em LOCAL, ter recebido a leitura ja prova que o
+      // aparelho esta vivo agora.
+      _semComunicacao =
+          dados != null &&
+          _api.modoConexao == 'NUVEM' &&
+          tsLeitura != null &&
+          (DateTime.now().millisecondsSinceEpoch - tsLeitura) >
+              _limiarSemComunicacaoMs;
     });
   }
 
@@ -116,7 +148,9 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
 
   Widget _buildConteudoResumo() {
     final dados = _dadosResumo;
-    if (dados == null) return _buildLayoutOffline();
+    // Enquanto a 1a resposta nao chega o card fica neutro: dizer "offline"
+    // antes de ter tentado fazia todos os galpoes piscarem vermelho ao abrir.
+    if (dados == null) return _buildLayoutSemDados(_primeiraRespostaRecebida);
 
     final status = dados['status'] ?? {};
     final temp = double.parse((status['temperaturaAtual'] ?? 0).toString());
@@ -125,7 +159,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
     final temAlerta = sireneLigada || (status['corStatus'] == 'red');
 
-    return _buildLayoutOnline(temp, umid, temAlerta);
+    return _buildLayoutOnline(temp, umid, temAlerta, _semComunicacao);
   }
 
   Widget _buildMenuAcoes() {
@@ -174,7 +208,16 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
     );
   }
 
-  Widget _buildLayoutOnline(double temp, double umid, bool temAlerta) {
+  Widget _buildLayoutOnline(
+    double temp,
+    double umid,
+    bool temAlerta,
+    bool semComunicacao,
+  ) {
+    // Sem comunicacao: os valores sao a ultima leitura conhecida, nao o agora.
+    final corLed = semComunicacao
+        ? Colors.orangeAccent
+        : (temAlerta ? Colors.redAccent : const Color(0xFF00FF00));
     return Stack(
       children: [
         Positioned(
@@ -204,15 +247,11 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: temAlerta
-                            ? Colors.redAccent
-                            : const Color(0xFF00FF00),
+                        color: corLed,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: temAlerta
-                                ? Colors.redAccent.withValues(alpha: 0.6)
-                                : Colors.greenAccent.withValues(alpha: 0.4),
+                            color: corLed.withValues(alpha: 0.5),
                             blurRadius: 6,
                             spreadRadius: 1,
                           ),
@@ -268,6 +307,25 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                   ),
                 ),
               ),
+              if (semComunicacao)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'SEM SINAL',
+                    style: TextStyle(
+                      color: Colors.orangeAccent,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -320,7 +378,8 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
     );
   }
 
-  Widget _buildLayoutOffline() {
+  Widget _buildLayoutSemDados(bool offline) {
+    final cor = offline ? Colors.redAccent : Colors.white38;
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -336,11 +395,11 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: Colors.redAccent,
+                    color: cor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.redAccent.withValues(alpha: 0.4),
+                        color: cor.withValues(alpha: 0.4),
                         blurRadius: 6,
                         spreadRadius: 1,
                       ),
@@ -367,25 +426,34 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
               ),
             ],
           ),
-          const Expanded(
+          Expanded(
             child: Center(
-              child: Icon(
-                Icons.wifi_off_rounded,
-                color: Colors.white24,
-                size: 34,
-              ),
+              child: offline
+                  ? const Icon(
+                      Icons.wifi_off_rounded,
+                      color: Colors.white24,
+                      size: 34,
+                    )
+                  : const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white24,
+                      ),
+                    ),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
+              color: cor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text(
-              'OFFLINE',
+            child: Text(
+              offline ? 'OFFLINE' : 'CONECTANDO',
               style: TextStyle(
-                color: Colors.redAccent,
+                color: cor,
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
               ),
