@@ -412,7 +412,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       maxLengthEnforcement: MaxLengthEnforcement.enforced,
       style: const TextStyle(color: Colors.white),
       decoration: const InputDecoration(
-        labelText: 'Nome (ex: Galpão 01)',
+        labelText: 'Nome (ex: Estufa 01)',
         helperText: 'Use até 24 caracteres.',
         helperStyle: TextStyle(color: Colors.white38),
         counterStyle: TextStyle(color: Colors.white38),

@@ -136,7 +136,13 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
     final temAlerta = sireneLigada || (status['corStatus'] == 'red');
 
-    return _buildLayoutOnline(temp, umid, temAlerta, _semComunicacao(leitura));
+    return _buildLayoutOnline(
+      temp,
+      umid,
+      temAlerta,
+      _semComunicacao(leitura),
+      leitura.modoConexao == 'NUVEM',
+    );
   }
 
   Widget _buildMenuAcoes() {
@@ -190,11 +196,19 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
     double umid,
     bool temAlerta,
     bool semComunicacao,
+    bool viaNuvem,
   ) {
-    // Sem comunicacao: os valores sao a ultima leitura conhecida, nao o agora.
+    // A saude da estufa vem antes do caminho da leitura: laranja (a leitura e
+    // antiga) e vermelho (alarme) mandam no led. So quando nao ha nada errado o
+    // azul aparece, dizendo que o dado veio pela nuvem - mesma cor que o
+    // indicador NUVEM usa na tela de monitoramento.
     final corLed = semComunicacao
         ? Colors.orangeAccent
-        : (temAlerta ? Colors.redAccent : const Color(0xFF00FF00));
+        : temAlerta
+        ? Colors.redAccent
+        : viaNuvem
+        ? Colors.lightBlueAccent
+        : const Color(0xFF00FF00);
     return Stack(
       children: [
         Positioned(
