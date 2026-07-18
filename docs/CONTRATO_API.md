@@ -321,7 +321,17 @@ X-Device-Token: <token>
 
 No app, essa chave pode ser configurada por estufa. Se a estufa não tiver chave própria, o app usa a chave global informada no build, quando existir.
 
-Para apresentação local, a autenticação pode ficar desabilitada. Para nuvem ou rede exposta, deve ficar habilitada.
+**Todas as rotas exigem o token quando ele está configurado — inclusive as de
+leitura** (`GET /status`, `/historico`, `/`, `/dados`). Telemetria da estufa é
+dado do produtor, não público: sem essa exigência, qualquer pessoa com a URL da
+nuvem leria as leituras de qualquer aparelho. Consequência prática: uma estufa
+cadastrada **sem** chave de acesso no app não consegue ler pela nuvem (as rotas
+respondem 401). No aparelho local o `GET /status` continua aberto na rede da
+propriedade (edge-first); apenas os comandos exigem token lá.
+
+Para apresentação local, a autenticação pode ficar desabilitada
+(`PERMITIR_SEM_TOKEN=true`). Para nuvem ou rede exposta, deve ficar habilitada —
+o servidor se recusa a subir sem um token forte.
 
 ## Simulador vs hardware real
 

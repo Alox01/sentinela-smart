@@ -393,3 +393,33 @@ test('GET /comandos sem idHardware responde 400', async () => {
   const { status } = await requisitar(app, '/comandos');
   assert.equal(status, 400);
 });
+
+test('leituras exigem token quando a autenticacao esta ativa', async () => {
+  const bloqueia = (_req, res, _next) =>
+    res.status(401).json({ erro: 'Nao autorizado' });
+  const app = express();
+  app.use(express.json());
+  app.use(
+    createEstufaRouter({
+      simulador: { lerCompleto: () => ({ simulador: true }) },
+      db: { estaHabilitado: () => false },
+      authMiddleware: bloqueia,
+    }),
+  );
+
+  // Telemetria e dado do produtor: sem token, nenhuma rota de leitura responde.
+  for (const caminho of ['/status', '/historico', '/', '/dados']) {
+    const { status } = await requisitar(app, caminho);
+    assert.equal(status, 401, `esperava 401 em ${caminho}`);
+  }
+});
+
+test('POST /leitura rejeita idHardware gigante', async () => {
+  const app = criarApp({ db: { estaHabilitado: () => false } });
+  const { status } = await postLeitura(app, {
+    idHardware: 'X'.repeat(500),
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+  });
+  assert.equal(status, 400);
+});

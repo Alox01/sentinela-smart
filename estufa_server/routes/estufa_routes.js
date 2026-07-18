@@ -104,7 +104,10 @@ function createEstufaRouter({
     return null;
   }
 
-  router.get('/status', async (req, res) => {
+  // Leituras tambem exigem token: telemetria da estufa e dado do produtor, nao
+  // publico. O app ja envia a chave em toda chamada; o custo real e que uma
+  // estufa cadastrada sem chave deixa de ler pela nuvem.
+  router.get('/status', authMiddleware, async (req, res) => {
     const idHardware = req.query.idHardware;
     const dados = await lerDispositivo(idHardware);
     if (!dados) {
@@ -128,20 +131,20 @@ function createEstufaRouter({
   });
 
 
-  router.get('/', async (_req, res) => {
+  router.get('/', authMiddleware, async (_req, res) => {
     const dadosCompletos = simulador.lerCompleto();
     res.json(criarPayloadEsp32(dadosCompletos, 'simulador', { tokenConfigurado }));
   });
 
-  router.get('/dados', async (_req, res) => {
+  router.get('/dados', authMiddleware, async (_req, res) => {
     const dadosCompletos = simulador.lerCompleto();
     res.json(criarPayloadEsp32(dadosCompletos, 'simulador', { tokenConfigurado }));
   });
 
   // Historico persistido na nuvem, para o relatorio remoto preencher os
-  // periodos em que o app esteve fechado. Leitura publica (mesmo criterio de
-  // GET /status). Parametros opcionais: inicio, fim (ms Unix), idHardware.
-  router.get('/historico', async (req, res) => {
+  // periodos em que o app esteve fechado. Autenticado como o /status.
+  // Parametros opcionais: inicio, fim (ms Unix), idHardware.
+  router.get('/historico', authMiddleware, async (req, res) => {
     if (!db.estaHabilitado?.()) {
       res.json({ leituras: [], persistencia: false });
       return;
@@ -158,10 +161,10 @@ function createEstufaRouter({
       });
       res.json({ leituras, persistencia: true });
     } catch (error) {
-      res.status(500).json({
-        erro: 'Falha ao carregar historico',
-        detalhe: error.message,
-      });
+      // O detalhe fica no log: mensagens de erro do banco podem expor caminhos
+      // e configuracao internos a qualquer cliente.
+      console.error('Falha ao carregar historico:', error.message);
+      res.status(500).json({ erro: 'Falha ao carregar historico' });
     }
   });
 
@@ -274,10 +277,10 @@ function createEstufaRouter({
       res.json({ sucesso: true, persistido: true });
     } catch (error) {
       if (!buffer) {
+        console.error('Persistencia indisponivel:', error.message);
         res.status(503).json({
           sucesso: false,
           erro: 'Persistencia indisponivel',
-          detalhe: error.message,
         });
         return;
       }
@@ -286,10 +289,10 @@ function createEstufaRouter({
         await buffer.adicionar(dados);
         res.json({ sucesso: true, persistido: false, motivo: 'bufferizado' });
       } catch (erroBuffer) {
+        console.error('Falha ao guardar leitura no buffer:', erroBuffer.message);
         res.status(500).json({
           sucesso: false,
           erro: 'Falha ao guardar leitura no buffer',
-          detalhe: erroBuffer.message,
         });
       }
     }

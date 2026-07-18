@@ -15,6 +15,17 @@ const LIMITE_TEMPERATURA_MIN = 60;
 const LIMITE_TEMPERATURA_MAX = 200;
 const LIMITE_UMIDADE_MIN = 0;
 const LIMITE_UMIDADE_MAX = 100;
+// Ids reais tem ~12 caracteres (ESP32_XXXXXX); o limite folgado barra strings
+// arbitrariamente grandes virando chaves de mapa e linhas no banco.
+const LIMITE_ID_HARDWARE = 64;
+
+function idHardwareValido(valor) {
+  return (
+    typeof valor === 'string' &&
+    valor.trim() !== '' &&
+    valor.length <= LIMITE_ID_HARDWARE
+  );
+}
 
 function isObjetoPlano(valor) {
   return valor !== null && typeof valor === 'object' && !Array.isArray(valor);
@@ -49,11 +60,10 @@ function validarPayloadSincronizacao(payload) {
     }
   }
 
-  if (
-    Object.hasOwn(payload, 'idHardware') &&
-    (typeof payload.idHardware !== 'string' || payload.idHardware.trim() === '')
-  ) {
-    erros.push('idHardware deve ser texto nao vazio quando informado.');
+  if (Object.hasOwn(payload, 'idHardware') && !idHardwareValido(payload.idHardware)) {
+    erros.push(
+      `idHardware deve ser texto nao vazio de ate ${LIMITE_ID_HARDWARE} caracteres.`,
+    );
   }
 
   const temTemperatura = Object.hasOwn(payload, 'temperaturaMeta');
@@ -190,6 +200,14 @@ function validarPayloadLeitura(payload) {
     && !isTimestampValido(payload.timestampLeitura)
   ) {
     erros.push('timestampLeitura deve ser inteiro positivo.');
+  }
+
+  // O id vira chave do estado ao vivo e linha na tabela de dispositivos; sem
+  // limite, um cliente autenticado poderia inflar os dois com lixo.
+  if (Object.hasOwn(payload, 'idHardware') && !idHardwareValido(payload.idHardware)) {
+    erros.push(
+      `idHardware deve ser texto nao vazio de ate ${LIMITE_ID_HARDWARE} caracteres.`,
+    );
   }
 
   if (Object.hasOwn(payload, 'fonte') && !FONTES_LEITURA_VALIDAS.has(payload.fonte)) {
