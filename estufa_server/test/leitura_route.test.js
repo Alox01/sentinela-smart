@@ -274,9 +274,12 @@ test('POST /sincronizar sem idHardware continua indo para o simulador', async ()
   assert.equal(simulador.aplicados.length, 1);
 });
 
-test('GET /comandos entrega o comando do aparelho e so entrega uma vez', async () => {
+test('GET /comandos entrega o comando ate o aparelho confirmar', async () => {
   const simulador = simuladorEspiao();
-  const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });
+  const app = criarApp({
+    simulador,
+    db: { estaHabilitado: () => false, salvarComandoSync: async () => {} },
+  });
 
   await postSincronizar(app, {
     idHardware: 'ESP32_CAMPO_01',
@@ -291,8 +294,58 @@ test('GET /comandos entrega o comando do aparelho e so entrega uma vez', async (
   // O destino nao volta no comando: o aparelho ja sabe quem e.
   assert.equal(primeira.body.comando.idHardware, undefined);
 
+  // Buscar nao confirma nada: se o aparelho reiniciar antes de aplicar, o
+  // comando precisa continuar la.
   const segunda = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_01');
-  assert.equal(segunda.body.comando, null);
+  assert.equal(segunda.body.comando.temperaturaMeta, 80);
+
+  // O aparelho reporta a config ja com o ajuste: agora sim esta obedecido.
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+    config: { temperaturaMeta: 80, tempTimestamp: 1000 },
+  });
+
+  const terceira = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_01');
+  assert.equal(terceira.body.comando, null);
+});
+
+test('GET /status mostra o ajuste pendente antes de o aparelho confirmar', async () => {
+  const simulador = simuladorEspiao();
+  const app = criarApp({
+    simulador,
+    db: { estaHabilitado: () => false, salvarComandoSync: async () => {} },
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+    config: { temperaturaMeta: 70, tempTimestamp: 500 },
+  });
+
+  await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+
+  // Sem isso a tela voltaria para 70 poucos segundos depois do comando.
+  const pendente = await getStatus(app, '?idHardware=ESP32_CAMPO_01');
+  assert.equal(pendente.body.config.temperaturaMeta, 80);
+  assert.equal(pendente.body.aguardandoAparelho, true);
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+    config: { temperaturaMeta: 80, tempTimestamp: 1000 },
+  });
+
+  const confirmado = await getStatus(app, '?idHardware=ESP32_CAMPO_01');
+  assert.equal(confirmado.body.config.temperaturaMeta, 80);
+  assert.equal(confirmado.body.aguardandoAparelho, false);
 });
 
 test('GET /comandos nao entrega o comando de outro aparelho', async () => {

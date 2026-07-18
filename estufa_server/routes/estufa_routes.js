@@ -37,6 +37,49 @@ function createEstufaRouter({
     comandosPendentes.set(idHardware, { ...pendente, ...comando });
   }
 
+  // Campos de ajuste e o timestamp que decide o LWW de cada um.
+  const CAMPO_TIMESTAMP = {
+    temperaturaMeta: 'tempTimestamp',
+    umidadeMeta: 'umidTimestamp',
+    modoSilencioso: 'modoSilenciosoTimestamp',
+  };
+
+  // Um comando so deixa de estar pendente quando o proprio aparelho reporta
+  // aquele campo com timestamp igual ou mais novo - ou seja, quando ele
+  // confirma que aplicou. Ate la a entrega se repete, o que e inofensivo
+  // (o LWW no aparelho torna reaplicar idempotente) e cobre o caso de o
+  // aparelho reiniciar logo depois de buscar.
+  function limparPendentesConfirmados(idHardware, configDoAparelho) {
+    const pendente = comandosPendentes.get(idHardware);
+    if (!pendente || !configDoAparelho) return;
+
+    const restante = { ...pendente };
+    for (const [campo, chaveTimestamp] of Object.entries(CAMPO_TIMESTAMP)) {
+      if (!Object.hasOwn(restante, campo)) continue;
+      const tsPendente = Number(restante[chaveTimestamp]);
+      const tsAparelho = Number(configDoAparelho[chaveTimestamp]);
+      if (Number.isFinite(tsAparelho) && tsAparelho >= tsPendente) {
+        delete restante[campo];
+        delete restante[chaveTimestamp];
+      }
+    }
+
+    if (Object.keys(restante).length === 0) {
+      comandosPendentes.delete(idHardware);
+    } else {
+      comandosPendentes.set(idHardware, restante);
+    }
+  }
+
+  // O que o app deve ver: a config do aparelho com o comando pendente por cima.
+  // Sem isso a tela voltava ao valor antigo poucos segundos depois de o usuario
+  // mexer, ate o aparelho buscar o comando e reportar de volta.
+  function configComPendente(idHardware, config) {
+    const pendente = comandosPendentes.get(idHardware);
+    if (!pendente) return { config, aguardandoAparelho: false };
+    return { config: { ...config, ...pendente }, aguardandoAparelho: true };
+  }
+
   async function lerDispositivo(idHardware) {
     if (!idHardware || idHardware === ID_SIMULADOR) {
       return simulador.lerCompleto();
@@ -62,15 +105,26 @@ function createEstufaRouter({
   }
 
   router.get('/status', async (req, res) => {
-    const dados = await lerDispositivo(req.query.idHardware);
+    const idHardware = req.query.idHardware;
+    const dados = await lerDispositivo(idHardware);
     if (!dados) {
       res.status(404).json({
         erro: 'Aparelho sem leituras',
-        idHardware: req.query.idHardware || null,
+        idHardware: idHardware || null,
       });
       return;
     }
-    res.json(dados);
+
+    if (!idHardware || idHardware === ID_SIMULADOR) {
+      res.json(dados);
+      return;
+    }
+
+    const { config, aguardandoAparelho } = configComPendente(
+      idHardware,
+      dados.config,
+    );
+    res.json({ ...dados, config, aguardandoAparelho });
   });
 
 
@@ -170,7 +224,6 @@ function createEstufaRouter({
     }
 
     const comando = comandosPendentes.get(idHardware) || null;
-    comandosPendentes.delete(idHardware);
     res.json({ idHardware, comando });
   });
 
@@ -206,6 +259,9 @@ function createEstufaRouter({
         config: req.body.config || dispositivosAoVivo.get(idHw)?.config || {},
         recebidoMs: Date.now(),
       });
+      // A leitura que o aparelho empurra carrega a config dele: e por ela que
+      // sabemos se o comando pendente ja foi obedecido.
+      limparPendentesConfirmados(idHw, req.body.config);
     }
 
     if (!db.estaHabilitado()) {

@@ -368,6 +368,12 @@ void buscarComandosNuvem() {
   JsonArray aplicadas = descartavel["a"].to<JsonArray>();
   JsonArray ignoradas = descartavel["i"].to<JsonArray>();
   aplicarAjustes(comando, aplicadas, ignoradas);
+  if (aplicadas.size() == 0) return;
+
+  // Confirma na hora, em vez de esperar o proximo push: e a leitura empurrada
+  // que avisa a nuvem que o comando foi obedecido, e ate ela chegar o app fica
+  // mostrando "aguardando o aparelho".
+  ultimoPushNuvem = millis() - PUSH_INTERVAL_MS;
 
   Serial.print("Comando da nuvem aplicado. Campos: ");
   Serial.println(aplicadas.size());

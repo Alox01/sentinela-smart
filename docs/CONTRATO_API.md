@@ -361,10 +361,19 @@ O caminho remoto, então, é:
 3. O aparelho consulta `GET /comandos?idHardware=<o seu>` periodicamente
    (autenticado, mesmo token das demais rotas) e recebe
    `{"idHardware": "...", "comando": {...}}` ou `comando: null`.
-4. A nuvem entrega o comando **uma única vez** e limpa a caixa.
-5. O aparelho aplica pelo **mesmo LWW por campo** usado no `/sincronizar` local.
-6. O `POST /leitura` seguinte já carrega a configuração nova — é a confirmação
-   natural, sem precisar de rota de _ack_.
+4. O aparelho aplica pelo **mesmo LWW por campo** usado no `/sincronizar` local
+   e empurra a leitura em seguida.
+5. O `POST /leitura` carrega a configuração do aparelho — é por ela que a nuvem
+   sabe que o comando foi obedecido (o campo saiu da caixa quando o timestamp
+   reportado é igual ou mais novo que o pendente). Não existe rota de _ack_.
+6. Até essa confirmação, a caixa **continua entregando** o comando a cada
+   consulta. Reaplicar é inofensivo — o LWW no aparelho torna a operação
+   idempotente — e cobre o caso de o aparelho reiniciar logo após buscar.
+
+Enquanto houver comando pendente, `GET /status` devolve a configuração do
+aparelho **com o pendente por cima** e marca `aguardandoAparelho: true`. Sem
+isso, a tela do app voltaria ao valor antigo poucos segundos depois do comando,
+já que a leitura ao vivo ainda é a anterior — parecendo que o ajuste falhou.
 
 Comandos acumulados na caixa se fundem por campo: dois ajustes de temperatura,
 o mais novo vence; temperatura e silenciar convivem. Como o LWW final é do
