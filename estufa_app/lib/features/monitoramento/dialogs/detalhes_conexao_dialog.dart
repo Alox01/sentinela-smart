@@ -17,7 +17,10 @@ Future<void> mostrarDetalhesConexaoDialog({
   required bool temTokenConfigurado,
   required int totalPendencias,
   required List<PendingSyncCommandEntity> pendencias,
-  required Future<List<ApiConnectionProbe>> probesFuture,
+  // O ultimo teste ja feito nesta estufa (nulo na primeira vez) e como refazer.
+  // Reabrir o dialogo mostra o que ja se sabe em vez de sondar tudo de novo.
+  required ResultadoAlcance? alcanceConhecido,
+  required Future<List<ApiConnectionProbe>> Function() testarAlcance,
   required bool sincronizandoPendencias,
   required VoidCallback onLimparFila,
   required VoidCallback onSincronizar,
@@ -77,7 +80,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                         _LinhaDetalhe('Pend\u00EAncias', '$totalPendencias'),
                         const SizedBox(height: 14),
                         const Text(
-                          'TESTE DE ALCANCE (SERVIDORES)',
+                          'TESTE DE ALCANCE',
                           style: TextStyle(
                             color: Colors.white54,
                             fontSize: 11,
@@ -85,58 +88,10 @@ Future<void> mostrarDetalhesConexaoDialog({
                             letterSpacing: 0.8,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Diz se o celular alcança cada endereço — '
-                          'não se o aparelho está reportando.',
-                          style: TextStyle(color: Colors.white38, fontSize: 11),
-                        ),
                         const SizedBox(height: 8),
-                        FutureBuilder<List<ApiConnectionProbe>>(
-                          future: probesFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Row(
-                                children: [
-                                  SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Verificando conex\u00E3o...',
-                                    style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }
-
-                            final probes =
-                                snapshot.data ?? <ApiConnectionProbe>[];
-                            if (probes.isEmpty) {
-                              return const Text(
-                                'N\u00E3o foi poss\u00EDvel verificar agora.',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
-                                ),
-                              );
-                            }
-
-                            return Column(
-                              children: [
-                                for (final probe in probes)
-                                  _ProbeConexao(probe),
-                              ],
-                            );
-                          },
+                        _TesteDeAlcance(
+                          alcanceConhecido: alcanceConhecido,
+                          testar: testarAlcance,
                         ),
                         if (pendencias.isNotEmpty) ...[
                           const SizedBox(height: 14),
@@ -248,6 +203,110 @@ class _LinhaDetalhe extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Secao do teste de alcance: mostra o ultimo resultado conhecido de imediato e
+/// deixa refazer sob demanda. Sondar a nuvem pode levar mais de 10 s, entao
+/// refazer tudo a cada abertura do dialogo so servia para fazer esperar.
+class _TesteDeAlcance extends StatefulWidget {
+  final ResultadoAlcance? alcanceConhecido;
+  final Future<List<ApiConnectionProbe>> Function() testar;
+
+  const _TesteDeAlcance({required this.alcanceConhecido, required this.testar});
+
+  @override
+  State<_TesteDeAlcance> createState() => _TesteDeAlcanceState();
+}
+
+class _TesteDeAlcanceState extends State<_TesteDeAlcance> {
+  late List<ApiConnectionProbe> _probes;
+  late DateTime? _quando;
+  bool _testando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _probes = widget.alcanceConhecido?.probes ?? const [];
+    _quando = widget.alcanceConhecido?.quando;
+    // Sem nada conhecido, testa sozinho: e a primeira vez nesta estufa.
+    if (_probes.isEmpty) _testar();
+  }
+
+  Future<void> _testar() async {
+    setState(() => _testando = true);
+    final probes = await widget.testar();
+    if (!mounted) return;
+    setState(() {
+      _probes = probes;
+      _quando = DateTime.now();
+      _testando = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_testando && _probes.isEmpty) {
+      return const Row(
+        children: [
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 8),
+          Text(
+            'Verificando conexão...',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+        ],
+      );
+    }
+
+    if (_probes.isEmpty) {
+      return const Text(
+        'Não foi possível verificar agora.',
+        style: TextStyle(color: Colors.white54, fontSize: 12),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final probe in _probes) _ProbeConexao(probe),
+        const SizedBox(height: 2),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _quando == null ? '' : 'Verificado ${_desde(_quando!)}.',
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ),
+            TextButton(
+              onPressed: _testando ? null : _testar,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                _testando ? 'Testando...' : 'Testar de novo',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _desde(DateTime quando) {
+    final segundos = DateTime.now().difference(quando).inSeconds;
+    if (segundos < 60) return 'agora há pouco';
+    final minutos = segundos ~/ 60;
+    if (minutos < 60) return 'há $minutos min';
+    return 'há ${minutos ~/ 60}h';
   }
 }
 

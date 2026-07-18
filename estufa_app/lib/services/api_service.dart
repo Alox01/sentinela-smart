@@ -46,6 +46,7 @@ class ApiService {
   String? _baseUrlAtiva;
   DateTime _ultimaResolucao = DateTime.fromMillisecondsSinceEpoch(0);
   ApiCommandFailure _ultimaFalhaComando = ApiCommandFailure.none;
+  ResultadoAlcance? _ultimoAlcance;
 
   ApiService(String ip, {String? cloudUrl, String? token, this.idHardware})
     : ipOriginal = ip,
@@ -240,7 +241,31 @@ class ApiService {
     });
   }
 
-  Future<List<ApiConnectionProbe>> verificarConexoes() async {
+  /// Resultado do ultimo teste de alcance, com o instante em que foi feito.
+  /// Nulo enquanto ninguem tiver testado nesta estufa.
+  ResultadoAlcance? get ultimoAlcance => _ultimoAlcance;
+
+  /// Sonda os enderecos. Como o ApiService e compartilhado pelas telas, o
+  /// resultado sobrevive a fechar e reabrir o dialogo: sem [forcar], reabrir
+  /// mostra na hora o que ja se sabe, em vez de sondar tudo de novo (a sonda da
+  /// nuvem sozinha pode levar mais de 10 s).
+  Future<List<ApiConnectionProbe>> verificarConexoes({
+    bool forcar = false,
+    Duration validade = const Duration(minutes: 2),
+  }) async {
+    final anterior = _ultimoAlcance;
+    if (!forcar &&
+        anterior != null &&
+        DateTime.now().difference(anterior.quando) < validade) {
+      return anterior.probes;
+    }
+
+    final probes = await _sondarConexoes();
+    _ultimoAlcance = ResultadoAlcance(probes: probes, quando: DateTime.now());
+    return probes;
+  }
+
+  Future<List<ApiConnectionProbe>> _sondarConexoes() async {
     final candidatas = _candidatas();
     final resultados = await Future.wait(
       candidatas.map((base) async => MapEntry(base, await _estaOnline(base))),
@@ -604,6 +629,15 @@ class ApiConnectionProbe {
     required this.baseUrl,
     required this.online,
   });
+}
+
+/// Um teste de alcance com a hora em que foi feito - a hora importa tanto
+/// quanto o resultado, porque o que se ve pode nao ser mais verdade.
+class ResultadoAlcance {
+  final List<ApiConnectionProbe> probes;
+  final DateTime quando;
+
+  const ResultadoAlcance({required this.probes, required this.quando});
 }
 
 class _ResolucaoConexao {

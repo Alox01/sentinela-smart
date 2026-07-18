@@ -1038,7 +1038,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       api.localBaseUrl,
       limite: 5,
     );
-    final probesFuture = api.verificarConexoes();
     if (!mounted) return;
 
     await mostrarDetalhesConexaoDialog(
@@ -1053,7 +1052,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       temTokenConfigurado: api.temTokenConfigurado,
       totalPendencias: _pendenciasSincronizacao,
       pendencias: pendencias,
-      probesFuture: probesFuture,
+      alcanceConhecido: api.ultimoAlcance,
+      testarAlcance: () => api.verificarConexoes(forcar: true),
       sincronizandoPendencias: _sincronizandoPendencias,
       onLimparFila: () => unawaited(_confirmarLimpezaPendencias()),
       onSincronizar: () =>
