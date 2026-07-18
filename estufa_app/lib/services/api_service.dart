@@ -71,11 +71,14 @@ class ApiService {
   Duration _timeoutSonda(String base) =>
       _ehNuvem(base) ? const Duration(seconds: 6) : const Duration(seconds: 2);
 
+  // A nuvem no plano gratuito hiberna e leva um tempo para responder a primeira
+  // chamada depois de ociosa; um timeout curto derrubava a leitura remota justo
+  // quando ela estava acordando.
   Duration _timeoutGet(String base) =>
-      _ehNuvem(base) ? const Duration(seconds: 8) : const Duration(seconds: 3);
+      _ehNuvem(base) ? const Duration(seconds: 15) : const Duration(seconds: 3);
 
   Duration _timeoutPost(String base) =>
-      _ehNuvem(base) ? const Duration(seconds: 10) : const Duration(seconds: 4);
+      _ehNuvem(base) ? const Duration(seconds: 15) : const Duration(seconds: 4);
 
   String get modoConexao {
     final ativa = _baseUrlAtiva;
@@ -96,9 +99,19 @@ class ApiService {
       cloudBaseUrl != null && cloudBaseUrl!.isNotEmpty;
 
   Future<Map<String, dynamic>?> buscarStatus() async {
-    final caminhoStatus = (idHardware != null && idHardware!.isNotEmpty)
-        ? '/status?idHardware=${Uri.encodeComponent(idHardware!)}'
-        : '/status';
+    final base = await _resolverBaseAtiva();
+    if (base == null) return null;
+
+    final semIdHardware = idHardware == null || idHardware!.isEmpty;
+    // Na nuvem, /status sem idHardware devolve o aparelho padrao (hoje, o
+    // simulador). Mostrar a leitura de outro aparelho como se fosse desta
+    // estufa e pior do que nao mostrar nada: o id e capturado na 1a conexao
+    // local, entao ate la esta estufa fica sem dado remoto.
+    if (_ehNuvem(base) && semIdHardware) return null;
+
+    final caminhoStatus = semIdHardware
+        ? '/status'
+        : '/status?idHardware=${Uri.encodeComponent(idHardware!)}';
     final response = await _getComFallback(caminhoStatus);
     if (response?.statusCode == 200) {
       final dados = _decodificarMapa(response!.body);
@@ -115,6 +128,11 @@ class ApiService {
 
       return dados;
     }
+
+    // A rota raiz e o formato antigo servido pelo proprio ESP na rede local.
+    // Na nuvem ela nao vale: alem de nao ser por aparelho, o adaptador carimba
+    // o timestamp com a hora atual, o que esconderia o "sem sinal".
+    if (modoConexao == 'NUVEM') return null;
 
     final responseRaiz = await _getComFallback('/');
     if (responseRaiz?.statusCode == 200) {
@@ -214,25 +232,47 @@ class ApiService {
   }
 
   Future<List<ApiConnectionProbe>> verificarConexoes() async {
-    String nomeDaBase(String base) {
-      if (base == localBaseUrl) return 'Local';
-      if (base == localPort80FallbackUrl) return 'Local (porta 80, ESP32)';
-      return 'Nuvem';
-    }
-
     final candidatas = _candidatas();
     final resultados = await Future.wait(
       candidatas.map((base) async => MapEntry(base, await _estaOnline(base))),
     );
+    final online = {
+      for (final resultado in resultados) resultado.key: resultado.value,
+    };
+
+    // As candidatas locais sao o mesmo aparelho em portas diferentes (3000 do
+    // servidor, 80 do ESP32). Viram uma linha so: o que interessa e se o
+    // aparelho responde na rede local, nao em qual porta ele escuta.
+    final locais = candidatas.where((base) => !_ehNuvem(base)).toList();
+    String? localQueRespondeu;
+    for (final base in locais) {
+      if (online[base] == true) {
+        localQueRespondeu = base;
+        break;
+      }
+    }
 
     return [
-      for (final resultado in resultados)
+      if (locais.isNotEmpty)
         ApiConnectionProbe(
-          baseUrl: resultado.key,
-          nome: nomeDaBase(resultado.key),
-          online: resultado.value,
+          baseUrl: localQueRespondeu ?? localBaseUrl,
+          nome: localQueRespondeu == null
+              ? 'Local'
+              : 'Local (${_descreverPorta(localQueRespondeu)})',
+          online: localQueRespondeu != null,
+        ),
+      for (final base in candidatas.where(_ehNuvem))
+        ApiConnectionProbe(
+          baseUrl: base,
+          nome: 'Nuvem',
+          online: online[base] == true,
         ),
     ];
+  }
+
+  String _descreverPorta(String base) {
+    final porta = Uri.tryParse(base)?.port;
+    return porta == null ? 'rede local' : 'porta $porta';
   }
 
   Future<int> sincronizarComandosPendentes({int limite = 100}) async {
@@ -320,22 +360,37 @@ class ApiService {
       return _baseUrlAtiva;
     }
 
-    // Sonda todas as candidatas em paralelo: o tempo total vira o da mais
-    // lenta, em vez da soma dos timeouts (local morto + porta 80 + nuvem).
     final candidatas = _candidatas();
-    final respostas = await Future.wait(
-      candidatas.map((base) async => MapEntry(base, await _estaOnline(base))),
-    );
-    final online = {
-      for (final resposta in respostas) resposta.key: resposta.value,
-    };
+    final locais = candidatas.where((base) => !_ehNuvem(base)).toList();
 
-    // Prioridade: local primeiro; nuvem so quando o local nao responde.
+    // Sonda so as candidatas locais, em paralelo: sao rapidas e o tempo total
+    // vira o da mais lenta, em vez da soma dos timeouts.
     String? escolhida;
-    for (final base in candidatas) {
-      if (online[base] == true) {
-        escolhida = base;
-        break;
+    if (locais.isNotEmpty) {
+      final respostas = await Future.wait(
+        locais.map((base) async => MapEntry(base, await _estaOnline(base))),
+      );
+      final online = {
+        for (final resposta in respostas) resposta.key: resposta.value,
+      };
+      // Prioridade: local primeiro; nuvem so quando o local nao responde.
+      for (final base in locais) {
+        if (online[base] == true) {
+          escolhida = base;
+          break;
+        }
+      }
+    }
+
+    // A nuvem nao e sondada: a sonda e o mesmo GET /status da leitura, entao
+    // sondar dobrava as chamadas remotas. Se a chamada real falhar,
+    // _getComFallback ja re-resolve a conexao.
+    if (escolhida == null) {
+      for (final base in candidatas) {
+        if (_ehNuvem(base)) {
+          escolhida = base;
+          break;
+        }
       }
     }
 
