@@ -75,6 +75,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   static const int _limiarSemComunicacaoMs = 3 * 60 * 1000;
   bool _semComunicacaoAparelho = false;
   int? _ultimaLeituraMs;
+  // Comando aceito pela nuvem mas ainda nao obedecido pelo aparelho. O valor na
+  // tela ja e o novo, entao sem este aviso o produtor acha que a estufa mudou.
+  bool _aguardandoAparelho = false;
   final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
   final RastreadorConexao _rastreadorConexao = RastreadorConexao();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -175,6 +178,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
     // Sem o campo, assume que ha energia (nao alarma a toa). So false = sem energia.
     final novoTemEnergia = status['temEnergia'] != false;
     final tsLeitura = (status['timestampLeitura'] as num?)?.toInt();
+    final aguardandoAparelho = dados['aguardandoAparelho'] == true;
     final ajusteTempAnterior = _ultimoTempAjusteServidor;
     final ajusteUmidAnterior = _ultimoUmidAjusteServidor;
     // Ao detectar uma mudanca de ajuste (feita no app ou no aparelho), abre a
@@ -235,6 +239,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
       _semEnergia = !novoTemEnergia;
       // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
       // recebida ja significa que o aparelho esta vivo agora.
+      _aguardandoAparelho = aguardandoAparelho;
       _ultimaLeituraMs = tsLeitura;
       _semComunicacaoAparelho =
           api.modoConexao == 'NUVEM' &&
@@ -367,6 +372,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
                     ),
                   ),
                 if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
+                if (_aguardandoAparelho) _buildBannerAguardandoAparelho(),
                 LeituraAparelhoCard(
                   temperatura: temperatura,
                   umidade: umidade,
@@ -563,6 +569,44 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
               texto,
               style: const TextStyle(
                 color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Ambar, nao vermelho: nao e falha, e espera. O ajuste na tela ja e o novo,
+  // mas o aparelho so busca o comando de tempos em tempos.
+  Widget _buildBannerAguardandoAparelho() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.amberAccent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.amberAccent,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Ajuste enviado. Aguardando a estufa aplicar — '
+              'pode levar alguns segundos.',
+              style: TextStyle(
+                color: Colors.amberAccent,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
