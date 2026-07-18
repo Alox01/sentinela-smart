@@ -6,6 +6,9 @@ const CAMPOS_PERMITIDOS = new Set([
   'modoSilencioso',
   'modoSilenciosoTimestamp',
   'comando',
+  // Destino do comando. So roteia: nao e um ajuste em si, por isso nao conta
+  // como conteudo ao verificar se o payload tem algo a aplicar.
+  'idHardware',
 ]);
 
 const LIMITE_TEMPERATURA_MIN = 60;
@@ -36,7 +39,7 @@ function validarPayloadSincronizacao(payload) {
   }
 
   const chaves = Object.keys(payload);
-  if (chaves.length === 0) {
+  if (chaves.filter((chave) => chave !== 'idHardware').length === 0) {
     erros.push('Payload nao pode ser vazio.');
   }
 
@@ -44,6 +47,13 @@ function validarPayloadSincronizacao(payload) {
     if (!CAMPOS_PERMITIDOS.has(chave)) {
       erros.push(`Campo desconhecido: ${chave}.`);
     }
+  }
+
+  if (
+    Object.hasOwn(payload, 'idHardware') &&
+    (typeof payload.idHardware !== 'string' || payload.idHardware.trim() === '')
+  ) {
+    erros.push('idHardware deve ser texto nao vazio quando informado.');
   }
 
   const temTemperatura = Object.hasOwn(payload, 'temperaturaMeta');

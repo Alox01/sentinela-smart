@@ -24,6 +24,19 @@ function createEstufaRouter({
   // misturar com os reais.
   const dispositivosAoVivo = new Map();
 
+  // Caixa de comandos por aparelho (idHardware -> config pendente). O aparelho
+  // real nao e alcancavel de fora: quem manda e ele, empurrando leituras. Entao
+  // o comando do app fica aqui ate o proprio aparelho vir buscar em
+  // GET /comandos. O LWW por campo continua sendo resolvido no aparelho.
+  const comandosPendentes = new Map();
+
+  function guardarComandoPendente(idHardware, comando) {
+    const pendente = comandosPendentes.get(idHardware) || {};
+    // Campos diferentes convivem; o mesmo campo e sobrescrito pelo mais novo,
+    // que e o mesmo criterio que o aparelho aplicaria de qualquer forma.
+    comandosPendentes.set(idHardware, { ...pendente, ...comando });
+  }
+
   async function lerDispositivo(idHardware) {
     if (!idHardware || idHardware === ID_SIMULADOR) {
       return simulador.lerCompleto();
@@ -111,6 +124,32 @@ function createEstufaRouter({
       return;
     }
 
+    const idHardware = configDoApp.idHardware;
+    const paraAparelhoReal = idHardware && idHardware !== ID_SIMULADOR;
+
+    // Comando para aparelho real nao pode ser aplicado aqui: quem manda no
+    // equipamento e o proprio aparelho. Fica pendente ate ele buscar. Sem isso
+    // o comando caia no simulador e o app dizia "aplicado" sem nada acontecer.
+    if (paraAparelhoReal) {
+      const comando = { ...configDoApp };
+      delete comando.idHardware;
+      guardarComandoPendente(idHardware, comando);
+
+      const resultado = {
+        sucesso: true,
+        pendente: true,
+        idHardware,
+        aviso: 'Comando guardado; sera aplicado quando o aparelho buscar.',
+      };
+      try {
+        await db.salvarComandoSync(configDoApp, resultado);
+      } catch (error) {
+        console.error('Falha ao salvar comando no banco:', error.message);
+      }
+      res.json(resultado);
+      return;
+    }
+
     const resultado = simulador.sincronizarConfiguracao(configDoApp);
     try {
       await db.salvarComandoSync(configDoApp, resultado);
@@ -118,6 +157,21 @@ function createEstufaRouter({
       console.error('Falha ao salvar comando no banco:', error.message);
     }
     res.json(resultado);
+  });
+
+  // O aparelho pergunta se tem ajuste esperando por ele. Responder e entregar:
+  // o proprio POST /leitura seguinte, ja com a config nova, serve de confirmacao
+  // — e se o comando se perder no caminho, o app reenvia pela fila que ja tem.
+  router.get('/comandos', authMiddleware, (req, res) => {
+    const idHardware = req.query.idHardware;
+    if (!idHardware) {
+      res.status(400).json({ erro: 'idHardware obrigatorio' });
+      return;
+    }
+
+    const comando = comandosPendentes.get(idHardware) || null;
+    comandosPendentes.delete(idHardware);
+    res.json({ idHardware, comando });
   });
 
   // Ingestao de telemetria vinda do hardware (ou de outra ponte). Persiste na

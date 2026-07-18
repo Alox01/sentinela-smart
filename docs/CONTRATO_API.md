@@ -343,6 +343,33 @@ O app não deve depender da origem. Ele deve depender apenas deste contrato.
 6. Ao reconectar, app envia a fila via `POST /sincronizar`.
 7. O destino aplica LWW por campo e retorna a configuração vencedora.
 
+### Comando pela nuvem (`GET /comandos`)
+
+Na rede local o destino do `POST /sincronizar` é o próprio aparelho, que aplica
+o LWW na hora. **Pela nuvem isso não é possível:** o aparelho fica atrás do
+roteador da propriedade e não é alcançável de fora — quem inicia toda conversa
+é ele. Sem uma caixa de comandos, o ajuste feito de longe não chegava ao
+equipamento (e o servidor ainda o aplicava no simulador, fazendo o app relatar
+sucesso sem que nada acontecesse).
+
+O caminho remoto, então, é:
+
+1. App envia `POST /sincronizar` incluindo o campo **`idHardware`** de destino.
+2. A nuvem **não aplica** o comando: guarda-o na caixa daquele aparelho e
+   responde `{"sucesso": true, "pendente": true}`. Quando o `idHardware` é o do
+   simulador (ou não vem), o comportamento antigo é mantido e o simulador aplica.
+3. O aparelho consulta `GET /comandos?idHardware=<o seu>` periodicamente
+   (autenticado, mesmo token das demais rotas) e recebe
+   `{"idHardware": "...", "comando": {...}}` ou `comando: null`.
+4. A nuvem entrega o comando **uma única vez** e limpa a caixa.
+5. O aparelho aplica pelo **mesmo LWW por campo** usado no `/sincronizar` local.
+6. O `POST /leitura` seguinte já carrega a configuração nova — é a confirmação
+   natural, sem precisar de rota de _ack_.
+
+Comandos acumulados na caixa se fundem por campo: dois ajustes de temperatura,
+o mais novo vence; temperatura e silenciar convivem. Como o LWW final é do
+aparelho, uma entrega duplicada ou fora de ordem não causa dano.
+
 ## Critério para remover o simulador
 
 O simulador pode ser substituído pelo hardware real quando:

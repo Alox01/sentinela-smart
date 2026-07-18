@@ -209,3 +209,134 @@ test('GET /historico sem banco responde lista vazia', async () => {
   assert.equal(status, 200);
   assert.deepEqual(body, { leituras: [], persistencia: false });
 });
+
+async function requisitar(app, caminho, opcoes = {}) {
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    const resposta = await fetch(`http://127.0.0.1:${port}${caminho}`, opcoes);
+    return { status: resposta.status, body: await resposta.json() };
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((erro) => (erro ? reject(erro) : resolve()));
+    });
+  }
+}
+
+function postSincronizar(app, corpo) {
+  return requisitar(app, '/sincronizar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(corpo),
+  });
+}
+
+function simuladorEspiao() {
+  const aplicados = [];
+  return {
+    aplicados,
+    lerCompleto: () => ({ simulador: true }),
+    sincronizarConfiguracao(config) {
+      aplicados.push(config);
+      return { sucesso: true, alteracoesAplicadas: Object.keys(config) };
+    },
+  };
+}
+
+test('POST /sincronizar de aparelho real nao aplica no simulador', async () => {
+  const simulador = simuladorEspiao();
+  const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });
+
+  const { status, body } = await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+
+  assert.equal(status, 200);
+  assert.equal(body.sucesso, true);
+  assert.equal(body.pendente, true);
+  assert.equal(simulador.aplicados.length, 0);
+});
+
+test('POST /sincronizar sem idHardware continua indo para o simulador', async () => {
+  const simulador = simuladorEspiao();
+  const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });
+
+  const { status, body } = await postSincronizar(app, {
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+
+  assert.equal(status, 200);
+  assert.equal(body.pendente, undefined);
+  assert.equal(simulador.aplicados.length, 1);
+});
+
+test('GET /comandos entrega o comando do aparelho e so entrega uma vez', async () => {
+  const simulador = simuladorEspiao();
+  const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });
+
+  await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+
+  const primeira = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_01');
+  assert.equal(primeira.status, 200);
+  assert.equal(primeira.body.comando.temperaturaMeta, 80);
+  assert.equal(primeira.body.comando.tempTimestamp, 1000);
+  // O destino nao volta no comando: o aparelho ja sabe quem e.
+  assert.equal(primeira.body.comando.idHardware, undefined);
+
+  const segunda = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_01');
+  assert.equal(segunda.body.comando, null);
+});
+
+test('GET /comandos nao entrega o comando de outro aparelho', async () => {
+  const simulador = simuladorEspiao();
+  const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });
+
+  await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+
+  const { body } = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_02');
+  assert.equal(body.comando, null);
+});
+
+test('comandos do mesmo campo se sobrepoem, campos diferentes convivem', async () => {
+  const simulador = simuladorEspiao();
+  const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });
+
+  await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+  await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 90,
+    tempTimestamp: 2000,
+  });
+  await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    modoSilencioso: true,
+    modoSilenciosoTimestamp: 3000,
+  });
+
+  const { body } = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_01');
+  assert.equal(body.comando.temperaturaMeta, 90);
+  assert.equal(body.comando.tempTimestamp, 2000);
+  assert.equal(body.comando.modoSilencioso, true);
+});
+
+test('GET /comandos sem idHardware responde 400', async () => {
+  const app = criarApp({ db: {} });
+  const { status } = await requisitar(app, '/comandos');
+  assert.equal(status, 400);
+});
