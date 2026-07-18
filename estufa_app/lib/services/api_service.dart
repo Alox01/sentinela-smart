@@ -180,10 +180,19 @@ class ApiService {
     bool enfileirarSeOffline = true,
   }) async {
     _ultimaFalhaComando = ApiCommandFailure.none;
+    // Na nuvem o comando precisa dizer a quem se destina: o servidor guarda na
+    // caixa daquele aparelho, que vem busca-lo. Na rede local e dispensavel (o
+    // destino e o proprio aparelho que responde), mas mandar sempre mantem um
+    // payload so e permite que a fila de pendencias seja drenada por qualquer
+    // um dos dois caminhos.
+    final payload = idHardware != null && idHardware!.isNotEmpty
+        ? {...dadosParaAtualizar, 'idHardware': idHardware}
+        : dadosParaAtualizar;
+
     final response = await _postComFallback(
       '/sincronizar',
       headers: _headers({'Content-Type': 'application/json'}),
-      body: jsonEncode(dadosParaAtualizar),
+      body: jsonEncode(payload),
     );
 
     if (response != null && _respostaSucesso(response.statusCode)) {
