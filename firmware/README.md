@@ -39,7 +39,10 @@ configurar nada. Ao ligar, o Serial (115200) mostra o **id** (ex.:
 | `POST /sincronizar` | ajustes com **token** e **Last-Write-Wins** por campo |
 
 Além de servir esses endpoints, o aparelho **empurra a leitura atual para a
-nuvem** (`POST CLOUD_URL/leitura`) a cada `PUSH_INTERVAL_MS`. A nuvem guarda o
+nuvem** (`POST CLOUD_URL/leitura`) a cada `PUSH_INTERVAL_MS` e **busca ajustes
+feitos de longe** (`GET CLOUD_URL/comandos`) a cada `COMANDOS_INTERVAL_MS` — é
+assim que um comando dado pelo app fora da propriedade chega ao equipamento,
+já que o aparelho não é alcançável de fora. A nuvem guarda o
 estado **por aparelho** (pelo id do MAC): cada estufa no app puxa o `/status` do
 seu aparelho, e o simulador continua sendo um aparelho de teste à parte. Quando
 o aparelho é desligado, a nuvem para de receber e o app avisa "sem comunicação"
@@ -56,6 +59,19 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   temperatura passar de 175 °F.
 - **Umidade:** o `umidadeMeta` é registrado e reportado, mas **não é atuado**
   (não há umidificador). `ventiladorLigado` fica `false` (sem relé).
+- **Silenciar tem prazo:** silenciar (pelo botão ou pelo app) cala a sirene por
+  **10 minutos**, o mesmo `TEMPO_SILENCIO` do servidor. Passado o prazo, se a
+  temperatura ainda estiver fora, ela volta a tocar. Apertar o botão de novo
+  reinicia os 10 min — não religa a sirene na hora. Incêndio continua **não
+  silenciável**.
+- **Leituras inteiras:** temperatura e umidade são arredondadas para número
+  inteiro (o display tem 4 dígitos e as casas decimais não agregam).
+- **A rede custa tempo do loop:** cada chamada à nuvem (push e busca de
+  comandos) é um handshake HTTPS que segura o loop por 1–2 s. Por isso os
+  intervalos são largos e a busca de comandos é **pulada enquanto houver
+  alarme de incêndio** — em emergência o controle local fica com todo o tempo.
+  Se precisar de resposta remota mais rápida, o caminho não é diminuir o
+  intervalo, e sim manter a conexão aberta (WebSocket/MQTT).
 - **Energia:** `temEnergia` é sempre `true` (falta o sensor de tensão — ver
   `docs/NOTIFICACOES_PUSH.md`).
 - **Config não persiste** entre reinícios (alvo volta a 76 °F). Persistir em

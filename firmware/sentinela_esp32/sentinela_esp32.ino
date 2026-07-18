@@ -42,11 +42,15 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // precisar configurar nada. Cada aparelho vira o seu na nuvem (status por
 // aparelho). Ex.: "ESP32_A1B2C3".
 const char* VERSAO_FIRMWARE = "1.0.0";
-// URL da nuvem para onde o aparelho empurra as leituras (historico + acesso
-// remoto). Deixe "" para nao empurrar. Precisa que o servidor esteja em
-// MODO_RECEPTOR para o /status remoto refletir o aparelho real.
+// URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
+// remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
+// longe da propriedade. Deixe "" para operar so na rede local.
 const char* CLOUD_URL = "https://estufa-server.onrender.com";
 const unsigned long PUSH_INTERVAL_MS = 60000;  // envia uma leitura a cada 1 min
+// Mais frequente que o push: e o tempo que o produtor espera entre mexer no app
+// de longe e a estufa obedecer. Nao diminua muito: cada busca e um handshake
+// HTTPS que segura o loop por 1-2 s, tempo que falta ao controle local.
+const unsigned long COMANDOS_INTERVAL_MS = 20000;
 // =============================================================
 
 // ---- Pinos (mapa de referencia) ----
@@ -106,12 +110,20 @@ bool modoAjuste = false;
 
 bool alertaLuz = false;
 bool alertaTemperatura = false;
-bool buzzerSilenciado = false;
 bool buzzerLigadoAgora = false;
 bool ledControleLigado = false;
 
-float temperaturaF = 0;
-float umidade = 0;
+// Silencio com prazo, espelhando TEMPO_SILENCIO do servidor (logica.js): o
+// alarme volta sozinho depois de 10 min se a temperatura continuar fora. Guarda
+// o instante-limite em millis() (nao no relogio NTP) para funcionar mesmo sem
+// hora sincronizada. 0 = nao silenciado.
+const unsigned long TEMPO_SILENCIO_MS = 10UL * 60UL * 1000UL;
+unsigned long silencioAteMillis = 0;
+
+// Leituras em numeros inteiros: o display tem 4 digitos e as casas decimais do
+// DHT22 nao acrescentam nada util para o produtor.
+int temperaturaF = 0;
+int umidade = 0;
 
 bool leituraOk = false;
 
@@ -130,7 +142,18 @@ long long modoSilenciosoTimestamp = 0;
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
 unsigned long ultimoPushNuvem = 0;
+unsigned long ultimaBuscaComandos = 0;
 String idHardware;  // definido no setup a partir do chip (unico por ESP)
+
+// Prototipos explicitos: o gerador automatico do Arduino as vezes nao monta a
+// assinatura certa para funcoes que recebem tipos do ArduinoJson.
+void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
+                    JsonArray ignoradas);
+void buscarComandosNuvem();
+bool estaSilenciado();
+void silenciarPorPrazo();
+void reativarAlarme();
+long long nowMs();
 
 // ============================================================
 //  SETUP
@@ -199,6 +222,11 @@ void loop() {
   if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
     ultimoPushNuvem = millis();
     empurrarLeituraNuvem();
+  }
+
+  if (millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
+    ultimaBuscaComandos = millis();
+    buscarComandosNuvem();
   }
 
   verificarSensorLuz();
@@ -284,7 +312,7 @@ void empurrarLeituraNuvem() {
   config["tempTimestamp"] = tempTimestamp;
   config["umidadeMeta"] = umidadeAlvo;
   config["umidTimestamp"] = umidTimestamp;
-  config["modoSilencioso"] = buzzerSilenciado;
+  config["modoSilencioso"] = estaSilenciado();
   config["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
 
   String corpo;
@@ -301,6 +329,48 @@ void empurrarLeituraNuvem() {
   Serial.print("Push nuvem -> HTTP ");
   Serial.println(codigo);
   http.end();
+}
+
+// Busca na nuvem um ajuste feito pelo app quando o celular estava longe da
+// propriedade. O aparelho nao e alcancavel de fora (fica atras do roteador do
+// produtor), entao quem procura e ele. O servidor entrega o comando uma vez; o
+// POST /leitura seguinte ja leva a config nova e serve de confirmacao. Se algo
+// se perder, o app reenvia pela fila de pendencias que ele ja mantem.
+void buscarComandosNuvem() {
+  if (strlen(CLOUD_URL) == 0) return;
+  if (WiFi.status() != WL_CONNECTED) return;
+  // Emergencia manda: o handshake HTTPS trava o loop por 1-2 s, e durante um
+  // incendio esse tempo faz falta para a sirene e os botoes. A nuvem espera.
+  if (alertaLuz || riscoIncendioAgora()) return;
+
+  WiFiClientSecure cliente;
+  cliente.setInsecure();
+  HTTPClient http;
+  String url = String(CLOUD_URL) + "/comandos?idHardware=" + idHardware;
+  if (!http.begin(cliente, url)) return;
+  if (strlen(DEVICE_TOKEN) > 0) http.addHeader("X-Device-Token", DEVICE_TOKEN);
+
+  int codigo = http.GET();
+  if (codigo != 200) {
+    http.end();
+    return;
+  }
+
+  JsonDocument resposta;
+  DeserializationError erro = deserializeJson(resposta, http.getString());
+  http.end();
+  if (erro) return;
+
+  JsonObjectConst comando = resposta["comando"].as<JsonObjectConst>();
+  if (comando.isNull()) return;  // nada esperando por este aparelho
+
+  JsonDocument descartavel;
+  JsonArray aplicadas = descartavel["a"].to<JsonArray>();
+  JsonArray ignoradas = descartavel["i"].to<JsonArray>();
+  aplicarAjustes(comando, aplicadas, ignoradas);
+
+  Serial.print("Comando da nuvem aplicado. Campos: ");
+  Serial.println(aplicadas.size());
 }
 
 // epoch em milissegundos quando o NTP sincronizou; senao, fallback para millis().
@@ -331,14 +401,40 @@ const char* fasePorAlvo(int alvo) {
 }
 
 bool riscoIncendioAgora() {
-  return leituraOk && temperaturaF > 175.0;
+  return leituraOk && temperaturaF > 175;
+}
+
+// O silencio expirou? Comparacao com sinal para sobreviver ao rollover do
+// millis() (~49 dias): negativo significa que o limite ainda esta no futuro.
+bool estaSilenciado() {
+  if (silencioAteMillis == 0) return false;
+  if ((long)(millis() - silencioAteMillis) >= 0) {
+    silencioAteMillis = 0;  // prazo vencido: volta a apitar
+    return false;
+  }
+  return true;
+}
+
+// Silenciar e sempre "por 10 minutos a partir de agora" - nunca um liga/desliga.
+// Apertar o botao de novo apenas reinicia o prazo, em vez de fazer a sirene
+// voltar na hora, que era o comportamento antigo.
+void silenciarPorPrazo() {
+  silencioAteMillis = millis() + TEMPO_SILENCIO_MS;
+  if (silencioAteMillis == 0) silencioAteMillis = 1;  // 0 e "nao silenciado"
+  digitalWrite(BUZZER, LOW);
+  buzzerLigadoAgora = false;
+}
+
+void reativarAlarme() {
+  silencioAteMillis = 0;
+  ultimoTempoBuzzer = 0;
 }
 
 // Sirene fisica ligada agora? Incendio (nao silenciavel) ou temperatura fora
 // (silenciavel). Espelha a logica de atualizarSaidas().
 bool alarmeAtivoAgora() {
   bool fogo = alertaLuz || riscoIncendioAgora();
-  bool sireneTemp = alertaTemperatura && !buzzerSilenciado;
+  bool sireneTemp = alertaTemperatura && !estaSilenciado();
   return fogo || sireneTemp;
 }
 
@@ -408,7 +504,7 @@ void handleStatus() {
   config["tempTimestamp"] = tempTimestamp;
   config["umidadeMeta"] = umidadeAlvo;
   config["umidTimestamp"] = umidTimestamp;
-  config["modoSilencioso"] = buzzerSilenciado;
+  config["modoSilencioso"] = estaSilenciado();
   config["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
 
   String saida;
@@ -427,7 +523,7 @@ void handleSimple() {
   doc["alertaLuz"] = alertaLuz;
   doc["mostrandoUmidade"] = mostrandoUmidade;
   doc["modoAjuste"] = modoAjuste;
-  doc["buzzerSilenciado"] = buzzerSilenciado;
+  doc["buzzerSilenciado"] = estaSilenciado();
   doc["ledControleLigado"] = ledControleLigado;
   doc["leituraOk"] = leituraOk;
   doc["ip"] = WiFi.localIP().toString();
@@ -439,31 +535,11 @@ void handleSimple() {
   server.send(200, "application/json", saida);
 }
 
-void handleSincronizar() {
-  if (!tokenValido()) {
-    server.send(401, "application/json",
-                "{\"sucesso\":false,\"erro\":\"Nao autorizado\"}");
-    return;
-  }
-
-  if (!server.hasArg("plain")) {
-    server.send(400, "application/json",
-                "{\"sucesso\":false,\"erro\":\"Payload invalido\"}");
-    return;
-  }
-
-  JsonDocument entrada;
-  DeserializationError erro = deserializeJson(entrada, server.arg("plain"));
-  if (erro) {
-    server.send(400, "application/json",
-                "{\"sucesso\":false,\"erro\":\"JSON invalido\"}");
-    return;
-  }
-
-  JsonDocument resp;
-  JsonArray aplicadas = resp["alteracoesAplicadas"].to<JsonArray>();
-  JsonArray ignoradas = resp["alteracoesIgnoradas"].to<JsonArray>();
-
+// Aplica ajustes com Last-Write-Wins por campo. Vale tanto para o comando que
+// chega direto do app na rede local (POST /sincronizar) quanto para o que o
+// aparelho busca na nuvem: e a mesma regra, entao e o mesmo caminho.
+void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
+                    JsonArray ignoradas) {
   // Temperatura (LWW por tempTimestamp).
   if (!entrada["temperaturaMeta"].isNull()) {
     long long ts = entrada["tempTimestamp"].as<long long>();
@@ -499,13 +575,46 @@ void handleSincronizar() {
                        ? nowMs()
                        : entrada["modoSilenciosoTimestamp"].as<long long>();
     if (ts > modoSilenciosoTimestamp) {
-      buzzerSilenciado = temModo ? entrada["modoSilencioso"].as<bool>() : true;
+      bool silenciar = temModo ? entrada["modoSilencioso"].as<bool>() : true;
+      if (silenciar) {
+        silenciarPorPrazo();
+      } else {
+        reativarAlarme();
+      }
       modoSilenciosoTimestamp = ts;
       aplicadas.add("modoSilencioso");
     } else {
       ignoradas.add("modoSilencioso");
     }
   }
+}
+
+void handleSincronizar() {
+  if (!tokenValido()) {
+    server.send(401, "application/json",
+                "{\"sucesso\":false,\"erro\":\"Nao autorizado\"}");
+    return;
+  }
+
+  if (!server.hasArg("plain")) {
+    server.send(400, "application/json",
+                "{\"sucesso\":false,\"erro\":\"Payload invalido\"}");
+    return;
+  }
+
+  JsonDocument entrada;
+  DeserializationError erro = deserializeJson(entrada, server.arg("plain"));
+  if (erro) {
+    server.send(400, "application/json",
+                "{\"sucesso\":false,\"erro\":\"JSON invalido\"}");
+    return;
+  }
+
+  JsonDocument resp;
+  JsonArray aplicadas = resp["alteracoesAplicadas"].to<JsonArray>();
+  JsonArray ignoradas = resp["alteracoesIgnoradas"].to<JsonArray>();
+
+  aplicarAjustes(entrada.as<JsonObjectConst>(), aplicadas, ignoradas);
 
   resp["sucesso"] = true;
   JsonObject cfg = resp["configAtualizada"].to<JsonObject>();
@@ -514,7 +623,7 @@ void handleSincronizar() {
   cfg["tempTimestamp"] = tempTimestamp;
   cfg["umidadeMeta"] = umidadeAlvo;
   cfg["umidTimestamp"] = umidTimestamp;
-  cfg["modoSilencioso"] = buzzerSilenciado;
+  cfg["modoSilencioso"] = estaSilenciado();
   cfg["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
 
   String saida;
@@ -550,18 +659,13 @@ bool botaoFoiPressionado(int pino, bool &ultimoEstado, bool &estadoEstavel,
 void verificarBotoes() {
   if (botaoFoiPressionado(BOTAO_BUZZER, ultimoBuzzer, estavelBuzzer, debounceBuzzer)) {
     if (alertaTemperatura && !alertaLuz) {
-      buzzerSilenciado = !buzzerSilenciado;
+      // Mesmo comportamento do botao do app: silencia por 10 min. Apertar de
+      // novo reinicia o prazo em vez de religar a sirene na hora.
+      silenciarPorPrazo();
       // Registra o momento para o LWW: um silenciamento fisico e mais recente
       // que ajustes remotos antigos.
       modoSilenciosoTimestamp = nowMs();
-      if (buzzerSilenciado) {
-        digitalWrite(BUZZER, LOW);
-        buzzerLigadoAgora = false;
-        Serial.println("Buzzer silenciado");
-      } else {
-        ultimoTempoBuzzer = 0;
-        Serial.println("Buzzer ativado novamente");
-      }
+      Serial.println("Buzzer silenciado por 10 min");
     }
   }
 
@@ -653,8 +757,8 @@ void lerDHT22() {
   }
 
   leituraOk = true;
-  umidade = leituraUmidade;
-  temperaturaF = leituraTemperaturaF;
+  umidade = (int)round(leituraUmidade);
+  temperaturaF = (int)round(leituraTemperaturaF);
   atualizarEstadoTemperatura();
 
   Serial.print("Temperatura: ");
@@ -706,13 +810,14 @@ void atualizarSaidas() {
   }
 
   if (!alertaTemperatura) {
-    buzzerSilenciado = false;
+    // Temperatura normalizou: o silencio perde a razao de existir.
+    silencioAteMillis = 0;
     buzzerLigadoAgora = false;
     digitalWrite(BUZZER, LOW);
     return;
   }
 
-  if (buzzerSilenciado) {
+  if (estaSilenciado()) {
     buzzerLigadoAgora = false;
     digitalWrite(BUZZER, LOW);
     return;
@@ -756,7 +861,7 @@ void atualizarDisplay() {
   }
 
   if (mostrandoUmidade) {
-    display.showNumberDec((int)round(umidade), false);
+    display.showNumberDec(umidade, false);
   } else {
     display.showNumberDec((int)round(temperaturaF), false);
   }
