@@ -12,6 +12,7 @@ import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
 import '../services/backup_file_service.dart';
 import '../services/isar_service.dart';
+import '../services/monitor_estufas.dart';
 import 'estufa_form_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -199,6 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmado != true) return;
 
     await _estufasRepository.remover(estufa.id);
+    MonitorEstufas.instance.remover(estufa.id);
     await _carregarEstufas();
   }
 

@@ -13,11 +13,15 @@ import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../models/ciclo_secagem_entity.dart';
 import '../services/api_service.dart';
 import '../services/isar_service.dart';
+import '../services/monitor_estufas.dart';
 import '../widgets/painel_controle.dart';
 import 'historico_screen.dart';
 import '../features/relatorio_estufada/screens/gerenciar_estufadas_screen.dart';
 
 class MonitoramentoScreen extends StatefulWidget {
+  // Identifica a estufa no registro de monitores, para esta tela e o card da
+  // home compartilharem a mesma leitura ao vivo.
+  final int idEstufa;
   final String nomeEstufa;
   final String ipEstufa;
   final String? tokenAcesso;
@@ -25,6 +29,7 @@ class MonitoramentoScreen extends StatefulWidget {
 
   const MonitoramentoScreen({
     super.key,
+    required this.idEstufa,
     required this.nomeEstufa,
     required this.ipEstufa,
     this.tokenAcesso,
@@ -35,8 +40,10 @@ class MonitoramentoScreen extends StatefulWidget {
   State<MonitoramentoScreen> createState() => _MonitoramentoScreenState();
 }
 
-class _MonitoramentoScreenState extends State<MonitoramentoScreen>
-    with WidgetsBindingObserver {
+// Sem WidgetsBindingObserver: o ciclo de vida do app e tratado no
+// MonitorEstufas, que pausa todos os monitores de uma vez. Esta tela nao
+// gerencia mais o proprio polling.
+class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   static const int _intervaloRegistroHistoricoMs = 10 * 60 * 1000;
   // Intervalo minimo entre um registro periodico e um registro disparado por
   // evento (mudanca de ajuste, alarme, desvio). Evita marcar pontos redundantes
@@ -61,7 +68,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   // Comeca em CONECTANDO: antes da 1a resposta nao da para afirmar que esta
   // offline, e mostrar vermelho na abertura assustava a toa.
   String _modoConexao = 'CONECTANDO';
-  bool _buscandoStatus = false;
+  // Identifica a ultima leitura ja processada, para os efeitos colaterais nao
+  // rodarem duas vezes sobre a mesma.
+  int? _ultimaLeituraProcessadaMs;
   int _ultimoRegistroHistoricoMs = 0;
   CicloSecagemEntity? _cicloAtual;
   double? _ultimoTempAjusteServidor;
@@ -83,67 +92,51 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _sugestaoFimCicloExibida = false;
 
-  Timer? timer;
   Timer? _debounceTemperatura;
   Timer? _debounceUmidade;
-  late ApiService api;
+  late EstufaMonitor _monitor;
+  ApiService get api => _monitor.api;
   final MonitoramentoRepository _monitoramentoRepository =
       MonitoramentoRepository(IsarService.instance);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    api = ApiService(
-      widget.ipEstufa,
+    _monitor = MonitorEstufas.instance.obter(
+      idEstufa: widget.idEstufa,
+      ip: widget.ipEstufa,
       token: widget.tokenAcesso,
       idHardware: widget.idHardware,
     );
     unawaited(_carregarCicloAtual());
     unawaited(_atualizarPendencias());
-    _iniciarAtualizacaoPeriodica();
+    // Assinar ja entrega a ultima leitura do card, entao a tela abre preenchida
+    // em vez de esperar a propria busca.
+    _monitor.assinar(_aoMudarLeitura);
+    _aoMudarLeitura();
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    timer?.cancel();
+    _monitor.desassinar(_aoMudarLeitura);
     _debounceTemperatura?.cancel();
     _debounceUmidade?.cancel();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pausa o polling de 1s quando o app sai da frente (economia de bateria e
-    // dados) e retoma assim que volta.
-    if (state == AppLifecycleState.resumed) {
-      _iniciarAtualizacaoPeriodica();
-    } else {
-      timer?.cancel();
-      timer = null;
-    }
-  }
-
-  void _iniciarAtualizacaoPeriodica() {
-    timer?.cancel();
+  void _aoMudarLeitura() {
+    final leitura = _monitor.ultima;
+    if (leitura == null) return;
+    // Os efeitos abaixo (historico, eventos do ciclo, oscilacao) valem uma vez
+    // por leitura. Sem esta guarda, reentrar na tela ou um rebuild qualquer
+    // gravaria pontos repetidos no relatorio.
+    if (leitura.recebidaEmMs == _ultimaLeituraProcessadaMs) return;
+    _ultimaLeituraProcessadaMs = leitura.recebidaEmMs;
     unawaited(atualizarTela());
-    // 3s em vez de 1s: uma leitura pela nuvem leva mais que 1s, entao o timer
-    // antigo empilhava requisicoes sobre a mesma ApiService.
-    timer = Timer.periodic(const Duration(seconds: 3), (_) => atualizarTela());
   }
 
   Future<void> atualizarTela() async {
-    // Trava de reentrada: sem ela as respostas chegavam fora de ordem e uma
-    // leitura lenta derrubava a conexao que outra tinha acabado de resolver.
-    if (_buscandoStatus) return;
-    _buscandoStatus = true;
-    final Map<String, dynamic>? dados;
-    try {
-      dados = await api.buscarStatus();
-    } finally {
-      _buscandoStatus = false;
-    }
+    final dados = _monitor.ultima?.dados;
     if (dados == null) {
       if (mounted) {
         setState(() {
@@ -1149,6 +1142,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen>
   Future<bool> _enviarComandoComFeedback(Map<String, dynamic> payload) async {
     final sucesso = await api.enviarSincronizacao(payload);
     final falha = api.ultimaFalhaComando;
+    // Busca fora do ritmo do timer: esta tela e o card da home compartilham o
+    // monitor, entao os dois refletem o comando juntos e na hora.
+    if (sucesso) unawaited(_monitor.atualizarAgora());
     await _atualizarPendencias();
     if (!mounted) return sucesso;
     final messenger = ScaffoldMessenger.of(context);

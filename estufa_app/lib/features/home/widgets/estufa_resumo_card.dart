@@ -1,9 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../../screens/monitoramento_screen.dart';
-import '../../../services/api_service.dart';
+import '../../../services/monitor_estufas.dart';
 import '../models/modelo_estufa.dart';
 
 class EstufaResumoCard extends StatefulWidget {
@@ -27,29 +25,13 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
   // demais significa que o aparelho parou de reportar (sem luz ou sem internet).
   static const int _limiarSemComunicacaoMs = 3 * 60 * 1000;
 
-  late ApiService _api;
-  Timer? _timerResumo;
-  Map<String, dynamic>? _dadosResumo;
-  bool _semComunicacao = false;
-  // Uma leitura pela nuvem pode demorar mais que o intervalo do timer; sem esta
-  // trava as requisicoes se acumulam e as respostas chegam fora de ordem.
-  bool _buscando = false;
-  // Antes da 1a resposta nao da para dizer que esta offline: so nao se sabe.
-  bool _primeiraRespostaRecebida = false;
+  late EstufaMonitor _monitor;
 
   @override
   void initState() {
     super.initState();
-    _api = ApiService(
-      widget.estufa.ip,
-      token: widget.estufa.tokenAcesso,
-      idHardware: widget.estufa.idHardware,
-    );
-    unawaited(_atualizarResumo());
-    _timerResumo = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _atualizarResumo(),
-    );
+    _monitor = _obterMonitor();
+    _monitor.assinar(_aoMudar);
   }
 
   @override
@@ -58,50 +40,40 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
     if (oldWidget.estufa.ip != widget.estufa.ip ||
         oldWidget.estufa.tokenAcesso != widget.estufa.tokenAcesso ||
         oldWidget.estufa.idHardware != widget.estufa.idHardware) {
-      _api = ApiService(
-        widget.estufa.ip,
-        token: widget.estufa.tokenAcesso,
-        idHardware: widget.estufa.idHardware,
-      );
-      _dadosResumo = null;
-      _primeiraRespostaRecebida = false;
-      _semComunicacao = false;
-      unawaited(_atualizarResumo());
+      _monitor.desassinar(_aoMudar);
+      _monitor = _obterMonitor();
+      _monitor.assinar(_aoMudar);
     }
   }
 
   @override
   void dispose() {
-    _timerResumo?.cancel();
+    _monitor.desassinar(_aoMudar);
     super.dispose();
   }
 
-  Future<void> _atualizarResumo() async {
-    if (_buscando) return;
-    _buscando = true;
-    final Map<String, dynamic>? dados;
-    try {
-      dados = await _api.buscarStatus();
-    } finally {
-      _buscando = false;
-    }
-    if (!mounted) return;
-    final status = dados?['status'];
+  EstufaMonitor _obterMonitor() => MonitorEstufas.instance.obter(
+    idEstufa: widget.estufa.id,
+    ip: widget.estufa.ip,
+    token: widget.estufa.tokenAcesso,
+    idHardware: widget.estufa.idHardware,
+  );
+
+  void _aoMudar() {
+    if (mounted) setState(() {});
+  }
+
+  // So vale no modo nuvem: em LOCAL, ter recebido a leitura ja prova que o
+  // aparelho esta vivo agora.
+  bool _semComunicacao(LeituraAoVivo leitura) {
+    if (!leitura.temDados || leitura.modoConexao != 'NUVEM') return false;
+    final status = leitura.dados!['status'];
     final tsLeitura = status is Map
         ? (status['timestampLeitura'] as num?)?.toInt()
         : null;
-    setState(() {
-      _dadosResumo = dados;
-      _primeiraRespostaRecebida = true;
-      // So vale no modo nuvem: em LOCAL, ter recebido a leitura ja prova que o
-      // aparelho esta vivo agora.
-      _semComunicacao =
-          dados != null &&
-          _api.modoConexao == 'NUVEM' &&
-          tsLeitura != null &&
-          (DateTime.now().millisecondsSinceEpoch - tsLeitura) >
-              _limiarSemComunicacaoMs;
-    });
+    if (tsLeitura == null) return false;
+    return (DateTime.now().millisecondsSinceEpoch - tsLeitura) >
+        _limiarSemComunicacaoMs;
   }
 
   @override
@@ -114,13 +86,16 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
             context,
             MaterialPageRoute(
               builder: (context) => MonitoramentoScreen(
+                idEstufa: widget.estufa.id,
                 nomeEstufa: widget.estufa.nome,
                 ipEstufa: widget.estufa.ip,
                 tokenAcesso: widget.estufa.tokenAcesso,
                 idHardware: widget.estufa.idHardware,
               ),
             ),
-          ).then((_) => _atualizarResumo());
+          );
+          // Nao precisa buscar ao voltar: as duas telas compartilham o mesmo
+          // monitor, entao o card ja esta com a leitura mais recente.
         },
         child: Container(
           decoration: BoxDecoration(
@@ -147,11 +122,13 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
   }
 
   Widget _buildConteudoResumo() {
-    final dados = _dadosResumo;
+    final leitura = _monitor.ultima;
     // Enquanto a 1a resposta nao chega o card fica neutro: dizer "offline"
     // antes de ter tentado fazia todos os galpoes piscarem vermelho ao abrir.
-    if (dados == null) return _buildLayoutSemDados(_primeiraRespostaRecebida);
+    if (leitura == null) return _buildLayoutSemDados(false);
+    if (!leitura.temDados) return _buildLayoutSemDados(true);
 
+    final dados = leitura.dados!;
     final status = dados['status'] ?? {};
     final temp = double.parse((status['temperaturaAtual'] ?? 0).toString());
     final umid = double.parse((status['umidadeAtual'] ?? 0).toString());
@@ -159,7 +136,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
     final temAlerta = sireneLigada || (status['corStatus'] == 'red');
 
-    return _buildLayoutOnline(temp, umid, temAlerta, _semComunicacao);
+    return _buildLayoutOnline(temp, umid, temAlerta, _semComunicacao(leitura));
   }
 
   Widget _buildMenuAcoes() {
