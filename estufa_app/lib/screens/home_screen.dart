@@ -223,11 +223,14 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
       // Abre o compartilhamento nativo: o produtor pode salvar no Drive,
-      // mandar por WhatsApp, e-mail, etc.
+      // mandar por WhatsApp, e-mail, etc. O aviso importa: o arquivo carrega
+      // as chaves de acesso das estufas, entao vaza-lo e vazar as chaves.
       await Share.shareXFiles(
         [XFile(destino, mimeType: 'application/json')],
         subject: 'Backup Sentinela Smart',
-        text: 'Backup das estufas ($fileName).',
+        text:
+            'Backup das estufas ($fileName). '
+            'Contém as chaves de acesso — guarde como uma senha.',
       );
     } catch (e) {
       if (!mounted) return;
