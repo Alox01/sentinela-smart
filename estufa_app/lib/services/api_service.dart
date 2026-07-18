@@ -289,10 +289,10 @@ class ApiService {
     return [
       if (locais.isNotEmpty)
         ApiConnectionProbe(
+          // A porta que respondeu fica no baseUrl, fora do rotulo: para quem
+          // usa, o que importa e se a estufa responde na rede local.
           baseUrl: localQueRespondeu ?? localBaseUrl,
-          nome: localQueRespondeu == null
-              ? 'Local'
-              : 'Local (${_descreverPorta(localQueRespondeu)})',
+          nome: 'Local',
           online: localQueRespondeu != null,
         ),
       for (final base in candidatas.where(_ehNuvem))
@@ -302,11 +302,6 @@ class ApiService {
           online: online[base] == true,
         ),
     ];
-  }
-
-  String _descreverPorta(String base) {
-    final porta = Uri.tryParse(base)?.port;
-    return porta == null ? 'rede local' : 'porta $porta';
   }
 
   Future<int> sincronizarComandosPendentes({int limite = 100}) async {
