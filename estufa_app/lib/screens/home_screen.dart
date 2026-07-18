@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'MEUS GALPÕES',
+              'MINHAS ESTUFAS',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
