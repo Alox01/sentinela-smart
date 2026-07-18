@@ -15,8 +15,14 @@ class EstufasRepository {
     required String nome,
     required String ip,
     String? tokenAcesso,
+    String? idHardware,
   }) async {
-    await _isar.salvarEstufa(nome: nome, ip: ip, tokenAcesso: tokenAcesso);
+    await _isar.salvarEstufa(
+      nome: nome,
+      ip: ip,
+      tokenAcesso: tokenAcesso,
+      idHardware: idHardware,
+    );
   }
 
   Future<void> atualizar({
@@ -24,12 +30,14 @@ class EstufasRepository {
     required String nome,
     required String ip,
     String? tokenAcesso,
+    String? idHardware,
   }) async {
     await _isar.atualizarEstufa(
       id: id,
       nome: nome,
       ip: ip,
       tokenAcesso: tokenAcesso,
+      idHardware: idHardware,
     );
   }
 

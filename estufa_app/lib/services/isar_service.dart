@@ -105,12 +105,14 @@ class IsarService {
     required String nome,
     required String ip,
     String? tokenAcesso,
+    String? idHardware,
   }) async {
     final estufa = EstufaEntity()
       ..chave = '${nome.trim()}::${ip.trim()}'
       ..nome = nome.trim()
       ..ip = ip.trim()
       ..tokenAcesso = _normalizarTextoOpcional(tokenAcesso)
+      ..idHardware = _normalizarTextoOpcional(idHardware)
       ..criadaEm = DateTime.now();
 
     if (kIsWeb) {
@@ -140,21 +142,27 @@ class IsarService {
     required String nome,
     required String ip,
     String? tokenAcesso,
+    String? idHardware,
   }) async {
     final nomeLimpo = nome.trim();
     final ipLimpo = ip.trim();
+    final idHardwareLimpo = _normalizarTextoOpcional(idHardware);
     final estufa = EstufaEntity()
       ..id = id
       ..chave = '$nomeLimpo::$ipLimpo'
       ..nome = nomeLimpo
       ..ip = ipLimpo
       ..tokenAcesso = _normalizarTextoOpcional(tokenAcesso)
+      ..idHardware = idHardwareLimpo
       ..criadaEm = DateTime.now();
 
     if (kIsWeb) {
       final index = _webEstufas.indexWhere((e) => e.id == id);
       if (index >= 0) {
         estufa.criadaEm = _webEstufas[index].criadaEm;
+        // Nao perde o id capturado automaticamente quando a edicao nao informa
+        // um: o formulario so o envia quando o usuario digita algo.
+        estufa.idHardware ??= _webEstufas[index].idHardware;
         _webEstufas[index] = estufa;
       } else {
         _webEstufas.add(estufa);
@@ -166,6 +174,7 @@ class IsarService {
     final existente = await isar.collection<EstufaEntity>().get(id);
     if (existente != null) {
       estufa.criadaEm = existente.criadaEm;
+      estufa.idHardware ??= existente.idHardware;
     }
 
     await isar.writeTxn(() async {

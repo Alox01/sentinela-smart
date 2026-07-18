@@ -23,6 +23,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   late final TextEditingController _nomeController;
   late final TextEditingController _ipController;
   late final TextEditingController _chaveController;
+  late final TextEditingController _idHardwareController;
 
   bool _ocultarChave = true;
   bool _salvando = false;
@@ -43,6 +44,9 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     _chaveController = TextEditingController(
       text: widget.estufa?.tokenAcesso ?? '',
     );
+    _idHardwareController = TextEditingController(
+      text: widget.estufa?.idHardware ?? '',
+    );
   }
 
   @override
@@ -50,6 +54,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     _nomeController.dispose();
     _ipController.dispose();
     _chaveController.dispose();
+    _idHardwareController.dispose();
     super.dispose();
   }
 
@@ -58,6 +63,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     final ip = _ipController.text.trim();
     final chaveTexto = _chaveController.text.trim();
     final chave = chaveTexto.isEmpty ? null : chaveTexto;
+    final idHardwareTexto = _idHardwareController.text.trim();
+    final idHardware = idHardwareTexto.isEmpty ? null : idHardwareTexto;
 
     if (nome.isEmpty || ip.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,9 +94,15 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
           nome: nome,
           ip: ip,
           tokenAcesso: chave,
+          idHardware: idHardware,
         );
       } else {
-        await _repository.salvar(nome: nome, ip: ip, tokenAcesso: chave);
+        await _repository.salvar(
+          nome: nome,
+          ip: ip,
+          tokenAcesso: chave,
+          idHardware: idHardware,
+        );
       }
 
       if (!mounted) return;
@@ -228,6 +241,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
         _buildIpField(),
         const SizedBox(height: 18),
         _buildChaveField(),
+        const SizedBox(height: 18),
+        _buildIdHardwareField(),
       ],
     );
   }
@@ -236,6 +251,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     final nome = _nomeController.text.trim();
     final ip = _ipController.text.trim();
     final chaveConfigurada = _chaveController.text.trim().isNotEmpty;
+    final idHardware = _idHardwareController.text.trim();
 
     return Column(
       children: [
@@ -270,6 +286,19 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
           onTap: () => _editarTextoNativo(
             titulo: 'Chave de acesso',
             controller: _chaveController,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildCampoNativoCard(
+          titulo: 'ID do aparelho',
+          valor: idHardware.isEmpty ? 'Automático' : idHardware,
+          subtitulo:
+              'Preenchido sozinho na primeira conexão local. '
+              'Informe à mão só para acessar apenas pela nuvem.',
+          icone: Icons.memory_rounded,
+          onTap: () => _editarTextoNativo(
+            titulo: 'ID do aparelho',
+            controller: _idHardwareController,
           ),
         ),
       ],
@@ -345,6 +374,36 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     );
   }
 
+  // Normalmente o id e capturado sozinho na 1a conexao local, mas uma estufa
+  // que so sera acessada pela nuvem (ou o simulador) nunca passa por essa
+  // conexao — entao precisa poder ser informado a mao.
+  Widget _buildIdHardwareField() {
+    return TextField(
+      controller: _idHardwareController,
+      enableSuggestions: false,
+      autocorrect: false,
+      textCapitalization: TextCapitalization.characters,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _salvar(),
+      style: const TextStyle(color: Colors.white),
+      decoration: const InputDecoration(
+        labelText: 'ID do aparelho',
+        hintText: 'Opcional — ex: ESP32_A1B2C3',
+        helperText:
+            'Preenchido sozinho na primeira conexão local. '
+            'Informe à mão só para acessar a estufa apenas pela nuvem.',
+        helperMaxLines: 3,
+        prefixIcon: Icon(Icons.memory_rounded, color: Colors.white38),
+        labelStyle: TextStyle(color: Colors.white54),
+        hintStyle: TextStyle(color: Colors.white30),
+        helperStyle: TextStyle(color: Colors.white38),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white24),
+        ),
+      ),
+    );
+  }
+
   Widget _buildNomeField() {
     return TextField(
       controller: _nomeController,
@@ -392,8 +451,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       autocorrect: false,
       keyboardType: TextInputType.visiblePassword,
       textCapitalization: TextCapitalization.none,
-      textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _salvar(),
+      textInputAction: TextInputAction.next,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: 'Chave de acesso',
