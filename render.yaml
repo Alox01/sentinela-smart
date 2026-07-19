@@ -12,7 +12,10 @@ services:
     rootDir: estufa_server
     dockerfilePath: ./Dockerfile
     plan: free
-    healthCheckPath: /status
+    # /status passou a exigir token; o health check nao envia nenhum, entao ele
+    # reprovava todo deploy novo e o Render mantinha a versao antiga no ar.
+    # /versao e publico e sem dado de estufa - existe para isso.
+    healthCheckPath: /versao
     envVars:
       # String de conexao do Supabase. Use o "Session pooler" (IPv4),
       # nao a "Direct connection" (IPv6, que o Render nao alcanca).
