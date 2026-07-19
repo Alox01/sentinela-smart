@@ -71,7 +71,11 @@ test('persiste leitura na nuvem e marca fonte hardware por padrao', async () => 
   });
 
   assert.equal(status, 200);
-  assert.deepEqual(body, { sucesso: true, persistido: true });
+  assert.deepEqual(body, {
+    sucesso: true,
+    persistido: true,
+    motivo: 'primeira_leitura',
+  });
   assert.equal(persistidas.length, 1);
   assert.equal(persistidas[0].status.fonte, 'hardware');
   assert.equal(persistidas[0].status.temperaturaAtual, 95.2);
@@ -94,6 +98,7 @@ test('guarda no buffer quando a nuvem esta indisponivel', async () => {
   });
 
   const { status, body } = await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
     temperaturaAtual: 95.2,
     umidadeAtual: 60,
   });
@@ -121,6 +126,7 @@ test('quando a persistencia esta desabilitada apenas confirma sem gravar', async
   const app = criarApp({ db: { estaHabilitado: () => false } });
 
   const { status, body } = await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
     temperaturaAtual: 90,
     umidadeAtual: 50,
   });
@@ -133,6 +139,55 @@ test('quando a persistencia esta desabilitada apenas confirma sem gravar', async
   });
 });
 
+test('atualiza estado ao vivo a cada leitura e poupa o historico comum', async () => {
+  const persistidas = [];
+  const app = criarApp({
+    db: {
+      estaHabilitado: () => true,
+      async persistirLeituraBufferizada(dados) {
+        persistidas.push(dados);
+      },
+    },
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+  });
+  const segunda = await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 91,
+    umidadeAtual: 50,
+  });
+  const aoVivo = await getStatus(app, '?idHardware=ESP32_CAMPO_01');
+
+  assert.equal(persistidas.length, 1);
+  assert.equal(segunda.body.persistido, false);
+  assert.equal(segunda.body.motivo, 'sem_mudanca_relevante');
+  assert.equal(aoVivo.body.status.temperaturaAtual, 91);
+});
+
+test('POST /leitura exige aparelho e valida a configuracao recebida', async () => {
+  const app = criarApp({ db: { estaHabilitado: () => false } });
+
+  const semId = await postLeitura(app, {
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+  });
+  assert.equal(semId.status, 400);
+  assert.ok(semId.body.detalhes.some((d) => d.includes('idHardware')));
+
+  const configInvalida = await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+    config: { temperaturaMeta: 999, modoSilencioso: 'sim' },
+  });
+  assert.equal(configInvalida.status, 400);
+  assert.ok(configInvalida.body.detalhes.some((d) => d.includes('temperaturaMeta')));
+  assert.ok(configInvalida.body.detalhes.some((d) => d.includes('modoSilencioso')));
+});
 test('POST /leitura alimenta o /status daquele aparelho', async () => {
   const app = criarApp({ db: { estaHabilitado: () => false } });
 

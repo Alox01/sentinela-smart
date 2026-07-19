@@ -5,6 +5,8 @@ carregarEnvLocal();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 
 const simulador = require('./simulador');
 const db = require('./db');
@@ -77,7 +79,23 @@ const bufferPush = criarBufferLeituras({
   caminho: process.env.PUSH_BUFFER_PATH || path.join(__dirname, '.buffer_push.jsonl'),
 });
 
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(
+  helmet({
+    // A API local pode ser consumida pelo app servido em outra origem.
+    crossOriginResourcePolicy: false,
+  }),
+);
+app.use(
+  rateLimit({
+    windowMs: 60_000,
+    limit: 180,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { sucesso: false, erro: 'Muitas requisicoes. Tente novamente em instantes.' },
+  }),
+);
+app.use(express.json({ limit: '64kb' }));
 app.use(cors(createCorsOptions(ALLOWED_ORIGINS)));
 app.use(
   createEstufaRouter({

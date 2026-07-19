@@ -555,7 +555,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off_rounded, color: Colors.redAccent, size: 20),
+          const Icon(
+            Icons.cloud_off_rounded,
+            color: Colors.redAccent,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

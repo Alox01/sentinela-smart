@@ -6,6 +6,10 @@ const {
   validarPayloadSincronizacao,
 } = require('../sync');
 const { criarPayloadEsp32 } = require('../esp32_payload');
+const {
+  criarRegistroLeitura,
+  deveSalvarLeitura,
+} = require('../storage_policy');
 
 const ID_SIMULADOR = 'ESP32_REALISTIC_V2';
 
@@ -23,6 +27,7 @@ function createEstufaRouter({
   // sendo o aparelho ESP32_REALISTIC_V2, servido do seu proprio modelo, sem se
   // misturar com os reais.
   const dispositivosAoVivo = new Map();
+  const ultimasLeiturasPersistidas = new Map();
 
   // Caixa de comandos por aparelho (idHardware -> config pendente). O aparelho
   // real nao e alcancavel de fora: quem manda e ele, empurrando leituras. Entao
@@ -268,7 +273,7 @@ function createEstufaRouter({
 
   // O aparelho pergunta se tem ajuste esperando por ele. Responder e entregar:
   // o proprio POST /leitura seguinte, ja com a config nova, serve de confirmacao
-  // — e se o comando se perder no caminho, o app reenvia pela fila que ja tem.
+  // â€” e se o comando se perder no caminho, o app reenvia pela fila que ja tem.
   router.get('/comandos', authMiddleware, (req, res) => {
     const idHardware = req.query.idHardware;
     if (!idHardware) {
@@ -287,7 +292,7 @@ function createEstufaRouter({
   router.post('/leitura', authMiddleware, async (req, res) => {
     const status = { ...req.body };
     delete status.config;
-    const validacao = validarPayloadLeitura(status);
+    const validacao = validarPayloadLeitura(status, req.body.config);
 
     if (!validacao.valido) {
       res.status(400).json({
@@ -322,9 +327,33 @@ function createEstufaRouter({
       return;
     }
 
+    const agoraMs = Date.now();
+    const registro = criarRegistroLeitura(status, dados.config, agoraMs);
+    const ultimaPersistida = ultimasLeiturasPersistidas.get(idHw);
+    const decisao = deveSalvarLeitura({
+      ultimaLeitura: ultimaPersistida,
+      status,
+      config: dados.config,
+      agoraMs,
+    });
+
+    if (!decisao.salvar) {
+      res.json({
+        sucesso: true,
+        persistido: false,
+        motivo: decisao.motivo,
+      });
+      return;
+    }
+
     try {
       await db.persistirLeituraBufferizada(dados);
-      res.json({ sucesso: true, persistido: true });
+      ultimasLeiturasPersistidas.set(idHw, registro);
+      res.json({
+        sucesso: true,
+        persistido: true,
+        motivo: decisao.motivo,
+      });
     } catch (error) {
       if (!buffer) {
         console.error('Persistencia indisponivel:', error.message);
@@ -337,7 +366,13 @@ function createEstufaRouter({
 
       try {
         await buffer.adicionar(dados);
-        res.json({ sucesso: true, persistido: false, motivo: 'bufferizado' });
+        ultimasLeiturasPersistidas.set(idHw, registro);
+        res.json({
+          sucesso: true,
+          persistido: false,
+          motivo: 'bufferizado',
+          motivoAmostragem: decisao.motivo,
+        });
       } catch (erroBuffer) {
         console.error('Falha ao guardar leitura no buffer:', erroBuffer.message);
         res.status(500).json({

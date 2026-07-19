@@ -7,10 +7,22 @@ try {
 }
 
 const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || '';
+
+function criarConfigSsl() {
+  if ((process.env.DB_SSL ?? '').trim().toLowerCase() === 'false') {
+    return false;
+  }
+
+  const ca = (process.env.DB_SSL_CA ?? '').replace(/\\n/g, '\n').trim();
+  return ca
+    ? { rejectUnauthorized: true, ca }
+    : { rejectUnauthorized: true };
+}
+
 const pool = Pool && connectionString
   ? new Pool({
       connectionString,
-      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+      ssl: criarConfigSsl(),
     })
   : null;
 const {
@@ -179,12 +191,10 @@ async function salvarSnapshot(dados) {
   if (!pool) return false;
 
   const { status, config } = dados;
-  const dispositivo = await buscarOuCriarDispositivo(status);
-  await salvarConfiguracao(dispositivo.id, config);
-
   const agoraMs = Date.now();
+  const chaveLeitura = status.idHardware || ID_SIMULADOR_PADRAO;
   const decisao = deveSalvarLeitura({
-    ultimaLeitura: ultimasLeiturasSalvas.get(dispositivo.id),
+    ultimaLeitura: ultimasLeiturasSalvas.get(chaveLeitura),
     status,
     config,
     agoraMs,
@@ -194,13 +204,16 @@ async function salvarSnapshot(dados) {
     return { salvo: false, motivo: decisao.motivo };
   }
 
+  const dispositivo = await buscarOuCriarDispositivo(status);
+  await salvarConfiguracao(dispositivo.id, config);
+
   const leituraPersistida = {
     ...statusParaLeituraPersistida(status),
     temperaturaMeta: config?.temperaturaMeta ?? status.temperaturaMeta ?? null,
     umidadeMeta: config?.umidadeMeta ?? status.umidadeMeta ?? null,
   };
   await salvarLeitura(dispositivo.id, leituraPersistida);
-  ultimasLeiturasSalvas.set(dispositivo.id, criarRegistroLeitura(status, config, agoraMs));
+  ultimasLeiturasSalvas.set(chaveLeitura, criarRegistroLeitura(status, config, agoraMs));
   return { salvo: true, motivo: decisao.motivo };
 }
 
@@ -242,7 +255,7 @@ async function salvarComandoSync(payload, resultado, status = 'aplicado') {
   if (!pool) return false;
 
   const config = resultado?.configAtualizada;
-  const identificador = config?.idHardware || 'ESP32_REALISTIC_V2';
+  const identificador = payload?.idHardware || config?.idHardware || ID_SIMULADOR_PADRAO;
   const dispositivoResult = await pool.query(
     'select id from dispositivos where identificador_hardware = $1 limit 1',
     [identificador],
@@ -384,22 +397,33 @@ async function carregarHistorico(
 
   const result = await pool.query(
     `
-      select
-        l.timestamp_origem_ms,
-        l.timestamp_leitura,
-        l.temperatura,
-        l.umidade,
-        l.temperatura_meta,
-        l.umidade_meta,
-        l.alerta_incendio,
-        l.aviso,
-        l.cor_status,
-        l.fonte
-      from dispositivos d
-      join leituras l on l.dispositivo_id = d.id
-      where ${condicoes.join(' and ')}
-      order by coalesce(l.timestamp_origem_ms, extract(epoch from l.timestamp_leitura) * 1000) asc
-      limit ${limiteParam}
+      with historico_recente as (
+        select
+          l.timestamp_origem_ms,
+          l.timestamp_leitura,
+          l.temperatura,
+          l.umidade,
+          l.temperatura_meta,
+          l.umidade_meta,
+          l.alerta_incendio,
+          l.aviso,
+          l.cor_status,
+          l.fonte
+        from dispositivos d
+        join leituras l on l.dispositivo_id = d.id
+        where ${condicoes.join(' and ')}
+        order by coalesce(
+          l.timestamp_origem_ms,
+          extract(epoch from l.timestamp_leitura) * 1000
+        ) desc
+        limit ${limiteParam}
+      )
+      select *
+      from historico_recente
+      order by coalesce(
+        timestamp_origem_ms,
+        extract(epoch from timestamp_leitura) * 1000
+      ) asc
     `,
     parametros,
   );
@@ -494,4 +518,3 @@ module.exports = {
     normalizarTipoDispositivo,
   },
 };
-

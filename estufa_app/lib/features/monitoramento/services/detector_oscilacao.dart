@@ -60,7 +60,8 @@ class DetectorOscilacao {
     _umidade.acomodacaoAteMs = nowMs + _tempoAcomodacaoAjusteMs;
   }
 
-  bool temperaturaEmAcomodacao(int nowMs) => nowMs < _temperatura.acomodacaoAteMs;
+  bool temperaturaEmAcomodacao(int nowMs) =>
+      nowMs < _temperatura.acomodacaoAteMs;
 
   bool umidadeEmAcomodacao(int nowMs) => nowMs < _umidade.acomodacaoAteMs;
 

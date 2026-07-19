@@ -1,61 +1,83 @@
-# Postura de segurança
+﻿# Seguranca do sistema
 
-O que o sistema protege, como, e quais riscos foram **aceitos conscientemente**
-— com o porquê. Útil para a banca e para decidir o que endurecer depois.
+Este documento resume as protecoes implementadas, o fluxo de leituras e os riscos que ainda devem ser tratados antes de uma implantacao comercial.
 
-## Modelo de ameaça (resumo)
+## Modelo de ameaca
 
-O aparelho fica na rede Wi-Fi da propriedade, atrás de NAT — ninguém o alcança
-de fora. A nuvem (Render) é pública na internet. Os dados são telemetria de
-secagem e comandos de ajuste; o pior caso prático é um terceiro **ler** a
-operação da estufa ou **mandar um ajuste** nela (ex.: mudar o alvo de
-temperatura durante uma estufada).
+O ESP32 opera normalmente na rede Wi-Fi da propriedade. O servidor em nuvem pode ser acessado pela internet. Os principais riscos sao:
 
-## Proteções em vigor
+- leitura indevida da telemetria;
+- envio de ajustes sem autorizacao;
+- abuso das rotas publicas;
+- vazamento da chave de acesso ou da credencial do banco;
+- alteracao ou repeticao de comandos.
 
-| Camada | Proteção |
-|---|---|
-| Nuvem | **Todas** as rotas exigem o token quando configurado — leituras incluídas (`/status`, `/historico`) |
-| Nuvem | Servidor **se recusa a subir** com token fraco/ausente (`token_policy.js`); exceção só com `PERMITIR_SEM_TOKEN=true` |
-| Nuvem | Comparação de token **timing-safe** (`crypto.timingSafeEqual`) |
-| Nuvem | SQL 100% parametrizado (sem injeção); payloads validados com faixas e lista fechada de campos; `idHardware` limitado a 64 caracteres |
-| Nuvem | Erros internos não vazam ao cliente (detalhe só no log); CORS restringível via `ALLOWED_ORIGINS` |
-| Aparelho | Comandos (`POST /sincronizar`) exigem o token; TLS ao falar com a nuvem |
-| App | Chave enviada em toda chamada (`Authorization: Bearer` + `X-Device-Token`) |
-| Repositório | `.env` (chaves, banco) fora do versionamento |
+## Protecoes implementadas
 
-No aparelho, o `GET /status` **local** é aberto de propósito: a operação
-edge-first na rede da propriedade depende dele, e o alcance é só quem já está
-no Wi-Fi da fazenda.
+### API e autenticacao
 
-## Riscos aceitos (e o porquê)
+- As rotas protegidas exigem a chave configurada em `ESTUFA_API_TOKEN`.
+- A comparacao da chave usa `crypto.timingSafeEqual`.
+- Em producao, o servidor recusa uma chave ausente ou fraca. O modo sem chave exige habilitacao explicita para desenvolvimento.
+- O servidor limita cada origem a 180 requisicoes por minuto.
+- O corpo JSON e limitado a 64 KB.
+- O Helmet adiciona cabecalhos HTTP de seguranca e o cabecalho `X-Powered-By` fica desabilitado.
+- Os campos recebidos sao validados e valores fora das faixas permitidas sao rejeitados.
 
-- **O ESP32 não valida o certificado da nuvem** (`setInsecure()`). Um atacante
-  *no caminho* da conexão (roteador da fazenda ou provedor comprometidos)
-  poderia se passar pela nuvem — inclusive injetando comandos na busca do
-  `/comandos`. Fixar o CA raiz no firmware quebraria o acesso remoto de todos
-  os aparelhos em campo a qualquer rotação de certificado do Render, e
-  regravar firmware exige ir até a estufa. Com o alcance restrito a ataques
-  on-path, o custo supera o risco **nesta escala**. Endurecimento futuro:
-  embutir o CA com atualização OTA do firmware.
-- **Token único compartilhado** entre app, aparelhos e nuvem. Um vazamento
-  expõe tudo; tokens por aparelho seriam o próximo passo (a caixa de comandos
-  por `idHardware` já deixa o terreno pronto).
-- **O backup exportado contém as chaves de acesso** — necessário para o
-  restore funcionar. O app avisa ao compartilhar; o arquivo deve ser tratado
-  como senha.
-- **Sem rate-limiting.** Com token forte (48+ caracteres) e comparação
-  timing-safe, força bruta é impraticável; um limitador por IP atrás do proxy
-  do Render arriscaria bloquear o próprio produtor (operadoras móveis
-  compartilham IPs via CGNAT).
-- **`rejectUnauthorized: false` na conexão com o banco** — exigência prática
-  do pooler do Supabase; a conexão segue cifrada, sem validação da cadeia.
+### Banco de dados
 
-## Se um segredo vazar
+- As consultas SQL usam parametros, reduzindo o risco de injecao de SQL.
+- A conexao PostgreSQL valida o certificado TLS por padrao.
+- `DB_SSL=false` deve ser usado apenas em ambiente controlado.
+- Um certificado personalizado pode ser fornecido em `DB_SSL_CA`.
 
-1. Gerar token novo forte (`openssl rand -hex 24`);
-2. Trocar `ESTUFA_API_TOKEN` no Render;
-3. Trocar a "Chave de acesso" das estufas no app;
-4. Regravar os aparelhos com o novo `DEVICE_TOKEN`;
-5. Se o vazamento incluir o banco: trocar a senha no Supabase e atualizar
-   `DATABASE_URL`.
+### Aplicativo
+
+- A chave e enviada nas requisicoes autenticadas.
+- A chave de acesso nao e incluida no backup exportado.
+- Backups antigos que ainda contenham chave continuam importaveis, mas a chave nao volta a ser exportada.
+
+### Repositorio e configuracao
+
+- Arquivos `.env` e credenciais locais nao devem ser versionados.
+- Segredos devem ser configurados por variaveis de ambiente no servidor.
+- Chaves reais nao devem aparecer em documentacao, testes, prints ou commits.
+
+## Fluxo de leituras
+
+O envio ao vivo e a persistencia historica possuem objetivos diferentes:
+
+1. O ESP32 envia uma leitura aproximadamente a cada minuto.
+2. O servidor atualiza o estado em memoria imediatamente.
+3. O aplicativo consulta esse estado e mostra a leitura mais recente.
+4. Uma leitura comum e gravada no banco somente a cada 10 minutos.
+5. Leituras importantes sao gravadas imediatamente, mesmo antes dos 10 minutos.
+
+Sao consideradas importantes:
+
+- primeira leitura do aparelho;
+- mudanca do estado de alarme;
+- alteracao do ajuste de temperatura ou umidade;
+- entrada em desvio relevante de temperatura ou umidade.
+
+Se o banco estiver indisponivel, somente as amostras selecionadas para persistencia entram na fila temporaria. Isso evita armazenar milhares de leituras repetitivas sem perder eventos relevantes.
+
+## Por que nao gravar toda leitura
+
+Uma estufada de 10 dias, com uma leitura por minuto, produziria cerca de 14.400 registros comuns. Com amostragem a cada 10 minutos, o volume cai para aproximadamente 1.440 registros, alem dos eventos importantes. A tela continua atualizada porque o estado ao vivo nao depende do intervalo de gravacao historica.
+
+## Riscos restantes
+
+- HTTP local nao cifra o trafego dentro da rede Wi-Fi. Uma rede comprometida ainda pode observar o trafego.
+- Uma chave compartilhada entre varios aparelhos aumenta o impacto de um vazamento. O ideal futuro e uma chave por aparelho.
+- A fila offline atual e temporaria e pode ser perdida se o processo do servidor reiniciar antes da sincronizacao.
+- O ESP32 deve validar certificados ao acessar servicos HTTPS externos.
+- A protecao contra repeticao de comandos pode ser fortalecida com identificador unico, validade e confirmacao por aparelho.
+
+## Se uma chave vazar
+
+1. Gere uma nova chave forte.
+2. Atualize `ESTUFA_API_TOKEN` no servidor.
+3. Atualize a chave cadastrada no aplicativo.
+4. Atualize a configuracao dos aparelhos autorizados.
+5. Se a credencial do banco tambem tiver vazado, altere a senha no provedor e atualize `DATABASE_URL`.

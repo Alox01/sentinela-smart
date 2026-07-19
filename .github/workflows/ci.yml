@@ -1,6 +1,5 @@
-# Roda a cada push/PR: testes do servidor, análise + testes do app e uma
-# compilação real do firmware. O firmware entra de propósito — ele já quebrou
-# em campo por nunca ter passado por um compilador antes de gravar.
+# Roda a cada push/PR: testes do servidor, analise, testes e build web do app,
+# alem de uma compilacao real do firmware.
 name: CI
 
 on:
@@ -39,6 +38,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze lib test
       - run: flutter test
+      - run: flutter build web
 
   firmware:
     name: Firmware (ESP32)

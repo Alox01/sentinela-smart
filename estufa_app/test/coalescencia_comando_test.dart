@@ -6,8 +6,10 @@ import 'package:estufa_app/services/coalescencia_comando.dart';
 void main() {
   group('chaveCoalescenciaComando', () {
     test('comando de temperatura usa a chave temperaturaMeta', () {
-      expect(chaveCoalescenciaComando({'temperaturaMeta': 95.0}),
-          'temperaturaMeta');
+      expect(
+        chaveCoalescenciaComando({'temperaturaMeta': 95.0}),
+        'temperaturaMeta',
+      );
     });
 
     test('comando de umidade usa a chave umidadeMeta', () {
@@ -15,10 +17,14 @@ void main() {
     });
 
     test('silenciar (por campo ou por comando) usa a chave modoSilencioso', () {
-      expect(chaveCoalescenciaComando({'modoSilencioso': true}),
-          'modoSilencioso');
-      expect(chaveCoalescenciaComando({'comando': 'silenciar'}),
-          'modoSilencioso');
+      expect(
+        chaveCoalescenciaComando({'modoSilencioso': true}),
+        'modoSilencioso',
+      );
+      expect(
+        chaveCoalescenciaComando({'comando': 'silenciar'}),
+        'modoSilencioso',
+      );
     });
 
     test('comando sem campo conhecido nao coalesce (retorna null)', () {

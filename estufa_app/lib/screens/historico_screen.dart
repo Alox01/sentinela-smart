@@ -111,7 +111,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
     final leiturasLocais = resultados[0] as List<HistoricoLeituraEntity>;
     // Renderiza ja com o local (instantaneo) e busca a nuvem em segundo plano.
-    unawaited(_carregarHistoricoNuvem(cicloSelecionado, fimCiclo, leiturasLocais));
+    unawaited(
+      _carregarHistoricoNuvem(cicloSelecionado, fimCiclo, leiturasLocais),
+    );
 
     return _DadosRelatorioEstufada(
       leituras: leiturasLocais,
@@ -132,9 +134,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     }
     _cicloNuvemEmProgresso = ciclo.id;
 
-    final nuvem = (await _api.buscarHistorico(inicio: ciclo.inicio, fim: fim))
-        .map(_leituraDaNuvem)
-        .toList();
+    final nuvem = (await _api.buscarHistorico(
+      inicio: ciclo.inicio,
+      fim: fim,
+    )).map(_leituraDaNuvem).toList();
 
     if (!mounted) {
       _cicloNuvemEmProgresso = null;
@@ -160,7 +163,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       ..umidade = umidade
       // Leituras antigas da nuvem podem nao ter o ajuste: cai no proprio valor
       // para nao distorcer a cor e a linha de meta do grafico.
-      ..temperaturaMeta = (m['temperaturaMeta'] as num?)?.toDouble() ?? temperatura
+      ..temperaturaMeta =
+          (m['temperaturaMeta'] as num?)?.toDouble() ?? temperatura
       ..umidadeMeta = (m['umidadeMeta'] as num?)?.toDouble() ?? umidade
       ..aviso = (m['aviso'] as String?) ?? ''
       ..alertaIncendio = m['alertaIncendio'] == true;
@@ -332,7 +336,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             iconSize: 22,
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            onPressed: _cicloSelecionadoId == null ? null : _apagarCicloSelecionado,
+            onPressed: _cicloSelecionadoId == null
+                ? null
+                : _apagarCicloSelecionado,
             tooltip: 'Apagar esta estufada',
           ),
           IconButton(
@@ -539,9 +545,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
     await _relatorioRepository.apagarCiclo(id);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Estufada apagada.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Estufada apagada.')));
     setState(() {
       _resetarExibicaoGrafico();
       _cicloSelecionadoId = null;

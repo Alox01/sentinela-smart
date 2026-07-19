@@ -154,12 +154,18 @@ class RelatorioPdfService {
             children: [
               pw.Text(
                 titulo,
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey700,
+                ),
               ),
               pw.SizedBox(height: 3),
               pw.Text(
                 valor,
-                style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(
+                  fontSize: 13,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -198,7 +204,10 @@ class RelatorioPdfService {
     );
   }
 
-  pw.Widget _tabelaEventos(List<EventoCicloEntity> eventos, DateFormat horaFmt) {
+  pw.Widget _tabelaEventos(
+    List<EventoCicloEntity> eventos,
+    DateFormat horaFmt,
+  ) {
     if (eventos.isEmpty) {
       return pw.Text(
         'Nenhum evento registrado.',
@@ -214,11 +223,13 @@ class RelatorioPdfService {
       cellStyle: const pw.TextStyle(fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
       cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.centerLeft},
-      columnWidths: {0: const pw.FixedColumnWidth(70), 1: const pw.FlexColumnWidth()},
+      columnWidths: {
+        0: const pw.FixedColumnWidth(70),
+        1: const pw.FlexColumnWidth(),
+      },
       headers: ['Horario', 'Evento'],
       data: [
-        for (final e in ordenados)
-          [horaFmt.format(e.timestamp), e.descricao],
+        for (final e in ordenados) [horaFmt.format(e.timestamp), e.descricao],
       ],
     );
   }
@@ -232,7 +243,14 @@ class RelatorioPdfService {
       cellStyle: const pw.TextStyle(fontSize: 8),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
       cellAlignment: pw.Alignment.center,
-      headers: ['Horario', 'Temp. (F)', 'Ajuste', 'Umid. (%)', 'Ajuste', 'Alarme'],
+      headers: [
+        'Horario',
+        'Temp. (F)',
+        'Ajuste',
+        'Umid. (%)',
+        'Ajuste',
+        'Alarme',
+      ],
       data: [
         for (final l in leituras)
           [

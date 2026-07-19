@@ -60,7 +60,10 @@ function validarPayloadSincronizacao(payload) {
     }
   }
 
-  if (Object.hasOwn(payload, 'idHardware') && !idHardwareValido(payload.idHardware)) {
+  if (
+    Object.hasOwn(payload, 'idHardware') &&
+    !idHardwareValido(payload.idHardware)
+  ) {
     erros.push(
       `idHardware deve ser texto nao vazio de ate ${LIMITE_ID_HARDWARE} caracteres.`,
     );
@@ -176,7 +179,39 @@ const FONTES_LEITURA_VALIDAS = new Set(['hardware', 'simulador', 'manual']);
 // Valida uma leitura de telemetria recebida pela rota de ingestao (POST /leitura).
 // Exige apenas os campos minimos; os demais sao opcionais para nao travar
 // prototipos de hardware que enviem menos informacao.
-function validarPayloadLeitura(payload) {
+function validarConfigLeitura(config) {
+  const erros = [];
+
+  if (config == null) return erros;
+  if (!isObjetoPlano(config)) return ['config deve ser um objeto JSON.'];
+
+  const validarAjuste = (campo, timestamp, minimo, maximo) => {
+    if (Object.hasOwn(config, campo)) {
+      if (!isNumeroFinito(config[campo])) {
+        erros.push(campo + ' deve ser numero.');
+      } else if (config[campo] < minimo || config[campo] > maximo) {
+        erros.push(campo + ' deve estar entre ' + minimo + ' e ' + maximo + '.');
+      }
+    }
+    if (Object.hasOwn(config, timestamp) && !isTimestampValido(config[timestamp])) {
+      erros.push(timestamp + ' deve ser inteiro positivo.');
+    }
+  };
+
+  validarAjuste('temperaturaMeta', 'tempTimestamp', LIMITE_TEMPERATURA_MIN, LIMITE_TEMPERATURA_MAX);
+  validarAjuste('umidadeMeta', 'umidTimestamp', LIMITE_UMIDADE_MIN, LIMITE_UMIDADE_MAX);
+
+  if (Object.hasOwn(config, 'modoSilencioso') && typeof config.modoSilencioso !== 'boolean') {
+    erros.push('modoSilencioso deve ser boolean.');
+  }
+  if (Object.hasOwn(config, 'modoSilenciosoTimestamp') && !isTimestampValido(config.modoSilenciosoTimestamp)) {
+    erros.push('modoSilenciosoTimestamp deve ser inteiro positivo.');
+  }
+
+  return erros;
+}
+
+function validarPayloadLeitura(payload, config) {
   const erros = [];
 
   if (!isObjetoPlano(payload)) {
@@ -204,7 +239,7 @@ function validarPayloadLeitura(payload) {
 
   // O id vira chave do estado ao vivo e linha na tabela de dispositivos; sem
   // limite, um cliente autenticado poderia inflar os dois com lixo.
-  if (Object.hasOwn(payload, 'idHardware') && !idHardwareValido(payload.idHardware)) {
+  if (!idHardwareValido(payload.idHardware)) {
     erros.push(
       `idHardware deve ser texto nao vazio de ate ${LIMITE_ID_HARDWARE} caracteres.`,
     );
@@ -213,6 +248,8 @@ function validarPayloadLeitura(payload) {
   if (Object.hasOwn(payload, 'fonte') && !FONTES_LEITURA_VALIDAS.has(payload.fonte)) {
     erros.push('fonte deve ser hardware, simulador ou manual.');
   }
+
+  erros.push(...validarConfigLeitura(config));
 
   return {
     valido: erros.length === 0,

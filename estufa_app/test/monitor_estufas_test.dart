@@ -143,48 +143,54 @@ void main() {
     monitor.dispose();
   });
 
-  test('busca falha vira leitura sem dados, nao fica no valor antigo', () async {
-    final busca = BuscaFalsa();
-    final monitor = criarMonitor(busca);
+  test(
+    'busca falha vira leitura sem dados, nao fica no valor antigo',
+    () async {
+      final busca = BuscaFalsa();
+      final monitor = criarMonitor(busca);
 
-    void ouvinte() {}
-    monitor.assinar(ouvinte);
-    busca.responder({
-      'status': {'temperaturaAtual': 95},
-    });
-    await Future<void>.delayed(Duration.zero);
-    expect(monitor.ultima!.temDados, isTrue);
+      void ouvinte() {}
+      monitor.assinar(ouvinte);
+      busca.responder({
+        'status': {'temperaturaAtual': 95},
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(monitor.ultima!.temDados, isTrue);
 
-    unawaited(monitor.atualizarAgora());
-    busca.responderFalha();
-    await Future<void>.delayed(Duration.zero);
+      unawaited(monitor.atualizarAgora());
+      busca.responderFalha();
+      await Future<void>.delayed(Duration.zero);
 
-    expect(monitor.ultima!.temDados, isFalse);
+      expect(monitor.ultima!.temDados, isFalse);
 
-    monitor.desassinar(ouvinte);
-    monitor.dispose();
-  });
+      monitor.desassinar(ouvinte);
+      monitor.dispose();
+    },
+  );
 
-  test('cada leitura tem um instante proprio, para nao repetir efeitos', () async {
-    final busca = BuscaFalsa();
-    final monitor = criarMonitor(busca);
+  test(
+    'cada leitura tem um instante proprio, para nao repetir efeitos',
+    () async {
+      final busca = BuscaFalsa();
+      final monitor = criarMonitor(busca);
 
-    void ouvinte() {}
-    monitor.assinar(ouvinte);
-    busca.responder();
-    await Future<void>.delayed(Duration.zero);
-    final primeira = monitor.ultima!.recebidaEmMs;
+      void ouvinte() {}
+      monitor.assinar(ouvinte);
+      busca.responder();
+      await Future<void>.delayed(Duration.zero);
+      final primeira = monitor.ultima!.recebidaEmMs;
 
-    await Future<void>.delayed(const Duration(milliseconds: 5));
-    unawaited(monitor.atualizarAgora());
-    busca.responder();
-    await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      unawaited(monitor.atualizarAgora());
+      busca.responder();
+      await Future<void>.delayed(Duration.zero);
 
-    expect(monitor.ultima!.recebidaEmMs, greaterThanOrEqualTo(primeira));
+      expect(monitor.ultima!.recebidaEmMs, greaterThanOrEqualTo(primeira));
 
-    monitor.desassinar(ouvinte);
-    monitor.dispose();
-  });
+      monitor.desassinar(ouvinte);
+      monitor.dispose();
+    },
+  );
 
   test('pausar interrompe e retomar so religa se houver assinante', () async {
     final busca = BuscaFalsa();

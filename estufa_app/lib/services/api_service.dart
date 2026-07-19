@@ -154,7 +154,9 @@ class ApiService {
     final idLido = status is Map ? status['idHardware'] : null;
     if (idLido is String && idLido.isNotEmpty && idLido != idHardware) {
       idHardware = idLido;
-      unawaited(IsarService.instance.definirIdHardwarePorIp(ipOriginal, idLido));
+      unawaited(
+        IsarService.instance.definirIdHardwarePorIp(ipOriginal, idLido),
+      );
     }
   }
 

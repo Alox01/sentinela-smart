@@ -14,7 +14,10 @@ void main() {
     // diferenca 8 (>5, atencao): primeira leitura so arma o relogio
     expect(d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 0), isNull);
     // ainda dentro do tempo minimo de 10 min
-    expect(d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 9 * min), isNull);
+    expect(
+      d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 9 * min),
+      isNull,
+    );
     // 10 min persistindo -> evento
     final ev = d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 10 * min);
     expect(ev, isNotNull);
@@ -28,7 +31,10 @@ void main() {
   test('desvio critico (>20) vira evento apos 5 min', () {
     final d = DetectorOscilacao();
     expect(d.avaliarTemperatura(leitura: 120, ajuste: 90, nowMs: 0), isNull);
-    expect(d.avaliarTemperatura(leitura: 120, ajuste: 90, nowMs: 4 * min), isNull);
+    expect(
+      d.avaliarTemperatura(leitura: 120, ajuste: 90, nowMs: 4 * min),
+      isNull,
+    );
     final ev = d.avaliarTemperatura(leitura: 120, ajuste: 90, nowMs: 5 * min);
     expect(ev, isNotNull);
     expect(ev!.severidade, 'critico');
@@ -42,7 +48,10 @@ void main() {
 
     // diferenca 10 (atencao) persistindo durante a acomodacao: sem evento
     d.avaliarTemperatura(leitura: 100, ajuste: 90, nowMs: 0);
-    expect(d.avaliarTemperatura(leitura: 100, ajuste: 90, nowMs: 15 * min), isNull);
+    expect(
+      d.avaliarTemperatura(leitura: 100, ajuste: 90, nowMs: 15 * min),
+      isNull,
+    );
   });
 
   test('acomodacao nao impede o nivel critico', () {
@@ -58,7 +67,11 @@ void main() {
   test('voltar para a faixa normal gera evento de normalizacao', () {
     final d = DetectorOscilacao();
     d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 0);
-    d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 10 * min); // entra em atencao
+    d.avaliarTemperatura(
+      leitura: 98,
+      ajuste: 90,
+      nowMs: 10 * min,
+    ); // entra em atencao
     final ev = d.avaliarTemperatura(leitura: 91, ajuste: 90, nowMs: 11 * min);
     expect(ev, isNotNull);
     expect(ev!.tipo, 'oscilacao_temperatura_normalizada');
@@ -68,10 +81,17 @@ void main() {
   test('reiniciar zera a maquina de estados', () {
     final d = DetectorOscilacao();
     d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 0);
-    d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 10 * min); // em atencao
+    d.avaliarTemperatura(
+      leitura: 98,
+      ajuste: 90,
+      nowMs: 10 * min,
+    ); // em atencao
     d.reiniciar();
     // como voltou para 'normal', uma leitura normal nao gera "normalizada"
-    expect(d.avaliarTemperatura(leitura: 90, ajuste: 90, nowMs: 11 * min), isNull);
+    expect(
+      d.avaliarTemperatura(leitura: 90, ajuste: 90, nowMs: 11 * min),
+      isNull,
+    );
   });
 
   test('umidade usa unidade e textos proprios', () {

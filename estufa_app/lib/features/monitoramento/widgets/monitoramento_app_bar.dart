@@ -4,7 +4,8 @@ import 'indicador_conexao.dart';
 
 /// AppBar da tela de monitoramento: nome da estufa (com balao do nome completo),
 /// indicador de conexao e acoes de detalhes/sincronizacao.
-class MonitoramentoAppBar extends StatelessWidget implements PreferredSizeWidget {
+class MonitoramentoAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
   final String nomeEstufa;
   final String modoConexao;
   final bool sincronizando;

@@ -98,10 +98,14 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'TEMPERATURA',
                       icone: Icons.thermostat,
                       corIcone: Colors.orangeAccent,
-                      alta: temperatura >
-                          temperaturaAjuste + _limiarLed(temperaturaEmAcomodacao),
-                      baixa: temperatura <
-                          temperaturaAjuste - _limiarLed(temperaturaEmAcomodacao),
+                      alta:
+                          temperatura >
+                          temperaturaAjuste +
+                              _limiarLed(temperaturaEmAcomodacao),
+                      baixa:
+                          temperatura <
+                          temperaturaAjuste -
+                              _limiarLed(temperaturaEmAcomodacao),
                     ),
                   ),
                   const VerticalDivider(color: Colors.white10, thickness: 1),
@@ -110,9 +114,11 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'UMIDADE',
                       icone: Icons.water_drop,
                       corIcone: Colors.lightBlueAccent,
-                      alta: umidade >
+                      alta:
+                          umidade >
                           umidadeAjuste + _limiarLed(umidadeEmAcomodacao),
-                      baixa: umidade <
+                      baixa:
+                          umidade <
                           umidadeAjuste - _limiarLed(umidadeEmAcomodacao),
                     ),
                   ),
