@@ -30,11 +30,38 @@ function createEstufaRouter({
   // GET /comandos. O LWW por campo continua sendo resolvido no aparelho.
   const comandosPendentes = new Map();
 
+  // O plano gratuito recicla o processo com frequencia; sem espelhar a caixa no
+  // banco, um ajuste feito de longe sumia em silencio se o servidor reiniciasse
+  // antes de o aparelho buscar. O mapa segue sendo a verdade em memoria; o
+  // banco e so o backup de restart (falha nele nao derruba o comando).
+  if (db?.carregarComandosPendentes && db.estaHabilitado?.()) {
+    db.carregarComandosPendentes()
+      .then((pendentes) => {
+        for (const { idHardware, comando } of pendentes) {
+          if (!comandosPendentes.has(idHardware)) {
+            comandosPendentes.set(idHardware, comando);
+          }
+        }
+        if (pendentes.length > 0) {
+          console.log(`Comandos pendentes restaurados: ${pendentes.length}`);
+        }
+      })
+      .catch((error) => {
+        console.error('Falha ao restaurar comandos pendentes:', error.message);
+      });
+  }
+
   function guardarComandoPendente(idHardware, comando) {
     const pendente = comandosPendentes.get(idHardware) || {};
     // Campos diferentes convivem; o mesmo campo e sobrescrito pelo mais novo,
     // que e o mesmo criterio que o aparelho aplicaria de qualquer forma.
-    comandosPendentes.set(idHardware, { ...pendente, ...comando });
+    const fundido = { ...pendente, ...comando };
+    comandosPendentes.set(idHardware, fundido);
+    if (db?.salvarComandoPendente) {
+      db.salvarComandoPendente(idHardware, fundido).catch((error) => {
+        console.error('Falha ao persistir comando pendente:', error.message);
+      });
+    }
   }
 
   // Campos de ajuste e o timestamp que decide o LWW de cada um.
@@ -66,8 +93,18 @@ function createEstufaRouter({
 
     if (Object.keys(restante).length === 0) {
       comandosPendentes.delete(idHardware);
+      if (db?.removerComandoPendente) {
+        db.removerComandoPendente(idHardware).catch((error) => {
+          console.error('Falha ao limpar comando pendente:', error.message);
+        });
+      }
     } else {
       comandosPendentes.set(idHardware, restante);
+      if (db?.salvarComandoPendente) {
+        db.salvarComandoPendente(idHardware, restante).catch((error) => {
+          console.error('Falha ao persistir comando pendente:', error.message);
+        });
+      }
     }
   }
 
@@ -103,6 +140,19 @@ function createEstufaRouter({
     }
     return null;
   }
+
+  // Publico de proposito: e o detector de deploy. Hoje descobrimos um deploy
+  // que nao subiu so porque um curl manual estranhou a resposta; com o commit
+  // exposto aqui, "o que esta no ar?" vira uma pergunta de um segundo. Nao
+  // carrega dado de estufa nenhum.
+  const iniciadoEmMs = Date.now();
+  router.get('/versao', (_req, res) => {
+    const commit = (process.env.RENDER_GIT_COMMIT || '').slice(0, 7) || null;
+    res.json({
+      commit,
+      uptimeSegundos: Math.round((Date.now() - iniciadoEmMs) / 1000),
+    });
+  });
 
   // Leituras tambem exigem token: telemetria da estufa e dado do produtor, nao
   // publico. O app ja envia a chave em toda chamada; o custo real e que uma

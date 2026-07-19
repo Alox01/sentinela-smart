@@ -419,13 +419,72 @@ async function carregarHistorico(
   }));
 }
 
+// ---- Caixa de comandos pendentes (sobrevive a restarts do servidor) ----
+// O plano gratuito do Render recicla o processo com frequencia; sem persistir,
+// um ajuste feito de longe sumia em silencio se o dyno reiniciasse antes de o
+// aparelho buscar. Uma linha por aparelho: o payload ja chega fundido por campo.
+
+let tabelaComandosPendentesPronta = false;
+
+async function garantirTabelaComandosPendentes() {
+  if (tabelaComandosPendentesPronta) return;
+  await pool.query(`
+    create table if not exists comandos_pendentes (
+      identificador_hardware text primary key,
+      payload jsonb not null,
+      updated_at timestamptz not null default now()
+    )
+  `);
+  tabelaComandosPendentesPronta = true;
+}
+
+async function salvarComandoPendente(identificadorHardware, payload) {
+  if (!pool) return false;
+  await garantirTabelaComandosPendentes();
+  await pool.query(
+    `
+      insert into comandos_pendentes (identificador_hardware, payload, updated_at)
+      values ($1, $2, now())
+      on conflict (identificador_hardware)
+      do update set payload = excluded.payload, updated_at = now()
+    `,
+    [identificadorHardware, payload],
+  );
+  return true;
+}
+
+async function removerComandoPendente(identificadorHardware) {
+  if (!pool) return false;
+  await garantirTabelaComandosPendentes();
+  await pool.query(
+    'delete from comandos_pendentes where identificador_hardware = $1',
+    [identificadorHardware],
+  );
+  return true;
+}
+
+async function carregarComandosPendentes() {
+  if (!pool) return [];
+  await garantirTabelaComandosPendentes();
+  const result = await pool.query(
+    'select identificador_hardware, payload from comandos_pendentes',
+  );
+  return result.rows.map((row) => ({
+    idHardware: row.identificador_hardware,
+    comando: row.payload,
+  }));
+}
+
 module.exports = {
+  carregarComandosPendentes,
   carregarConfiguracao,
   carregarHistorico,
   carregarUltimaLeitura,
   estaHabilitado,
   motivoDesabilitado,
   persistirLeituraBufferizada,
+  removerComandoPendente,
+  salvarComandoPendente,
   salvarComandoSync,
   salvarConfiguracaoSnapshot,
   salvarSnapshot,

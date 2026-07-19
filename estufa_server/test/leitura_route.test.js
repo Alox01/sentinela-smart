@@ -423,3 +423,63 @@ test('POST /leitura rejeita idHardware gigante', async () => {
   });
   assert.equal(status, 400);
 });
+
+test('comando pendente sobrevive a um restart do servidor', async () => {
+  // Banco falso com a mesma superficie da caixa persistida.
+  const guardados = new Map();
+  const dbFalso = {
+    estaHabilitado: () => true,
+    async persistirLeituraBufferizada() { return true; },
+    async salvarComandoSync() {},
+    async salvarComandoPendente(id, payload) { guardados.set(id, payload); },
+    async removerComandoPendente(id) { guardados.delete(id); },
+    async carregarComandosPendentes() {
+      return [...guardados].map(([idHardware, comando]) => ({ idHardware, comando }));
+    },
+  };
+
+  const app1 = criarApp({ simulador: simuladorEspiao(), db: dbFalso });
+  await postSincronizar(app1, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 85,
+    tempTimestamp: 5000,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(guardados.get('ESP32_CAMPO_01').temperaturaMeta, 85);
+
+  // "Restart": um router novo, memoria zerada, mesmo banco.
+  const app2 = criarApp({ simulador: simuladorEspiao(), db: dbFalso });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const { body } = await requisitar(app2, '/comandos?idHardware=ESP32_CAMPO_01');
+  assert.equal(body.comando.temperaturaMeta, 85);
+
+  // A confirmacao do aparelho limpa a copia persistida tambem.
+  await postLeitura(app2, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 90,
+    umidadeAtual: 50,
+    config: { temperaturaMeta: 85, tempTimestamp: 5000 },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(guardados.has('ESP32_CAMPO_01'), false);
+});
+
+test('GET /versao responde sem token e informa o commit', async () => {
+  const bloqueia = (_req, res, _next) =>
+    res.status(401).json({ erro: 'Nao autorizado' });
+  const app = express();
+  app.use(express.json());
+  app.use(
+    createEstufaRouter({
+      simulador: { lerCompleto: () => ({ simulador: true }) },
+      db: { estaHabilitado: () => false },
+      authMiddleware: bloqueia,
+    }),
+  );
+
+  const { status, body } = await requisitar(app, '/versao');
+  assert.equal(status, 200);
+  assert.ok(Object.hasOwn(body, 'commit'));
+  assert.ok(body.uptimeSegundos >= 0);
+});
