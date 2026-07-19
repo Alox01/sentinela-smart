@@ -41,7 +41,11 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // O id do aparelho e gerado do chip (MAC) no setup -> unico por ESP, sem
 // precisar configurar nada. Cada aparelho vira o seu na nuvem (status por
 // aparelho). Ex.: "ESP32_A1B2C3".
-const char* VERSAO_FIRMWARE = "1.0.0";
+// Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
+// /status, qual firmware um aparelho em campo esta rodando.
+// 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
+//        inteiras, id unico por chip.
+const char* VERSAO_FIRMWARE = "1.1.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
