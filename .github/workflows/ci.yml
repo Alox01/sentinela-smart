@@ -1,0 +1,62 @@
+# Roda a cada push/PR: testes do servidor, análise + testes do app e uma
+# compilação real do firmware. O firmware entra de propósito — ele já quebrou
+# em campo por nunca ter passado por um compilador antes de gravar.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  servidor:
+    name: Servidor (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: estufa_server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: estufa_server/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  app:
+    name: App (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: estufa_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze lib test
+      - run: flutter test
+
+  firmware:
+    name: Firmware (ESP32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/compile-sketches@v1
+        with:
+          fqbn: esp32:esp32:esp32
+          platforms: |
+            - name: esp32:esp32
+              source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+              version: 3.2.0
+          libraries: |
+            - name: DHT sensor library
+            - name: Adafruit Unified Sensor
+            - name: TM1637
+            - name: ArduinoJson
+          sketch-paths: |
+            - firmware/sentinela_esp32
+          enable-warnings-report: true
