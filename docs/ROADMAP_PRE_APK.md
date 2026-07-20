@@ -57,16 +57,24 @@ Depois da revisao leve:
 
 ### 5. Melhorias futuras
 
-Deixar para depois do APK inicial:
+> Atualizado jul/2026. Vários itens que estavam aqui já foram entregues.
 
-- Refatoracao maior de arquivos grandes.
-- Melhorias profundas de arquitetura.
-- Integracao completa com nuvem.
-- MQTT como opcao remota.
-- HTTPS/certificados.
-- Controle remoto fora da rede local.
-- Notificacoes push.
-- Build de producao assinado para distribuicao.
+**Já feito** (saiu do "futuro"):
+
+- Integracao completa com nuvem (deploy Render + Supabase, autenticado).
+- Controle remoto fora da rede local (caixa de comandos nuvem→aparelho).
+- mDNS (`sentinela-XXXXXX.local`) e id unico por aparelho.
+- Retencao automatica de dados na nuvem.
+- Refatoracao de arquivos grandes (split native/web do Isar; store de leitura).
+
+**Ainda futuro:**
+
+- **Notificacoes push (FCM)** — proximo item, ver `NOTIFICACOES_PUSH.md`.
+- MQTT como opcao remota (hoje o transporte e HTTP).
+- HTTPS no aparelho local / validacao de certificado no ESP.
+- Modo de configuracao Wi-Fi por AP (`Sentinela-Config`).
+- Controle de atuadores (ventoinha/rele) e agendamento — depende de hardware.
+- Build de producao assinado para distribuicao (Play Store).
 
 ## Proximos blocos do projeto
 

@@ -2,65 +2,105 @@
 
 Ponto de retomada para continuar o trabalho em qualquer máquina (o histórico do
 chat fica local; este arquivo e o Git são a memória portátil do projeto).
+Atualizado após a rodada de produção de jul/2026 (segurança, controle remoto,
+firmware real, CI, retenção).
 
 ## Repositório oficial
 
-`https://github.com/Alox01/sentinela-smart` — branch de trabalho:
-`test/http-local-device`. Regras de versionamento em uso: commits/branches em
-inglês, sem menção a ferramentas de IA, `main` = produção, não usar
-`git add .` cego (o Flutter gera arquivos que aparecem como modificados).
+`https://github.com/Alox01/sentinela-smart` — branch de deploy:
+`test/http-local-device` (o Render faz auto-deploy dela). Regras de versionamento:
+commits/branches em inglês, sem menção a ferramentas de IA, não usar `git add .`
+cego (o Flutter gera arquivos que aparecem como modificados). Deploy verificável
+em `GET /versao` (mostra o commit no ar).
 
-## O que já funciona
+## O que já funciona (implementado e verificado)
 
-- App Flutter (Android/APK) com monitoramento em tempo real, arquitetura
-  híbrida local↔nuvem↔offline (indicador LOCAL/NUVEM/OFFLINE automático).
-- Sincronização LWW por campo; fila offline de comandos (app) e buffers de
-  leitura (servidor e ESP32 virtual).
-- Servidor Node deployado na nuvem (Render + Supabase), com `GET /historico`,
-  `POST /leitura`, keep-alive, e o ESP32 virtual (push HTTP).
-- Relatório com resumo, gráfico (degraus + linha de ajuste + amostragem 10min/
-  eventos com cooldown), eventos e histórico preenchido pela nuvem.
-- Guias: `docs/ARQUITETURA*`, `CONTRATO_API.md`, `DEMO.md`, `ESP32_VIRTUAL.md`,
-  `SEGURANCA_COMANDOS.md`, `ROADMAP_PRE_APK.md`.
+**App (Flutter/Android)**
+- Monitoramento em tempo real; arquitetura híbrida com 4 estados de conexão
+  automáticos: `LOCAL` (verde) → `NUVEM` (azul) → `SEM SINAL` (âmbar, aparelho
+  parou de reportar) → `OFFLINE` (vermelho, celular sem alcance) → `CONECTANDO`.
+- Leitura ao vivo **compartilhada** entre a home e a tela de monitoramento (um
+  `EstufaMonitor` por estufa) — abrir uma estufa é instantâneo, sem busca dupla.
+- Sincronização LWW por campo; fila offline de comandos; captura automática do
+  `idHardware` na 1ª conexão local (+ campo manual no cadastro, para estufa só de
+  nuvem/simulador).
+- Relatório por estufada: resumo, gráfico (degraus + linha de ajuste, amostragem
+  10 min/eventos), eventos, exportação **PDF e CSV**; apagar estufadas.
+- Backup/restore local (JSON), sem a chave de acesso no arquivo exportado.
 
-## Pendências
+**Servidor (Node/Express, Render + Supabase)**
+- Rotas: `GET /status`, `/historico`, `/`, `/dados` (autenticadas), `POST /leitura`,
+  `POST /sincronizar`, `GET /comandos`, `GET /versao` (pública).
+- **Estado ao vivo por aparelho** (não mistura simulador com ESP reais).
+- **Caixa de comandos nuvem→aparelho** (retransmissão de comandos remotos):
+  o app manda o ajuste com `idHardware`, a nuvem guarda, o aparelho busca em
+  `GET /comandos` e confirma no push seguinte. Persistida no Postgres (sobrevive
+  a restart). O app mostra "aguardando o aparelho" até a confirmação.
+- Segurança: token obrigatório (timing-safe), servidor recusa subir sem token
+  forte, helmet, rate-limit (180/min), corpo JSON ≤ 64 KB, SQL parametrizado,
+  TLS no banco (validação completa com `DB_SSL_CA`). Ver `SEGURANCA.md`.
+- Persistência com dedup (1 leitura/10 min + eventos) nas **duas** vias de
+  escrita (`salvarSnapshot` e a ingestão `POST /leitura`) e **retenção
+  automática** (~300 dias, `CLOUD_RETENTION_DAYS`). Ambas são obrigatórias:
+  sem a dedup na ingestão o banco chegou a 2,7 M de linhas e estourou a cota do
+  Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
+- ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-1. **Relatório em PDF — concluído.** O botão de download da
-   `historico_screen.dart` virou um menu **PDF / CSV**. O PDF
-   (`relatorio_pdf_service.dart`) traz cabeçalho, resumo, gráficos de
-   temperatura/umidade, eventos e tabela de leituras, e é compartilhado via
-   `Printing.sharePdf` (share sheet: WhatsApp, imprimir, salvar). CSV mantido.
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.2.0, **compilado** (84%
+flash / 15% RAM no core esp32 3.2.0)
+- Controle local edge-first (DHT22, botões, display, LEDs, buzzer) sem depender
+  de Wi-Fi. Id único por chip (MAC). Leituras inteiras.
+- Silêncio do alarme **com prazo de 10 min** (botão e app pelo mesmo caminho);
+  incêndio não silenciável.
+- Push de leitura para a nuvem + busca de comandos (`GET /comandos`), pulada
+  durante alarme de incêndio (o handshake HTTPS não pode roubar tempo do loop).
+- **mDNS**: anuncia `sentinela-XXXXXX.local` (nome estável por chip), IP como
+  fallback.
 
-2. **Observar o teste da nuvem.** Confirmar que, ao fechar o app e reabrir o
-   relatório, o histórico gravado pela nuvem preenche os "buracos".
+**Infra**
+- CI (GitHub Actions): a cada push roda testes do servidor, `flutter analyze` +
+  testes + build web do app, e uma **compilação real do firmware**.
 
-3. **Teste com o ESP32 real (aguardando o aparelho).** O app já lê/controla o
-   ESP32 na rede local sem mudança de código (contrato conferido). Checklist e a
-   fase 2 (histórico na nuvem via app-ponte) em `docs/TESTE_ESP32_REAL.md`.
-   Implementar a fase 2 quando o aparelho chegar.
+## O que falta (planejado)
 
-4. **Menu da estufa — Fase B (aguardando o ESP32).** A gaveta "Ações da estufa"
-   (endDrawer no monitoramento) já tem "Preparar nova estufada" (Fase A). Falta,
-   com o aparelho: desligar a ventoinha (direto e agendado) e agendar mudancas
-   de temperatura/umidade. Agendamento confiavel deve ser feito no aparelho (nao
-   app-only), especialmente o da ventoinha (seguranca/fogo).
+1. **🔴 Notificações push (FCM) — a peça central que falta.** É o Objetivo
+   Específico #4 da proposta assinada e o resultado marcado como "principalmente"
+   (avisar incêndio e interrupção/falta de energia com o app fechado). Plano
+   completo em `NOTIFICACOES_PUSH.md` (5 fases, watchdog de silêncio, matriz de
+   preferências por evento). **Bloqueio:** depende de criar um projeto Firebase
+   (conta Google do autor) + `google-services.json`. Fatível 100% em software:
+   incêndio vem do push do aparelho; "parou de reportar" vem de um watchdog na
+   nuvem (cobre luz e internet).
+2. **Matriz de preferências de notificação** (Fase 1 do doc acima): tela no menu,
+   toggles notificar × tocar/vibrar por evento, respeitados com o app aberto.
+   Não depende do Firebase — pode vir antes.
 
-5. **Revisão geral do código (solicitada).** Passar o projeto inteiro buscando
-   melhorias viáveis sem alterar comportamento: quebrar arquivos grandes
-   (`monitoramento_screen.dart`, `isar_service.dart`), simplificações, remoção
-   de código morto, consistência. Fazer em passos pequenos e testáveis.
+## Bloqueado por hardware (trabalho futuro honesto — ver §6.2 do outline)
 
-## Build do APK (lembrete)
+- **Distinção definitiva luz × internet:** exige bateria/nobreak + sensor de
+  tensão no ESP para ele avisar "sem energia" antes de morrer. Hoje `temEnergia`
+  é sempre `true` no firmware. O watchdog de silêncio cobre o caso genérico.
+- **Controle de ventoinha / agendamento (menu Fase B):** exige relé no aparelho.
+- **Sensor DHT22 novo:** o atual queimou (inversão de polaridade).
+- **Modo de configuração Wi-Fi por AP** (`Sentinela-Config`): trocar rede/chave
+  sem regravar. Software (firmware), mas trabalhoso; defensável como futuro.
 
-Sempre **release** (bug do Isar 3.1.0 em debug). Ver `memory`/gotchas:
+## Desvios em relação à proposta (avisar o orientador)
 
+- **Autenticação por chave de acesso**, não "de usuários" (Obj. Específico #2):
+  o sistema é de produtor único; não há cadastro/contas. Reformular o objetivo,
+  não omitir.
+- **Backend em Node.js puro**, não TypeScript (a proposta dizia "Node.js com
+  TypeScript, ou Python"). Sem impacto técnico.
+
+## Build do APK
+
+Sempre **release** (bug do Isar em debug):
 ```
 flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
 ```
 
-## Continuar em outra máquina
+## Verificação
 
-O histórico desta conversa fica na máquina atual. Para retomar em outro PC:
-clonar o repositório acima, abrir o Claude Code na pasta e pedir para ele ler
-`docs/` (começando por este arquivo). Todo o contexto de arquitetura e as
-pendências estão versionados aqui.
+- Servidor: `cd estufa_server && npm test` · App: `cd estufa_app && flutter analyze lib test && flutter test` · Firmware: compilar no Arduino IDE / arduino-cli (core esp32 3.2.0).
+- Deploy no ar: `GET https://estufa-server.onrender.com/versao` → commit atual.
