@@ -22,7 +22,7 @@ const CHANCE_EVENTO = 0.0085;
 // real recebida via POST /leitura. A evolucao automatica fica pausada.
 // Ultima mudanca de ajuste: abre a janela de acomodacao, para o simulador nao
 // alarmar enquanto a estufa "persegue" o alvo novo (mesma regra do firmware).
-let acomodacaoTemp = { desdeMs: 0, deslocamento: 0 };
+let acomodacaoTemp = { desdeMs: 0, folga: 0 };
 
 let evolucaoPausada = false;
 
@@ -232,7 +232,13 @@ module.exports = {
     if (resultado.alteracoesAplicadas.includes('temperaturaMeta')) {
       acomodacaoTemp = {
         desdeMs: Date.now(),
-        deslocamento: configLocal.temperaturaMeta - alvoAnterior,
+        // So a distancia que a mudanca criou: aproximar o alvo da leitura nao
+        // gera folga, porque a estufa nao tem nada a percorrer.
+        folga: Math.max(
+          0,
+          Math.abs(statusFisico.temperaturaAtual - configLocal.temperaturaMeta)
+            - Math.abs(statusFisico.temperaturaAtual - alvoAnterior),
+        ),
       };
       console.log(`Novo ajuste de temperatura aceito: ${configLocal.temperaturaMeta} F`);
     }
@@ -253,7 +259,11 @@ module.exports = {
       // novo do mesmo jeito, tenha vindo do app ou do botao.
       acomodacaoTemp = {
         desdeMs: agora,
-        deslocamento: valor - configLocal.temperaturaMeta,
+        folga: Math.max(
+          0,
+          Math.abs(statusFisico.temperaturaAtual - valor)
+            - Math.abs(statusFisico.temperaturaAtual - configLocal.temperaturaMeta),
+        ),
       };
       configLocal.temperaturaMeta = valor;
       configLocal.tempTimestamp = agora;

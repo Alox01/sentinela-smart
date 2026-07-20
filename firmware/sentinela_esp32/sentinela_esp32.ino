@@ -44,15 +44,17 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
-// 1.4.0: acomodacao no proprio aparelho apos mudar o alvo (a folga acompanha
-//        o tamanho da mudanca) - antes o ESP alarmava na hora ao subir o
-//        ajuste, ignorando a acomodacao que so existia no app.
+// 1.5.0: a folga da acomodacao cobre so a distancia que a mudanca criou -
+//        aproximar o alvo da temperatura atual nao silencia mais o alarme.
+// 1.4.0: acomodacao no proprio aparelho apos mudar o alvo - antes o ESP
+//        alarmava na hora ao subir o ajuste, ignorando a acomodacao que so
+//        existia no app.
 // 1.3.0: envio imediato quando o alarme/incendio comeca ou termina (antes a
 //        nuvem so sabia no ciclo de 1 min, e um teste rapido nem chegava).
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.4.0";
+const char* VERSAO_FIRMWARE = "1.5.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -363,7 +365,13 @@ void definirTemperaturaAlvo(int novoAlvo) {
   int delta = novoAlvo - temperaturaAlvoF;
   if (delta == 0) return;
 
-  int folga = abs(delta);
+  // A folga cobre so a distancia que a mudanca CRIOU. Aproximar o alvo da
+  // temperatura atual nao gera folga nenhuma: a estufa nao precisa percorrer
+  // nada, entao um desvio que ja existia continua sendo alarme.
+  int desvioAntes = abs(temperaturaF - temperaturaAlvoF);
+  int desvioDepois = abs(temperaturaF - novoAlvo);
+  int folga = leituraOk ? (desvioDepois - desvioAntes) : 0;
+  if (folga < 0) folga = 0;
   if (folga > FOLGA_ACOMODACAO_MAX) folga = FOLGA_ACOMODACAO_MAX;
   // Ajustes seguidos: vale a maior folga enquanto a janela estiver aberta.
   bool janelaAberta = acomodacaoAteMillis != 0 &&

@@ -43,7 +43,12 @@ void main() {
   test('acomodacao apos mudar o ajuste suprime o nivel de atencao', () {
     final d = DetectorOscilacao();
     // O ajuste andou 10: e essa mudanca que justifica perdoar um desvio de 10.
-    d.registrarMudancaAjusteTemperatura(0, deslocamento: 10);
+    d.registrarMudancaAjusteTemperatura(
+      0,
+      leitura: 90,
+      ajusteAnterior: 90,
+      ajusteNovo: 100,
+    );
     expect(d.temperaturaEmAcomodacao(10 * min), isTrue);
     expect(d.temperaturaEmAcomodacao(21 * min), isFalse);
 
@@ -103,52 +108,81 @@ void main() {
     expect(ev!.tipo, 'oscilacao_umidade');
     expect(ev.descricao, contains('%'));
   });
-  test('folga da acomodacao acompanha o tamanho da mudanca', () {
+  test('folga cobre so a distancia que a mudanca criou', () {
     final d = DetectorOscilacao();
     const t0 = 1000000;
+    // Leitura 90, ajuste vai de 90 para 100: a mudanca criou 10 de distancia.
+    d.registrarMudancaAjusteTemperatura(
+      t0,
+      leitura: 90,
+      ajusteAnterior: 90,
+      ajusteNovo: 100,
+    );
+    expect(d.folgaTemperatura(t0), 10);
+  });
 
-    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 1);
-    expect(d.folgaTemperatura(t0), 1);
+  // Regressao do caso real: ESP ligou com 127 e ajuste 70 (alarme tocando).
+  // Ao mover o ajuste para 110 o alarme calava, porque a regra antiga olhava o
+  // TAMANHO do movimento (40). Mas o alvo se aproximou da leitura: a estufa nao
+  // tem nada a percorrer, e o desvio de 17 ja existia.
+  test('aproximar o ajuste da leitura nao gera folga', () {
+    final d = DetectorOscilacao();
+    const t0 = 1000000;
+    d.registrarMudancaAjusteTemperatura(
+      t0,
+      leitura: 127,
+      ajusteAnterior: 70,
+      ajusteNovo: 110,
+    );
+    expect(d.folgaTemperatura(t0), 0);
 
-    final d2 = DetectorOscilacao();
-    d2.registrarMudancaAjusteTemperatura(t0, deslocamento: -25);
-    // Teto: um salto enorme nao cega o alerta por completo.
-    expect(d2.folgaTemperatura(t0), 20);
+    // E o desvio remanescente segue virando evento.
+    d.avaliarTemperatura(leitura: 127, ajuste: 110, nowMs: t0);
+    final evento = d.avaliarTemperatura(
+      leitura: 127,
+      ajuste: 110,
+      nowMs: t0 + 11 * 60 * 1000,
+    );
+    expect(evento, isNotNull);
+  });
+
+  test('folga respeita o teto', () {
+    final d = DetectorOscilacao();
+    const t0 = 1000000;
+    d.registrarMudancaAjusteTemperatura(
+      t0,
+      leitura: 90,
+      ajusteAnterior: 90,
+      ajusteNovo: 140,
+    );
+    expect(d.folgaTemperatura(t0), 20);
   });
 
   test('fora da janela a folga zera', () {
     final d = DetectorOscilacao();
     const t0 = 1000000;
-    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 10);
-    expect(d.folgaTemperatura(t0 + 21 * 60 * 1000), 0);
-  });
-
-  test('desvio maior que a folga nao e suprimido pela acomodacao', () {
-    final d = DetectorOscilacao();
-    const t0 = 1000000;
-    // Mexeu 1 grau: folga 1, entao tolera ate 6 (5 + 1).
-    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 1);
-
-    // Desvio de 8 (125 x 117) e maior que a folga: continua contando como
-    // oscilacao e vira evento depois do tempo de atencao.
-    var evento = d.avaliarTemperatura(leitura: 125, ajuste: 117, nowMs: t0);
-    expect(evento, isNull); // ainda nao persistiu tempo suficiente
-    evento = d.avaliarTemperatura(
-      leitura: 125,
-      ajuste: 117,
-      nowMs: t0 + 11 * 60 * 1000,
+    d.registrarMudancaAjusteTemperatura(
+      t0,
+      leitura: 90,
+      ajusteAnterior: 90,
+      ajusteNovo: 100,
     );
-    expect(evento, isNotNull, reason: 'desvio pre-existente nao pode sumir');
+    expect(d.folgaTemperatura(t0 + 21 * 60 * 1000), 0);
   });
 
   test('desvio dentro da folga segue perdoado durante a janela', () {
     final d = DetectorOscilacao();
     const t0 = 1000000;
-    // Saltou 15 graus: e esperado a estufa levar tempo para chegar la.
-    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 15);
+    // Saltou o alvo de 117 para 132 com a leitura em 117: criou 15 de distancia.
+    d.registrarMudancaAjusteTemperatura(
+      t0,
+      leitura: 117,
+      ajusteAnterior: 117,
+      ajusteNovo: 132,
+    );
     final evento = d.avaliarTemperatura(
-      leitura: 130,
-      ajuste: 117,
+      leitura: 119,
+      ajuste: 132,
       nowMs: t0 + 11 * 60 * 1000,
     );
     expect(evento, isNull);

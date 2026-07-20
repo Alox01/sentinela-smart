@@ -6,8 +6,9 @@ const TOLERANCIA_UMID = 2.0; // Margem de erro de 2%
 const TEMPO_SILENCIO = 10 * 60 * 1000;
 // Acomodacao apos mudar o ajuste: a estufa leva tempo para alcancar o alvo
 // novo, e alarmar nesse caminho seria acusar um problema que o proprio produtor
-// causou. A folga acompanha o tamanho da mudanca (mexer 1 grau nao perdoa um
-// desvio de 20). Mesma regra do app e do firmware. Incendio nunca e afetado.
+// causou. A folga cobre SO a distancia que a mudanca criou - aproximar o alvo
+// da leitura nao perdoa nada. Mesma regra do app e do firmware. Incendio nunca
+// e afetado.
 const TEMPO_ACOMODACAO = 20 * 60 * 1000;
 const FOLGA_ACOMODACAO_MAX = 20;
 
@@ -70,7 +71,7 @@ module.exports = {
             if (acomodacao && Number.isFinite(acomodacao.desdeMs)
                 && (agora - acomodacao.desdeMs) < TEMPO_ACOMODACAO) {
                 const folga = Math.min(
-                    Math.abs(Number(acomodacao.deslocamento) || 0),
+                    Math.max(Number(acomodacao.folga) || 0, 0),
                     FOLGA_ACOMODACAO_MAX,
                 );
                 toleranciaTemp += folga;

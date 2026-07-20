@@ -22,8 +22,8 @@ class _EstadoGrandeza {
   int? desdeMs;
   int ultimoRegistroMs = 0;
   int acomodacaoAteMs = 0;
-  // Quanto o ajuste andou na mudanca que abriu a janela. A tolerancia extra
-  // acompanha esse tamanho: mexer 1 grau nao pode perdoar um desvio de 20.
+  // Distancia que a ultima mudanca de ajuste CRIOU. E so isso que a janela
+  // perdoa: aproximar o ajuste da leitura nao gera folga nenhuma.
   double folgaAcomodacao = 0;
 
   // Reinicia so a maquina de oscilacao (a janela de acomodacao e preservada,
@@ -58,20 +58,38 @@ class DetectorOscilacao {
     _umidade.reiniciar();
   }
 
-  /// Abre a janela de acomodacao com folga proporcional ao tamanho da mudanca.
-  /// Antes a folga era fixa (20): mexer 1 grau apagava o aviso de um desvio de
-  /// 8 que ja existia antes do ajuste - a acomodacao escondia um problema em
-  /// vez de perdoar a estufa perseguindo o alvo novo.
-  void registrarMudancaAjusteTemperatura(int nowMs, {double deslocamento = 0}) {
-    _abrirAcomodacao(_temperatura, nowMs, deslocamento);
+  /// Abre a janela de acomodacao. A folga cobre so a distancia que a mudanca
+  /// CRIOU - aproximar o ajuste da leitura atual nao gera folga, porque a
+  /// estufa nao precisa percorrer nada e um desvio que ja existia continua
+  /// valendo como problema.
+  void registrarMudancaAjusteTemperatura(
+    int nowMs, {
+    double leitura = 0,
+    double ajusteAnterior = 0,
+    double ajusteNovo = 0,
+  }) {
+    _abrirAcomodacao(_temperatura, nowMs, leitura, ajusteAnterior, ajusteNovo);
   }
 
-  void registrarMudancaAjusteUmidade(int nowMs, {double deslocamento = 0}) {
-    _abrirAcomodacao(_umidade, nowMs, deslocamento);
+  void registrarMudancaAjusteUmidade(
+    int nowMs, {
+    double leitura = 0,
+    double ajusteAnterior = 0,
+    double ajusteNovo = 0,
+  }) {
+    _abrirAcomodacao(_umidade, nowMs, leitura, ajusteAnterior, ajusteNovo);
   }
 
-  void _abrirAcomodacao(_EstadoGrandeza estado, int nowMs, double deslocamento) {
-    final folga = deslocamento.abs().clamp(0.0, _folgaAcomodacaoMaxima);
+  void _abrirAcomodacao(
+    _EstadoGrandeza estado,
+    int nowMs,
+    double leitura,
+    double ajusteAnterior,
+    double ajusteNovo,
+  ) {
+    final desvioAntes = (leitura - ajusteAnterior).abs();
+    final desvioDepois = (leitura - ajusteNovo).abs();
+    final folga = (desvioDepois - desvioAntes).clamp(0.0, _folgaAcomodacaoMaxima);
     // Ajustes seguidos: vale a maior folga enquanto a janela ainda estiver
     // aberta, senao um toque de 1 grau anularia a folga de um salto grande.
     estado.folgaAcomodacao = nowMs < estado.acomodacaoAteMs
@@ -166,12 +184,11 @@ class DetectorOscilacao {
 
     // Durante a acomodacao apos mudar o ajuste, a diferenca de "atencao" e
     // esperada (estufa indo ate o novo alvo): zera o relogio e nao gera evento.
-    // Mas so ate a folga daquela mudanca: um desvio maior do que o ajuste andou
-    // nao foi causado por ele, e continua valendo como oscilacao. O nivel
-    // critico (>20) nunca e suprimido.
+    // Mas so ate a folga daquela mudanca: um desvio que ela nao criou continua
+    // valendo como oscilacao. O nivel critico (>20) nunca e suprimido.
     if (estadoAlvo == 'atencao' &&
         nowMs < estado.acomodacaoAteMs &&
-        diferenca <= _tolerancia + estado.folgaAcomodacao) {
+        diferencaAbs <= _tolerancia + estado.folgaAcomodacao) {
       estado.pendente = 'atencao';
       estado.desdeMs = nowMs;
       return null;

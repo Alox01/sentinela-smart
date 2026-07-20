@@ -183,14 +183,18 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         (novoTempAjuste - ajusteTempAnterior).abs() > 0.5) {
       _detectorOscilacao.registrarMudancaAjusteTemperatura(
         agoraAjusteMs,
-        deslocamento: novoTempAjuste - ajusteTempAnterior,
+        leitura: novaTemperatura,
+        ajusteAnterior: ajusteTempAnterior,
+        ajusteNovo: novoTempAjuste,
       );
     }
     if (ajusteUmidAnterior != null &&
         (novoUmidAjuste - ajusteUmidAnterior).abs() > 0.5) {
       _detectorOscilacao.registrarMudancaAjusteUmidade(
         agoraAjusteMs,
-        deslocamento: novoUmidAjuste - ajusteUmidAnterior,
+        leitura: novaUmidade,
+        ajusteAnterior: ajusteUmidAnterior,
+        ajusteNovo: novoUmidAjuste,
       );
     }
     final deveSugerirFimCiclo =
@@ -391,6 +395,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                     // de o servidor confirmar a mudanca.
                     _detectorOscilacao.registrarMudancaAjusteTemperatura(
                       DateTime.now().millisecondsSinceEpoch,
+                      leitura: temperatura,
+                      ajusteAnterior: ajusteAnterior,
+                      ajusteNovo: novaTemp,
                     );
                     setState(() {
                       tempAjuste = novaTemp;
@@ -402,6 +409,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                     final ajusteAnterior = umidAjuste;
                     _detectorOscilacao.registrarMudancaAjusteUmidade(
                       DateTime.now().millisecondsSinceEpoch,
+                      leitura: umidade,
+                      ajusteAnterior: ajusteAnterior,
+                      ajusteNovo: novaUmid,
                     );
                     setState(() {
                       umidAjuste = novaUmid;
@@ -733,8 +743,18 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final tempAnterior = tempAjuste;
     final umidAnterior = umidAjuste;
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    _detectorOscilacao.registrarMudancaAjusteTemperatura(agoraMs);
-    _detectorOscilacao.registrarMudancaAjusteUmidade(agoraMs);
+    _detectorOscilacao.registrarMudancaAjusteTemperatura(
+      agoraMs,
+      leitura: temperatura,
+      ajusteAnterior: tempAnterior,
+      ajusteNovo: _tempNovaEstufada,
+    );
+    _detectorOscilacao.registrarMudancaAjusteUmidade(
+      agoraMs,
+      leitura: umidade,
+      ajusteAnterior: umidAnterior,
+      ajusteNovo: _umidNovaEstufada,
+    );
     setState(() {
       tempAjuste = _tempNovaEstufada;
       umidAjuste = _umidNovaEstufada;

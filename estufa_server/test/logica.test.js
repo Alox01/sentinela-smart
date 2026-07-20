@@ -48,17 +48,17 @@ test('acomodacao perdoa o desvio proporcional a mudanca do ajuste', () => {
   // Subiu 10 graus: tolerancia vira 5 + 10 = 15, entao erro de 12 nao alarma.
   const r = analisarEstado(102, 90, 50, 50, 0, false, {
     desdeMs: agora,
-    deslocamento: 10,
+    folga: 10,
   });
   assert.equal(r.alarmeAtivo, false);
 });
 
-test('acomodacao nao perdoa desvio maior do que o ajuste andou', () => {
+test('acomodacao nao perdoa desvio maior do que a mudanca criou', () => {
   const agora = Date.now();
   // Mexeu 1 grau: tolerancia 6. Um desvio de 12 nao foi causado por isso.
   const r = analisarEstado(102, 90, 50, 50, 0, false, {
     desdeMs: agora,
-    deslocamento: 1,
+    folga: 1,
   });
   assert.equal(r.alarmeAtivo, true);
 });
@@ -66,7 +66,7 @@ test('acomodacao nao perdoa desvio maior do que o ajuste andou', () => {
 test('a janela de acomodacao expira', () => {
   const r = analisarEstado(102, 90, 50, 50, 0, false, {
     desdeMs: Date.now() - 21 * 60 * 1000,
-    deslocamento: 10,
+    folga: 10,
   });
   assert.equal(r.alarmeAtivo, true);
 });
@@ -74,7 +74,7 @@ test('a janela de acomodacao expira', () => {
 test('incendio nunca e acomodado', () => {
   const r = analisarEstado(200, 90, 50, 50, 0, false, {
     desdeMs: Date.now(),
-    deslocamento: 20,
+    folga: 20,
   });
   assert.equal(r.alarmeAtivo, true);
   assert.equal(r.riscoIncendio, true);
