@@ -43,15 +43,32 @@ class PushNotificationService {
         importance: Importance.high,
       );
 
-  static const AndroidNotificationChannel _canalCritico =
-      AndroidNotificationChannel(
-        'sentinela_critico',
-        'Alertas cr\u00edticos',
-        description: 'Avisos cr\u00edticos de inc\u00eandio ou chama.',
-        importance: Importance.max,
-        playSound: true,
-        enableVibration: true,
-      );
+  /// O id mudou de `sentinela_critico` para `_v2` de proposito: o Android nao
+  /// deixa alterar som nem importancia de um canal ja criado, entao quem ja
+  /// tinha o app continuaria com o bipe curto padrao. Canal novo e a unica
+  /// forma de a mudanca valer para todo mundo. **Tem que casar com o
+  /// `channelId` que o servidor envia** (`estufa_server/push.js`).
+  static const String canalCriticoId = 'sentinela_critico_v2';
+
+  /// Som longo e em volume de ALARME (nao de notificacao). Essa distincao e o
+  /// ponto principal: o volume de notificacao costuma ficar baixo, enquanto o
+  /// de alarme e o que as pessoas mantem alto justamente para acordar.
+  static AndroidNotificationChannel _canalCriticoCom({
+    required bool furarNaoPerturbe,
+  }) => AndroidNotificationChannel(
+    canalCriticoId,
+    'Inc\u00eandio',
+    description:
+        'Toca como alarme, em volume alto, mesmo de madrugada. '
+        'Reservado a inc\u00eandio.',
+    importance: Importance.max,
+    playSound: true,
+    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
+    bypassDnd: furarNaoPerturbe,
+  );
 
   final FlutterLocalNotificationsPlugin _notificacoesLocais =
       FlutterLocalNotificationsPlugin();
@@ -90,19 +107,58 @@ class PushNotificationService {
     }
   }
 
+  AndroidFlutterLocalNotificationsPlugin? get _android =>
+      _notificacoesLocais
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
   Future<void> _inicializarNotificacoesLocais() async {
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
     await _notificacoesLocais.initialize(settings: settings);
 
-    final android = _notificacoesLocais
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    await android?.createNotificationChannel(_canalAlertas);
-    await android?.createNotificationChannel(_canalCritico);
+    final android = _android;
+    // A permissao vem ANTES de criar os canais: um canal criado com
+    // `bypassDnd: true` sem a permissao concedida nasce sem o bypass, calado,
+    // e o Android nao deixa corrigir depois sem recriar o canal.
     await android?.requestNotificationsPermission();
+    final podeFurarNaoPerturbe =
+        await android?.hasNotificationPolicyAccess() ?? false;
+
+    await android?.createNotificationChannel(_canalAlertas);
+    await android?.createNotificationChannel(
+      _canalCriticoCom(furarNaoPerturbe: podeFurarNaoPerturbe),
+    );
+  }
+
+  /// Se o canal de incêndio já pode tocar com o aparelho em "Não perturbe".
+  Future<bool> get podeFurarNaoPerturbe async =>
+      await _android?.hasNotificationPolicyAccess() ?? false;
+
+  /// Leva o produtor à tela do sistema onde ele libera o app a furar o "Não
+  /// perturbe", e recria o canal para o bypass valer.
+  ///
+  /// Recriar é necessário porque o Android congela a configuração de um canal
+  /// existente. Em algumas versões o sistema restaura os ajustes do canal
+  /// apagado; nesses aparelhos pode ser preciso ligar na mão, em
+  /// Configurações → Notificações → Incêndio.
+  Future<bool> solicitarPermissaoNaoPerturbe() async {
+    final android = _android;
+    if (android == null) return false;
+    try {
+      final concedido = await android.requestNotificationPolicyAccess() ?? false;
+      if (!concedido) return false;
+      await android.deleteNotificationChannel(channelId: canalCriticoId);
+      await android.createNotificationChannel(
+        _canalCriticoCom(furarNaoPerturbe: true),
+      );
+      return true;
+    } catch (erro) {
+      debugPrint('Não foi possível liberar o Não perturbe: $erro');
+      return false;
+    }
   }
 
   void _preferenciasAlteradas() {
@@ -217,16 +273,25 @@ class PushNotificationService {
         mensagem.data['mensagem']?.toString() ??
         evento.descricao;
     final critico = evento.critico;
-    final canal = critico ? _canalCritico : _canalAlertas;
 
+    // Com o app aberto quem monta a notificacao e este codigo; com o app
+    // fechado quem monta e o Android, so com o que esta no canal. Por isso o
+    // som de alarme aparece nos dois lugares - senao o alerta seria forte de
+    // madrugada e fraco com o app na mao.
     final detalhes = NotificationDetails(
       android: AndroidNotificationDetails(
-        canal.id,
-        canal.name,
-        channelDescription: canal.description,
+        critico ? canalCriticoId : _canalAlertas.id,
+        critico ? 'Incêndio' : _canalAlertas.name,
+        channelDescription: critico ? null : _canalAlertas.description,
         importance: critico ? Importance.max : Importance.high,
         priority: critico ? Priority.max : Priority.high,
         playSound: opcao.tocarVibrar,
+        sound: critico && opcao.tocarVibrar
+            ? const RawResourceAndroidNotificationSound('alarme_estufa')
+            : null,
+        audioAttributesUsage: critico
+            ? AudioAttributesUsage.alarm
+            : AudioAttributesUsage.notification,
         enableVibration: opcao.tocarVibrar,
         silent: !opcao.tocarVibrar,
       ),

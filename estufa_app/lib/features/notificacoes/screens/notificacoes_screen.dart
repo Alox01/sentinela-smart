@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/preferencias_notificacao.dart';
 import '../services/preferencias_notificacao_service.dart';
+import '../services/push_notification_service.dart';
 
 /// Preferencias de notificacao, globais. Cada evento tem dois interruptores:
 /// mostrar a mensagem e fazer o celular tocar/vibrar.
@@ -14,6 +18,31 @@ class NotificacoesScreen extends StatefulWidget {
 
 class _NotificacoesScreenState extends State<NotificacoesScreen> {
   final _servico = PreferenciasNotificacaoService.instance;
+
+  // O "Nao perturbe" so existe no Android; nas outras plataformas o cartao nem
+  // aparece, em vez de mostrar um botao que nao faz nada.
+  bool get _ehAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  bool? _furaNaoPerturbe;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_ehAndroid) unawaited(_conferirNaoPerturbe());
+  }
+
+  Future<void> _conferirNaoPerturbe() async {
+    final pode = await PushNotificationService.instance.podeFurarNaoPerturbe;
+    if (mounted) setState(() => _furaNaoPerturbe = pode);
+  }
+
+  Future<void> _pedirNaoPerturbe() async {
+    await PushNotificationService.instance.solicitarPermissaoNaoPerturbe();
+    // Reconsulta em vez de confiar no retorno: o produtor pode ter voltado da
+    // tela do sistema sem concluir.
+    await _conferirNaoPerturbe();
+  }
 
   Future<void> _mudar(
     EventoNotificacao evento,
@@ -61,6 +90,80 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     );
   }
 
+  Widget _cartaoNaoPerturbe() {
+    final liberado = _furaNaoPerturbe == true;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: liberado
+              ? Colors.greenAccent.withValues(alpha: 0.3)
+              : Colors.amberAccent.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                liberado
+                    ? Icons.notifications_active_rounded
+                    : Icons.do_not_disturb_on_rounded,
+                color: liberado ? Colors.greenAccent : Colors.amberAccent,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Tocar no "Não perturbe"',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            liberado
+                ? 'Liberado. O aviso de incêndio toca como alarme mesmo com o '
+                      'celular no "Não perturbe".'
+                : 'Sem isso, o aviso de incêndio fica mudo enquanto o celular '
+                      'estiver no "Não perturbe" — justamente de madrugada.',
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+          if (!liberado) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _pedirNaoPerturbe,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.amberAccent,
+                  side: BorderSide(
+                    color: Colors.amberAccent.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: const Text('Liberar nas configurações'),
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          const Text(
+            'Isso não vence o modo silencioso do aparelho.',
+            style: TextStyle(color: Colors.white24, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,6 +194,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                     aoMudar: (nova, desligandoIncendio) =>
                         _mudar(evento, nova, desligandoIncendio),
                   ),
+                if (_ehAndroid) _cartaoNaoPerturbe(),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),

@@ -3,6 +3,10 @@
          adiciona INTERNET automaticamente em debug/profile). -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Permite que o canal de incendio toque mesmo com o aparelho em "Nao
+         perturbe". Ter a permissao no manifesto nao basta: o produtor precisa
+         liberar o app numa tela do sistema (ver PushNotificationService). -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <application
         android:label="Sentinela Smart"
         android:name="${applicationName}"

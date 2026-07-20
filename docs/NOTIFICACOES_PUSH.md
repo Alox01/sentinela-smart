@@ -166,8 +166,42 @@ a sirene física do aparelho continua sendo a rede de segurança independente.
    levam 1–2 min de silêncio normal. Para afinar sem regravar o servidor, use as
    variáveis `WATCHDOG_SILENCIO_MIN` e `WATCHDOG_VERIFICACAO_MIN` (em minutos);
    valor ausente ou inválido cai no padrão.
-5. **Ajustes finos:** som/prioridade diferentes para incêndio, link para abrir a
-   estufa certa no app, eventual exceção de preferência por estufa.
+5. ✅ **Som de alarme para incêndio — FEITO.** O alerta de incêndio precisa
+   acordar alguém às 3h da manhã, e o bipe padrão de notificação dura ~2s.
+
+   **O detalhe que decide tudo:** com o app fechado, o código Dart não roda —
+   quem desenha a notificação é o Android, usando **só o que está no canal**.
+   Então o que acorda o produtor é a configuração do canal, não o
+   `AndroidNotificationDetails`.
+
+   O canal `sentinela_critico_v2` usa som de 30s (`res/raw/alarme_estufa.wav`,
+   gerado por `estufa_app/tools/gerar_som_alarme.js`) com
+   `audioAttributesUsage: alarm` — toca no **volume de alarme**, não no de
+   notificação, que costuma ficar baixo. Mais vibração longa e `bypassDnd`.
+
+   **Por que `_v2`:** o Android congela som e importância de um canal já
+   criado. Manter o id antigo deixaria quem já tinha o app com o bipe curto
+   para sempre. O id é fixado por teste (`test/push.test.js`) porque um id
+   divergente entre app e servidor não gera erro nenhum — só tira o som,
+   calado.
+
+   **"Não perturbe":** `ACCESS_NOTIFICATION_POLICY` no manifesto **não basta**.
+   O produtor libera numa tela do sistema, pelo botão na tela de Notificações.
+   A permissão precisa vir **antes** de criar o canal, senão o Android ignora o
+   `bypassDnd` em silêncio — por isso `inicializar()` pede a permissão primeiro
+   e, quando o produtor libera depois, o canal é apagado e recriado. Em algumas
+   versões do Android o sistema restaura os ajustes do canal apagado; nesses
+   aparelhos pode ser preciso ligar na mão nas configurações.
+
+   **Não vence o modo silencioso** do aparelho — isso exigiria mexer no
+   `RingerMode`, o que o app não faz.
+6. **Alarme contínuo (não feito):** tocar sem parar até alguém apertar "parar",
+   como despertador. Exigiria mensagem só de dados, `fullScreenIntent`, tela
+   própria e serviço em primeiro plano — e no Android 14+ o recurso é restrito
+   a apps de chamada e despertador, com permissão à parte. Avaliado e adiado:
+   o som de 30s em volume de alarme resolve a maior parte do problema.
+7. **Ajustes finos:** link para abrir a estufa certa no app, eventual exceção
+   de preferência por estufa.
 
 ## Como ligar o push (configuração)
 

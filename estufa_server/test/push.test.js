@@ -1,7 +1,12 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { criarEnviadorPush, lerCredencial } = require('../push');
+const {
+  CANAL_ALERTAS,
+  CANAL_CRITICO,
+  criarEnviadorPush,
+  lerCredencial,
+} = require('../push');
 
 const CREDENCIAL_FALSA = {
   project_id: 'projeto-teste',
@@ -34,6 +39,17 @@ describe('lerCredencial', () => {
       }),
       null,
     );
+  });
+});
+
+// Os ids vivem em dois repositorios de codigo diferentes (aqui e no Dart, em
+// PushNotificationService). Nada em tempo de execucao liga os dois, entao o
+// valor literal fica fixado aqui: mudar de um lado quebra o teste e lembra de
+// mudar do outro.
+describe('ids dos canais', () => {
+  it('batem com os canais criados pelo app', () => {
+    assert.equal(CANAL_CRITICO, 'sentinela_critico_v2');
+    assert.equal(CANAL_ALERTAS, 'sentinela_alertas');
   });
 });
 
@@ -110,7 +126,9 @@ describe('criarEnviadorPush com credencial', () => {
     });
     const msg = sdk.chamadas.enviadas[0];
     assert.deepEqual(msg.tokens, ['a', 'b']);
-    assert.equal(msg.android.notification.channelId, 'sentinela_critico');
+    // Um id divergente do app nao da erro nenhum: a notificacao so perde o som
+    // de alarme, calada. Por isso o canal fica travado por teste.
+    assert.equal(msg.android.notification.channelId, 'sentinela_critico_v2');
     assert.equal(msg.android.priority, 'high');
     assert.equal(r.enviados, 2);
   });

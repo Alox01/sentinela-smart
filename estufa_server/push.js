@@ -7,6 +7,12 @@
 // funcionando. Ja aconteceu de um erro na inicializacao matar o processo no
 // boot - por isso a inicializacao inteira vive dentro de um try/catch.
 
+// Precisam ser identicos aos canais criados pelo app. Se divergirem, o Android
+// entrega a notificacao no canal padrao (ou descarta, dependendo da versao) e o
+// alerta perde o som de alarme sem erro nenhum aparecer.
+const CANAL_CRITICO = 'sentinela_critico_v2';
+const CANAL_ALERTAS = 'sentinela_alertas';
+
 function carregarSdk() {
   try {
     // API modular (firebase-admin v10+). O namespace antigo (admin.apps) foi
@@ -93,7 +99,13 @@ function criarEnviadorPush({
         android: {
           priority: critico ? 'high' : 'normal',
           notification: {
-            channelId: critico ? 'sentinela_critico' : 'sentinela_alertas',
+            // Com o app fechado quem desenha a notificacao e o Android, usando
+            // SO as configuracoes do canal - o codigo Dart nem roda. Entao e
+            // este id que decide se o alerta acorda alguem de madrugada.
+            // O `_v2` acompanha o app (PushNotificationService.canalCriticoId):
+            // o canal antigo tocava o bipe curto padrao, e o Android nao deixa
+            // reconfigurar um canal ja criado.
+            channelId: critico ? CANAL_CRITICO : CANAL_ALERTAS,
           },
         },
       });
@@ -114,4 +126,4 @@ function criarEnviadorPush({
   };
 }
 
-module.exports = { criarEnviadorPush, lerCredencial };
+module.exports = { CANAL_ALERTAS, CANAL_CRITICO, criarEnviadorPush, lerCredencial };

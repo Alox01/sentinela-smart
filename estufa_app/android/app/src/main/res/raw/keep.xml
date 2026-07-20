@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  O R8 remove recursos que nao aparecem citados no codigo Java/Kotlin. O som do
+  alerta e o icone da notificacao sao referenciados por NOME, do lado Dart, entao
+  o compilador nao os enxerga e os descartaria da build release - a notificacao
+  sairia muda, e so em release, que e justamente onde o produtor usa.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/alarme_estufa,@drawable/*,@mipmap/ic_launcher" />
