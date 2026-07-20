@@ -111,14 +111,15 @@ void main() {
   test('folga cobre so a distancia que a mudanca criou', () {
     final d = DetectorOscilacao();
     const t0 = 1000000;
-    // Leitura 90, ajuste vai de 90 para 100: a mudanca criou 10 de distancia.
+    // Leitura 90, ajuste vai de 90 para 96: a mudanca criou 6 de distancia.
+    // Abaixo do teto, para medir a proporcionalidade e nao o corte.
     d.registrarMudancaAjusteTemperatura(
       t0,
       leitura: 90,
       ajusteAnterior: 90,
-      ajusteNovo: 100,
+      ajusteNovo: 96,
     );
-    expect(d.folgaTemperatura(t0), 10);
+    expect(d.folgaTemperatura(t0), 6);
   });
 
   // Regressao do caso real: ESP ligou com 127 e ajuste 70 (alarme tocando).
@@ -155,7 +156,9 @@ void main() {
       ajusteAnterior: 90,
       ajusteNovo: 140,
     );
-    expect(d.folgaTemperatura(t0), 20);
+    // Criou 50 de distancia, mas o teto corta em 8: um salto enorme de ajuste
+    // nao pode cegar o alerta.
+    expect(d.folgaTemperatura(t0), 8);
   });
 
   test('fora da janela a folga zera', () {
@@ -181,12 +184,14 @@ void main() {
       ajusteNovo: 132,
     );
     // Dentro da janela a folga vale: e ela que o LED usa como limiar, e o
-    // aparelho como margem da sirene. Vencida a janela, some.
-    expect(d.folgaTemperatura(t0 + 4 * 60 * 1000), 15);
+    // aparelho como margem da sirene. Os 15 criados batem no teto de 8.
+    // Vencida a janela, some.
+    expect(d.folgaTemperatura(t0 + 4 * 60 * 1000), 8);
     expect(d.folgaTemperatura(t0 + 6 * 60 * 1000), 0);
 
+    // Diferenca 11, dentro da tolerancia (5) somada a folga (8).
     final evento = d.avaliarTemperatura(
-      leitura: 119,
+      leitura: 121,
       ajuste: 132,
       nowMs: t0 + 4 * 60 * 1000,
     );

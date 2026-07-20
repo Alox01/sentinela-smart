@@ -50,8 +50,8 @@ class DetectorOscilacao {
   static const int _tempoAcomodacaoAjusteMs = 5 * 60 * 1000;
   static const double _tolerancia = 5;
   // Teto da folga: um salto enorme de ajuste nao pode cegar o alerta por
-  // completo. 20 era o valor fixo antigo; agora e so o limite.
-  static const double _folgaAcomodacaoMaxima = 20;
+  // completo. Tem que bater com o firmware e o simulador.
+  static const double _folgaAcomodacaoMaxima = 8;
 
   final _EstadoGrandeza _temperatura = _EstadoGrandeza();
   final _EstadoGrandeza _umidade = _EstadoGrandeza();

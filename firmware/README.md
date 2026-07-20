@@ -71,7 +71,7 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   reinicia os 10 min — não religa a sirene na hora. Incêndio continua **não
   silenciável**.
 - **Acomodação de 5 min:** ao mudar o alvo, o aparelho perdoa por 5 minutos
-  **apenas a distância que a mudança criou** (teto de 20°F) — aproximar o alvo
+  **apenas a distância que a mudança criou** (teto de 8°F) — aproximar o alvo
   da leitura atual não perdoa nada. Serve para não alarmar enquanto a estufa
   percorre o caminho até o alvo novo. O tempo veio de medição na estufa real,
   que alcança um alvo 10–15°F acima em menos que isso; precisa ser **igual** ao

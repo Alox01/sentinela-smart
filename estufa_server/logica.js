@@ -12,7 +12,7 @@ const TEMPO_SILENCIO = 10 * 60 * 1000;
 // 5 min: medido na estufa real, que alcanca um alvo 10-15 F acima em menos que
 // isso. Janela maior so atrasaria o alerta de um desvio verdadeiro.
 const TEMPO_ACOMODACAO = 5 * 60 * 1000;
-const FOLGA_ACOMODACAO_MAX = 20;
+const FOLGA_ACOMODACAO_MAX = 8;
 
 // Tabela de referencia (o sistema sabe o nome das fases)
 const cicloDeCura = [
