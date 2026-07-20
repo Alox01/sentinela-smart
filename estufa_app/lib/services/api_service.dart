@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../features/notificacoes/services/push_notification_service.dart';
 import 'isar_service.dart';
 
 enum ApiCommandFailure {
@@ -155,7 +156,9 @@ class ApiService {
     if (idLido is String && idLido.isNotEmpty && idLido != idHardware) {
       idHardware = idLido;
       unawaited(
-        IsarService.instance.definirIdHardwarePorIp(ipOriginal, idLido),
+        IsarService.instance
+            .definirIdHardwarePorIp(ipOriginal, idLido)
+            .then((_) => PushNotificationService.instance.sincronizarEstufas()),
       );
     }
   }

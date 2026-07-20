@@ -1,14 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'features/notificacoes/services/preferencias_notificacao_service.dart';
+import 'features/notificacoes/services/push_notification_service.dart';
 import 'screens/home_screen.dart';
 import 'services/isar_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  registrarTratamentoPushEmSegundoPlano();
   runApp(const EstufaApp());
 }
 
@@ -57,8 +57,9 @@ class _BootstrapScreenState extends State<_BootstrapScreen> {
   Future<void> _inicializar() async {
     // Preferencias de notificacao: carrega cedo para o app ja respeitar os
     // interruptores; nao bloqueia o boot se falhar.
-    unawaited(PreferenciasNotificacaoService.instance.carregar());
+    await PreferenciasNotificacaoService.instance.carregar();
     await IsarService.instance.init().timeout(const Duration(seconds: 20));
+    await PushNotificationService.instance.inicializar();
   }
 
   void _tentarNovamente() {

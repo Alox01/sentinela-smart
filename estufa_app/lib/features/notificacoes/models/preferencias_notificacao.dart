@@ -1,9 +1,14 @@
 import 'dart:convert';
 
 /// Um evento que pode gerar aviso, com dois interruptores independentes:
-/// mostrar a mensagem e fazer o celular tocar/vibrar. Escopo global — as mesmas
-/// preferencias valem para todas as estufas.
-enum EventoNotificacao { alarmeProcesso, incendio, faltaEnergia, semComunicacao }
+/// mostrar a mensagem e fazer o celular tocar/vibrar. O escopo e global: as
+/// mesmas preferencias valem para todas as estufas.
+enum EventoNotificacao {
+  alarmeProcesso,
+  incendio,
+  faltaEnergia,
+  semComunicacao,
+}
 
 extension EventoNotificacaoInfo on EventoNotificacao {
   String get chave => switch (this) {
@@ -15,18 +20,16 @@ extension EventoNotificacaoInfo on EventoNotificacao {
 
   String get titulo => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Alarme de temperatura',
-    EventoNotificacao.incendio => 'Incêndio / chama',
+    EventoNotificacao.incendio => 'Inc\u00eandio / chama',
     EventoNotificacao.faltaEnergia => 'Falta de energia',
-    EventoNotificacao.semComunicacao => 'Sem comunicação',
+    EventoNotificacao.semComunicacao => 'Sem comunica\u00e7\u00e3o',
   };
 
   String get descricao => switch (this) {
-    EventoNotificacao.alarmeProcesso =>
-      'Temperatura fora da faixa do ajuste.',
+    EventoNotificacao.alarmeProcesso => 'Temperatura fora da faixa do ajuste.',
     EventoNotificacao.incendio =>
-      'Sensor de chama ou temperatura de incêndio. Crítico.',
-    EventoNotificacao.faltaEnergia =>
-      'O aparelho avisou que a energia caiu.',
+      'Sensor de chama ou temperatura de inc\u00eandio. Cr\u00edtico.',
+    EventoNotificacao.faltaEnergia => 'O aparelho avisou que a energia caiu.',
     EventoNotificacao.semComunicacao =>
       'A estufa parou de reportar (pode ser luz ou internet).',
   };
@@ -90,9 +93,12 @@ class PreferenciasNotificacao {
     return PreferenciasNotificacao({...porEvento, evento: opcao});
   }
 
-  String toJsonString() => jsonEncode({
-    for (final entry in porEvento.entries) entry.key.chave: entry.value.toJson(),
-  });
+  Map<String, dynamic> toJson() => {
+    for (final entry in porEvento.entries)
+      entry.key.chave: entry.value.toJson(),
+  };
+
+  String toJsonString() => jsonEncode(toJson());
 
   factory PreferenciasNotificacao.fromJsonString(String? texto) {
     if (texto == null || texto.isEmpty) return PreferenciasNotificacao.padrao();
