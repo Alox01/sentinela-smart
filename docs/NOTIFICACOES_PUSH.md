@@ -134,11 +134,15 @@ a sirene física do aparelho continua sendo a rede de segurança independente.
 
 ## Fases sugeridas
 
-1. **Preferências (local, sem FCM):** tela "Notificações" no menu com a matriz
-   global de toggles (notificar × tocar/vibrar por evento), persistida local, e o
-   app aberto já respeitando-a (banner/som/vibração). Aviso de segurança no
-   incêndio. Também melhorar o texto do indicador `OFFLINE` para a mensagem de
-   causa incerta.
+1. ✅ **Preferências (local, sem FCM) — FEITO.** Tela "Notificações" no menu da
+   estufa com a matriz global (notificar × tocar/vibrar por evento), persistida
+   com `shared_preferences`, carregada no boot. Confirmação ao desligar incêndio.
+   Código em `estufa_app/lib/features/notificacoes/`
+   (`models/preferencias_notificacao.dart`, `services/…_service.dart` singleton
+   `PreferenciasNotificacaoService.instance`, `screens/notificacoes_screen.dart`).
+   **Ainda falta desta fase:** som/vibração e supressão de banner com o app
+   aberto respeitando os toggles — entra junto da Fase 3 (hoje o app só mostra
+   banner visual, não toca som). E o texto de "causa incerta" no `OFFLINE`.
 2. **Base FCM:** projeto Firebase, `firebase_messaging`, canais de notificação
    Android por evento, registro de token e um push de teste manual (endpoint
    `POST /notificar-teste`).
@@ -148,6 +152,29 @@ a sirene física do aparelho continua sendo a rede de segurança independente.
    de retorno (mensagem de causa incerta).
 5. **Ajustes finos:** som/prioridade diferentes para incêndio, link para abrir a
    estufa certa no app, eventual exceção de preferência por estufa.
+
+## Retomada — o que fazer para a Fase 2 (base FCM)
+
+**Bloqueio:** precisa dos dois arquivos do Firebase (o autor já os tem). Handling
+seguro — **nunca colar o service-account no chat** (é chave privada):
+
+1. `google-services.json` → colocar em
+   `estufa_app/android/app/google-services.json` (já no `.gitignore`; o build lê
+   sozinho, não precisa ler o conteúdo).
+2. service-account JSON → **não** vai ao Git. Vira variável de ambiente no Render
+   (ex.: `FIREBASE_SERVICE_ACCOUNT` com o JSON inteiro), lida pelo servidor. O
+   código a escrever deve ler dessa env (com fallback para arquivo local
+   gitignored em dev).
+
+**Passos de código da Fase 2:**
+- App: adicionar `firebase_messaging` + plugin gradle `google-services`; pedir
+  permissão `POST_NOTIFICATIONS` (Android 13+); registrar o token FCM na nuvem
+  (`POST /dispositivos` com token + estufas acompanhadas); criar canais Android
+  por evento.
+- Servidor: dependência de envio FCM (ex.: `firebase-admin`); tabela
+  `dispositivos_push` (token, estufas, updated_at) + `estado_notificado` por
+  estufa para debounce; rota `POST /dispositivos` e `POST /notificar-teste`.
+- Verificar com um push de teste manual antes de ligar os gatilhos (Fase 3/4).
 
 ## Estado atual no app
 

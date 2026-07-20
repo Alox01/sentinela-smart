@@ -65,15 +65,16 @@ flash / 15% RAM no core esp32 3.2.0)
 
 1. **🔴 Notificações push (FCM) — a peça central que falta.** É o Objetivo
    Específico #4 da proposta assinada e o resultado marcado como "principalmente"
-   (avisar incêndio e interrupção/falta de energia com o app fechado). Plano
-   completo em `NOTIFICACOES_PUSH.md` (5 fases, watchdog de silêncio, matriz de
-   preferências por evento). **Bloqueio:** depende de criar um projeto Firebase
-   (conta Google do autor) + `google-services.json`. Fatível 100% em software:
-   incêndio vem do push do aparelho; "parou de reportar" vem de um watchdog na
-   nuvem (cobre luz e internet).
-2. **Matriz de preferências de notificação** (Fase 1 do doc acima): tela no menu,
-   toggles notificar × tocar/vibrar por evento, respeitados com o app aberto.
-   Não depende do Firebase — pode vir antes.
+   (avisar incêndio e interrupção/falta de energia com o app fechado).
+   - ✅ **Fase 1 feita:** tela de preferências (matriz notificar × tocar/vibrar
+     por evento), em `estufa_app/lib/features/notificacoes/`. Menu da estufa →
+     "Notificações". Persistida com `shared_preferences`.
+   - ⏳ **Fases 2–4 pendentes** e **bloqueadas** pelos dois arquivos do Firebase
+     (o autor já os tem). Passos exatos de retomada e o handling seguro dos
+     segredos estão em `NOTIFICACOES_PUSH.md` → seção "Retomada".
+   - **Regra de segurança:** o `google-services.json` vai em
+     `estufa_app/android/app/` (gitignored); o **service-account nunca entra no
+     Git nem no chat** — vira env var no Render (padrão do `DB_SSL_CA`).
 
 ## Bloqueado por hardware (trabalho futuro honesto — ver §6.2 do outline)
 
