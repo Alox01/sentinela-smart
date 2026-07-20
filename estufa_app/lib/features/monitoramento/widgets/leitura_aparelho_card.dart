@@ -9,9 +9,12 @@ class LeituraAparelhoCard extends StatelessWidget {
   final double temperaturaAjuste;
   final double umidadeAjuste;
   final bool sireneLigada;
-  // Folga extra vigente da acomodacao (0 fora da janela), proporcional ao
-  // tamanho da mudanca de ajuste.
-  final double folgaTemperatura;
+  /// Veredito do APARELHO sobre a temperatura: 'alta', 'baixa' ou 'ok'. O app
+  /// nao recalcula - a borda e a fonte da verdade, e assim a sirene e o LED
+  /// nunca aparecem em desacordo na tela.
+  final String estadoTemperaturaAparelho;
+  // A umidade segue calculada aqui: o aparelho nao opina sobre ela (e ela nao
+  // aciona a sirene), entao nao ha veredito para espelhar.
   final double folgaUmidade;
   final VoidCallback onSilenciarAlarme;
 
@@ -22,7 +25,7 @@ class LeituraAparelhoCard extends StatelessWidget {
     required this.temperaturaAjuste,
     required this.umidadeAjuste,
     required this.sireneLigada,
-    this.folgaTemperatura = 0,
+    this.estadoTemperaturaAparelho = 'ok',
     this.folgaUmidade = 0,
     required this.onSilenciarAlarme,
   });
@@ -100,14 +103,8 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'TEMPERATURA',
                       icone: Icons.thermostat,
                       corIcone: Colors.orangeAccent,
-                      alta:
-                          temperatura >
-                          temperaturaAjuste +
-                              _limiarLed(folgaTemperatura),
-                      baixa:
-                          temperatura <
-                          temperaturaAjuste -
-                              _limiarLed(folgaTemperatura),
+                      alta: estadoTemperaturaAparelho == 'alta',
+                      baixa: estadoTemperaturaAparelho == 'baixa',
                     ),
                   ),
                   const VerticalDivider(color: Colors.white10, thickness: 1),

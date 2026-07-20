@@ -64,6 +64,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
 
   bool isFire = false;
   bool sireneLigada = false;
+  // Veredito do proprio aparelho sobre a temperatura (o app nao emite um
+  // segundo parecer: a borda e a fonte da verdade). 'orange' alta, 'purple'
+  // baixa, 'green' ok, 'red' fogo.
+  String _corStatusAparelho = 'green';
   int _pendenciasSincronizacao = 0;
   bool _sincronizandoPendencias = false;
   // Comeca em CONECTANDO: antes da 1a resposta nao da para afirmar que esta
@@ -239,6 +243,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       umidAjuste = _umidAjustePendente ?? novoUmidAjuste;
       avisoEmergencia = novoAviso;
       sireneLigada = novaSireneLigada;
+      _corStatusAparelho = (status['corStatus'] ?? 'green').toString();
       isFire = fogoDetectado;
       _semEnergia = !novoTemEnergia;
       // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
@@ -308,7 +313,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final isSuperaquecimentoNaoIntencional =
         temperatura >= 165.0 && temperatura > (tempAjuste + 2.0);
     final agoraLedMs = DateTime.now().millisecondsSinceEpoch;
-    final folgaTemp = _detectorOscilacao.folgaTemperatura(agoraLedMs);
     final folgaUmid = _detectorOscilacao.folgaUmidade(agoraLedMs);
 
     return Scaffold(
@@ -381,7 +385,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                   temperaturaAjuste: tempAjuste,
                   umidadeAjuste: umidAjuste,
                   sireneLigada: sireneLigada,
-                  folgaTemperatura: folgaTemp,
+                  estadoTemperaturaAparelho: _estadoTemperaturaAparelho(),
                   folgaUmidade: folgaUmid,
                   onSilenciarAlarme: api.silenciarAlarme,
                 ),
@@ -611,6 +615,23 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         ],
       ),
     );
+  }
+
+  /// Traduz o veredito do aparelho para o indicador de temperatura. Assim a
+  /// sirene e o LED nunca se contradizem: os dois saem da mesma decisao.
+  String _estadoTemperaturaAparelho() {
+    switch (_corStatusAparelho) {
+      case 'orange':
+        return 'alta';
+      case 'purple':
+        return 'baixa';
+      case 'red':
+        // Fogo: o alarme e quem manda na tela, mas ainda vale mostrar o lado
+        // em que a temperatura esta.
+        return temperatura > tempAjuste ? 'alta' : 'ok';
+      default:
+        return 'ok';
+    }
   }
 
   // Ambar, nao vermelho: nao e falha, e espera. O ajuste na tela ja e o novo,
