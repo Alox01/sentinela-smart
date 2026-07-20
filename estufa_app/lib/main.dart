@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'features/notificacoes/services/preferencias_notificacao_service.dart';
 import 'screens/home_screen.dart';
 import 'services/isar_service.dart';
 
@@ -51,8 +54,11 @@ class _BootstrapScreenState extends State<_BootstrapScreen> {
     _initFuture = _inicializar();
   }
 
-  Future<void> _inicializar() {
-    return IsarService.instance.init().timeout(const Duration(seconds: 20));
+  Future<void> _inicializar() async {
+    // Preferencias de notificacao: carrega cedo para o app ja respeitar os
+    // interruptores; nao bloqueia o boot se falhar.
+    unawaited(PreferenciasNotificacaoService.instance.carregar());
+    await IsarService.instance.init().timeout(const Duration(seconds: 20));
   }
 
   void _tentarNovamente() {

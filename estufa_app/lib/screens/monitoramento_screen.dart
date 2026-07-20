@@ -10,6 +10,7 @@ import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
+import '../features/notificacoes/screens/notificacoes_screen.dart';
 import '../models/ciclo_secagem_entity.dart';
 import '../services/api_service.dart';
 import '../services/isar_service.dart';
@@ -470,6 +471,28 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               onTap: () {
                 Navigator.of(context).pop();
                 _mostrarDetalhesConexao();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.notifications_active_outlined,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Notificações',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: const Text(
+                'O que avisar e o que faz o celular tocar',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const NotificacoesScreen(),
+                  ),
+                );
               },
             ),
             ListTile(
