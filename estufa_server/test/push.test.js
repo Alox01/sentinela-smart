@@ -50,3 +50,91 @@ describe('criarEnviadorPush sem credencial', () => {
     assert.deepEqual(r.invalidos, []);
   });
 });
+
+// SDK falso com a mesma forma da API modular do firebase-admin. Estes testes
+// existem porque a versao anterior usava a API antiga (admin.apps), quebrava no
+// boot e derrubava o servidor - e os testes de entao so cobriam o caminho SEM
+// credencial, entao nao pegaram nada.
+function sdkFalso({ falharInit = false, respostaEnvio } = {}) {
+  const chamadas = { init: 0, enviadas: [] };
+  return {
+    chamadas,
+    getApps: () => [],
+    cert: (c) => ({ cert: c }),
+    initializeApp: () => {
+      chamadas.init++;
+      if (falharInit) throw new Error('credencial recusada');
+    },
+    getMessaging: () => ({
+      async sendEachForMulticast(msg) {
+        chamadas.enviadas.push(msg);
+        return (
+          respostaEnvio ?? {
+            successCount: msg.tokens.length,
+            responses: msg.tokens.map(() => ({})),
+          }
+        );
+      },
+    }),
+  };
+}
+
+describe('criarEnviadorPush com credencial', () => {
+  const env = { FIREBASE_SERVICE_ACCOUNT: JSON.stringify(CREDENCIAL_FALSA) };
+  const silencioso = { log() {}, error() {} };
+
+  it('inicializa e habilita o envio', () => {
+    const sdk = sdkFalso();
+    const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+    assert.equal(enviador.habilitado, true);
+    assert.equal(sdk.chamadas.init, 1);
+  });
+
+  it('uma falha ao inicializar desabilita, nao derruba o servidor', () => {
+    const sdk = sdkFalso({ falharInit: true });
+    assert.doesNotThrow(() => {
+      const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+      assert.equal(enviador.habilitado, false);
+    });
+  });
+
+  it('envia com o canal certo e sem tokens repetidos', async () => {
+    const sdk = sdkFalso();
+    const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+    const r = await enviador.enviar({
+      tokens: ['a', 'a', 'b', null],
+      titulo: 'Fogo',
+      corpo: 'Verifique',
+      evento: 'incendio',
+      critico: true,
+    });
+    const msg = sdk.chamadas.enviadas[0];
+    assert.deepEqual(msg.tokens, ['a', 'b']);
+    assert.equal(msg.android.notification.channelId, 'sentinela_critico');
+    assert.equal(msg.android.priority, 'high');
+    assert.equal(r.enviados, 2);
+  });
+
+  it('devolve os tokens que o FCM diz nao existirem mais', async () => {
+    const sdk = sdkFalso({
+      respostaEnvio: {
+        successCount: 1,
+        responses: [
+          {},
+          { error: { code: 'messaging/registration-token-not-registered' } },
+        ],
+      },
+    });
+    const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+    const r = await enviador.enviar({ tokens: ['bom', 'morto'], titulo: 't', corpo: 'c' });
+    assert.deepEqual(r.invalidos, ['morto']);
+  });
+
+  it('sem tokens nao chama o FCM', async () => {
+    const sdk = sdkFalso();
+    const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+    const r = await enviador.enviar({ tokens: [], titulo: 't', corpo: 'c' });
+    assert.equal(r.enviados, 0);
+    assert.equal(sdk.chamadas.enviadas.length, 0);
+  });
+});
