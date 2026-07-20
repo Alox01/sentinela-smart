@@ -137,7 +137,7 @@ class PushNotificationService {
       final resposta = await http
           .post(
             uri,
-            headers: _headersJson(),
+            headers: _headersJson(estufa.tokenAcesso),
             body: jsonEncode({
               'tokenPush': token,
               'idHardware': idHardware,
@@ -173,7 +173,7 @@ class PushNotificationService {
       await http
           .delete(
             uri,
-            headers: _headersJson(),
+            headers: _headersJson(estufa.tokenAcesso),
             body: jsonEncode({'tokenPush': token, 'idHardware': idHardware}),
           )
           .timeout(const Duration(seconds: 8));
@@ -188,11 +188,21 @@ class PushNotificationService {
     return Uri.tryParse('${base.replaceFirst(RegExp(r'/+$'), '')}$caminho');
   }
 
-  Map<String, String> _headersJson() => {
-    'Content-Type': 'application/json',
-    if (_apiToken.trim().isNotEmpty)
-      'Authorization': 'Bearer ${_apiToken.trim()}',
-  };
+  /// A chave da propria estufa vem primeiro: e ela que o produtor cadastra no
+  /// app e que o servidor espera. O token de build (`--dart-define`) e so
+  /// fallback - so com ele o registro ia sem autenticacao e levava 401 calado.
+  Map<String, String> _headersJson([String? tokenEstufa]) {
+    final token = (tokenEstufa?.trim().isNotEmpty ?? false)
+        ? tokenEstufa!.trim()
+        : _apiToken.trim();
+    return {
+      'Content-Type': 'application/json',
+      if (token.isNotEmpty) ...{
+        'Authorization': 'Bearer $token',
+        'X-Device-Token': token,
+      },
+    };
+  }
 
   Future<void> _mostrarMensagemEmPrimeiroPlano(RemoteMessage mensagem) async {
     final evento = _eventoDaMensagem(mensagem);
