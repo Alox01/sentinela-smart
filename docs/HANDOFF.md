@@ -108,8 +108,15 @@ validação em campo e a escrita.
   é sempre `true` no firmware. O watchdog de silêncio cobre o caso genérico.
 - **Controle de ventoinha / agendamento (menu Fase B):** exige relé no aparelho.
 - **Sensor DHT22 novo:** o atual queimou (inversão de polaridade).
-- **Modo de configuração Wi-Fi por AP** (`Sentinela-Config`): trocar rede/chave
-  sem regravar. Software (firmware), mas trabalhoso; defensável como futuro.
+
+## Trabalho futuro de software (não bloqueado, decidido não fazer)
+
+- **Modo de configuração Wi-Fi por AP** (`Sentinela-Config`): hoje o SSID e a
+  senha são constantes no `.ino`, então trocar de roteador exige regravar o
+  firmware. É a limitação mais visível para quem usa, e não fazia parte dos
+  objetivos da proposta. O mDNS e a reserva de DHCP cobrem o caso frequente
+  (mudança de IP); o que exige regravar (SSID/senha) muda raramente. Análise
+  completa e fluxo planejado em `CONFIGURACAO_ESP32.md`.
 
 ## Desvios em relação à proposta (avisar o orientador)
 

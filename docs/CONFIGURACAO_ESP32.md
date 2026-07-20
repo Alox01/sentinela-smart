@@ -50,23 +50,32 @@ Comportamento do firmware atual (montagem de referencia):
 - **Sem atuacao real:** LEDs + buzzer apenas; sem reles para aquecedor/ventilador
   (coerente com "hardware e projeto complementar").
 
-### Lacuna de integracao (importante)
+### Estado da integracao (concluida)
 
-O firmware atual e **autonomo e offline**: nao tem Wi-Fi, servidor HTTP, JSON,
-token nem persistencia de configuracao (o alvo volta a 76 F a cada boot). Ou
-seja, ele **ainda nao fala com o app/nuvem**. Toda a camada de conectividade que
-o app espera — rotas `/status`, `/dados`, `/sincronizar`, `/leitura`, o contrato
-JSON e o cabecalho `X-Device-Token` — precisa ser adicionada a este firmware
-para a integracao acontecer. O app foi validado contra o simulador, que ja fala
-esse contrato; este e o principal trabalho quando o aparelho chegar.
+> Esta secao descrevia uma lacuna que **nao existe mais**. O firmware
+> (v1.8.0) fala o contrato completo do app: rotas `/status`, `/dados`,
+> `/sincronizar`, o JSON de `CONTRATO_API.md`, o cabecalho `X-Device-Token`,
+> o push de leituras para a nuvem e a busca de comandos remotos. A
+> configuracao **persiste em NVS/`Preferences`** — o alvo nao volta mais ao
+> padrao a cada boot. Validado em hardware real.
 
-Pontos a alinhar entre firmware e servidor/app:
+Diferencas que permanecem entre o aparelho e o simulador, de proposito ou por
+decidir — vale citar no TCC em vez de fingir que nao existem:
 
-- alvo padrao (firmware 76 F x app 90 F na nova estufada);
-- margem/tolerancia (firmware +/- 8 F x servidor +/- 5 F);
-- deteccao de incendio (firmware: sensor de luz binario x servidor:
-  temperatura > 175 F ou sensor de chama);
-- persistir a configuracao no ESP32 (NVS/Preferences) para nao resetar no boot.
+| Ponto | Aparelho | Simulador/servidor |
+|---|---|---|
+| Margem do alarme de temperatura | +/- 8 F | +/- 5 F |
+| Alvo inicial (antes do 1o ajuste) | 76 F | 90 F na nova estufada |
+| Deteccao de incendio | sensor de luz + temp > 175 F | temp > 175 F ou sensor de chama |
+
+A margem diferente e a divergencia mais relevante: o aparelho tolera mais antes
+de tocar a sirene do que o simulador. Como o app passou a **espelhar o estado
+que o aparelho reporta** (em vez de recalcular por conta propria), isso nao
+gera mais contradicao na tela — mas o simulador continua sendo um pouco mais
+sensivel que o equipamento real.
+
+O alvo inicial so aparece antes do primeiro ajuste: depois disso o valor vem do
+NVS, inclusive apos queda de energia.
 
 ## Estrategia de rede
 
@@ -125,12 +134,33 @@ funcionar de forma consistente. Por isso, ele é um facilitador, não a única
 forma de conexão: o IP exibido no Monitor Serial continua sendo a alternativa.
 O mDNS funciona apenas na mesma rede local e não fornece acesso pela internet.
 
-## Modo de configuracao
+## Modo de configuracao — **nao implementado** (trabalho futuro)
 
-O ESP32 deve ter um modo de configuracao para recuperar ou alterar dados sem
-reenviar firmware.
+> **Status:** planejado, nao feito. Hoje `WIFI_SSID` e `WIFI_PASS` sao
+> constantes no `.ino`: trocar de roteador, mudar a senha ou levar o aparelho
+> para outra propriedade **exige regravar o firmware**, com computador e cabo.
 
-Fluxo sugerido:
+Essa e a limitacao mais visivel do projeto para quem usa, e vale reconhece-la no
+TCC: um sistema que argumenta autonomia em ambiente rural nao deveria depender
+de um tecnico a cada troca de roteador.
+
+O que **hoje** reduz o problema (e por isso ela nao bloqueia o uso):
+
+- **mDNS** (`sentinela-XXXXXX.local`, ja implementado) mantem o aparelho
+  encontravel mesmo quando o DHCP muda o IP — que e a causa mais comum de
+  "sumiu do app" depois de uma queda de energia;
+- **reserva de DHCP no roteador** resolve o endereco de forma definitiva quando
+  ha acesso a ele;
+- a chave de acesso e configurada **pelo app**, por estufa, e nao exige tocar no
+  firmware.
+
+Ou seja: o que muda com frequencia (IP) ja esta coberto; o que exige regravar
+(SSID/senha) muda raramente. O custo de implementar o modo AP e moderado — a
+metade dificil ja existe, porque o NVS e o `WebServer` estao no firmware — mas
+consome espaco de flash (o binario ja ocupa 84%) e nao fazia parte dos
+objetivos da proposta.
+
+Fluxo planejado, para quem retomar:
 
 1. Ao segurar um botao fisico durante a inicializacao, o ESP32 entra em modo de
    configuracao.
@@ -201,10 +231,21 @@ Esta solucao combina com a proposta hibrida porque:
 
 ## Tarefas futuras
 
-- Implementar modo de configuracao no firmware do ESP32.
-- Salvar Wi-Fi, IP, nome e chave em memoria persistente.
-- Adicionar botao fisico ou combinacao de botoes para entrar no modo de
-  configuracao.
-- Testar DHCP reservado, IP fixo e o mDNS já implementado no firmware.
-- Validar reconexao depois de queda de energia.
-- Alinhar endpoints finais entre app, simulador e ESP32.
+Pendentes:
+
+- Implementar o modo de configuracao por AP (`Sentinela-Config`) e a pagina em
+  `192.168.4.1`.
+- Salvar **Wi-Fi, IP e nome** em memoria persistente — o NVS ja e usado para os
+  ajustes de temperatura/umidade, entao o mecanismo esta pronto; falta so
+  gravar tambem as credenciais.
+- Adicionar a combinacao de botoes para entrar no modo de configuracao.
+- Testar DHCP reservado e IP fixo em campo.
+
+Concluidas:
+
+- ~~Alinhar endpoints finais entre app, simulador e ESP32~~ — feito, contrato
+  unico em `CONTRATO_API.md`.
+- ~~mDNS no firmware~~ — feito (v1.2.0).
+- ~~Persistir a configuracao para nao resetar no boot~~ — feito (v1.6.0, NVS).
+- ~~Validar reconexao depois de queda de energia~~ — o firmware reconecta
+  sozinho; falta apenas repetir a medicao com a versao atual.
