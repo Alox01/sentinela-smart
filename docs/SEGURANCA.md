@@ -27,9 +27,14 @@ O ESP32 opera normalmente na rede Wi-Fi da propriedade. O servidor em nuvem pode
 ### Banco de dados
 
 - As consultas SQL usam parametros, reduzindo o risco de injecao de SQL.
-- A conexao PostgreSQL valida o certificado TLS por padrao.
-- `DB_SSL=false` deve ser usado apenas em ambiente controlado.
-- Um certificado personalizado pode ser fornecido em `DB_SSL_CA`.
+- A conexao PostgreSQL e sempre cifrada. A **validacao** do certificado exige
+  o CA em `DB_SSL_CA`: o pooler do Supabase usa certificado proprio e reprova a
+  validacao contra CAs publicas (verificado em teste real — exigir validacao
+  sem o CA derrubava toda a persistencia). Sem `DB_SSL_CA`, o servidor cifra
+  sem validar e registra um aviso no log.
+- Para ativar a validacao completa: painel do Supabase → Settings → Database →
+  SSL → baixar o certificado e colar o PEM na variavel `DB_SSL_CA` do Render.
+- `DB_SSL=false` desliga o TLS e deve ser usado apenas em ambiente controlado.
 
 ### Aplicativo
 

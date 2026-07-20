@@ -8,15 +8,26 @@ try {
 
 const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || '';
 
-function criarConfigSsl() {
-  if ((process.env.DB_SSL ?? '').trim().toLowerCase() === 'false') {
+function criarConfigSsl(env = process.env) {
+  if ((env.DB_SSL ?? '').trim().toLowerCase() === 'false') {
     return false;
   }
 
-  const ca = (process.env.DB_SSL_CA ?? '').replace(/\\n/g, '\n').trim();
-  return ca
-    ? { rejectUnauthorized: true, ca }
-    : { rejectUnauthorized: true };
+  const ca = (env.DB_SSL_CA ?? '').replace(/\\n/g, '\n').trim();
+  if (ca) {
+    return { rejectUnauthorized: true, ca };
+  }
+
+  // Sem CA nao da para validar a cadeia: o pooler do Supabase usa certificado
+  // proprio, e exigir validacao aqui derrubava TODA a persistencia (testado:
+  // "self-signed certificate in certificate chain"). A conexao segue cifrada;
+  // para validar de verdade, baixe o CA do painel do Supabase (Settings >
+  // Database > SSL) e cole o PEM em DB_SSL_CA.
+  console.warn(
+    'DB_SSL_CA nao configurado: conexao com o banco cifrada, mas sem validar ' +
+      'o certificado. Configure DB_SSL_CA para validacao completa.',
+  );
+  return { rejectUnauthorized: false };
 }
 
 const pool = Pool && connectionString
@@ -513,6 +524,7 @@ module.exports = {
   salvarConfiguracaoSnapshot,
   salvarSnapshot,
   __testables: {
+    criarConfigSsl,
     normalizarFonteLeitura,
     normalizarIpLocal,
     normalizarTipoDispositivo,

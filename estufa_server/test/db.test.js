@@ -44,3 +44,22 @@ describe('database device normalization', () => {
     assert.equal(normalizarIpLocal({}), null);
   });
 });
+
+describe('database TLS options', () => {
+  it('valida a cadeia quando um CA e fornecido', () => {
+    const config = __testables.criarConfigSsl({ DB_SSL_CA: 'PEM AQUI' });
+    assert.equal(config.rejectUnauthorized, true);
+    assert.equal(config.ca, 'PEM AQUI');
+  });
+
+  it('sem CA cifra sem validar, em vez de derrubar a persistencia', () => {
+    // Exigir validacao sem CA quebrava TODA a gravacao: o pooler do Supabase
+    // nao passa na cadeia publica (verificado empiricamente).
+    const config = __testables.criarConfigSsl({});
+    assert.equal(config.rejectUnauthorized, false);
+  });
+
+  it('DB_SSL=false desliga o TLS por completo', () => {
+    assert.equal(__testables.criarConfigSsl({ DB_SSL: 'false' }), false);
+  });
+});
