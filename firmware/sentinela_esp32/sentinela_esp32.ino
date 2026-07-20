@@ -328,10 +328,10 @@ void iniciarMdns() {
   Serial.println(".local");
 }
 
-// Empurra a leitura atual para a nuvem (POST /leitura). O servidor em
-// MODO_RECEPTOR usa isso para o /status remoto refletir o aparelho real, em vez
-// de simular. Bloqueia o loop por ~1-2 s durante o handshake HTTPS; como so roda
-// a cada PUSH_INTERVAL_MS, nao atrapalha o controle local.
+// Empurra a leitura atual para a nuvem (POST /leitura), que guarda o estado ao
+// vivo por aparelho para o /status remoto refletir este ESP em vez do simulador.
+// Bloqueia o loop por ~1-2 s durante o handshake HTTPS; como so roda a cada
+// PUSH_INTERVAL_MS, nao atrapalha o controle local.
 void empurrarLeituraNuvem() {
   if (strlen(CLOUD_URL) == 0) return;
   if (WiFi.status() != WL_CONNECTED) return;
