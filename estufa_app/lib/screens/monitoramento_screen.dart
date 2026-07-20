@@ -88,7 +88,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // Comando aceito pela nuvem mas ainda nao obedecido pelo aparelho. O valor na
   // tela ja e o novo, entao sem este aviso o produtor acha que a estufa mudou.
   bool _aguardandoAparelho = false;
-  final DetectorOscilacao _detectorOscilacao = DetectorOscilacao();
+  DetectorOscilacao get _detectorOscilacao => _monitor.detectorOscilacao;
   final RastreadorConexao _rastreadorConexao = RastreadorConexao();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _sugestaoFimCicloExibida = false;
@@ -181,11 +181,17 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final agoraAjusteMs = DateTime.now().millisecondsSinceEpoch;
     if (ajusteTempAnterior != null &&
         (novoTempAjuste - ajusteTempAnterior).abs() > 0.5) {
-      _detectorOscilacao.registrarMudancaAjusteTemperatura(agoraAjusteMs);
+      _detectorOscilacao.registrarMudancaAjusteTemperatura(
+        agoraAjusteMs,
+        deslocamento: novoTempAjuste - ajusteTempAnterior,
+      );
     }
     if (ajusteUmidAnterior != null &&
         (novoUmidAjuste - ajusteUmidAnterior).abs() > 0.5) {
-      _detectorOscilacao.registrarMudancaAjusteUmidade(agoraAjusteMs);
+      _detectorOscilacao.registrarMudancaAjusteUmidade(
+        agoraAjusteMs,
+        deslocamento: novoUmidAjuste - ajusteUmidAnterior,
+      );
     }
     final deveSugerirFimCiclo =
         _cicloAtual != null &&
@@ -298,10 +304,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final isSuperaquecimentoNaoIntencional =
         temperatura >= 165.0 && temperatura > (tempAjuste + 2.0);
     final agoraLedMs = DateTime.now().millisecondsSinceEpoch;
-    final tempEmAcomodacao = _detectorOscilacao.temperaturaEmAcomodacao(
-      agoraLedMs,
-    );
-    final umidEmAcomodacao = _detectorOscilacao.umidadeEmAcomodacao(agoraLedMs);
+    final folgaTemp = _detectorOscilacao.folgaTemperatura(agoraLedMs);
+    final folgaUmid = _detectorOscilacao.folgaUmidade(agoraLedMs);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -373,8 +377,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                   temperaturaAjuste: tempAjuste,
                   umidadeAjuste: umidAjuste,
                   sireneLigada: sireneLigada,
-                  temperaturaEmAcomodacao: tempEmAcomodacao,
-                  umidadeEmAcomodacao: umidEmAcomodacao,
+                  folgaTemperatura: folgaTemp,
+                  folgaUmidade: folgaUmid,
                   onSilenciarAlarme: api.silenciarAlarme,
                 ),
                 const SizedBox(height: 25),

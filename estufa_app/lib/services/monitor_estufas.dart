@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../features/monitoramento/services/detector_oscilacao.dart';
 import 'api_service.dart';
 
 /// Uma leitura ja resolvida, do jeito que as telas precisam consumir.
@@ -40,6 +41,11 @@ class EstufaMonitor extends ChangeNotifier {
   final ApiService api;
   final Duration intervalo;
   final Future<Map<String, dynamic>?> Function() _buscar;
+
+  /// Vive aqui, e nao na tela, porque a janela de acomodacao precisa sobreviver
+  /// a sair e voltar do monitoramento: antes o detector nascia junto com a tela
+  /// e a acomodacao era perdida, fazendo o alerta reacender sozinho.
+  final DetectorOscilacao detectorOscilacao = DetectorOscilacao();
 
   LeituraAoVivo? _ultima;
   Timer? _timer;

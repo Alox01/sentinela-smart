@@ -42,7 +42,8 @@ void main() {
 
   test('acomodacao apos mudar o ajuste suprime o nivel de atencao', () {
     final d = DetectorOscilacao();
-    d.registrarMudancaAjusteTemperatura(0); // acomodacao ate 20 min
+    // O ajuste andou 10: e essa mudanca que justifica perdoar um desvio de 10.
+    d.registrarMudancaAjusteTemperatura(0, deslocamento: 10);
     expect(d.temperaturaEmAcomodacao(10 * min), isTrue);
     expect(d.temperaturaEmAcomodacao(21 * min), isFalse);
 
@@ -101,5 +102,55 @@ void main() {
     expect(ev, isNotNull);
     expect(ev!.tipo, 'oscilacao_umidade');
     expect(ev.descricao, contains('%'));
+  });
+  test('folga da acomodacao acompanha o tamanho da mudanca', () {
+    final d = DetectorOscilacao();
+    const t0 = 1000000;
+
+    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 1);
+    expect(d.folgaTemperatura(t0), 1);
+
+    final d2 = DetectorOscilacao();
+    d2.registrarMudancaAjusteTemperatura(t0, deslocamento: -25);
+    // Teto: um salto enorme nao cega o alerta por completo.
+    expect(d2.folgaTemperatura(t0), 20);
+  });
+
+  test('fora da janela a folga zera', () {
+    final d = DetectorOscilacao();
+    const t0 = 1000000;
+    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 10);
+    expect(d.folgaTemperatura(t0 + 21 * 60 * 1000), 0);
+  });
+
+  test('desvio maior que a folga nao e suprimido pela acomodacao', () {
+    final d = DetectorOscilacao();
+    const t0 = 1000000;
+    // Mexeu 1 grau: folga 1, entao tolera ate 6 (5 + 1).
+    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 1);
+
+    // Desvio de 8 (125 x 117) e maior que a folga: continua contando como
+    // oscilacao e vira evento depois do tempo de atencao.
+    var evento = d.avaliarTemperatura(leitura: 125, ajuste: 117, nowMs: t0);
+    expect(evento, isNull); // ainda nao persistiu tempo suficiente
+    evento = d.avaliarTemperatura(
+      leitura: 125,
+      ajuste: 117,
+      nowMs: t0 + 11 * 60 * 1000,
+    );
+    expect(evento, isNotNull, reason: 'desvio pre-existente nao pode sumir');
+  });
+
+  test('desvio dentro da folga segue perdoado durante a janela', () {
+    final d = DetectorOscilacao();
+    const t0 = 1000000;
+    // Saltou 15 graus: e esperado a estufa levar tempo para chegar la.
+    d.registrarMudancaAjusteTemperatura(t0, deslocamento: 15);
+    final evento = d.avaliarTemperatura(
+      leitura: 130,
+      ajuste: 117,
+      nowMs: t0 + 11 * 60 * 1000,
+    );
+    expect(evento, isNull);
   });
 }

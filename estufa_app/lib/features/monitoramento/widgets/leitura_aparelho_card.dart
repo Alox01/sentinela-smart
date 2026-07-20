@@ -9,8 +9,10 @@ class LeituraAparelhoCard extends StatelessWidget {
   final double temperaturaAjuste;
   final double umidadeAjuste;
   final bool sireneLigada;
-  final bool temperaturaEmAcomodacao;
-  final bool umidadeEmAcomodacao;
+  // Folga extra vigente da acomodacao (0 fora da janela), proporcional ao
+  // tamanho da mudanca de ajuste.
+  final double folgaTemperatura;
+  final double folgaUmidade;
   final VoidCallback onSilenciarAlarme;
 
   const LeituraAparelhoCard({
@@ -20,15 +22,15 @@ class LeituraAparelhoCard extends StatelessWidget {
     required this.temperaturaAjuste,
     required this.umidadeAjuste,
     required this.sireneLigada,
-    this.temperaturaEmAcomodacao = false,
-    this.umidadeEmAcomodacao = false,
+    this.folgaTemperatura = 0,
+    this.folgaUmidade = 0,
     required this.onSilenciarAlarme,
   });
 
-  // Acende com 5 de diferenca do ajuste. Durante a acomodacao (logo apos mudar
-  // o ajuste), so o nivel critico (20) acende, para nao confundir a estufa
+  // Acende com 5 de diferenca do ajuste, mais a folga da acomodacao (que e
+  // proporcional ao tanto que o ajuste andou), para nao confundir a estufa
   // "perseguindo" o novo alvo com uma oscilacao de clima.
-  static double _limiarLed(bool emAcomodacao) => emAcomodacao ? 20.0 : 5.0;
+  static double _limiarLed(double folga) => 5.0 + folga;
 
   @override
   Widget build(BuildContext context) {
@@ -101,11 +103,11 @@ class LeituraAparelhoCard extends StatelessWidget {
                       alta:
                           temperatura >
                           temperaturaAjuste +
-                              _limiarLed(temperaturaEmAcomodacao),
+                              _limiarLed(folgaTemperatura),
                       baixa:
                           temperatura <
                           temperaturaAjuste -
-                              _limiarLed(temperaturaEmAcomodacao),
+                              _limiarLed(folgaTemperatura),
                     ),
                   ),
                   const VerticalDivider(color: Colors.white10, thickness: 1),
@@ -116,10 +118,10 @@ class LeituraAparelhoCard extends StatelessWidget {
                       corIcone: Colors.lightBlueAccent,
                       alta:
                           umidade >
-                          umidadeAjuste + _limiarLed(umidadeEmAcomodacao),
+                          umidadeAjuste + _limiarLed(folgaUmidade),
                       baixa:
                           umidade <
-                          umidadeAjuste - _limiarLed(umidadeEmAcomodacao),
+                          umidadeAjuste - _limiarLed(folgaUmidade),
                     ),
                   ),
                 ],

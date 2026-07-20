@@ -22,6 +22,9 @@ class _EstadoGrandeza {
   int? desdeMs;
   int ultimoRegistroMs = 0;
   int acomodacaoAteMs = 0;
+  // Quanto o ajuste andou na mudanca que abriu a janela. A tolerancia extra
+  // acompanha esse tamanho: mexer 1 grau nao pode perdoar um desvio de 20.
+  double folgaAcomodacao = 0;
 
   // Reinicia so a maquina de oscilacao (a janela de acomodacao e preservada,
   // como no comportamento original ao iniciar/finalizar ciclo).
@@ -43,6 +46,9 @@ class DetectorOscilacao {
   static const int _intervaloContinuaMs = 10 * 60 * 1000;
   static const int _tempoAcomodacaoAjusteMs = 20 * 60 * 1000;
   static const double _tolerancia = 5;
+  // Teto da folga: um salto enorme de ajuste nao pode cegar o alerta por
+  // completo. 20 era o valor fixo antigo; agora e so o limite.
+  static const double _folgaAcomodacaoMaxima = 20;
 
   final _EstadoGrandeza _temperatura = _EstadoGrandeza();
   final _EstadoGrandeza _umidade = _EstadoGrandeza();
@@ -52,18 +58,40 @@ class DetectorOscilacao {
     _umidade.reiniciar();
   }
 
-  void registrarMudancaAjusteTemperatura(int nowMs) {
-    _temperatura.acomodacaoAteMs = nowMs + _tempoAcomodacaoAjusteMs;
+  /// Abre a janela de acomodacao com folga proporcional ao tamanho da mudanca.
+  /// Antes a folga era fixa (20): mexer 1 grau apagava o aviso de um desvio de
+  /// 8 que ja existia antes do ajuste - a acomodacao escondia um problema em
+  /// vez de perdoar a estufa perseguindo o alvo novo.
+  void registrarMudancaAjusteTemperatura(int nowMs, {double deslocamento = 0}) {
+    _abrirAcomodacao(_temperatura, nowMs, deslocamento);
   }
 
-  void registrarMudancaAjusteUmidade(int nowMs) {
-    _umidade.acomodacaoAteMs = nowMs + _tempoAcomodacaoAjusteMs;
+  void registrarMudancaAjusteUmidade(int nowMs, {double deslocamento = 0}) {
+    _abrirAcomodacao(_umidade, nowMs, deslocamento);
+  }
+
+  void _abrirAcomodacao(_EstadoGrandeza estado, int nowMs, double deslocamento) {
+    final folga = deslocamento.abs().clamp(0.0, _folgaAcomodacaoMaxima);
+    // Ajustes seguidos: vale a maior folga enquanto a janela ainda estiver
+    // aberta, senao um toque de 1 grau anularia a folga de um salto grande.
+    estado.folgaAcomodacao = nowMs < estado.acomodacaoAteMs
+        ? (folga > estado.folgaAcomodacao ? folga : estado.folgaAcomodacao)
+        : folga;
+    estado.acomodacaoAteMs = nowMs + _tempoAcomodacaoAjusteMs;
   }
 
   bool temperaturaEmAcomodacao(int nowMs) =>
       nowMs < _temperatura.acomodacaoAteMs;
 
   bool umidadeEmAcomodacao(int nowMs) => nowMs < _umidade.acomodacaoAteMs;
+
+  /// Tolerancia extra vigente agora (0 fora da janela). O widget usa isto para
+  /// decidir o limiar do LED, em vez de um valor fixo.
+  double folgaTemperatura(int nowMs) =>
+      temperaturaEmAcomodacao(nowMs) ? _temperatura.folgaAcomodacao : 0;
+
+  double folgaUmidade(int nowMs) =>
+      umidadeEmAcomodacao(nowMs) ? _umidade.folgaAcomodacao : 0;
 
   EventoOscilacao? avaliarTemperatura({
     required double leitura,
@@ -138,8 +166,12 @@ class DetectorOscilacao {
 
     // Durante a acomodacao apos mudar o ajuste, a diferenca de "atencao" e
     // esperada (estufa indo ate o novo alvo): zera o relogio e nao gera evento.
-    // O nivel critico (>20) segue valendo como alarme.
-    if (estadoAlvo == 'atencao' && nowMs < estado.acomodacaoAteMs) {
+    // Mas so ate a folga daquela mudanca: um desvio maior do que o ajuste andou
+    // nao foi causado por ele, e continua valendo como oscilacao. O nivel
+    // critico (>20) nunca e suprimido.
+    if (estadoAlvo == 'atencao' &&
+        nowMs < estado.acomodacaoAteMs &&
+        diferenca <= _tolerancia + estado.folgaAcomodacao) {
       estado.pendente = 'atencao';
       estado.desdeMs = nowMs;
       return null;
