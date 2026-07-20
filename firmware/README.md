@@ -70,6 +70,13 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   temperatura ainda estiver fora, ela volta a tocar. Apertar o botão de novo
   reinicia os 10 min — não religa a sirene na hora. Incêndio continua **não
   silenciável**.
+- **Acomodação de 5 min:** ao mudar o alvo, o aparelho perdoa por 5 minutos
+  **apenas a distância que a mudança criou** (teto de 20°F) — aproximar o alvo
+  da leitura atual não perdoa nada. Serve para não alarmar enquanto a estufa
+  percorre o caminho até o alvo novo. O tempo veio de medição na estufa real,
+  que alcança um alvo 10–15°F acima em menos que isso; precisa ser **igual** ao
+  do app e do simulador, senão o app acusa oscilação enquanto o aparelho ainda
+  está perdoando. Incêndio nunca é afetado.
 - **Leituras inteiras:** temperatura e umidade são arredondadas para número
   inteiro (o display tem 4 dígitos e as casas decimais não agregam).
 - **A rede custa tempo do loop:** cada chamada à nuvem (push e busca de

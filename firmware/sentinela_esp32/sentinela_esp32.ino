@@ -45,6 +45,8 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.7.0: janela de acomodacao de 20 para 5 min - medido na estufa real, que
+//        alcanca o alvo novo antes disso; a janela antiga atrasava o alerta.
 // 1.6.0: ajustes guardados na memoria nao-volatil - uma queda de energia nao
 //        devolve mais o alvo ao padrao no meio de uma estufada.
 // 1.5.0: a folga da acomodacao cobre so a distancia que a mudanca criou -
@@ -57,7 +59,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.6.0";
+const char* VERSAO_FIRMWARE = "1.7.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -151,7 +153,9 @@ int margemF = 8;
 // produtor causou. A folga acompanha o tamanho da mudanca (mexer 1 grau nao
 // pode perdoar um desvio de 20) e vale por um tempo. Espelha a mesma regra do
 // app. Incendio NUNCA e afetado: seguranca nao se acomoda.
-const unsigned long TEMPO_ACOMODACAO_MS = 20UL * 60UL * 1000UL;
+// 5 min: medido na estufa real, que alcanca um alvo 10-15 F acima em menos que
+// isso. Precisa ser igual ao do app e do simulador.
+const unsigned long TEMPO_ACOMODACAO_MS = 5UL * 60UL * 1000UL;
 const int FOLGA_ACOMODACAO_MAX = 20;
 unsigned long acomodacaoAteMillis = 0;
 int folgaAcomodacao = 0;

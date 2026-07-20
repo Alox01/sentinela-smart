@@ -49,13 +49,13 @@ void main() {
       ajusteAnterior: 90,
       ajusteNovo: 100,
     );
-    expect(d.temperaturaEmAcomodacao(10 * min), isTrue);
-    expect(d.temperaturaEmAcomodacao(21 * min), isFalse);
+    expect(d.temperaturaEmAcomodacao(4 * min), isTrue);
+    expect(d.temperaturaEmAcomodacao(6 * min), isFalse);
 
-    // diferenca 10 (atencao) persistindo durante a acomodacao: sem evento
+    // diferenca 10 (atencao) durante a acomodacao: relogio zerado, sem evento
     d.avaliarTemperatura(leitura: 100, ajuste: 90, nowMs: 0);
     expect(
-      d.avaliarTemperatura(leitura: 100, ajuste: 90, nowMs: 15 * min),
+      d.avaliarTemperatura(leitura: 100, ajuste: 90, nowMs: 4 * min),
       isNull,
     );
   });
@@ -167,7 +167,7 @@ void main() {
       ajusteAnterior: 90,
       ajusteNovo: 100,
     );
-    expect(d.folgaTemperatura(t0 + 21 * 60 * 1000), 0);
+    expect(d.folgaTemperatura(t0 + 6 * 60 * 1000), 0);
   });
 
   test('desvio dentro da folga segue perdoado durante a janela', () {
@@ -180,10 +180,15 @@ void main() {
       ajusteAnterior: 117,
       ajusteNovo: 132,
     );
+    // Dentro da janela a folga vale: e ela que o LED usa como limiar, e o
+    // aparelho como margem da sirene. Vencida a janela, some.
+    expect(d.folgaTemperatura(t0 + 4 * 60 * 1000), 15);
+    expect(d.folgaTemperatura(t0 + 6 * 60 * 1000), 0);
+
     final evento = d.avaliarTemperatura(
       leitura: 119,
       ajuste: 132,
-      nowMs: t0 + 11 * 60 * 1000,
+      nowMs: t0 + 4 * 60 * 1000,
     );
     expect(evento, isNull);
   });

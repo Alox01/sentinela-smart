@@ -44,7 +44,10 @@ class DetectorOscilacao {
   static const int _tempoOscilacaoAtencaoMs = 10 * 60 * 1000;
   static const int _tempoOscilacaoCriticaMs = 5 * 60 * 1000;
   static const int _intervaloContinuaMs = 10 * 60 * 1000;
-  static const int _tempoAcomodacaoAjusteMs = 20 * 60 * 1000;
+  // 5 min: medido na estufa real, que alcanca um alvo 10-15 F acima em menos
+  // que isso. Tem que bater com o firmware e o simulador, senao o app acusa
+  // oscilacao enquanto o aparelho ainda esta perdoando o desvio.
+  static const int _tempoAcomodacaoAjusteMs = 5 * 60 * 1000;
   static const double _tolerancia = 5;
   // Teto da folga: um salto enorme de ajuste nao pode cegar o alerta por
   // completo. 20 era o valor fixo antigo; agora e so o limite.

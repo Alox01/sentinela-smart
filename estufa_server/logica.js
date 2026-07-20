@@ -9,7 +9,9 @@ const TEMPO_SILENCIO = 10 * 60 * 1000;
 // causou. A folga cobre SO a distancia que a mudanca criou - aproximar o alvo
 // da leitura nao perdoa nada. Mesma regra do app e do firmware. Incendio nunca
 // e afetado.
-const TEMPO_ACOMODACAO = 20 * 60 * 1000;
+// 5 min: medido na estufa real, que alcanca um alvo 10-15 F acima em menos que
+// isso. Janela maior so atrasaria o alerta de um desvio verdadeiro.
+const TEMPO_ACOMODACAO = 5 * 60 * 1000;
 const FOLGA_ACOMODACAO_MAX = 20;
 
 // Tabela de referencia (o sistema sabe o nome das fases)
