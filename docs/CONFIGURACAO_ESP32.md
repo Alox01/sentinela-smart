@@ -109,17 +109,21 @@ Regras recomendadas:
 
 ### 3. Nome local por mDNS
 
-Como facilitador, o ESP32 pode anunciar um nome local, por exemplo:
+O firmware anuncia automaticamente um nome local exclusivo, formado pelos seis
+últimos caracteres do MAC do ESP32. Exemplo:
 
 ```text
-sentinela.local
+sentinela-a1b2c3.local
 ```
 
-Assim o app poderia tentar conectar por nome em vez de depender apenas do IP.
+O Monitor Serial mostra o nome completo ao iniciar. Ele pode ser cadastrado no
+campo IP ou endereço do app, sem `http://` e sem porta. Assim, uma mudança do
+IP entregue pelo DHCP não exige editar a estufa cadastrada.
 
-Observacao importante: em alguns celulares Android e roteadores, mDNS pode nao
-funcionar de forma consistente. Por isso, ele deve ser um facilitador, nao a
-unica forma de conexao.
+Observação importante: em alguns celulares Android e roteadores, mDNS pode não
+funcionar de forma consistente. Por isso, ele é um facilitador, não a única
+forma de conexão: o IP exibido no Monitor Serial continua sendo a alternativa.
+O mDNS funciona apenas na mesma rede local e não fornece acesso pela internet.
 
 ## Modo de configuracao
 
@@ -201,6 +205,6 @@ Esta solucao combina com a proposta hibrida porque:
 - Salvar Wi-Fi, IP, nome e chave em memoria persistente.
 - Adicionar botao fisico ou combinacao de botoes para entrar no modo de
   configuracao.
-- Testar DHCP reservado, IP fixo e mDNS.
+- Testar DHCP reservado, IP fixo e o mDNS já implementado no firmware.
 - Validar reconexao depois de queda de energia.
 - Alinhar endpoints finais entre app, simulador e ESP32.

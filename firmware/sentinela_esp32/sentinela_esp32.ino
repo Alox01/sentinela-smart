@@ -24,6 +24,7 @@
 */
 
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -43,9 +44,10 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.1.0";
+const char* VERSAO_FIRMWARE = "1.2.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -147,7 +149,11 @@ unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
 unsigned long ultimoPushNuvem = 0;
 unsigned long ultimaBuscaComandos = 0;
+unsigned long ultimaTentativaMdns = 0;
 String idHardware;  // definido no setup a partir do chip (unico por ESP)
+String nomeLocal;   // ex.: sentinela-a1b2c3 -> http://sentinela-a1b2c3.local
+bool mdnsAtivo = false;
+const unsigned long intervaloTentativaMdns = 15000;
 
 // Prototipos explicitos: o gerador automatico do Arduino as vezes nao monta a
 // assinatura certa para funcoes que recebem tipos do ArduinoJson.
@@ -158,6 +164,7 @@ bool estaSilenciado();
 void silenciarPorPrazo();
 void reativarAlarme();
 long long nowMs();
+void iniciarMdns();
 
 // ============================================================
 //  SETUP
@@ -171,6 +178,10 @@ void setup() {
   char idBuf[16];
   snprintf(idBuf, sizeof(idBuf), "ESP32_%06X", (unsigned)(chipMac & 0xFFFFFF));
   idHardware = idBuf;
+  char nomeLocalBuf[24];
+  snprintf(nomeLocalBuf, sizeof(nomeLocalBuf), "sentinela-%06x",
+           (unsigned)(chipMac & 0xFFFFFF));
+  nomeLocal = nomeLocalBuf;
   Serial.print("ID do aparelho: ");
   Serial.println(idHardware);
 
@@ -208,6 +219,7 @@ void setup() {
     server.send(404, "application/json", "{\"erro\":\"Rota nao encontrada\"}");
   });
   server.begin();
+  iniciarMdns();
 
   Serial.println("Sistema iniciado");
   Serial.print("Servidor HTTP em: http://");
@@ -276,10 +288,44 @@ void conectarWifi() {
 // Reconecta em segundo plano sem travar o controle local.
 void manterWifi() {
   if (strlen(WIFI_SSID) == 0) return;
-  if (WiFi.status() == WL_CONNECTED) return;
+  if (WiFi.status() == WL_CONNECTED) {
+    iniciarMdns();
+    return;
+  }
+
+  if (mdnsAtivo) {
+    MDNS.end();
+    mdnsAtivo = false;
+  }
   if (millis() - ultimaTentativaWifi < intervaloReconexaoWifi) return;
   ultimaTentativaWifi = millis();
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+}
+
+// Publica um nome estavel na rede local sem depender do IP entregue pelo
+// roteador. O sufixo vem do MAC, portanto duas estufas nao disputam o mesmo
+// nome. mDNS e uma conveniencia: o IP continua sendo o caminho alternativo.
+void iniciarMdns() {
+  if (mdnsAtivo || WiFi.status() != WL_CONNECTED || nomeLocal.length() == 0) {
+    return;
+  }
+
+  if (ultimaTentativaMdns != 0 &&
+      millis() - ultimaTentativaMdns < intervaloTentativaMdns) {
+    return;
+  }
+  ultimaTentativaMdns = millis();
+
+  if (!MDNS.begin(nomeLocal.c_str())) {
+    Serial.println("Falha ao iniciar mDNS; use o IP exibido acima.");
+    return;
+  }
+
+  MDNS.addService("http", "tcp", 80);
+  mdnsAtivo = true;
+  Serial.print("Nome local: http://");
+  Serial.print(nomeLocal);
+  Serial.println(".local");
 }
 
 // Empurra a leitura atual para a nuvem (POST /leitura). O servidor em
@@ -537,6 +583,7 @@ void handleSimple() {
   doc["ledControleLigado"] = ledControleLigado;
   doc["leituraOk"] = leituraOk;
   doc["ip"] = WiFi.localIP().toString();
+  doc["nomeLocal"] = nomeLocal + ".local";
   doc["tokenConfigurado"] = (strlen(DEVICE_TOKEN) > 0);
   doc["versaoFirmware"] = VERSAO_FIRMWARE;
 

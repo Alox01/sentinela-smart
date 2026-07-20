@@ -89,8 +89,8 @@ O protótipo ESP32 testado respondeu um JSON simples na raiz do endereço, por e
 
 ```json
 {
-  "temperaturaF": 95.2,
-  "umidade": 65.0,
+  "temperaturaF": 95,
+  "umidade": 65,
   "temperaturaAlvoF": 95,
   "umidadeAlvo": 65,
   "margemF": 8,
@@ -101,7 +101,8 @@ O protótipo ESP32 testado respondeu um JSON simples na raiz do endereço, por e
   "buzzerSilenciado": false,
   "ledControleLigado": true,
   "leituraOk": true,
-  "ip": "192.168.1.21"
+  "ip": "192.168.1.21",
+  "nomeLocal": "sentinela-a1b2c3.local"
 }
 ```
 
@@ -119,6 +120,11 @@ Campos opcionais recomendados:
 - `umidadeAlvo`: number, para o app diferenciar umidade lida e ajuste de umidade. O simulador local já envia esse campo; o ESP32 atual ainda pode omitir.
 - `tokenConfigurado`: boolean, para indicar se o aparelho exige chave de acesso.
 - `versaoFirmware`: string, para diagnóstico.
+- `nomeLocal`: string, nome mDNS exclusivo anunciado pelo aparelho na rede local.
+
+O firmware atual arredonda as leituras do DHT22 antes de montar o JSON.
+`temperaturaF` e `umidade` seguem como inteiros, mas o app e o servidor ainda
+aceitam qualquer valor do tipo `number` para manter compatibilidade.
 
 Quando o ESP32 não enviar `umidadeAlvo`, o app usa a umidade lida como referência visual. Isso mantém o protótipo funcionando sem bloquear a evolução futura.
 

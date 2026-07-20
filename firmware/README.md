@@ -28,7 +28,13 @@ Preencha no topo do `.ino`:
 
 O **id do aparelho é gerado automaticamente do chip (MAC)** — único por ESP, sem
 configurar nada. Ao ligar, o Serial (115200) mostra o **id** (ex.:
-`ESP32_A1B2C3`) e o **IP** do aparelho — o IP é o que se cadastra no app.
+`ESP32_A1B2C3`), o **IP** e o **nome local** (ex.:
+`sentinela-a1b2c3.local`). No app, prefira o nome local; se a rede ou o celular
+não resolver mDNS, cadastre o IP exibido no Serial.
+
+O nome mDNS funciona somente na mesma rede local e não substitui o acesso pela
+nuvem. Ele evita recadastrar a estufa quando o DHCP muda o IP depois de uma
+queda de energia. O suporte ESPmDNS já faz parte do core ESP32 da Espressif.
 
 ## O que o firmware expõe
 
