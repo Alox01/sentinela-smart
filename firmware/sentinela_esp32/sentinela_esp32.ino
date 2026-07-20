@@ -44,10 +44,12 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.3.0: envio imediato quando o alarme/incendio comeca ou termina (antes a
+//        nuvem so sabia no ciclo de 1 min, e um teste rapido nem chegava).
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.2.0";
+const char* VERSAO_FIRMWARE = "1.3.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -148,6 +150,10 @@ long long modoSilenciosoTimestamp = 0;
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
 unsigned long ultimoPushNuvem = 0;
+// Ultimo estado de emergencia ja enviado, para detectar a borda e empurrar na
+// hora em que algo comeca (ou termina), em vez de esperar o ciclo de 1 min.
+bool ultimoFogoEnviado = false;
+bool ultimoAlarmeEnviado = false;
 unsigned long ultimaBuscaComandos = 0;
 unsigned long ultimaTentativaMdns = 0;
 String idHardware;  // definido no setup a partir do chip (unico por ESP)
@@ -160,6 +166,7 @@ const unsigned long intervaloTentativaMdns = 15000;
 void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
                     JsonArray ignoradas);
 void buscarComandosNuvem();
+bool estadoDeAlertaMudou();
 bool estaSilenciado();
 void silenciarPorPrazo();
 void reativarAlarme();
@@ -235,7 +242,13 @@ void loop() {
   server.handleClient();
   manterWifi();
 
-  if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
+  // Emergencia nao espera o proximo envio agendado. Sem isto, um incendio so
+  // chegaria a nuvem ate um minuto depois - e um teste rapido no sensor de
+  // chama comecava e terminava entre dois envios, sem a nuvem ver nada.
+  if (estadoDeAlertaMudou()) {
+    ultimoPushNuvem = millis();
+    empurrarLeituraNuvem();
+  } else if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
     ultimoPushNuvem = millis();
     empurrarLeituraNuvem();
   }
@@ -326,6 +339,19 @@ void iniciarMdns() {
   Serial.print("Nome local: http://");
   Serial.print(nomeLocal);
   Serial.println(".local");
+}
+
+// Houve mudanca no que a nuvem precisa saber com urgencia? Detecta a BORDA:
+// so devolve true na transicao, para uma emergencia em curso nao virar um
+// envio a cada volta do loop.
+bool estadoDeAlertaMudou() {
+  bool fogo = alertaLuz || riscoIncendioAgora();
+  bool alarme = alarmeAtivoAgora();
+
+  bool mudou = (fogo != ultimoFogoEnviado) || (alarme != ultimoAlarmeEnviado);
+  ultimoFogoEnviado = fogo;
+  ultimoAlarmeEnviado = alarme;
+  return mudou;
 }
 
 // Empurra a leitura atual para a nuvem (POST /leitura), que guarda o estado ao
