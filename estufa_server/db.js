@@ -547,6 +547,17 @@ async function listarDispositivosPush(idHardware) {
   }));
 }
 
+/// Aparelhos que tem alguem inscrito no push - so esses interessam ao watchdog:
+/// vigiar o silencio de uma estufa que ninguem acompanha nao serve a ninguem.
+async function listarAparelhosComPush() {
+  if (!pool) return [];
+  await garantirTabelaPush();
+  const result = await pool.query(
+    'select distinct identificador_hardware from push_dispositivos',
+  );
+  return result.rows.map((row) => row.identificador_hardware);
+}
+
 async function removerTokensPushInvalidos(tokens) {
   if (!pool || !tokens?.length) return 0;
   await garantirTabelaPush();
@@ -617,6 +628,7 @@ module.exports = {
   apagarLeiturasAntigas,
   carregarComandosPendentes,
   carregarConfiguracao,
+  listarAparelhosComPush,
   listarDispositivosPush,
   registrarDispositivoPush,
   removerDispositivoPush,

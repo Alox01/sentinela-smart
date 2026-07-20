@@ -6,6 +6,7 @@ const {
   validarPayloadSincronizacao,
 } = require('../sync');
 const { criarPayloadEsp32 } = require('../esp32_payload');
+const { iniciarWatchdog } = require('../watchdog');
 const {
   criarRegistroLeitura,
   deveSalvarLeitura,
@@ -57,6 +58,31 @@ function createEstufaRouter({
       console.error('Falha ao notificar push:', error.message);
     }
   }
+
+  // Quando cada aparelho acompanhado foi visto pela ultima vez. Prefere o
+  // estado ao vivo (desta sessao) e cai para o banco quando o servidor
+  // reiniciou - senao um aparelho morto antes do restart nunca seria vigiado.
+  async function listarAparelhosVigiados() {
+    if (!db.listarAparelhosComPush) return [];
+    const ids = await db.listarAparelhosComPush();
+    const aparelhos = [];
+    for (const idHardware of ids) {
+      if (!idHardware || idHardware === ID_SIMULADOR) continue;
+      const aoVivo = dispositivosAoVivo.get(idHardware);
+      let ultimoContatoMs = aoVivo?.recebidoMs ?? 0;
+      if (!ultimoContatoMs && db.carregarUltimaLeitura) {
+        const status = await db.carregarUltimaLeitura(idHardware);
+        ultimoContatoMs = Number(status?.timestampLeitura) || 0;
+      }
+      aparelhos.push({ idHardware, ultimoContatoMs });
+    }
+    return aparelhos;
+  }
+
+  const vigia = iniciarWatchdog({
+    listarAparelhos: listarAparelhosVigiados,
+    notificar: (aviso) => notificarEvento(aviso),
+  });
 
   // Compara a leitura nova com o ultimo estado avisado e dispara so na subida.
   async function avaliarAlertas(idHardware, status) {
@@ -416,6 +442,22 @@ function createEstufaRouter({
     } catch (error) {
       console.error('Falha ao remover dispositivo push:', error.message);
       res.status(500).json({ erro: 'Falha ao remover dispositivo' });
+    }
+  });
+
+  // Roda o watchdog na hora, sem esperar o ciclo. Serve para testar o aviso de
+  // silencio sem precisar desligar a estufa e cronometrar 15 minutos.
+  router.post('/push/verificar-silencio', authMiddleware, async (_req, res) => {
+    if (!vigia) {
+      res.status(503).json({ erro: 'Watchdog indisponivel' });
+      return;
+    }
+    try {
+      await vigia.verificar();
+      res.json({ sucesso: true });
+    } catch (error) {
+      console.error('Falha ao verificar silencio:', error.message);
+      res.status(500).json({ erro: 'Falha ao verificar silencio' });
     }
   });
 

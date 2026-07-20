@@ -1,0 +1,113 @@
+// Vigia o silencio dos aparelhos: se uma estufa para de reportar, ninguem
+// consegue avisar por ela - o proprio aparelho e que morreu. Entao quem avisa e
+// a nuvem, pela ausencia.
+//
+// Este e o caso mais provavel de queda de energia: o ESP32 nao tem bateria para
+// mandar "estou sem luz" antes de desligar. O silencio e ambiguo por natureza
+// (falta de luz ou falta de internet dao no mesmo), e a mensagem assume isso em
+// vez de fingir certeza.
+
+const LIMITE_SILENCIO_PADRAO_MS = 15 * 60 * 1000; // ~15 pushes perdidos
+const INTERVALO_VERIFICACAO_PADRAO_MS = 5 * 60 * 1000;
+
+/// Decide o que avisar sobre um aparelho. Puro: sem relogio, sem rede.
+/// Devolve 'silencio' na entrada do silencio, 'retorno' quando volta a
+/// reportar, e null quando nada mudou (para nao repetir aviso a cada rodada).
+function decidirAviso({
+  ultimoContatoMs,
+  agoraMs,
+  limiteMs = LIMITE_SILENCIO_PADRAO_MS,
+  estavaSilencioso = false,
+}) {
+  // Aparelho sem nenhuma leitura conhecida: nao da para afirmar que ficou em
+  // silencio (pode nunca ter sido ligado). Melhor calar do que alarmar a toa.
+  if (!Number.isFinite(ultimoContatoMs) || ultimoContatoMs <= 0) return null;
+
+  const silenciosoAgora = agoraMs - ultimoContatoMs > limiteMs;
+
+  if (silenciosoAgora && !estavaSilencioso) return 'silencio';
+  if (!silenciosoAgora && estavaSilencioso) return 'retorno';
+  return null;
+}
+
+function formatarTempo(ms) {
+  const minutos = Math.floor(ms / 60000);
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `${horas}h` : `${horas}h ${resto}min`;
+}
+
+function iniciarWatchdog({
+  listarAparelhos,
+  notificar,
+  intervaloMs = INTERVALO_VERIFICACAO_PADRAO_MS,
+  limiteMs = LIMITE_SILENCIO_PADRAO_MS,
+  setIntervalFn = setInterval,
+  agora = () => Date.now(),
+  logger = console,
+}) {
+  if (typeof listarAparelhos !== 'function' || typeof notificar !== 'function') {
+    return null;
+  }
+
+  // Quem ja foi avisado, para o aviso sair na borda e nao a cada rodada.
+  const silenciosos = new Set();
+
+  const verificar = async () => {
+    try {
+      const aparelhos = await listarAparelhos();
+      const agoraMs = agora();
+
+      for (const { idHardware, ultimoContatoMs } of aparelhos ?? []) {
+        if (!idHardware) continue;
+        const decisao = decidirAviso({
+          ultimoContatoMs,
+          agoraMs,
+          limiteMs,
+          estavaSilencioso: silenciosos.has(idHardware),
+        });
+        if (!decisao) continue;
+
+        if (decisao === 'silencio') {
+          silenciosos.add(idHardware);
+          const desde = formatarTempo(agoraMs - ultimoContatoMs);
+          await notificar({
+            idHardware,
+            evento: 'semComunicacao',
+            titulo: 'Estufa sem comunicacao',
+            // Honesto sobre a duvida: melhor um "va conferir" a toa do que
+            // perder a estufada por achar que estava tudo bem.
+            corpo:
+              `Parei de receber dados ha ${desde}. Pode ser falta de energia ` +
+              'ou de internet no local. Verifique.',
+            critico: true,
+          });
+        } else {
+          silenciosos.delete(idHardware);
+          await notificar({
+            idHardware,
+            evento: 'semComunicacao',
+            titulo: 'Estufa voltou a reportar',
+            corpo: 'A comunicacao com a estufa foi restabelecida.',
+            critico: false,
+          });
+        }
+      }
+    } catch (erro) {
+      // Vigia que derruba o servidor nao vigia nada.
+      logger.error?.('Falha no watchdog de silencio:', erro.message);
+    }
+  };
+
+  const timer = setIntervalFn(verificar, intervaloMs);
+  timer?.unref?.();
+  return { timer, verificar };
+}
+
+module.exports = {
+  INTERVALO_VERIFICACAO_PADRAO_MS,
+  LIMITE_SILENCIO_PADRAO_MS,
+  decidirAviso,
+  iniciarWatchdog,
+};

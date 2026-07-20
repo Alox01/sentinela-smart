@@ -152,8 +152,14 @@ a sirene física do aparelho continua sendo a rede de segurança independente.
    **na borda de subida** (não repete enquanto o problema dura) para incêndio,
    falta de energia e alarme de temperatura, respeitando as preferências
    salvas por aparelho. Tokens recusados pelo FCM são removidos sozinhos.
-4. **Watchdog de energia/comunicação:** timer no servidor + push de silêncio e
-   de retorno (mensagem de causa incerta). **← próximo passo**
+4. ✅ **Watchdog de energia/comunicação — FEITO.** `watchdog.js` verifica a cada
+   5 min os aparelhos que têm alguém inscrito no push. Passando **15 min** sem
+   reportar, dispara "estufa sem comunicação" com a **mensagem de causa
+   incerta** (luz ou internet); avisa de novo só quando **volta** a reportar.
+   Último contato vem do estado ao vivo, com fallback no banco — assim um
+   aparelho que morreu antes de um restart do servidor continua sendo vigiado.
+   Rota `POST /push/verificar-silencio` roda a checagem na hora, para testar sem
+   esperar 15 minutos.
 5. **Ajustes finos:** som/prioridade diferentes para incêndio, link para abrir a
    estufa certa no app, eventual exceção de preferência por estufa.
 
