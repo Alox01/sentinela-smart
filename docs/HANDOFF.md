@@ -2,8 +2,8 @@
 
 Ponto de retomada para continuar o trabalho em qualquer máquina (o histórico do
 chat fica local; este arquivo e o Git são a memória portátil do projeto).
-Atualizado após a rodada de produção de jul/2026 (segurança, controle remoto,
-firmware real, CI, retenção).
+Atualizado após a rodada de jul/2026: segurança, controle remoto, firmware real,
+CI, retenção, push completo (incl. som de alarme) e persistência dos ajustes.
 
 ## Repositório oficial
 
@@ -46,8 +46,14 @@ em `GET /versao` (mostra o commit no ar).
   Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.2.0, **compilado** (84%
-flash / 15% RAM no core esp32 3.2.0)
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.8.0, **compilado e validado
+em hardware** (84% flash / 15% RAM no core esp32 3.2.0)
+- **Ajustes persistem** em memória não-volátil (NVS): queda de energia não
+  devolve mais o alvo ao padrão no meio de uma estufada.
+- **Acomodação de 5 min / teto de 8** após mudar o alvo, igual ao app e ao
+  simulador — perdoa só a distância que a mudança criou.
+- Push imediato na borda do alarme/incêndio (um teste de chama curto chegava a
+  passar despercebido entre dois ciclos de 1 min).
 - Controle local edge-first (DHT22, botões, display, LEDs, buzzer) sem depender
   de Wi-Fi. Id único por chip (MAC). Leituras inteiras.
 - Silêncio do alarme **com prazo de 10 min** (botão e app pelo mesmo caminho);
@@ -61,20 +67,39 @@ flash / 15% RAM no core esp32 3.2.0)
 - CI (GitHub Actions): a cada push roda testes do servidor, `flutter analyze` +
   testes + build web do app, e uma **compilação real do firmware**.
 
-## O que falta (planejado)
+**Notificações push (FCM)** — Objetivo Específico #4 da proposta, **completo e
+confirmado em campo** (chegou no celular com o app fechado)
+- Preferências por evento (notificar × tocar/vibrar), incêndio com confirmação
+  para desligar.
+- Disparo na **borda de subida** para incêndio, falta de energia e alarme;
+  tokens recusados pelo FCM são removidos sozinhos.
+- **Watchdog de silêncio**: 5 min sem reportar → "estufa sem comunicação", com
+  mensagem honesta sobre a causa (luz ou internet). Ajustável por
+  `WATCHDOG_SILENCIO_MIN` / `WATCHDOG_VERIFICACAO_MIN`.
+- **Som de alarme** para incêndio: canal `sentinela_critico_v2`, sirene de 30s
+  em volume de **alarme** (não de notificação), com opção de furar o "Não
+  perturbe". Ver `NOTIFICACOES_PUSH.md`.
+- **Segredos:** `google-services.json` em `estufa_app/android/app/`
+  (gitignored); o **service-account nunca entra no Git nem no chat** — é env var
+  no Render.
 
-1. **🔴 Notificações push (FCM) — a peça central que falta.** É o Objetivo
-   Específico #4 da proposta assinada e o resultado marcado como "principalmente"
-   (avisar incêndio e interrupção/falta de energia com o app fechado).
-   - ✅ **Fase 1 feita:** tela de preferências (matriz notificar × tocar/vibrar
-     por evento), em `estufa_app/lib/features/notificacoes/`. Menu da estufa →
-     "Notificações". Persistida com `shared_preferences`.
-   - ⏳ **Fases 2–4 pendentes** e **bloqueadas** pelos dois arquivos do Firebase
-     (o autor já os tem). Passos exatos de retomada e o handling seguro dos
-     segredos estão em `NOTIFICACOES_PUSH.md` → seção "Retomada".
-   - **Regra de segurança:** o `google-services.json` vai em
-     `estufa_app/android/app/` (gitignored); o **service-account nunca entra no
-     Git nem no chat** — vira env var no Render (padrão do `DB_SSL_CA`).
+## O que falta
+
+Nada de **produção**: o escopo da proposta está implementado. O que resta é
+validação em campo e a escrita.
+
+1. **Validar em hardware o que mudou por último** (código pronto, não provado):
+   - regravar o ESP com a 1.8.0 e instalar o APK novo;
+   - **teste da queda de energia** — vale por três de uma vez: mede o tempo real
+     até o push de "sem comunicação", confirma que o alvo volta do NVS (e não
+     nos 76 °F padrão) e fecha o ciclo com o aviso de retorno;
+   - **teste do som de incêndio de madrugada**: volume de notificação baixo,
+     volume de alarme alto, tela trancada. É essa combinação que a mudança do
+     canal ataca.
+2. **Escrita do TCC** e seção de resultados (números dos testes acima).
+3. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
+   fio em pino errado de regulador queimado. Não bloqueia o TCC — um aparelho
+   basta.
 
 ## Bloqueado por hardware (trabalho futuro honesto — ver §6.2 do outline)
 
