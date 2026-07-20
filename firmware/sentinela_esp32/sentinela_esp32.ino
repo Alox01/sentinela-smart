@@ -44,12 +44,15 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.4.0: acomodacao no proprio aparelho apos mudar o alvo (a folga acompanha
+//        o tamanho da mudanca) - antes o ESP alarmava na hora ao subir o
+//        ajuste, ignorando a acomodacao que so existia no app.
 // 1.3.0: envio imediato quando o alarme/incendio comeca ou termina (antes a
 //        nuvem so sabia no ciclo de 1 min, e um teste rapido nem chegava).
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.3.0";
+const char* VERSAO_FIRMWARE = "1.4.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -138,6 +141,16 @@ bool leituraOk = false;
 int temperaturaAlvoF = 76;
 int margemF = 8;
 
+// Acomodacao apos mudar o alvo: a estufa leva tempo para alcancar o ajuste
+// novo, e alarmar nesse caminho seria acusar um problema que o proprio
+// produtor causou. A folga acompanha o tamanho da mudanca (mexer 1 grau nao
+// pode perdoar um desvio de 20) e vale por um tempo. Espelha a mesma regra do
+// app. Incendio NUNCA e afetado: seguranca nao se acomoda.
+const unsigned long TEMPO_ACOMODACAO_MS = 20UL * 60UL * 1000UL;
+const int FOLGA_ACOMODACAO_MAX = 20;
+unsigned long acomodacaoAteMillis = 0;
+int folgaAcomodacao = 0;
+
 // ---- Novo: ajuste de umidade e timestamps para o Last-Write-Wins ----
 // O hardware nao controla umidade fisicamente (sem umidificador), mas registra
 // o ajuste que o app envia para exibir e reportar. Os timestamps sao epoch ms,
@@ -167,6 +180,9 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
                     JsonArray ignoradas);
 void buscarComandosNuvem();
 bool estadoDeAlertaMudou();
+void definirTemperaturaAlvo(int novoAlvo);
+int margemVigente();
+void atualizarEstadoTemperatura();
 bool estaSilenciado();
 void silenciarPorPrazo();
 void reativarAlarme();
@@ -339,6 +355,37 @@ void iniciarMdns() {
   Serial.print("Nome local: http://");
   Serial.print(nomeLocal);
   Serial.println(".local");
+}
+
+// Troca o alvo por um caminho so, abrindo a janela de acomodacao proporcional
+// ao tamanho da mudanca. Todo lugar que mexe no ajuste passa por aqui.
+void definirTemperaturaAlvo(int novoAlvo) {
+  int delta = novoAlvo - temperaturaAlvoF;
+  if (delta == 0) return;
+
+  int folga = abs(delta);
+  if (folga > FOLGA_ACOMODACAO_MAX) folga = FOLGA_ACOMODACAO_MAX;
+  // Ajustes seguidos: vale a maior folga enquanto a janela estiver aberta.
+  bool janelaAberta = acomodacaoAteMillis != 0 &&
+                      (long)(millis() - acomodacaoAteMillis) < 0;
+  folgaAcomodacao = (janelaAberta && folgaAcomodacao > folga) ? folgaAcomodacao : folga;
+  acomodacaoAteMillis = millis() + TEMPO_ACOMODACAO_MS;
+  if (acomodacaoAteMillis == 0) acomodacaoAteMillis = 1;
+
+  temperaturaAlvoF = novoAlvo;
+  atualizarEstadoTemperatura();
+}
+
+// Margem valendo agora: a normal mais a folga da acomodacao, se a janela
+// ainda estiver aberta.
+int margemVigente() {
+  if (acomodacaoAteMillis == 0) return margemF;
+  if ((long)(millis() - acomodacaoAteMillis) >= 0) {
+    acomodacaoAteMillis = 0;  // venceu
+    folgaAcomodacao = 0;
+    return margemF;
+  }
+  return margemF + folgaAcomodacao;
 }
 
 // Houve mudanca no que a nuvem precisa saber com urgencia? Detecta a BORDA:
@@ -603,7 +650,7 @@ void handleSimple() {
   doc["umidade"] = umidade;
   doc["temperaturaAlvoF"] = temperaturaAlvoF;
   doc["umidadeAlvo"] = umidadeAlvo;
-  doc["margemF"] = margemF;
+  doc["margemF"] = margemVigente();
   doc["alertaTemperatura"] = alertaTemperatura;
   doc["alertaLuz"] = alertaLuz;
   doc["mostrandoUmidade"] = mostrandoUmidade;
@@ -630,9 +677,8 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
   if (!entrada["temperaturaMeta"].isNull()) {
     long long ts = entrada["tempTimestamp"].as<long long>();
     if (ts > tempTimestamp) {
-      temperaturaAlvoF = (int)round(entrada["temperaturaMeta"].as<float>());
+      definirTemperaturaAlvo((int)round(entrada["temperaturaMeta"].as<float>()));
       tempTimestamp = ts;
-      atualizarEstadoTemperatura();
       aplicadas.add("temperaturaMeta");
     } else {
       ignoradas.add("temperaturaMeta");
@@ -759,12 +805,11 @@ void verificarBotoes() {
     if (!modoAjuste) {
       entrarModoAjuste();
     } else {
-      temperaturaAlvoF++;
+      definirTemperaturaAlvo(temperaturaAlvoF + 1);
       tempTimestamp = nowMs();  // ajuste fisico participa do LWW
       ultimoTempoAjuste = millis();
       displayAjusteLigado = true;
       ultimoPiscaAjuste = millis();
-      atualizarEstadoTemperatura();
       Serial.print("Temperatura desejada: ");
       Serial.println(temperaturaAlvoF);
     }
@@ -772,12 +817,11 @@ void verificarBotoes() {
 
   if (botaoFoiPressionado(BOTAO_VERDE, ultimoVerde, estavelVerde, debounceVerde)) {
     if (modoAjuste) {
-      temperaturaAlvoF--;
+      definirTemperaturaAlvo(temperaturaAlvoF - 1);
       tempTimestamp = nowMs();
       ultimoTempoAjuste = millis();
       displayAjusteLigado = true;
       ultimoPiscaAjuste = millis();
-      atualizarEstadoTemperatura();
       Serial.print("Temperatura desejada: ");
       Serial.println(temperaturaAlvoF);
     } else {
@@ -862,8 +906,9 @@ void atualizarEstadoTemperatura() {
     return;
   }
 
-  if (temperaturaF > temperaturaAlvoF + margemF ||
-      temperaturaF < temperaturaAlvoF - margemF) {
+  int margem = margemVigente();
+  if (temperaturaF > temperaturaAlvoF + margem ||
+      temperaturaF < temperaturaAlvoF - margem) {
     alertaTemperatura = true;
   } else {
     alertaTemperatura = false;
