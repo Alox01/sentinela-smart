@@ -381,6 +381,9 @@ void empurrarLeituraNuvem() {
   doc["aviso"] = avisoAtual();
   doc["corStatus"] = corStatusAtual();
   doc["fonte"] = "hardware";
+  // Vai junto da leitura para dar para saber, pela nuvem, qual firmware cada
+  // aparelho em campo esta rodando - sem isso so olhando o Serial no local.
+  doc["versaoFirmware"] = VERSAO_FIRMWARE;
 
   JsonObject config = doc["config"].to<JsonObject>();
   config["idHardware"] = idHardware;
