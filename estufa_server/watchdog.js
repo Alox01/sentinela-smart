@@ -7,8 +7,12 @@
 // (falta de luz ou falta de internet dao no mesmo), e a mensagem assume isso em
 // vez de fingir certeza.
 
-const LIMITE_SILENCIO_PADRAO_MS = 15 * 60 * 1000; // ~15 pushes perdidos
-const INTERVALO_VERIFICACAO_PADRAO_MS = 5 * 60 * 1000;
+// 5 pushes perdidos (o aparelho reporta a cada 60s). Nao da para descer muito
+// mais: um roteador reiniciando ou uma reconexao de Wi-Fi levam 1-2 min, e o
+// aviso viraria alarme falso. Com a verificacao de 1 em 1 min, o produtor sabe
+// em 5-6 min.
+const LIMITE_SILENCIO_PADRAO_MS = 5 * 60 * 1000;
+const INTERVALO_VERIFICACAO_PADRAO_MS = 60 * 1000;
 
 /// Decide o que avisar sobre um aparelho. Puro: sem relogio, sem rede.
 /// Devolve 'silencio' na entrada do silencio, 'retorno' quando volta a

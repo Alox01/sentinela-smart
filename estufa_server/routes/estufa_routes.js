@@ -79,9 +79,18 @@ function createEstufaRouter({
     return aparelhos;
   }
 
+  // Minutos vindos do ambiente, para afinar o vigia sem regravar o servidor.
+  // Valor invalido ou ausente cai no padrao do watchdog.
+  function minutosDoAmbiente(nome) {
+    const minutos = Number(process.env[nome]);
+    return Number.isFinite(minutos) && minutos > 0 ? minutos * 60 * 1000 : undefined;
+  }
+
   const vigia = iniciarWatchdog({
     listarAparelhos: listarAparelhosVigiados,
     notificar: (aviso) => notificarEvento(aviso),
+    limiteMs: minutosDoAmbiente('WATCHDOG_SILENCIO_MIN'),
+    intervaloMs: minutosDoAmbiente('WATCHDOG_VERIFICACAO_MIN'),
   });
 
   // Compara a leitura nova com o ultimo estado avisado e dispara so na subida.
