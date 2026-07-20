@@ -136,8 +136,10 @@ O capítulo central. Descrever a arquitetura e cada componente.
 - LWW por campo com timestamp; `POST /sincronizar` drena a fila.
 - Buffer de leituras em JSONL (`.buffer_push.jsonl`), reenviado em ordem ao
   reconectar; descarta as mais antigas se estourar o limite.
-- Retenção local (Isar): descarta leituras com mais de **10 meses**; a **nuvem
-  não** tem retenção automática (guarda indefinidamente).
+- Retenção local (Isar): descarta leituras com mais de **10 meses**. A **nuvem**
+  tem retenção equivalente (~**300 dias**, configurável por `CLOUD_RETENTION_DAYS`),
+  executada no boot e a cada 24 h — some com a política de dedup (1 a cada
+  10 min + eventos) para o banco não crescer sem limite.
 - Deploy: Render (dorme após ~15 min de inatividade) + Supabase (Session pooler,
   IPv4).
 

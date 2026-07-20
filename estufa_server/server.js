@@ -21,6 +21,7 @@ const {
   iniciarPersistenciaPeriodica,
   lerIntervaloPersistencia,
 } = require('./persistence_scheduler');
+const { iniciarRetencao, lerDiasRetencao } = require('./retention_scheduler');
 
 const app = express();
 const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
@@ -64,6 +65,10 @@ const KEEP_ALIVE_URL = (
 ).trim();
 const PUSH_TOKEN = process.env.PUSH_TOKEN ?? API_TOKEN;
 const PUSH_INTERVAL_MS = lerIntervaloPersistencia(process.env.PUSH_INTERVAL_MS);
+// Retencao na nuvem: apaga leituras alem da janela (padrao ~10 meses), a
+// contrapartida da retencao que o app ja faz local. Evita o banco crescer
+// para sempre.
+const RETENCAO_DIAS = lerDiasRetencao(process.env.CLOUD_RETENTION_DAYS);
 // Persistencia local (agendador que grava direto no banco). Por padrao fica
 // ligada quando ha banco, MAS desliga sozinha em modo aparelho (push ligado),
 // para nao gravar duplicado ja que a nuvem persiste o que recebe. Pode ser
@@ -167,6 +172,11 @@ async function iniciarServidor() {
       intervaloMs: PERSIST_READINGS_INTERVAL_MS,
       buffer: bufferLeituras,
     });
+  }
+
+  iniciarRetencao({ db, diasRetencao: RETENCAO_DIAS });
+  if (db.estaHabilitado()) {
+    console.log(`Retencao de leituras: janela de ${RETENCAO_DIAS} dias.`);
   }
 
   if (PUSH_TARGET_URL) {

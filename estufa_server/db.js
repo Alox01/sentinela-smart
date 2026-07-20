@@ -454,6 +454,22 @@ async function carregarHistorico(
   }));
 }
 
+// Apaga leituras mais antigas que a janela de retencao. Espelha, na nuvem, a
+// retencao que o Isar ja faz no celular: uma estufada dura ~10 dias, entao o
+// historico util cabe com folga na janela. Sem isso o banco so cresce - foi o
+// que levou a tabela a 2,7 milhoes de linhas e estourou a cota do Supabase.
+async function apagarLeiturasAntigas(diasRetencao) {
+  if (!pool) return { apagadas: 0 };
+  const dias = Number(diasRetencao);
+  if (!Number.isFinite(dias) || dias <= 0) return { apagadas: 0 };
+
+  const result = await pool.query(
+    `delete from leituras where timestamp_leitura < now() - ($1::int * interval '1 day')`,
+    [Math.round(dias)],
+  );
+  return { apagadas: result.rowCount };
+}
+
 // ---- Caixa de comandos pendentes (sobrevive a restarts do servidor) ----
 // O plano gratuito do Render recicla o processo com frequencia; sem persistir,
 // um ajuste feito de longe sumia em silencio se o dyno reiniciasse antes de o
@@ -511,6 +527,7 @@ async function carregarComandosPendentes() {
 }
 
 module.exports = {
+  apagarLeiturasAntigas,
   carregarComandosPendentes,
   carregarConfiguracao,
   carregarHistorico,
