@@ -22,6 +22,7 @@ const {
   lerIntervaloPersistencia,
 } = require('./persistence_scheduler');
 const { iniciarRetencao, lerDiasRetencao } = require('./retention_scheduler');
+const { criarEnviadorPush } = require('./push');
 
 const app = express();
 const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
@@ -77,6 +78,9 @@ const PERSISTIR_LOCAL = process.env.PERSISTIR_LOCAL != null
   ? process.env.PERSISTIR_LOCAL.trim().toLowerCase() !== 'false'
   : !PUSH_TARGET_URL;
 const authMiddleware = createAuthMiddleware(API_TOKEN);
+// Se a credencial do Firebase nao estiver configurada, o push fica desabilitado
+// e o servidor sobe igual: aviso remoto e camada extra, nao caminho critico.
+const enviadorPush = criarEnviadorPush();
 const bufferLeituras = criarBufferLeituras(
   process.env.LEITURA_BUFFER_PATH ? { caminho: process.env.LEITURA_BUFFER_PATH } : {},
 );
@@ -109,6 +113,7 @@ app.use(
     authMiddleware,
     tokenConfigurado: Boolean(API_TOKEN.trim()),
     buffer: bufferLeituras,
+    push: enviadorPush,
   }),
 );
 

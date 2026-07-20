@@ -143,38 +143,47 @@ a sirene física do aparelho continua sendo a rede de segurança independente.
    **Ainda falta desta fase:** som/vibração e supressão de banner com o app
    aberto respeitando os toggles — entra junto da Fase 3 (hoje o app só mostra
    banner visual, não toca som). E o texto de "causa incerta" no `OFFLINE`.
-2. **Base FCM:** projeto Firebase, `firebase_messaging`, canais de notificação
-   Android por evento, registro de token e um push de teste manual (endpoint
-   `POST /notificar-teste`).
-3. **Alarme e incêndio:** disparo na borda de subida a partir do `/leitura`,
-   com debounce por estado, respeitando as preferências.
+2. ✅ **Base FCM — FEITO.** App: `firebase_messaging` + `flutter_local_notifications`,
+   canais Android (`sentinela_alertas`, `sentinela_critico`), registro do token
+   por estufa (`PushNotificationService`). Servidor: `push.js` (envio via
+   `firebase-admin`), tabela `push_dispositivos`, rotas
+   `POST`/`DELETE /push/dispositivos` e `POST /push/teste`.
+3. ✅ **Alarme e incêndio — FEITO.** `avaliarAlertas` no `POST /leitura` dispara
+   **na borda de subida** (não repete enquanto o problema dura) para incêndio,
+   falta de energia e alarme de temperatura, respeitando as preferências
+   salvas por aparelho. Tokens recusados pelo FCM são removidos sozinhos.
 4. **Watchdog de energia/comunicação:** timer no servidor + push de silêncio e
-   de retorno (mensagem de causa incerta).
+   de retorno (mensagem de causa incerta). **← próximo passo**
 5. **Ajustes finos:** som/prioridade diferentes para incêndio, link para abrir a
    estufa certa no app, eventual exceção de preferência por estufa.
 
-## Retomada — o que fazer para a Fase 2 (base FCM)
+## Como ligar o push (configuração)
 
-**Bloqueio:** precisa dos dois arquivos do Firebase (o autor já os tem). Handling
-seguro — **nunca colar o service-account no chat** (é chave privada):
+O código está pronto; falta **só a credencial no servidor**:
 
-1. `google-services.json` → colocar em
-   `estufa_app/android/app/google-services.json` (já no `.gitignore`; o build lê
-   sozinho, não precisa ler o conteúdo).
-2. service-account JSON → **não** vai ao Git. Vira variável de ambiente no Render
-   (ex.: `FIREBASE_SERVICE_ACCOUNT` com o JSON inteiro), lida pelo servidor. O
-   código a escrever deve ler dessa env (com fallback para arquivo local
-   gitignored em dev).
+1. `google-services.json` → já está em `estufa_app/android/app/` (gitignored).
+2. **service-account JSON** → **nunca** no Git nem no chat. No painel do Render,
+   criar a variável **`FIREBASE_SERVICE_ACCOUNT`** e colar o **conteúdo do JSON**
+   (aceita o JSON cru ou em base64 — o base64 evita problema com as quebras de
+   linha da chave privada).
 
-**Passos de código da Fase 2:**
-- App: adicionar `firebase_messaging` + plugin gradle `google-services`; pedir
-  permissão `POST_NOTIFICATIONS` (Android 13+); registrar o token FCM na nuvem
-  (`POST /dispositivos` com token + estufas acompanhadas); criar canais Android
-  por evento.
-- Servidor: dependência de envio FCM (ex.: `firebase-admin`); tabela
-  `dispositivos_push` (token, estufas, updated_at) + `estado_notificado` por
-  estufa para debounce; rota `POST /dispositivos` e `POST /notificar-teste`.
-- Verificar com um push de teste manual antes de ligar os gatilhos (Fase 3/4).
+Sem essa variável o servidor sobe normal e apenas registra
+`Push desabilitado: FIREBASE_SERVICE_ACCOUNT nao configurado` — o push é camada
+extra, não caminho crítico.
+
+### Verificar ponta a ponta
+
+Com o app instalado e uma estufa cadastrada (com `idHardware` preenchido):
+
+```
+curl -X POST https://estufa-server.onrender.com/push/teste \
+  -H "X-Device-Token: <a chave de acesso>" \
+  -H "Content-Type: application/json" \
+  -d '{"idHardware":"ESP32_XXXXXX"}'
+```
+
+Resposta traz `enviados` e `inscritos`. Se `inscritos` for 0, o app ainda não
+registrou o token (abrir o app com internet e a estufa cadastrada).
 
 ## Estado atual no app
 

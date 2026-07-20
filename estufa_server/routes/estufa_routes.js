@@ -19,8 +19,87 @@ function createEstufaRouter({
   authMiddleware,
   tokenConfigurado = false,
   buffer = null,
+  push = null,
 }) {
   const router = express.Router();
+
+  // Ultimo estado notificado por aparelho, para avisar na BORDA (quando o
+  // problema comeca) e nao a cada leitura enquanto ele durar.
+  const ultimoEstadoNotificado = new Map();
+
+  function preferenciaPermite(preferencias, chaveEvento) {
+    if (!preferencias) return true; // sem preferencia salva, o padrao e avisar
+    const opcao = preferencias[chaveEvento];
+    if (!opcao || typeof opcao !== 'object') return true;
+    return opcao.notificar !== false;
+  }
+
+  async function notificarEvento({ idHardware, evento, titulo, corpo, critico }) {
+    if (!push?.habilitado || !db.listarDispositivosPush) return;
+    try {
+      const inscritos = await db.listarDispositivosPush(idHardware);
+      const tokens = inscritos
+        .filter((i) => preferenciaPermite(i.preferencias, evento))
+        .map((i) => i.tokenPush);
+      if (tokens.length === 0) return;
+
+      const { invalidos } = await push.enviar({
+        tokens,
+        titulo,
+        corpo,
+        evento,
+        critico,
+      });
+      if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
+        await db.removerTokensPushInvalidos(invalidos);
+      }
+    } catch (error) {
+      console.error('Falha ao notificar push:', error.message);
+    }
+  }
+
+  // Compara a leitura nova com o ultimo estado avisado e dispara so na subida.
+  async function avaliarAlertas(idHardware, status) {
+    if (!idHardware || idHardware === ID_SIMULADOR) return;
+
+    const fogo =
+      status.perigoChama === true ||
+      status.riscoIncendio === true ||
+      status.alertaIncendio === true;
+    const alarme = status.alarmeAtivo === true;
+    const semEnergia = status.temEnergia === false;
+
+    const anterior = ultimoEstadoNotificado.get(idHardware) || {};
+    ultimoEstadoNotificado.set(idHardware, { fogo, alarme, semEnergia });
+
+    if (fogo && !anterior.fogo) {
+      await notificarEvento({
+        idHardware,
+        evento: 'incendio',
+        titulo: 'Risco de incendio',
+        corpo: 'A estufa detectou chama ou temperatura de incendio. Verifique agora.',
+        critico: true,
+      });
+    }
+    if (semEnergia && !anterior.semEnergia) {
+      await notificarEvento({
+        idHardware,
+        evento: 'faltaEnergia',
+        titulo: 'Falta de energia',
+        corpo: 'A estufa avisou que a energia caiu. Pode ser preciso abrir as estufas.',
+        critico: true,
+      });
+    }
+    if (alarme && !anterior.alarme && !fogo) {
+      await notificarEvento({
+        idHardware,
+        evento: 'alarmeProcesso',
+        titulo: 'Temperatura fora da faixa',
+        corpo: status.aviso || 'A temperatura saiu da faixa do ajuste.',
+        critico: false,
+      });
+    }
+  }
 
   // Estado ao vivo por aparelho (idHardware -> { status, config, recebidoMs }),
   // alimentado pelos POST /leitura dos aparelhos reais. O simulador continua
@@ -285,6 +364,92 @@ function createEstufaRouter({
     res.json({ idHardware, comando });
   });
 
+  // O app registra aqui o token FCM do celular para cada estufa que acompanha.
+  // Autenticado: sem isso qualquer um inscreveria um celular nos alertas de uma
+  // estufa alheia.
+  router.post('/push/dispositivos', authMiddleware, async (req, res) => {
+    const { tokenPush, idHardware, plataforma, preferencias } = req.body || {};
+    if (typeof tokenPush !== 'string' || tokenPush.trim() === '') {
+      res.status(400).json({ erro: 'tokenPush obrigatorio' });
+      return;
+    }
+    if (typeof idHardware !== 'string' || idHardware.trim() === '') {
+      res.status(400).json({ erro: 'idHardware obrigatorio' });
+      return;
+    }
+    if (!db.registrarDispositivoPush) {
+      res.json({ sucesso: true, registrado: false, motivo: 'sem_persistencia' });
+      return;
+    }
+
+    try {
+      await db.registrarDispositivoPush({
+        tokenPush: tokenPush.trim(),
+        idHardware: idHardware.trim(),
+        plataforma,
+        preferencias: preferencias ?? null,
+      });
+      res.json({ sucesso: true, registrado: true, push: Boolean(push?.habilitado) });
+    } catch (error) {
+      console.error('Falha ao registrar dispositivo push:', error.message);
+      res.status(500).json({ erro: 'Falha ao registrar dispositivo' });
+    }
+  });
+
+  router.delete('/push/dispositivos', authMiddleware, async (req, res) => {
+    const { tokenPush, idHardware } = req.body || {};
+    if (typeof tokenPush !== 'string' || tokenPush.trim() === '') {
+      res.status(400).json({ erro: 'tokenPush obrigatorio' });
+      return;
+    }
+    if (!db.removerDispositivoPush) {
+      res.json({ sucesso: true });
+      return;
+    }
+
+    try {
+      await db.removerDispositivoPush({
+        tokenPush: tokenPush.trim(),
+        idHardware: typeof idHardware === 'string' ? idHardware.trim() : null,
+      });
+      res.json({ sucesso: true });
+    } catch (error) {
+      console.error('Falha ao remover dispositivo push:', error.message);
+      res.status(500).json({ erro: 'Falha ao remover dispositivo' });
+    }
+  });
+
+  // Push de teste: confirma a ponta a ponta (credencial, token, canal) sem
+  // precisar provocar um incendio de verdade.
+  router.post('/push/teste', authMiddleware, async (req, res) => {
+    const idHardware = (req.body?.idHardware || '').trim();
+    if (!idHardware) {
+      res.status(400).json({ erro: 'idHardware obrigatorio' });
+      return;
+    }
+    if (!push?.habilitado) {
+      res.status(503).json({ erro: 'Push desabilitado no servidor' });
+      return;
+    }
+
+    try {
+      const inscritos = await db.listarDispositivosPush(idHardware);
+      const { enviados, invalidos } = await push.enviar({
+        tokens: inscritos.map((i) => i.tokenPush),
+        titulo: 'Sentinela Smart',
+        corpo: 'Notificacao de teste. O aviso remoto esta funcionando.',
+        evento: 'alarmeProcesso',
+      });
+      if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
+        await db.removerTokensPushInvalidos(invalidos);
+      }
+      res.json({ sucesso: true, enviados, inscritos: inscritos.length });
+    } catch (error) {
+      console.error('Falha no push de teste:', error.message);
+      res.status(500).json({ erro: 'Falha ao enviar push de teste' });
+    }
+  });
+
   // Ingestao de telemetria vinda do hardware (ou de outra ponte). Persiste na
   // nuvem quando disponivel; se a nuvem estiver fora, guarda no buffer offline
   // para reenvio posterior. Assim a arquitetura fica pronta para o ESP32 real
@@ -320,6 +485,11 @@ function createEstufaRouter({
       // A leitura que o aparelho empurra carrega a config dele: e por ela que
       // sabemos se o comando pendente ja foi obedecido.
       limparPendentesConfirmados(idHw, req.body.config);
+      // Avisa o produtor no celular quando um problema COMECA. Nao aguarda: a
+      // resposta ao aparelho nao pode depender do FCM.
+      avaliarAlertas(idHw, status).catch((error) =>
+        console.error('Falha ao avaliar alertas:', error.message),
+      );
     }
 
     if (!db.estaHabilitado()) {

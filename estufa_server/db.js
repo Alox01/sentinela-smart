@@ -470,6 +470,93 @@ async function apagarLeiturasAntigas(diasRetencao) {
   return { apagadas: result.rowCount };
 }
 
+// ---- Aparelhos inscritos para push (token FCM por estufa) ----
+// Um celular pode acompanhar varias estufas e uma estufa pode ter varios
+// celulares, entao a chave e o par (token, idHardware).
+
+let tabelaPushPronta = false;
+
+async function garantirTabelaPush() {
+  if (tabelaPushPronta) return;
+  await pool.query(`
+    create table if not exists push_dispositivos (
+      token_push text not null,
+      identificador_hardware text not null,
+      plataforma text,
+      preferencias jsonb,
+      updated_at timestamptz not null default now(),
+      primary key (token_push, identificador_hardware)
+    )
+  `);
+  tabelaPushPronta = true;
+}
+
+async function registrarDispositivoPush({
+  tokenPush,
+  idHardware,
+  plataforma,
+  preferencias,
+}) {
+  if (!pool) return false;
+  await garantirTabelaPush();
+  await pool.query(
+    `
+      insert into push_dispositivos (
+        token_push, identificador_hardware, plataforma, preferencias, updated_at
+      )
+      values ($1, $2, $3, $4, now())
+      on conflict (token_push, identificador_hardware)
+      do update set
+        plataforma = excluded.plataforma,
+        preferencias = excluded.preferencias,
+        updated_at = now()
+    `,
+    [tokenPush, idHardware, plataforma ?? null, preferencias ?? null],
+  );
+  return true;
+}
+
+async function removerDispositivoPush({ tokenPush, idHardware }) {
+  if (!pool) return false;
+  await garantirTabelaPush();
+  if (idHardware) {
+    await pool.query(
+      'delete from push_dispositivos where token_push = $1 and identificador_hardware = $2',
+      [tokenPush, idHardware],
+    );
+  } else {
+    await pool.query('delete from push_dispositivos where token_push = $1', [
+      tokenPush,
+    ]);
+  }
+  return true;
+}
+
+/// Tokens inscritos numa estufa, com as preferencias de quem os registrou -
+/// e por elas que o envio decide suprimir um evento silenciado.
+async function listarDispositivosPush(idHardware) {
+  if (!pool) return [];
+  await garantirTabelaPush();
+  const result = await pool.query(
+    'select token_push, preferencias from push_dispositivos where identificador_hardware = $1',
+    [idHardware],
+  );
+  return result.rows.map((row) => ({
+    tokenPush: row.token_push,
+    preferencias: row.preferencias || null,
+  }));
+}
+
+async function removerTokensPushInvalidos(tokens) {
+  if (!pool || !tokens?.length) return 0;
+  await garantirTabelaPush();
+  const result = await pool.query(
+    'delete from push_dispositivos where token_push = any($1::text[])',
+    [tokens],
+  );
+  return result.rowCount;
+}
+
 // ---- Caixa de comandos pendentes (sobrevive a restarts do servidor) ----
 // O plano gratuito do Render recicla o processo com frequencia; sem persistir,
 // um ajuste feito de longe sumia em silencio se o dyno reiniciasse antes de o
@@ -530,6 +617,10 @@ module.exports = {
   apagarLeiturasAntigas,
   carregarComandosPendentes,
   carregarConfiguracao,
+  listarDispositivosPush,
+  registrarDispositivoPush,
+  removerDispositivoPush,
+  removerTokensPushInvalidos,
   carregarHistorico,
   carregarUltimaLeitura,
   estaHabilitado,
