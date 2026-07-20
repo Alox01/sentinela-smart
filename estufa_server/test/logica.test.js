@@ -40,3 +40,47 @@ test('respeita silencio recente e desliga sirene', () => {
   assert.equal(resultado.alertaIncendio, false);
 });
 
+
+// A acomodacao existe para nao acusar problema enquanto a estufa persegue um
+// alvo que o proprio produtor acabou de mudar.
+test('acomodacao perdoa o desvio proporcional a mudanca do ajuste', () => {
+  const agora = Date.now();
+  // Subiu 10 graus: tolerancia vira 5 + 10 = 15, entao erro de 12 nao alarma.
+  const r = analisarEstado(102, 90, 50, 50, 0, false, {
+    desdeMs: agora,
+    deslocamento: 10,
+  });
+  assert.equal(r.alarmeAtivo, false);
+});
+
+test('acomodacao nao perdoa desvio maior do que o ajuste andou', () => {
+  const agora = Date.now();
+  // Mexeu 1 grau: tolerancia 6. Um desvio de 12 nao foi causado por isso.
+  const r = analisarEstado(102, 90, 50, 50, 0, false, {
+    desdeMs: agora,
+    deslocamento: 1,
+  });
+  assert.equal(r.alarmeAtivo, true);
+});
+
+test('a janela de acomodacao expira', () => {
+  const r = analisarEstado(102, 90, 50, 50, 0, false, {
+    desdeMs: Date.now() - 21 * 60 * 1000,
+    deslocamento: 10,
+  });
+  assert.equal(r.alarmeAtivo, true);
+});
+
+test('incendio nunca e acomodado', () => {
+  const r = analisarEstado(200, 90, 50, 50, 0, false, {
+    desdeMs: Date.now(),
+    deslocamento: 20,
+  });
+  assert.equal(r.alarmeAtivo, true);
+  assert.equal(r.riscoIncendio, true);
+});
+
+test('sem acomodacao o comportamento antigo vale', () => {
+  const r = analisarEstado(102, 90, 50, 50, 0, false);
+  assert.equal(r.alarmeAtivo, true);
+});

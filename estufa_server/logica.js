@@ -4,6 +4,12 @@
 const TOLERANCIA_TEMP = 5.0; // Margem de erro de 5 F (alinhada com LEDs/eventos)
 const TOLERANCIA_UMID = 2.0; // Margem de erro de 2%
 const TEMPO_SILENCIO = 10 * 60 * 1000;
+// Acomodacao apos mudar o ajuste: a estufa leva tempo para alcancar o alvo
+// novo, e alarmar nesse caminho seria acusar um problema que o proprio produtor
+// causou. A folga acompanha o tamanho da mudanca (mexer 1 grau nao perdoa um
+// desvio de 20). Mesma regra do app e do firmware. Incendio nunca e afetado.
+const TEMPO_ACOMODACAO = 20 * 60 * 1000;
+const FOLGA_ACOMODACAO_MAX = 20;
 
 // Tabela de referencia (o sistema sabe o nome das fases)
 const cicloDeCura = [
@@ -17,7 +23,7 @@ const cicloDeCura = [
 ];
 
 module.exports = {
-    analisarEstado: (tempAtual, tempAjuste, umidAtual, umidAjuste, timestampSilencio, sensorChamaAtivado) => {
+    analisarEstado: (tempAtual, tempAjuste, umidAtual, umidAjuste, timestampSilencio, sensorChamaAtivado, acomodacao) => {
         let tocarSirene = false;
         let perigoChama = false;
         let riscoIncendio = false;
@@ -58,7 +64,19 @@ module.exports = {
             const erroTemp = tempAtual - tempAjuste;
             const erroUmid = umidAtual - umidAjuste;
 
-            if (Math.abs(erroTemp) > TOLERANCIA_TEMP) {
+            // Tolerancia vigente: a normal mais a folga da acomodacao, quando a
+            // janela aberta pela ultima mudanca de ajuste ainda vale.
+            let toleranciaTemp = TOLERANCIA_TEMP;
+            if (acomodacao && Number.isFinite(acomodacao.desdeMs)
+                && (agora - acomodacao.desdeMs) < TEMPO_ACOMODACAO) {
+                const folga = Math.min(
+                    Math.abs(Number(acomodacao.deslocamento) || 0),
+                    FOLGA_ACOMODACAO_MAX,
+                );
+                toleranciaTemp += folga;
+            }
+
+            if (Math.abs(erroTemp) > toleranciaTemp) {
                 tocarSirene = true;
 
                 if (erroTemp > 0) {

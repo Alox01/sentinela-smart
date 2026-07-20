@@ -20,6 +20,10 @@ const CHANCE_EVENTO = 0.0085;
 
 // Em modo receptor, a nuvem para de simular e passa a refletir a ultima leitura
 // real recebida via POST /leitura. A evolucao automatica fica pausada.
+// Ultima mudanca de ajuste: abre a janela de acomodacao, para o simulador nao
+// alarmar enquanto a estufa "persegue" o alvo novo (mesma regra do firmware).
+let acomodacaoTemp = { desdeMs: 0, deslocamento: 0 };
+
 let evolucaoPausada = false;
 
 setInterval(() => {
@@ -107,6 +111,7 @@ setInterval(() => {
     configLocal.umidadeMeta,
     configLocal.modoSilencioso ? configLocal.modoSilenciosoTimestamp : 0,
     false,
+    acomodacaoTemp,
   );
 
   statusFisico.faseAtual = analise.fase;
@@ -221,9 +226,14 @@ module.exports = {
   },
 
   sincronizarConfiguracao: (configDoApp) => {
+    const alvoAnterior = configLocal.temperaturaMeta;
     const resultado = aplicarSincronizacao(configLocal, configDoApp);
 
     if (resultado.alteracoesAplicadas.includes('temperaturaMeta')) {
+      acomodacaoTemp = {
+        desdeMs: Date.now(),
+        deslocamento: configLocal.temperaturaMeta - alvoAnterior,
+      };
       console.log(`Novo ajuste de temperatura aceito: ${configLocal.temperaturaMeta} F`);
     }
     if (resultado.alteracoesAplicadas.includes('umidadeMeta')) {
@@ -239,6 +249,12 @@ module.exports = {
   simularBotaoFisico: (tipo, valor) => {
     const agora = Date.now();
     if (tipo === 'temp') {
+      // O ajuste fisico tambem abre a janela: a estufa vai perseguir o alvo
+      // novo do mesmo jeito, tenha vindo do app ou do botao.
+      acomodacaoTemp = {
+        desdeMs: agora,
+        deslocamento: valor - configLocal.temperaturaMeta,
+      };
       configLocal.temperaturaMeta = valor;
       configLocal.tempTimestamp = agora;
       console.log(`Botao fisico alterou ajuste de temperatura para ${valor} F`);
