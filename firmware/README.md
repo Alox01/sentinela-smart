@@ -80,8 +80,11 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   intervalo, e sim manter a conexão aberta (WebSocket/MQTT).
 - **Energia:** `temEnergia` é sempre `true` (falta o sensor de tensão — ver
   `docs/NOTIFICACOES_PUSH.md`).
-- **Config não persiste** entre reinícios (alvo volta a 76 °F). Persistir em
-  NVS/`Preferences` é um próximo passo (ver `docs/CONFIGURACAO_ESP32.md`).
+- **Config persiste** entre reinícios: os ajustes de temperatura/umidade (e os
+  timestamps do LWW) ficam na memória não-volátil (NVS/`Preferences`). Uma
+  queda de energia não devolve mais o alvo ao padrão no meio de uma estufada.
+  O **silêncio do alarme não é guardado** de propósito — depois de um reinício
+  o alarme volta a valer.
 - **Wi-Fi fixo no código:** `WIFI_SSID`/`WIFI_PASS` são constantes. Para usar em
   outra rede (ex.: casa de outra pessoa) é preciso regravar com as credenciais
   dela — ou implementar o modo de configuração por AP (ver

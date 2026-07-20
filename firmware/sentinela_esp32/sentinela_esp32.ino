@@ -32,6 +32,7 @@
 #include <DHT.h>
 #include <TM1637Display.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 
 // ===================== CONFIG (preencher) =====================
 const char* WIFI_SSID       = "SUA_REDE_WIFI";
@@ -44,6 +45,8 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.6.0: ajustes guardados na memoria nao-volatil - uma queda de energia nao
+//        devolve mais o alvo ao padrao no meio de uma estufada.
 // 1.5.0: a folga da acomodacao cobre so a distancia que a mudanca criou -
 //        aproximar o alvo da temperatura atual nao silencia mais o alarme.
 // 1.4.0: acomodacao no proprio aparelho apos mudar o alvo - antes o ESP
@@ -54,7 +57,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.5.0";
+const char* VERSAO_FIRMWARE = "1.6.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -153,6 +156,16 @@ const int FOLGA_ACOMODACAO_MAX = 20;
 unsigned long acomodacaoAteMillis = 0;
 int folgaAcomodacao = 0;
 
+// Ajustes guardados na memoria nao-volatil (NVS): sem isso, uma queda de
+// energia devolvia o alvo ao padrao de fabrica no meio de uma estufada - o
+// produtor recuperava a luz e a estufa voltava aquecendo para o alvo errado.
+// O silencio do alarme NAO e guardado de proposito: apos um reinicio o alarme
+// deve voltar a valer.
+Preferences prefs;
+bool configSuja = false;
+unsigned long ultimoSalvamentoConfig = 0;
+const unsigned long INTERVALO_SALVAR_CONFIG_MS = 5000;
+
 // ---- Novo: ajuste de umidade e timestamps para o Last-Write-Wins ----
 // O hardware nao controla umidade fisicamente (sem umidificador), mas registra
 // o ajuste que o app envia para exibir e reportar. Os timestamps sao epoch ms,
@@ -182,6 +195,8 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
                     JsonArray ignoradas);
 void buscarComandosNuvem();
 bool estadoDeAlertaMudou();
+void carregarConfigPersistida();
+void salvarConfigSeNecessario();
 void definirTemperaturaAlvo(int novoAlvo);
 int margemVigente();
 void atualizarEstadoTemperatura();
@@ -209,6 +224,8 @@ void setup() {
   nomeLocal = nomeLocalBuf;
   Serial.print("ID do aparelho: ");
   Serial.println(idHardware);
+
+  carregarConfigPersistida();
 
   dht.begin();
 
@@ -279,6 +296,7 @@ void loop() {
   verificarSensorLuz();
   verificarBotoes();
   verificarTempos();
+  salvarConfigSeNecessario();
 
   if (agora - ultimoTempoLeitura >= intervaloLeitura) {
     ultimoTempoLeitura = agora;
@@ -381,6 +399,7 @@ void definirTemperaturaAlvo(int novoAlvo) {
   if (acomodacaoAteMillis == 0) acomodacaoAteMillis = 1;
 
   temperaturaAlvoF = novoAlvo;
+  configSuja = true;
   atualizarEstadoTemperatura();
 }
 
@@ -394,6 +413,44 @@ int margemVigente() {
     return margemF;
   }
   return margemF + folgaAcomodacao;
+}
+
+// Le os ajustes gravados na NVS. Sem valor gravado, mantem o padrao do codigo.
+void carregarConfigPersistida() {
+  prefs.begin("sentinela", true);  // somente leitura
+  temperaturaAlvoF = prefs.getInt("tempAlvo", temperaturaAlvoF);
+  umidadeAlvo = prefs.getInt("umidAlvo", umidadeAlvo);
+  // Os timestamps voltam junto para o Last-Write-Wins continuar valendo depois
+  // de um reinicio: sem eles um comando antigo poderia vencer o ajuste atual.
+  tempTimestamp = prefs.getLong64("tempTs", 0);
+  umidTimestamp = prefs.getLong64("umidTs", 0);
+  prefs.end();
+
+  Serial.print("Ajustes recuperados: ");
+  Serial.print(temperaturaAlvoF);
+  Serial.print(" F / ");
+  Serial.print(umidadeAlvo);
+  Serial.println(" %");
+}
+
+// Grava no maximo a cada INTERVALO_SALVAR_CONFIG_MS. Segurar o botao gera um
+// ajuste por toque, e a NVS tem numero limitado de escritas - juntar as
+// mudancas numa so evita gastar a flash a toa.
+void salvarConfigSeNecessario() {
+  if (!configSuja) return;
+  if (millis() - ultimoSalvamentoConfig < INTERVALO_SALVAR_CONFIG_MS) return;
+  if (modoAjuste) return;  // espera o produtor terminar de ajustar
+
+  prefs.begin("sentinela", false);
+  prefs.putInt("tempAlvo", temperaturaAlvoF);
+  prefs.putInt("umidAlvo", umidadeAlvo);
+  prefs.putLong64("tempTs", tempTimestamp);
+  prefs.putLong64("umidTs", umidTimestamp);
+  prefs.end();
+
+  configSuja = false;
+  ultimoSalvamentoConfig = millis();
+  Serial.println("Ajustes salvos na memoria");
 }
 
 // Houve mudanca no que a nuvem precisa saber com urgencia? Detecta a BORDA:
@@ -699,6 +756,7 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
     if (ts > umidTimestamp) {
       umidadeAlvo = (int)round(entrada["umidadeMeta"].as<float>());
       umidTimestamp = ts;
+      configSuja = true;
       aplicadas.add("umidadeMeta");
     } else {
       ignoradas.add("umidadeMeta");
