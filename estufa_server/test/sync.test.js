@@ -4,6 +4,7 @@ const { ConfiguracaoAlvo } = require('../classes');
 const {
   aplicarSincronizacao,
   validarPayloadBotaoFisico,
+  validarPayloadLeitura,
   validarPayloadSincronizacao,
 } = require('../sync');
 
@@ -97,4 +98,38 @@ test('valida payload do botao fisico simulado', () => {
   assert.equal(valido.valido, true);
   assert.equal(tipoInvalido.valido, false);
   assert.equal(valorInvalido.valido, false);
+});
+
+// Regressao: um ESP recem-gravado tem os timestamps em 0 (nunca recebeu
+// comando). Exigir > 0 rejeitava toda leitura dele com HTTP 400, deixando o
+// aparelho mudo na nuvem - e junto sumia o alerta de incendio.
+test('aceita a leitura de um aparelho recem-gravado (timestamps zerados)', () => {
+  const payload = {
+    idHardware: 'ESP32_NOVO',
+    temperaturaAtual: 124,
+    umidadeAtual: 40,
+  };
+  const config = {
+    temperaturaMeta: 117,
+    tempTimestamp: 0,
+    umidadeMeta: 90,
+    umidTimestamp: 0,
+    modoSilencioso: false,
+    modoSilenciosoTimestamp: 0,
+  };
+  const r = validarPayloadLeitura(payload, config);
+  assert.equal(r.valido, true, JSON.stringify(r.erros));
+});
+
+test('timestamp negativo na config relatada continua invalido', () => {
+  const r = validarPayloadLeitura(
+    { idHardware: 'ESP32_X', temperaturaAtual: 100, umidadeAtual: 50 },
+    { temperaturaMeta: 117, tempTimestamp: -1 },
+  );
+  assert.equal(r.valido, false);
+});
+
+test('comando ainda exige timestamp real (LWW nao aceita zero)', () => {
+  const r = validarPayloadSincronizacao({ temperaturaMeta: 117, tempTimestamp: 0 });
+  assert.equal(r.valido, false);
 });

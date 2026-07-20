@@ -179,6 +179,15 @@ const FONTES_LEITURA_VALIDAS = new Set(['hardware', 'simulador', 'manual']);
 // Valida uma leitura de telemetria recebida pela rota de ingestao (POST /leitura).
 // Exige apenas os campos minimos; os demais sao opcionais para nao travar
 // prototipos de hardware que enviem menos informacao.
+// Timestamp de uma config RELATADA pelo aparelho: 0 e legitimo e significa
+// "nunca ajustado" - um aparelho recem-gravado ainda nao recebeu comando algum.
+// Exigir > 0 aqui rejeitava toda leitura de um ESP novo (HTTP 400), deixando-o
+// mudo ate alguem mandar um comando. Em COMANDO o criterio segue estrito, que
+// e onde o LWW precisa de um instante real.
+function isTimestampRelatado(valor) {
+  return Number.isInteger(valor) && valor >= 0;
+}
+
 function validarConfigLeitura(config) {
   const erros = [];
 
@@ -193,8 +202,8 @@ function validarConfigLeitura(config) {
         erros.push(campo + ' deve estar entre ' + minimo + ' e ' + maximo + '.');
       }
     }
-    if (Object.hasOwn(config, timestamp) && !isTimestampValido(config[timestamp])) {
-      erros.push(timestamp + ' deve ser inteiro positivo.');
+    if (Object.hasOwn(config, timestamp) && !isTimestampRelatado(config[timestamp])) {
+      erros.push(timestamp + ' deve ser inteiro nao negativo.');
     }
   };
 
@@ -204,8 +213,9 @@ function validarConfigLeitura(config) {
   if (Object.hasOwn(config, 'modoSilencioso') && typeof config.modoSilencioso !== 'boolean') {
     erros.push('modoSilencioso deve ser boolean.');
   }
-  if (Object.hasOwn(config, 'modoSilenciosoTimestamp') && !isTimestampValido(config.modoSilenciosoTimestamp)) {
-    erros.push('modoSilenciosoTimestamp deve ser inteiro positivo.');
+  if (Object.hasOwn(config, 'modoSilenciosoTimestamp')
+      && !isTimestampRelatado(config.modoSilenciosoTimestamp)) {
+    erros.push('modoSilenciosoTimestamp deve ser inteiro nao negativo.');
   }
 
   return erros;
