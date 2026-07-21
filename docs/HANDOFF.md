@@ -111,7 +111,16 @@ validação em campo e a escrita.
   tensão no ESP para ele avisar "sem energia" antes de morrer. Hoje `temEnergia`
   é sempre `true` no firmware. O watchdog de silêncio cobre o caso genérico.
 - **Controle de ventoinha / agendamento (menu Fase B):** exige relé no aparelho.
-- **Sensor DHT22 novo:** o atual queimou (inversão de polaridade).
+- **Sensores da versão final (2):** o protótipo tem um DHT22 só, de teste. A
+  instalação real usa **dois pontos distintos** (temperatura na saída de ar
+  quente, umidade dentro da massa), com **cabo longo** até o aparelho — e o
+  DHT22 não atende a nenhum dos três requisitos (margem térmica, umidade, cabo).
+  Ambiente da estufa, posições, temperaturas e a direção recomendada
+  (DS18B20 estanque + SHT31/RS485) estão em **`AMBIENTE_ESTUFA.md`**.
+  Aguardando a metragem dos cabos para fechar a escolha da umidade.
+- **Limiar de incêndio (175 °F) apertado:** a máxima de trabalho é 165 °F e o
+  sensor fica no ar mais quente da estufa — 10 °F de folga. Risco de alarme
+  falso não silenciável. Ver `AMBIENTE_ESTUFA.md` §3.
 
 ## Trabalho futuro de software
 
