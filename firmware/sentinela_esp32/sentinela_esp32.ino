@@ -29,6 +29,7 @@
 #include <ESPmDNS.h>
 #include <WebServer.h>
 #include <DNSServer.h>
+#include <esp_netif.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <time.h>
@@ -302,6 +303,17 @@ void setup() {
     // No ponto de acesso, qualquer endereco cai no formulario: o produtor nao
     // precisa acertar a URL, basta abrir o navegador.
     if (modoConfig) {
+      String meuEndereco = WiFi.softAPIP().toString();
+      // O celular testa a internet buscando uma URL conhecida e esperando uma
+      // resposta especifica. Responder com DESVIO para o aparelho e o sinal que
+      // ele entende como "esta rede tem uma pagina para abrir" - e o que faz
+      // surgir o aviso de conectar-se a rede. Servir a pagina direto aqui nao
+      // aciona esse aviso de forma confiavel.
+      if (server.hostHeader() != meuEndereco) {
+        server.sendHeader("Location", "http://" + meuEndereco + "/", true);
+        server.send(302, "text/plain", "");
+        return;
+      }
       handleConfigPagina();
       return;
     }
@@ -489,6 +501,24 @@ void entrarModoConfig() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_AP);
   WiFi.softAP(NOME_AP_CONFIG);
+
+  // Anuncia o proprio aparelho como servidor DNS na entrega do endereco. Sem
+  // isto alguns Android consultam o DNS que ja tinham e nunca percebem o
+  // portal - o celular conecta, mas nada abre sozinho.
+  esp_netif_t* rede = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+  if (rede != nullptr) {
+    esp_netif_dns_info_t dns;
+    dns.ip.type = ESP_IPADDR_TYPE_V4;
+    dns.ip.u_addr.ip4.addr = (uint32_t)WiFi.softAPIP();
+    uint8_t oferecerDns = 1;
+    esp_netif_dhcps_stop(rede);
+    esp_netif_set_dns_info(rede, ESP_NETIF_DNS_MAIN, &dns);
+    esp_netif_dhcps_option(rede, ESP_NETIF_OP_SET,
+                           ESP_NETIF_DOMAIN_NAME_SERVER, &oferecerDns,
+                           sizeof(oferecerDns));
+    esp_netif_dhcps_start(rede);
+  }
+
   dnsServer.start(PORTA_DNS, "*", WiFi.softAPIP());
 
   Serial.print("Modo de configuracao. Rede: ");

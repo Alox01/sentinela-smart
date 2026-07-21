@@ -180,9 +180,19 @@ estiver gravado na NVS tem precedencia.
   segundos do loop em conexoes fadadas a falhar.
 - **A senha do Wi-Fi nao volta preenchida** no formulario: deixa-la no HTML
   entregaria a senha da propriedade a quem estivesse na rede aberta.
-- **Portal cativo (DNS coringa).** Sem ele, so o desvio de rota funcionaria — e
-  esse desvio nao pega dominios, porque a falha acontece antes, na resolucao do
-  nome. Na pratica o produtor teria que digitar `192.168.4.1` de cabeca.
+- **Portal cativo, em tres partes.** Ninguem decora `192.168.4.1`, entao o
+  objetivo e o celular abrir a pagina sozinho. Isso exige as tres:
+  1. **DNS coringa** — o aparelho responde qualquer consulta de nome com o
+     proprio IP. Sem isto a falha acontece antes de chegar nele;
+  2. **DNS anunciado no DHCP** — alguns Android consultam o servidor que ja
+     tinham e nunca chegam ao coringa;
+  3. **Desvio (HTTP 302)** na verificacao de internet — e esse sinal que o
+     sistema entende como "ha uma pagina para abrir". Servir a pagina direto,
+     com codigo 200, nao aciona o aviso de forma confiavel.
+- **Ainda assim e melhor esforco.** O comportamento varia por fabricante e
+  versao. O bloqueador mais comum e o **DNS privado** do Android (Rede → DNS
+  privado): ativo, o celular resolve nomes por fora e nunca percebe o portal.
+  Digitar `192.168.4.1` continua sendo o caminho que sempre funciona.
 - **Custo:** ~12 KB de flash (84% → 85%).
 
 ### Limitacao conhecida
