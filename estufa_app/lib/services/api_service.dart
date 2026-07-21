@@ -131,18 +131,12 @@ class ApiService {
       return dados;
     }
 
-    // A rota raiz e o formato antigo servido pelo proprio ESP na rede local.
-    // Na nuvem ela nao vale: alem de nao ser por aparelho, o adaptador carimba
-    // o timestamp com a hora atual, o que esconderia o "sem sinal".
-    if (modoConexao == 'NUVEM') return null;
-
-    final responseRaiz = await _getComFallback('/');
-    if (responseRaiz?.statusCode == 200) {
-      final dadosRaiz = _decodificarMapa(responseRaiz!.body);
-      if (dadosRaiz == null) return null;
-      return _adaptarStatusRaizEsp32(dadosRaiz);
-    }
-
+    // Sem recuo para a rota raiz: existiu um adaptador do formato antigo, mas
+    // ele traduzia alarme de temperatura e falha de sensor como INCENDIO - o
+    // alerta critico, nao silenciavel, que hoje toca sirene no celular. Como
+    // todo aparelho em campo serve /status, era um falso alarme guardado a
+    // espera de uma condicao rara. Se a leitura falhou, e melhor dizer que
+    // falhou.
     return null;
   }
 
@@ -465,61 +459,6 @@ class ApiService {
     } catch (_) {
       return null;
     }
-  }
-
-  Map<String, dynamic> _adaptarStatusRaizEsp32(Map<String, dynamic> dados) {
-    final temperatura = _numero(dados['temperaturaF']) ?? 0;
-    final umidade = _numero(dados['umidade']) ?? 0;
-    final ajusteTemperatura = _numero(dados['temperaturaAlvoF']) ?? temperatura;
-    final ajusteUmidade =
-        _numero(dados['umidadeAlvo']) ??
-        _numero(dados['umidadeMeta']) ??
-        umidade;
-    final alertaTemperatura = _booleano(dados['alertaTemperatura']);
-    final alertaLuz = _booleano(dados['alertaLuz']);
-    final leituraOk = _booleano(dados['leituraOk']);
-    final alertaLigado = alertaTemperatura || alertaLuz || !leituraOk;
-
-    return {
-      'status': {
-        'idHardware': 'ESP32_REAL',
-        'timestampLeitura': DateTime.now().millisecondsSinceEpoch,
-        'temperaturaAtual': temperatura,
-        'umidadeAtual': umidade,
-        'temEnergia': true,
-        'temInternet': true,
-        'sinalWifi': 100,
-        'alertaIncendio': alertaLigado,
-        'alertaIncendioLigado': alertaLigado,
-        'aquecedorLigado': _booleano(dados['ledControleLigado']),
-        'umidificadorLigado': _booleano(dados['mostrandoUmidade']),
-        'faseAtual': 'Leitura real',
-        'aviso': leituraOk ? 'ESP32 conectado' : 'Falha na leitura do sensor',
-        'corStatus': leituraOk ? 'green' : 'red',
-      },
-      'config': {
-        'idHardware': 'ESP32_REAL',
-        'tempMeta': ajusteTemperatura,
-        'tempTimestamp': DateTime.now().millisecondsSinceEpoch,
-        'umidadeMeta': ajusteUmidade,
-        'umidTimestamp': DateTime.now().millisecondsSinceEpoch,
-        'modoSilencioso': _booleano(dados['buzzerSilenciado']),
-        'modoSilenciosoTimestamp': 0,
-      },
-    };
-  }
-
-  double? _numero(Object? valor) {
-    if (valor is num) return valor.toDouble();
-    if (valor is String) return double.tryParse(valor.replaceAll(',', '.'));
-    return null;
-  }
-
-  bool _booleano(Object? valor) {
-    if (valor is bool) return valor;
-    if (valor is num) return valor != 0;
-    if (valor is String) return valor.toLowerCase() == 'true';
-    return false;
   }
 
   List<String> _candidatas() {

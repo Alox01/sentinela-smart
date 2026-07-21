@@ -82,8 +82,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   double? _ultimoTempAjusteServidor;
   double? _ultimoUmidAjusteServidor;
   bool? _ultimoAlertaIncendio;
-  bool _semEnergia = false;
-  bool? _ultimoTemEnergia;
   // Aparelho "sem comunicacao": no modo nuvem, quando a ultima leitura recebida
   // fica velha demais (o aparelho parou de reportar por falta de luz/internet),
   // o app mostra isso em vez de fingir que esta tudo ao vivo.
@@ -174,8 +172,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final novoAviso = status['aviso'] ?? '';
     final novaSireneLigada =
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
-    // Sem o campo, assume que ha energia (nao alarma a toa). So false = sem energia.
-    final novoTemEnergia = status['temEnergia'] != false;
     final tsLeitura = (status['timestampLeitura'] as num?)?.toInt();
     final aguardandoAparelho = dados['aguardandoAparelho'] == true;
     final ajusteTempAnterior = _ultimoTempAjusteServidor;
@@ -224,7 +220,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       umidadeAjusteAtual: novoUmidAjuste,
       alertaIncendioAtual: novaSireneLigada,
       riscoIncendioAtual: fogoDetectado,
-      temEnergiaAtual: novoTemEnergia,
       avisoAtual: novoAviso,
     );
 
@@ -246,7 +241,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       sireneLigada = novaSireneLigada;
       _corStatusAparelho = (status['corStatus'] ?? 'green').toString();
       isFire = fogoDetectado;
-      _semEnergia = !novoTemEnergia;
       // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
       // recebida ja significa que o aparelho esta vivo agora.
       _aguardandoAparelho = aguardandoAparelho;
@@ -342,42 +336,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                     temperaturaAtual: temperatura,
                     avisoEmergencia: avisoEmergencia,
                   ),
-                if (_semEnergia)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.amberAccent.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.power_off_rounded,
-                          color: Colors.amberAccent,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Estufa sem energia elétrica. O sistema está na '
-                            'bateria/gerador — verifique a alimentação.',
-                            style: TextStyle(
-                              color: Colors.amberAccent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // Sem banner de falta de energia: o aparelho nao tem sensor de
+                // tensao nem bateria, entao `temEnergia` e sempre true e o
+                // aviso nunca aparecia. O texto ainda prometia "o sistema esta
+                // na bateria/gerador", que nao existe. Quem cobre queda de luz
+                // e o banner de sem comunicacao, pela ausencia de leituras.
                 if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
                 if (_aguardandoAparelho) _buildBannerAguardandoAparelho(),
                 LeituraAparelhoCard(
@@ -952,42 +915,16 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     required double umidadeAjusteAtual,
     required bool alertaIncendioAtual,
     required bool riscoIncendioAtual,
-    required bool temEnergiaAtual,
     required String avisoAtual,
   }) {
     if (_cicloAtual == null) {
       _ultimoAlertaIncendio = alertaIncendioAtual;
-      _ultimoTemEnergia = temEnergiaAtual;
       return;
     }
 
-    if (!temEnergiaAtual && _ultimoTemEnergia != false) {
-      _registrarEventoCiclo(
-        tipo: 'queda_energia',
-        severidade: 'alerta',
-        descricao: 'A estufa ficou sem energia elétrica.',
-        temperaturaAtual: temperaturaAtual,
-        umidadeAtual: umidadeAtual,
-        temperaturaAjusteAtual: temperaturaAjusteAtual,
-        umidadeAjusteAtual: umidadeAjusteAtual,
-        avisoAtual: avisoAtual,
-        alertaIncendioAtual: alertaIncendioAtual,
-      );
-    } else if (temEnergiaAtual && _ultimoTemEnergia == false) {
-      _registrarEventoCiclo(
-        tipo: 'retorno_energia',
-        severidade: 'info',
-        descricao: 'A energia elétrica foi restabelecida.',
-        temperaturaAtual: temperaturaAtual,
-        umidadeAtual: umidadeAtual,
-        temperaturaAjusteAtual: temperaturaAjusteAtual,
-        umidadeAjusteAtual: umidadeAjusteAtual,
-        avisoAtual: avisoAtual,
-        alertaIncendioAtual: alertaIncendioAtual,
-      );
-    }
-    _ultimoTemEnergia = temEnergiaAtual;
-
+    // Nao ha evento de queda/retorno de energia: sem sensor de tensao o
+    // aparelho reporta `temEnergia` sempre true, e a transicao nunca ocorria.
+    // Volta quando o sensor existir.
     if (alertaIncendioAtual && _ultimoAlertaIncendio != true) {
       final ehIncendio = riscoIncendioAtual;
       _registrarEventoCiclo(
