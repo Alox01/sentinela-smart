@@ -486,8 +486,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 'Notificações',
                 style: TextStyle(color: Colors.white),
               ),
+              // Diz o alcance ANTES de abrir: a tela e a mesma da inicial, e
+              // chegar por dentro de uma estufa sugeriria que vale so para ela.
               subtitle: const Text(
-                'O que avisar e o que faz o celular tocar',
+                'Vale para todas as estufas',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {

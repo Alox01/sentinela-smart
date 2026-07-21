@@ -10,6 +10,7 @@ import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
+import '../features/notificacoes/screens/notificacoes_screen.dart';
 import '../services/backup_file_service.dart';
 import '../services/isar_service.dart';
 import '../services/monitor_estufas.dart';
@@ -54,6 +55,19 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF0E1012),
         elevation: 0,
         actions: [
+          // As preferencias de notificacao sao globais, entao o lugar natural
+          // delas e aqui, na lista de todas as estufas. Pelo menu de uma estufa
+          // so, o produtor esperaria que valessem apenas para aquela.
+          IconButton(
+            icon: const Icon(
+              Icons.notifications_active_outlined,
+              color: Colors.white70,
+            ),
+            tooltip: 'Notificações',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificacoesScreen()),
+            ),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.storage_rounded, color: Colors.white70),
             tooltip: 'Dados locais',
