@@ -49,6 +49,9 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.10.0: a pagina de configuracao mostra o nome local do aparelho (antes so
+//        aparecia no Monitor Serial, que exige um computador com a IDE) e
+//        aceita IP fixo, para roteador do provedor onde nao da para reservar.
 // 1.9.0: modo de configuracao por ponto de acesso (segurar os 3 botoes por
 //        3 s) - Wi-Fi e chave passam a sair da NVS, entao trocar de roteador
 //        nao exige mais regravar o firmware com um computador.
@@ -68,7 +71,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.9.0";
+const char* VERSAO_FIRMWARE = "1.10.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -210,6 +213,13 @@ String wifiSsid;
 String wifiPass;
 String tokenAparelho;
 
+// IP fixo (opcional). Vazio = DHCP, que e o normal. Existe porque em muita
+// propriedade o roteador e do provedor e o produtor nao tem acesso para fazer
+// reserva de DHCP - sem isto, so restaria reconferir o IP a cada queda de luz.
+String ipFixo;
+String gatewayFixo;
+String mascaraFixa;
+
 // --- Modo de configuracao (ponto de acesso) ---
 // Entra segurando os TRES botoes por 3 s: quem nao esta na frente do aparelho
 // nao abre a pagina. Sai sozinho depois de um tempo ocioso, para um modo aberto
@@ -242,6 +252,7 @@ void silenciarPorPrazo();
 void reativarAlarme();
 long long nowMs();
 void iniciarMdns();
+void aplicarIpFixoSeConfigurado();
 void verificarModoConfig();
 void entrarModoConfig();
 void handleConfigPagina();
@@ -380,6 +391,7 @@ void conectarWifi() {
   if (wifiSsid.length() == 0) return;
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
+  aplicarIpFixoSeConfigurado();
   WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
 
   Serial.print("Conectando ao Wi-Fi");
@@ -398,6 +410,35 @@ void conectarWifi() {
   } else {
     Serial.println("Sem Wi-Fi - operando em modo local standalone.");
   }
+}
+
+// Fixa o endereco antes de conectar, quando o produtor configurou um. Se algo
+// estiver malformado, cai no DHCP: um IP invalido deixaria o aparelho invisivel
+// na rede, que e pior do que um endereco que muda.
+void aplicarIpFixoSeConfigurado() {
+  if (ipFixo.length() == 0) return;
+
+  IPAddress ip, gateway, mascara;
+  if (!ip.fromString(ipFixo)) {
+    Serial.println("IP fixo invalido: usando DHCP.");
+    return;
+  }
+  if (!gateway.fromString(gatewayFixo)) {
+    // Sem gateway informado, o palpite seguro e o .1 da mesma faixa.
+    gateway = IPAddress(ip[0], ip[1], ip[2], 1);
+  }
+  if (!mascara.fromString(mascaraFixa)) {
+    mascara = IPAddress(255, 255, 255, 0);
+  }
+
+  // O gateway tambem responde como DNS na esmagadora maioria das redes
+  // domesticas - e o aparelho precisa de DNS para falar com a nuvem.
+  if (!WiFi.config(ip, gateway, mascara, gateway)) {
+    Serial.println("Falha ao aplicar IP fixo: usando DHCP.");
+    return;
+  }
+  Serial.print("IP fixo: ");
+  Serial.println(ipFixo);
 }
 
 // Reconecta em segundo plano sem travar o controle local.
@@ -558,7 +599,19 @@ void handleConfigPagina() {
       "box-sizing:border-box}button{margin-top:20px;width:100%;padding:12px;"
       "border:0;border-radius:8px;background:#2e7d32;color:#fff;font-size:16px}"
       "p.aviso{color:#888;font-size:12px;margin-top:18px}"
+      ".nome{background:#1c1c1e;border:1px solid #2e7d32;border-radius:8px;"
+      "padding:12px;margin-bottom:8px}.nome b{font-size:17px;color:#7bd88f;"
+      "word-break:break-all}.nome span{font-size:12px;color:#888}"
+      "details{margin-top:14px}summary{color:#bbb;font-size:14px;cursor:pointer}"
       "</style></head><body><h1>Configurar aparelho</h1>"
+      // O nome vem primeiro e destacado: e o dado que o produtor precisa levar
+      // para o app, e ate agora so aparecia no Monitor Serial - ou seja, so
+      // para quem tivesse um computador com a IDE do Arduino.
+      "<div class=\"nome\"><span>Cadastre este endere&ccedil;o no app:</span>"
+      "<br><b>");
+  html += escaparHtml(nomeLocal + ".local");
+  html += F(
+      "</b></div>"
       "<form method=\"POST\" action=\"/salvar\">"
       "<label>Rede Wi-Fi</label><input name=\"ssid\" value=\"");
   html += escaparHtml(wifiSsid);
@@ -569,7 +622,24 @@ void handleConfigPagina() {
       "<label>Chave de acesso</label><input name=\"token\" value=\"");
   html += escaparHtml(tokenAparelho);
   html += F(
-      "\"><button type=\"submit\">Salvar e reiniciar</button></form>"
+      "\">"
+      "<details><summary>Endere&ccedil;o fixo (opcional)</summary>"
+      "<p class=\"aviso\">Use quando n&atilde;o der para reservar o IP no "
+      "roteador. Deixe vazio para o roteador escolher.</p>"
+      "<label>IP fixo</label><input name=\"ip\" placeholder=\"192.168.1.220\" "
+      "value=\"");
+  html += escaparHtml(ipFixo);
+  html += F(
+      "\"><label>Gateway</label><input name=\"gateway\" "
+      "placeholder=\"192.168.1.1\" value=\"");
+  html += escaparHtml(gatewayFixo);
+  html += F(
+      "\"><label>M&aacute;scara</label><input name=\"mascara\" "
+      "placeholder=\"255.255.255.0\" value=\"");
+  html += escaparHtml(mascaraFixa);
+  html += F(
+      "\"></details>"
+      "<button type=\"submit\">Salvar e reiniciar</button></form>"
       "<p class=\"aviso\">O aparelho reinicia e volta ao normal. "
       "O alarme continua funcionando durante a configura&ccedil;&atilde;o.</p>"
       "</body></html>");
@@ -592,23 +662,57 @@ void handleConfigSalvar() {
     return;
   }
 
+  String ip = server.arg("ip");
+  String gateway = server.arg("gateway");
+  String mascara = server.arg("mascara");
+  ip.trim();
+  gateway.trim();
+  mascara.trim();
+
+  // IP preenchido mas invalido e pior do que nao ter nenhum: o aparelho sumiria
+  // da rede. Recusa antes de gravar, para o erro aparecer com o produtor ainda
+  // na frente do formulario.
+  IPAddress conferencia;
+  if (ip.length() > 0 && !conferencia.fromString(ip)) {
+    server.send(400, "text/html; charset=utf-8",
+                "<p>IP fixo invalido. Use o formato 192.168.1.220.</p>"
+                "<a href=\"/\">Voltar</a>");
+    return;
+  }
+
   prefs.begin("sentinela", false);
   prefs.putString("wifiSsid", ssid);
   // Senha vazia mantem a atual: assim da para so trocar a chave de acesso sem
   // precisar digitar a senha do Wi-Fi de novo.
   if (senha.length() > 0) prefs.putString("wifiPass", senha);
   prefs.putString("token", token);
+  prefs.putString("ipFixo", ip);
+  prefs.putString("gateway", gateway);
+  prefs.putString("mascara", mascara);
   prefs.end();
 
   Serial.print("Configuracao gravada. Rede: ");
   Serial.println(ssid);
 
-  server.send(200, "text/html; charset=utf-8",
-              "<!doctype html><meta charset=\"utf-8\">"
-              "<body style=\"font-family:sans-serif;background:#0e1012;"
-              "color:#fff;padding:24px\"><h1>Salvo</h1>"
-              "<p>O aparelho esta reiniciando e vai conectar na rede nova.</p>"
-              "</body>");
+  // Repete o endereco aqui tambem: o ponto de acesso vai sumir no reinicio, e
+  // esta e a ultima tela em que o produtor pode anotar o nome.
+  String confirmacao = F(
+      "<!doctype html><meta charset=\"utf-8\">"
+      "<body style=\"font-family:sans-serif;background:#0e1012;color:#fff;"
+      "padding:24px\"><h1>Salvo</h1>"
+      "<p>O aparelho esta reiniciando e vai conectar na rede nova.</p>"
+      "<p>Cadastre este endereco no app:<br><b style=\"font-size:18px;"
+      "color:#7bd88f\">");
+  confirmacao += escaparHtml(nomeLocal + ".local");
+  confirmacao += F("</b></p>");
+  if (ip.length() > 0) {
+    confirmacao += F("<p>Ou o endereco fixo: <b>");
+    confirmacao += escaparHtml(ip);
+    confirmacao += F("</b></p>");
+  }
+  confirmacao += F("</body>");
+
+  server.send(200, "text/html; charset=utf-8", confirmacao);
 
   delay(1500);  // deixa a resposta sair antes de reiniciar
   ESP.restart();
@@ -666,6 +770,9 @@ void carregarConfigPersistida() {
   wifiSsid = prefs.getString("wifiSsid", WIFI_SSID);
   wifiPass = prefs.getString("wifiPass", WIFI_PASS);
   tokenAparelho = prefs.getString("token", DEVICE_TOKEN);
+  ipFixo = prefs.getString("ipFixo", "");
+  gatewayFixo = prefs.getString("gateway", "");
+  mascaraFixa = prefs.getString("mascara", "");
   prefs.end();
 
   Serial.print("Wi-Fi configurado: ");
@@ -961,7 +1068,9 @@ void handleStatus() {
 void handleSimple() {
   // No ponto de acesso a raiz e o formulario, nao o JSON: quem abre o navegador
   // ali esta configurando o aparelho, nao consultando leitura.
-  if (modoConfig) {
+  // So a raiz vira formulario: `/dados` segue devolvendo JSON mesmo aqui, e e
+  // por ele que o app descobre o nome local para mostrar ao produtor.
+  if (modoConfig && server.uri() == "/") {
     handleConfigPagina();
     return;
   }

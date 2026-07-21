@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 /// Configura a rede e a chave do aparelho pelo app, sem digitar endereco.
@@ -22,17 +26,52 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   final _rede = TextEditingController();
   final _senha = TextEditingController();
   final _chave = TextEditingController();
+  final _ip = TextEditingController();
+  final _gateway = TextEditingController();
+  final _mascara = TextEditingController();
 
   bool _enviando = false;
   String? _erro;
   bool _concluido = false;
+  // Nome local do aparelho (ex.: sentinela-a1b2c3.local). E o endereco que o
+  // produtor cadastra na estufa, e ate a versao 1.10 do firmware ele so
+  // aparecia no Monitor Serial - inutil para quem nao tem a IDE do Arduino.
+  String? _nomeLocal;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_lerNomeDoAparelho());
+  }
 
   @override
   void dispose() {
     _rede.dispose();
     _senha.dispose();
     _chave.dispose();
+    _ip.dispose();
+    _gateway.dispose();
+    _mascara.dispose();
     super.dispose();
+  }
+
+  /// Silencioso de proposito: se o celular ainda nao estiver na rede do
+  /// aparelho, o formulario continua utilizavel e o erro aparece so quando ele
+  /// tentar salvar, que e quando importa.
+  Future<void> _lerNomeDoAparelho() async {
+    try {
+      final resposta = await http
+          .get(Uri.parse('$_enderecoAparelho/dados'))
+          .timeout(const Duration(seconds: 5));
+      if (!mounted || resposta.statusCode != 200) return;
+      final dados = jsonDecode(resposta.body);
+      final nome = dados is Map ? dados['nomeLocal']?.toString() : null;
+      if (nome != null && nome.isNotEmpty) {
+        setState(() => _nomeLocal = nome);
+      }
+    } catch (_) {
+      // Sem rede do aparelho ainda: nada a mostrar, e nada a avisar.
+    }
   }
 
   Future<void> _salvar() async {
@@ -57,6 +96,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               'ssid': rede,
               'senha': _senha.text,
               'token': _chave.text.trim(),
+              'ip': _ip.text.trim(),
+              'gateway': _gateway.text.trim(),
+              'mascara': _mascara.text.trim(),
             },
           )
           .timeout(const Duration(seconds: 10));
@@ -96,39 +138,103 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   }
 
   Widget _sucesso() {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.check_circle_outline,
-            color: Colors.greenAccent,
-            size: 56,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Configuração enviada',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.greenAccent,
+              size: 56,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 16),
+            const Text(
+              'Configuração enviada',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'O aparelho está reiniciando e vai entrar na rede nova. '
+              'A rede "Sentinela-Config" vai sumir — reconecte o celular no '
+              'Wi-Fi de sempre.',
+              style: TextStyle(color: Colors.white54, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+        // Repetido aqui porque o ponto de acesso some no reinicio: esta e a
+        // ultima tela em que o produtor pode copiar o endereco.
+        _cartaoNome(),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent),
+          child: const Text('Voltar'),
+        ),
+      ],
+    );
+  }
+
+  /// Endereço que o produtor precisa levar para o cadastro da estufa. Fica
+  /// visível aqui porque não há outro lugar: o visor tem 4 dígitos e o Monitor
+  /// Serial exige um computador com a IDE do Arduino.
+  Widget _cartaoNome() {
+    final nome = _nomeLocal;
+    if (nome == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           const Text(
-            'O aparelho está reiniciando e vai entrar na rede nova. '
-            'A rede "Sentinela-Config" vai sumir — reconecte o celular no '
-            'Wi-Fi de sempre.',
-            style: TextStyle(color: Colors.white54, fontSize: 13),
-            textAlign: TextAlign.center,
+            'Endereço deste aparelho',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
           ),
-          const SizedBox(height: 24),
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent),
-            child: const Text('Voltar'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: SelectableText(
+                  nome,
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Copiar',
+                icon: const Icon(Icons.copy_rounded, color: Colors.white54),
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: nome));
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Endereço copiado')),
+                  );
+                },
+              ),
+            ],
+          ),
+          const Text(
+            'Cadastre no campo de endereço da estufa. Ele continua valendo '
+            'mesmo que o roteador troque o IP.',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
           ),
         ],
       ),
@@ -139,6 +245,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
+        _cartaoNome(),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -174,6 +281,49 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           controlador: _chave,
           rotulo: 'Chave de acesso',
           dica: 'A mesma cadastrada na estufa, aqui no app',
+        ),
+        Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text(
+              'Endereço fixo (opcional)',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            subtitle: const Text(
+              'Quando não dá para reservar o IP no roteador',
+              style: TextStyle(color: Colors.white24, fontSize: 11),
+            ),
+            iconColor: Colors.white54,
+            collapsedIconColor: Colors.white54,
+            childrenPadding: const EdgeInsets.only(top: 8),
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Muito roteador de provedor não deixa reservar endereço. '
+                  'Aqui o próprio aparelho fixa o dele. Deixe vazio para o '
+                  'roteador escolher.',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              ),
+              _campo(
+                controlador: _ip,
+                rotulo: 'IP fixo',
+                dica: 'Ex.: 192.168.1.220 — use um número alto, de 200 a 250',
+              ),
+              _campo(
+                controlador: _gateway,
+                rotulo: 'Gateway',
+                dica: 'Vazio assume o .1 da mesma faixa',
+              ),
+              _campo(
+                controlador: _mascara,
+                rotulo: 'Máscara',
+                dica: 'Vazio assume 255.255.255.0',
+              ),
+            ],
+          ),
         ),
         if (_erro != null) ...[
           const SizedBox(height: 16),

@@ -100,12 +100,20 @@ Vantagens:
 - nao exige alterar o codigo do ESP32;
 - facilita cadastrar o endereco no app uma unica vez.
 
-### 2. IP fixo alto no ESP32
+### 2. IP fixo alto no ESP32 — **implementado** (firmware 1.10.0)
 
-Essa e a alternativa quando nao houver acesso ao roteador.
+Essa e a alternativa quando nao houver acesso ao roteador — o caso comum quando
+o roteador e do provedor e so ele tem a senha de administrador. Sem isso,
+restaria reconferir o IP a cada queda de energia.
 
-O ESP32 pode permitir configurar manualmente um IP alto dentro da rede local,
-por exemplo `192.168.1.220`.
+Configuravel na pagina do aparelho e na tela do app, em "Endereco fixo
+(opcional)". Vazio = DHCP. Gateway vazio assume o `.1` da mesma faixa e mascara
+vazia assume `255.255.255.0`; o gateway tambem e usado como DNS, porque o
+aparelho precisa resolver nomes para falar com a nuvem.
+
+**Um IP invalido e recusado antes de gravar**, e um que falhe ao ser aplicado
+cai no DHCP: um endereco errado deixaria o aparelho invisivel na rede, que e
+pior do que um endereco que muda.
 
 Essa opcao reduz a chance de conflito, mas nao elimina totalmente o risco. Se
 outro aparelho receber o mesmo IP, pode haver falha de conexao.
@@ -125,9 +133,15 @@ O firmware anuncia automaticamente um nome local exclusivo, formado pelos seis
 sentinela-a1b2c3.local
 ```
 
-O Monitor Serial mostra o nome completo ao iniciar. Ele pode ser cadastrado no
-campo IP ou endereço do app, sem `http://` e sem porta. Assim, uma mudança do
-IP entregue pelo DHCP não exige editar a estufa cadastrada.
+**Onde ver o nome** (o produtor não tem a IDE do Arduino):
+
+1. **Na tela "Configurar aparelho" do app** — em destaque, com botão de copiar;
+2. **Na página servida pelo aparelho**, no topo do formulário e de novo na
+   confirmação, porque o ponto de acesso some no reinício;
+3. No Monitor Serial ao iniciar, para quem estiver com um computador.
+
+Cadastre-o no campo de endereço da estufa, sem `http://` e sem porta. Assim, uma
+mudança do IP entregue pelo DHCP não exige editar a estufa cadastrada.
 
 Observação importante: em alguns celulares Android e roteadores, mDNS pode não
 funcionar de forma consistente. Por isso, ele é um facilitador, não a única
