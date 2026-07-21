@@ -143,6 +143,10 @@ estiver gravado na NVS tem precedencia.
 
 ### Como usar
 
+> **Caminho recomendado:** app → menu da estufa → **Configurar aparelho**. O
+> formulario e o mesmo, sem digitar endereco nenhum. Os passos abaixo (rede e
+> navegador) continuam valendo para quem nao tem o app instalado.
+
 1. **Segure os tres botoes ao mesmo tempo por 3 segundos** (buzzer, verde e
    vermelho). O visor mostra `ConF`.
 2. O aparelho cria a rede Wi-Fi **`Sentinela-Config`**.
@@ -192,7 +196,10 @@ estiver gravado na NVS tem precedencia.
 - **Ainda assim e melhor esforco.** O comportamento varia por fabricante e
   versao. O bloqueador mais comum e o **DNS privado** do Android (Rede → DNS
   privado): ativo, o celular resolve nomes por fora e nunca percebe o portal.
-  Digitar `192.168.4.1` continua sendo o caminho que sempre funciona.
+  **Por isso a tela no app existe:** ela nao depende de nada disso — o app fala
+  direto com `192.168.4.1`, sem navegador e sem o produtor digitar endereco.
+  O formulario servido pelo aparelho continua como saida para quem nao tem o
+  app instalado.
 - **Custo:** ~12 KB de flash (84% → 85%).
 
 ### Limitacao conhecida
