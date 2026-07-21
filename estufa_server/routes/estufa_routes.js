@@ -102,10 +102,9 @@ function createEstufaRouter({
       status.riscoIncendio === true ||
       status.alertaIncendio === true;
     const alarme = status.alarmeAtivo === true;
-    const semEnergia = status.temEnergia === false;
 
     const anterior = ultimoEstadoNotificado.get(idHardware) || {};
-    ultimoEstadoNotificado.set(idHardware, { fogo, alarme, semEnergia });
+    ultimoEstadoNotificado.set(idHardware, { fogo, alarme });
 
     if (fogo && !anterior.fogo) {
       await notificarEvento({
@@ -116,15 +115,12 @@ function createEstufaRouter({
         critico: true,
       });
     }
-    if (semEnergia && !anterior.semEnergia) {
-      await notificarEvento({
-        idHardware,
-        evento: 'faltaEnergia',
-        titulo: 'Falta de energia',
-        corpo: 'A estufa avisou que a energia caiu. Pode ser preciso abrir as estufas.',
-        critico: true,
-      });
-    }
+    // Sem aviso proprio de falta de energia: o aparelho nao tem sensor de tensao
+    // nem bateria, entao `temEnergia` e sempre true e ele nao consegue avisar
+    // que esta morrendo. Quem cobre esse caso e o watchdog, pela ausencia -
+    // manter um evento a parte prometeria uma distincao que o sistema nao sabe
+    // fazer, e o produtor poderia desligar o aviso que de fato funciona
+    // achando que este o cobria. Volta quando existir o sensor de tensao.
     if (alarme && !anterior.alarme && !fogo) {
       await notificarEvento({
         idHardware,

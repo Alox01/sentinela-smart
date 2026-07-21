@@ -3,25 +3,25 @@ import 'dart:convert';
 /// Um evento que pode gerar aviso, com dois interruptores independentes:
 /// mostrar a mensagem e fazer o celular tocar/vibrar. O escopo e global: as
 /// mesmas preferencias valem para todas as estufas.
-enum EventoNotificacao {
-  alarmeProcesso,
-  incendio,
-  faltaEnergia,
-  semComunicacao,
-}
+///
+/// Nao existe evento separado de "falta de energia": sem sensor de tensao e
+/// bateria, o aparelho nao consegue avisar que esta morrendo, e queda de luz
+/// chega igual a queda de internet - o silencio. Separar os dois prometeria uma
+/// distincao que o sistema nao sabe fazer, e alguem poderia desligar o aviso que
+/// funciona achando que o outro o cobria. `semComunicacao` cobre os dois casos,
+/// e a mensagem assume a duvida.
+enum EventoNotificacao { alarmeProcesso, incendio, semComunicacao }
 
 extension EventoNotificacaoInfo on EventoNotificacao {
   String get chave => switch (this) {
     EventoNotificacao.alarmeProcesso => 'alarmeProcesso',
     EventoNotificacao.incendio => 'incendio',
-    EventoNotificacao.faltaEnergia => 'faltaEnergia',
     EventoNotificacao.semComunicacao => 'semComunicacao',
   };
 
   String get titulo => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Alarme de temperatura',
     EventoNotificacao.incendio => 'Inc\u00eandio / chama',
-    EventoNotificacao.faltaEnergia => 'Falta de energia',
     EventoNotificacao.semComunicacao => 'Sem comunica\u00e7\u00e3o',
   };
 
@@ -29,9 +29,9 @@ extension EventoNotificacaoInfo on EventoNotificacao {
     EventoNotificacao.alarmeProcesso => 'Temperatura fora da faixa do ajuste.',
     EventoNotificacao.incendio =>
       'Sensor de chama ou temperatura de inc\u00eandio. Cr\u00edtico.',
-    EventoNotificacao.faltaEnergia => 'O aparelho avisou que a energia caiu.',
     EventoNotificacao.semComunicacao =>
-      'A estufa parou de reportar (pode ser luz ou internet).',
+      'A estufa parou de reportar. Cobre falta de energia e queda de '
+          'internet \u2014 o aparelho n\u00e3o distingue as duas.',
   };
 
   bool get critico => this == EventoNotificacao.incendio;

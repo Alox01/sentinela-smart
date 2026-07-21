@@ -59,4 +59,31 @@ void main() {
       expect(e.critico, e == EventoNotificacao.incendio, reason: e.chave);
     }
   });
+
+  // O evento separado de falta de energia foi removido de proposito: sem sensor
+  // de tensao o aparelho nunca reporta `temEnergia=false`, entao ele nao podia
+  // disparar. Pior, quem confiasse nele podia desligar "sem comunicacao" - o
+  // aviso que de fato funciona - achando que estava coberto.
+  test('nao existe evento separado de falta de energia', () {
+    expect(
+      EventoNotificacao.values.map((e) => e.chave),
+      isNot(contains('faltaEnergia')),
+    );
+    expect(EventoNotificacao.values, hasLength(3));
+  });
+
+  test('preferencia antiga com faltaEnergia continua carregando', () {
+    // Quem ja usava o app tem esta chave gravada no aparelho.
+    const salvoAntigo =
+        '{"alarmeProcesso":{"notificar":false,"tocarVibrar":false},'
+        '"faltaEnergia":{"notificar":true,"tocarVibrar":true},'
+        '"semComunicacao":{"notificar":false,"tocarVibrar":true}}';
+
+    final p = PreferenciasNotificacao.fromJsonString(salvoAntigo);
+
+    // A chave que sumiu e ignorada, e o resto e preservado.
+    expect(p.opcao(EventoNotificacao.alarmeProcesso).notificar, isFalse);
+    expect(p.opcao(EventoNotificacao.semComunicacao).notificar, isFalse);
+    expect(p.opcao(EventoNotificacao.semComunicacao).tocarVibrar, isTrue);
+  });
 }

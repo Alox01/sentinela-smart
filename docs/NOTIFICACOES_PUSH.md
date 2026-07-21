@@ -19,22 +19,27 @@ camada extra de aviso remoto — conveniência, não substitui o alarme físico.
 | --- | --- |
 | **Alarme de processo** (temperatura fora de ±5 °F) | Regra em `logica.js` já roda no ingest de `/leitura`. |
 | **Risco de incêndio / sensor de chama** | Mesmo `analisarEstado` (`riscoIncendio` / `perigoChama`). |
-| **Falta de energia** | Campo `temEnergia=false` no status **ou** ausência de comunicação (ver abaixo). |
+| **Sem comunicação** | Ausência de leituras por 5 min (watchdog). Cobre falta de energia **e** queda de internet. |
 
-### Falta de energia é um caso especial
+### Por que não existe um evento separado de "falta de energia"
 
-Um aparelho **sem energia não consegue reportar** `temEnergia=false`: silêncio é
-ambíguo por natureza — "sem luz" e "sem internet" chegam do mesmo jeito (nada).
-Nenhum software no celular desfaz isso sozinho. A estratégia é **transformar a
-queda de energia numa mensagem explícita** em vez de silêncio. Dois gatilhos
-complementares:
+Existiu, e foi **removido**. Um aparelho **sem energia não consegue reportar**
+`temEnergia=false` — ele morre antes. Sem sensor de tensão e sem bateria,
+`temEnergia` é fixo em `true` no firmware, então esse evento **nunca podia
+disparar**: era uma opção na tela que não correspondia a nada.
 
-1. **Reporte direto:** enquanto houver bateria/nobreak, o ESP32 manda
-   `temEnergia=false` e a nuvem dispara o push na hora.
-2. **Watchdog de silêncio:** a nuvem guarda o horário da última leitura de cada
-   estufa. Se passar de um limite (ex.: 3× o intervalo de push, ~30 min) sem
-   receber nada, dispara "estufa sem comunicação" — cobre queda total de energia
-   e de internet.
+Pior que inútil, era arriscado. O produtor podia manter "Falta de energia"
+ligada e desligar "Sem comunicação" por achar redundante — e ficar **sem aviso
+nenhum** exatamente no cenário que motiva o projeto. A tela prometia uma
+distinção que o sistema não sabe fazer.
+
+Silêncio é ambíguo por natureza: "sem luz" e "sem internet" chegam do mesmo
+jeito (nada). Então há **um** evento, `semComunicacao`, e a mensagem assume a
+dúvida: *"pode ser falta de energia ou de internet no local. Verifique."*
+
+O evento separado volta a fazer sentido **quando existir o sensor de tensão** —
+aí o aparelho consegue afirmar a causa antes de desligar, e a distinção passa a
+ser real em vez de prometida.
 
 #### Requisito de hardware (o disambiguador)
 
@@ -97,8 +102,7 @@ independentes**:
 | --- | --- | --- |
 | Alarme de processo (temperatura) | on/off | on/off |
 | Incêndio / sensor de chama | on/off | on/off |
-| Falta de energia | on/off | on/off |
-| Sem comunicação (silêncio) | on/off | on/off |
+| Sem comunicação (luz ou internet) | on/off | on/off |
 
 Assim ele pode, por exemplo, receber a mensagem de todos mas só deixar o celular
 **tocar** para incêndio e falta de energia (o que importa de madrugada), com o
