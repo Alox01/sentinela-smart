@@ -46,8 +46,12 @@ em `GET /versao` (mostra o commit no ar).
   Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.8.0, **compilado e validado
-em hardware** (84% flash / 15% RAM no core esp32 3.2.0)
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.9.0, **compilado e validado
+em hardware** (85% flash / 15% RAM no core esp32 3.2.0)
+- **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
+  acesso `Sentinela-Config`; Wi-Fi e chave saem da NVS. Trocar de roteador não
+  exige mais regravar. Fecha sozinho após 5 min ocioso, e o alarme segue ativo.
+  **Falta testar num celular de verdade.**
 - **Ajustes persistem** em memória não-volátil (NVS): queda de energia não
   devolve mais o alvo ao padrão no meio de uma estufada.
 - **Acomodação de 5 min / teto de 8** após mudar o alvo, igual ao app e ao
@@ -109,14 +113,11 @@ validação em campo e a escrita.
 - **Controle de ventoinha / agendamento (menu Fase B):** exige relé no aparelho.
 - **Sensor DHT22 novo:** o atual queimou (inversão de polaridade).
 
-## Trabalho futuro de software (não bloqueado, decidido não fazer)
+## Trabalho futuro de software
 
-- **Modo de configuração Wi-Fi por AP** (`Sentinela-Config`): hoje o SSID e a
-  senha são constantes no `.ino`, então trocar de roteador exige regravar o
-  firmware. É a limitação mais visível para quem usa, e não fazia parte dos
-  objetivos da proposta. O mDNS e a reserva de DHCP cobrem o caso frequente
-  (mudança de IP); o que exige regravar (SSID/senha) muda raramente. Análise
-  completa e fluxo planejado em `CONFIGURACAO_ESP32.md`.
+- **Criptografia da NVS:** a senha do Wi-Fi e a chave de acesso ficam em claro
+  na memória do ESP32. Exigiria *flash encryption*, que complica gravação e
+  manutenção. Documentado como limitação em `CONFIGURACAO_ESP32.md`.
 
 ## Desvios em relação à proposta (avisar o orientador)
 

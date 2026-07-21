@@ -4,8 +4,8 @@
 lógica original (DHT22, botões, display, LEDs, buzzer) **mais** a camada de rede
 que fala o contrato do app (`docs/CONTRATO_API.md`).
 
-> ⚠️ **Ainda não testado em hardware.** Foi escrito para o contrato; precisa ser
-> validado quando o aparelho chegar (checklist em `docs/TESTE_ESP32_REAL.md`).
+> ✅ **Validado em hardware** (v1.9.0). O modo de configuração por ponto de
+> acesso é a única parte ainda não exercitada num aparelho real.
 
 ## Dependências (Arduino IDE → Library Manager)
 
@@ -92,7 +92,10 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   queda de energia não devolve mais o alvo ao padrão no meio de uma estufada.
   O **silêncio do alarme não é guardado** de propósito — depois de um reinício
   o alarme volta a valer.
-- **Wi-Fi fixo no código:** `WIFI_SSID`/`WIFI_PASS` são constantes. Para usar em
-  outra rede (ex.: casa de outra pessoa) é preciso regravar com as credenciais
-  dela — ou implementar o modo de configuração por AP (ver
-  `docs/CONFIGURACAO_ESP32.md`).
+- **Wi-Fi configurável sem computador:** `WIFI_SSID`/`WIFI_PASS`/`DEVICE_TOKEN`
+  no `.ino` são só o valor **de fábrica**. Segurando os **três botões por 3 s** o
+  aparelho vira o ponto de acesso `Sentinela-Config` (visor mostra `ConF`); pelo
+  navegador em `192.168.4.1` dá para trocar rede, senha e chave, que ficam na
+  NVS. O modo se fecha sozinho após 5 min sem uso, e **o alarme continua
+  funcionando** durante a configuração. Detalhes e limitações em
+  `docs/CONFIGURACAO_ESP32.md`.

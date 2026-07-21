@@ -134,50 +134,60 @@ funcionar de forma consistente. Por isso, ele é um facilitador, não a única
 forma de conexão: o IP exibido no Monitor Serial continua sendo a alternativa.
 O mDNS funciona apenas na mesma rede local e não fornece acesso pela internet.
 
-## Modo de configuracao — **nao implementado** (trabalho futuro)
+## Modo de configuracao — **implementado** (firmware 1.9.0)
 
-> **Status:** planejado, nao feito. Hoje `WIFI_SSID` e `WIFI_PASS` sao
-> constantes no `.ino`: trocar de roteador, mudar a senha ou levar o aparelho
-> para outra propriedade **exige regravar o firmware**, com computador e cabo.
+Trocar de roteador, mudar a senha ou levar o aparelho para outra propriedade
+**nao exige mais regravar o firmware**. As constantes `WIFI_SSID`, `WIFI_PASS` e
+`DEVICE_TOKEN` no `.ino` passaram a ser apenas o **valor de fabrica**: o que
+estiver gravado na NVS tem precedencia.
 
-Essa e a limitacao mais visivel do projeto para quem usa, e vale reconhece-la no
-TCC: um sistema que argumenta autonomia em ambiente rural nao deveria depender
-de um tecnico a cada troca de roteador.
+### Como usar
 
-O que **hoje** reduz o problema (e por isso ela nao bloqueia o uso):
+1. **Segure os tres botoes ao mesmo tempo por 3 segundos** (buzzer, verde e
+   vermelho). O visor mostra `ConF`.
+2. O aparelho cria a rede Wi-Fi **`Sentinela-Config`**.
+3. Conecte o celular nela e abra o navegador em **`http://192.168.4.1`**
+   (qualquer endereco cai no formulario, entao nao precisa acertar a URL).
+4. Preencha rede, senha e chave de acesso. **Senha em branco mantem a atual** —
+   util para trocar so a chave.
+5. Salvar reinicia o aparelho, que ja sobe na rede nova.
 
-- **mDNS** (`sentinela-XXXXXX.local`, ja implementado) mantem o aparelho
-  encontravel mesmo quando o DHCP muda o IP — que e a causa mais comum de
-  "sumiu do app" depois de uma queda de energia;
-- **reserva de DHCP no roteador** resolve o endereco de forma definitiva quando
-  ha acesso a ele;
-- a chave de acesso e configurada **pelo app**, por estufa, e nao exige tocar no
-  firmware.
+### Decisoes de projeto
 
-Ou seja: o que muda com frequencia (IP) ja esta coberto; o que exige regravar
-(SSID/senha) muda raramente. O custo de implementar o modo AP e moderado — a
-metade dificil ja existe, porque o NVS e o `WebServer` estao no firmware — mas
-consome espaco de flash (o binario ja ocupa 84%) e nao fazia parte dos
-objetivos da proposta.
+- **Por que tres botoes, e nao um PIN no visor.** Segurar tres botoes ja e prova
+  de presenca fisica, que era o que o PIN buscava garantir. Um PIN adicionaria
+  atrito sem mudar quem consegue abrir o modo: em ambos os casos, so quem esta
+  na frente do aparelho.
+- **O que sobra de risco.** Enquanto o modo esta aberto, a rede fica sem senha e
+  qualquer um no alcance pode abrir a pagina. Duas coisas limitam isso: o modo
+  so abre por acao fisica deliberada, e **se fecha sozinho apos 5 minutos** sem
+  uso, reiniciando. Um modo aberto por engano nao fica exposto indefinidamente.
+- **O alarme continua funcionando durante a configuracao.** Sensor, sirene, LEDs
+  e visor seguem ativos; so a rede muda. Uma estufa nao pode ficar sem vigilancia
+  porque alguem foi mexer no Wi-Fi.
+- **Nenhum botao age sozinho durante a combinacao.** Sem isso, apertar os tres
+  silenciaria o alarme e mexeria no alvo no caminho — os contatos nunca fecham
+  ao mesmo tempo. Ao entrar no modo, os ajustes sao recarregados da NVS para
+  descartar qualquer toque acidental.
+- **A nuvem e ignorada no modo de configuracao.** Como ponto de acesso o
+  aparelho nao tem saida para a internet; tentar falar com a nuvem so gastaria
+  segundos do loop em conexoes fadadas a falhar.
+- **A senha do Wi-Fi nao volta preenchida** no formulario: deixa-la no HTML
+  entregaria a senha da propriedade a quem estivesse na rede aberta.
+- **Custo:** ~5 KB de flash (84% → 85%).
 
-Fluxo planejado, para quem retomar:
+### Limitacao conhecida
 
-1. Ao segurar um botao fisico durante a inicializacao, o ESP32 entra em modo de
-   configuracao.
-2. O ESP32 cria uma rede Wi-Fi propria, por exemplo `Sentinela-Config`.
-3. O produtor ou tecnico conecta o celular nessa rede.
-4. O navegador abre uma pagina local, por exemplo `http://192.168.4.1`.
-5. A pagina permite configurar:
-   - Wi-Fi da propriedade;
-   - senha do Wi-Fi;
-   - modo de IP: DHCP ou fixo;
-   - IP fixo, gateway e mascara, quando necessario;
-   - chave de acesso do aparelho;
-   - nome do aparelho.
-6. O ESP32 salva as configuracoes em memoria persistente.
-7. O ESP32 reinicia e volta ao modo normal.
+A senha do Wi-Fi e a chave de acesso ficam na NVS **sem criptografia**. Quem
+tiver o aparelho em maos e souber ler a memoria consegue extrai-las. E o padrao
+nesse tipo de dispositivo, mas nao deve ficar implicito. Mitigar exigiria
+*flash encryption* do ESP32, que complica a gravacao e a manutencao.
 
-No ESP32, essas configuracoes podem ser salvas com `Preferences` ou NVS.
+### Nao implementado
+
+Configurar **IP fixo, gateway e mascara** pela pagina. O DHCP com o mDNS ja
+cobre o caso real (o aparelho continua encontravel quando o IP muda), e os
+campos extras custariam espaco de flash sem resolver problema observado.
 
 ## Chave de acesso
 
@@ -233,13 +243,10 @@ Esta solucao combina com a proposta hibrida porque:
 
 Pendentes:
 
-- Implementar o modo de configuracao por AP (`Sentinela-Config`) e a pagina em
-  `192.168.4.1`.
-- Salvar **Wi-Fi, IP e nome** em memoria persistente — o NVS ja e usado para os
-  ajustes de temperatura/umidade, entao o mecanismo esta pronto; falta so
-  gravar tambem as credenciais.
-- Adicionar a combinacao de botoes para entrar no modo de configuracao.
-- Testar DHCP reservado e IP fixo em campo.
+- **Testar o modo de configuracao em campo** (compila e a logica esta escrita,
+  mas so vale depois de abrir a pagina num celular de verdade).
+- Testar DHCP reservado em campo.
+- Avaliar *flash encryption* se a senha em claro na NVS virar preocupacao real.
 
 Concluidas:
 
@@ -247,5 +254,8 @@ Concluidas:
   unico em `CONTRATO_API.md`.
 - ~~mDNS no firmware~~ — feito (v1.2.0).
 - ~~Persistir a configuracao para nao resetar no boot~~ — feito (v1.6.0, NVS).
+- ~~Implementar o modo de configuracao por AP e a combinacao de botoes~~ —
+  feito (v1.9.0).
+- ~~Salvar Wi-Fi e chave em memoria persistente~~ — feito (v1.9.0).
 - ~~Validar reconexao depois de queda de energia~~ — o firmware reconecta
   sozinho; falta apenas repetir a medicao com a versao atual.

@@ -17,10 +17,12 @@
   Placa: ESP32 (framework Arduino).
 
   ATENCAO:
-    1. Preencha WIFI_SSID, WIFI_PASS e DEVICE_TOKEN abaixo.
-    2. O DEVICE_TOKEN deve ser IGUAL a chave de acesso cadastrada no app.
-    3. Este firmware ainda NAO foi testado em hardware. Validar quando o
-       aparelho chegar (ver o checklist em docs/TESTE_ESP32_REAL.md).
+    1. WIFI_SSID, WIFI_PASS e DEVICE_TOKEN abaixo sao apenas o valor DE
+       FABRICA, usado ate alguem configurar o aparelho.
+    2. Depois de gravado, da para trocar rede e chave sem computador:
+       segure os TRES botoes por 3 s, conecte na rede "Sentinela-Config" e
+       abra o navegador. O que for salvo ali fica na NVS e tem precedencia.
+    3. O DEVICE_TOKEN deve ser IGUAL a chave de acesso cadastrada no app.
 */
 
 #include <WiFi.h>
@@ -45,6 +47,9 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.9.0: modo de configuracao por ponto de acesso (segurar os 3 botoes por
+//        3 s) - Wi-Fi e chave passam a sair da NVS, entao trocar de roteador
+//        nao exige mais regravar o firmware com um computador.
 // 1.8.0: teto da folga da acomodacao de 20 para 8 F/% - o teto antigo cabia
 //        um desvio grande demais dentro do "perdao" de um ajuste.
 // 1.7.0: janela de acomodacao de 20 para 5 min - medido na estufa real, que
@@ -61,7 +66,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.8.0";
+const char* VERSAO_FIRMWARE = "1.9.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -195,6 +200,25 @@ String nomeLocal;   // ex.: sentinela-a1b2c3 -> http://sentinela-a1b2c3.local
 bool mdnsAtivo = false;
 const unsigned long intervaloTentativaMdns = 15000;
 
+// --- Configuracao de rede em tempo de execucao ---
+// Wi-Fi e chave saem da NVS; as constantes do topo viram apenas o valor de
+// fabrica, usado enquanto ninguem configurou pelo modo de configuracao. Sem
+// isto, trocar de roteador exigiria regravar o firmware com um computador.
+String wifiSsid;
+String wifiPass;
+String tokenAparelho;
+
+// --- Modo de configuracao (ponto de acesso) ---
+// Entra segurando os TRES botoes por 3 s: quem nao esta na frente do aparelho
+// nao abre a pagina. Sai sozinho depois de um tempo ocioso, para um modo aberto
+// por engano nao ficar exposto ate alguem lembrar.
+const char* NOME_AP_CONFIG = "Sentinela-Config";
+const unsigned long TEMPO_SEGURAR_CONFIG_MS = 3000;
+const unsigned long TEMPO_CONFIG_OCIOSO_MS = 5UL * 60UL * 1000UL;
+bool modoConfig = false;
+unsigned long tresBotoesDesdeMs = 0;
+unsigned long ultimaAtividadeConfig = 0;
+
 // Prototipos explicitos: o gerador automatico do Arduino as vezes nao monta a
 // assinatura certa para funcoes que recebem tipos do ArduinoJson.
 void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
@@ -211,6 +235,10 @@ void silenciarPorPrazo();
 void reativarAlarme();
 long long nowMs();
 void iniciarMdns();
+void verificarModoConfig();
+void entrarModoConfig();
+void handleConfigPagina();
+void handleConfigSalvar();
 
 // ============================================================
 //  SETUP
@@ -263,7 +291,14 @@ void setup() {
   server.on("/", HTTP_GET, handleSimple);
   server.on("/dados", HTTP_GET, handleSimple);
   server.on("/sincronizar", HTTP_POST, handleSincronizar);
+  server.on("/salvar", HTTP_POST, handleConfigSalvar);
   server.onNotFound([]() {
+    // No ponto de acesso, qualquer endereco cai no formulario: o produtor nao
+    // precisa acertar a URL, basta abrir o navegador.
+    if (modoConfig) {
+      handleConfigPagina();
+      return;
+    }
     server.send(404, "application/json", "{\"erro\":\"Rota nao encontrada\"}");
   });
   server.begin();
@@ -286,20 +321,26 @@ void loop() {
   // Emergencia nao espera o proximo envio agendado. Sem isto, um incendio so
   // chegaria a nuvem ate um minuto depois - e um teste rapido no sensor de
   // chama comecava e terminava entre dois envios, sem a nuvem ver nada.
-  if (estadoDeAlertaMudou()) {
-    ultimoPushNuvem = millis();
-    empurrarLeituraNuvem();
-  } else if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
-    ultimoPushNuvem = millis();
-    empurrarLeituraNuvem();
-  }
+  // No modo de configuracao o aparelho e um ponto de acesso, sem saida para a
+  // internet: tentar falar com a nuvem so gastaria segundos do loop em
+  // conexoes fadadas a falhar.
+  if (!modoConfig) {
+    if (estadoDeAlertaMudou()) {
+      ultimoPushNuvem = millis();
+      empurrarLeituraNuvem();
+    } else if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
+      ultimoPushNuvem = millis();
+      empurrarLeituraNuvem();
+    }
 
-  if (millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
-    ultimaBuscaComandos = millis();
-    buscarComandosNuvem();
+    if (millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
+      ultimaBuscaComandos = millis();
+      buscarComandosNuvem();
+    }
   }
 
   verificarSensorLuz();
+  verificarModoConfig();
   verificarBotoes();
   verificarTempos();
   salvarConfigSeNecessario();
@@ -317,10 +358,10 @@ void loop() {
 //  REDE
 // ============================================================
 void conectarWifi() {
-  if (strlen(WIFI_SSID) == 0) return;
+  if (wifiSsid.length() == 0) return;
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
 
   Serial.print("Conectando ao Wi-Fi");
   unsigned long inicio = millis();
@@ -342,7 +383,10 @@ void conectarWifi() {
 
 // Reconecta em segundo plano sem travar o controle local.
 void manterWifi() {
-  if (strlen(WIFI_SSID) == 0) return;
+  // No modo de configuracao o radio esta servindo o ponto de acesso: tentar
+  // reconectar aqui derrubaria a pagina que o produtor esta usando.
+  if (modoConfig) return;
+  if (wifiSsid.length() == 0) return;
   if (WiFi.status() == WL_CONNECTED) {
     iniciarMdns();
     return;
@@ -381,6 +425,155 @@ void iniciarMdns() {
   Serial.print("Nome local: http://");
   Serial.print(nomeLocal);
   Serial.println(".local");
+}
+
+// ============================================================
+//  MODO DE CONFIGURACAO
+// ============================================================
+
+// Vigia a combinacao dos tres botoes e o tempo ocioso do modo aberto.
+void verificarModoConfig() {
+  if (modoConfig) {
+    if (millis() - ultimaAtividadeConfig >= TEMPO_CONFIG_OCIOSO_MS) {
+      Serial.println("Modo de configuracao ocioso: reiniciando.");
+      delay(200);
+      ESP.restart();
+    }
+    return;
+  }
+
+  bool todosPressionados = digitalRead(BOTAO_BUZZER) == LOW &&
+                           digitalRead(BOTAO_VERDE) == LOW &&
+                           digitalRead(BOTAO_VERMELHO) == LOW;
+  if (!todosPressionados) {
+    tresBotoesDesdeMs = 0;
+    return;
+  }
+
+  if (tresBotoesDesdeMs == 0) {
+    tresBotoesDesdeMs = millis();
+    return;
+  }
+  if (millis() - tresBotoesDesdeMs >= TEMPO_SEGURAR_CONFIG_MS) {
+    entrarModoConfig();
+  }
+}
+
+void entrarModoConfig() {
+  modoConfig = true;
+  tresBotoesDesdeMs = 0;
+  ultimaAtividadeConfig = millis();
+
+  // Apertar tres botoes quase nunca e simultaneo: o primeiro a fechar contato
+  // pode ter entrado no modo de ajuste e mexido no alvo. Descarta essas
+  // alteracoes acidentais recarregando o que esta gravado.
+  modoAjuste = false;
+  configSuja = false;
+  prefs.begin("sentinela", true);
+  temperaturaAlvoF = prefs.getInt("tempAlvo", temperaturaAlvoF);
+  umidadeAlvo = prefs.getInt("umidAlvo", umidadeAlvo);
+  prefs.end();
+
+  if (mdnsAtivo) {
+    MDNS.end();
+    mdnsAtivo = false;
+  }
+
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(NOME_AP_CONFIG);
+
+  Serial.print("Modo de configuracao. Rede: ");
+  Serial.print(NOME_AP_CONFIG);
+  Serial.print(" -> http://");
+  Serial.println(WiFi.softAPIP());
+}
+
+// Evita que um SSID com aspas quebre o HTML do formulario.
+String escaparHtml(const String& texto) {
+  String saida;
+  saida.reserve(texto.length() + 8);
+  for (unsigned int i = 0; i < texto.length(); i++) {
+    char c = texto.charAt(i);
+    if (c == '&') saida += "&amp;";
+    else if (c == '<') saida += "&lt;";
+    else if (c == '>') saida += "&gt;";
+    else if (c == '"') saida += "&quot;";
+    else saida += c;
+  }
+  return saida;
+}
+
+void handleConfigPagina() {
+  ultimaAtividadeConfig = millis();
+
+  // A senha nao volta preenchida: quem abre a pagina nao precisa ve-la, e
+  // deixa-la no HTML seria entregar a senha do Wi-Fi a quem estiver na rede.
+  String html = F(
+      "<!doctype html><html lang=\"pt-br\"><head><meta charset=\"utf-8\">"
+      "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+      "<title>Sentinela Smart</title><style>"
+      "body{font-family:sans-serif;background:#0e1012;color:#fff;margin:0;"
+      "padding:24px}h1{font-size:20px}label{display:block;margin:14px 0 4px;"
+      "font-size:14px;color:#bbb}input{width:100%;padding:10px;border-radius:8px;"
+      "border:1px solid #333;background:#1c1c1e;color:#fff;font-size:16px;"
+      "box-sizing:border-box}button{margin-top:20px;width:100%;padding:12px;"
+      "border:0;border-radius:8px;background:#2e7d32;color:#fff;font-size:16px}"
+      "p.aviso{color:#888;font-size:12px;margin-top:18px}"
+      "</style></head><body><h1>Configurar aparelho</h1>"
+      "<form method=\"POST\" action=\"/salvar\">"
+      "<label>Rede Wi-Fi</label><input name=\"ssid\" value=\"");
+  html += escaparHtml(wifiSsid);
+  html += F(
+      "\" required><label>Senha do Wi-Fi</label>"
+      "<input name=\"senha\" type=\"password\" placeholder=\"(deixe vazio para "
+      "manter a atual)\">"
+      "<label>Chave de acesso</label><input name=\"token\" value=\"");
+  html += escaparHtml(tokenAparelho);
+  html += F(
+      "\"><button type=\"submit\">Salvar e reiniciar</button></form>"
+      "<p class=\"aviso\">O aparelho reinicia e volta ao normal. "
+      "O alarme continua funcionando durante a configura&ccedil;&atilde;o.</p>"
+      "</body></html>");
+
+  server.send(200, "text/html; charset=utf-8", html);
+}
+
+void handleConfigSalvar() {
+  ultimaAtividadeConfig = millis();
+
+  String ssid = server.arg("ssid");
+  String senha = server.arg("senha");
+  String token = server.arg("token");
+  ssid.trim();
+  token.trim();
+
+  if (ssid.length() == 0) {
+    server.send(400, "text/html; charset=utf-8",
+                "<p>Informe a rede Wi-Fi.</p><a href=\"/\">Voltar</a>");
+    return;
+  }
+
+  prefs.begin("sentinela", false);
+  prefs.putString("wifiSsid", ssid);
+  // Senha vazia mantem a atual: assim da para so trocar a chave de acesso sem
+  // precisar digitar a senha do Wi-Fi de novo.
+  if (senha.length() > 0) prefs.putString("wifiPass", senha);
+  prefs.putString("token", token);
+  prefs.end();
+
+  Serial.print("Configuracao gravada. Rede: ");
+  Serial.println(ssid);
+
+  server.send(200, "text/html; charset=utf-8",
+              "<!doctype html><meta charset=\"utf-8\">"
+              "<body style=\"font-family:sans-serif;background:#0e1012;"
+              "color:#fff;padding:24px\"><h1>Salvo</h1>"
+              "<p>O aparelho esta reiniciando e vai conectar na rede nova.</p>"
+              "</body>");
+
+  delay(1500);  // deixa a resposta sair antes de reiniciar
+  ESP.restart();
 }
 
 // Troca o alvo por um caminho so, abrindo a janela de acomodacao proporcional
@@ -430,7 +623,15 @@ void carregarConfigPersistida() {
   // de um reinicio: sem eles um comando antigo poderia vencer o ajuste atual.
   tempTimestamp = prefs.getLong64("tempTs", 0);
   umidTimestamp = prefs.getLong64("umidTs", 0);
+  // As constantes do topo sao so o valor de fabrica: o que o produtor gravou
+  // pelo modo de configuracao tem precedencia.
+  wifiSsid = prefs.getString("wifiSsid", WIFI_SSID);
+  wifiPass = prefs.getString("wifiPass", WIFI_PASS);
+  tokenAparelho = prefs.getString("token", DEVICE_TOKEN);
   prefs.end();
+
+  Serial.print("Wi-Fi configurado: ");
+  Serial.println(wifiSsid.length() > 0 ? wifiSsid : String("(nenhum)"));
 
   Serial.print("Ajustes recuperados: ");
   Serial.print(temperaturaAlvoF);
@@ -521,7 +722,9 @@ void empurrarLeituraNuvem() {
   String url = String(CLOUD_URL) + "/leitura";
   if (!http.begin(cliente, url)) return;
   http.addHeader("Content-Type", "application/json");
-  if (strlen(DEVICE_TOKEN) > 0) http.addHeader("X-Device-Token", DEVICE_TOKEN);
+  if (tokenAparelho.length() > 0) {
+    http.addHeader("X-Device-Token", tokenAparelho);
+  }
   int codigo = http.POST(corpo);
   Serial.print("Push nuvem -> HTTP ");
   Serial.println(codigo);
@@ -545,7 +748,9 @@ void buscarComandosNuvem() {
   HTTPClient http;
   String url = String(CLOUD_URL) + "/comandos?idHardware=" + idHardware;
   if (!http.begin(cliente, url)) return;
-  if (strlen(DEVICE_TOKEN) > 0) http.addHeader("X-Device-Token", DEVICE_TOKEN);
+  if (tokenAparelho.length() > 0) {
+    http.addHeader("X-Device-Token", tokenAparelho);
+  }
 
   int codigo = http.GET();
   if (codigo != 200) {
@@ -658,7 +863,7 @@ String corStatusAtual() {
 }
 
 bool tokenValido() {
-  String esperado = DEVICE_TOKEN;
+  String esperado = tokenAparelho;
   if (esperado.length() == 0) return true;  // sem token = liberado
 
   String recebido = "";
@@ -716,6 +921,13 @@ void handleStatus() {
 }
 
 void handleSimple() {
+  // No ponto de acesso a raiz e o formulario, nao o JSON: quem abre o navegador
+  // ali esta configurando o aparelho, nao consultando leitura.
+  if (modoConfig) {
+    handleConfigPagina();
+    return;
+  }
+
   JsonDocument doc;
   doc["temperaturaF"] = temperaturaF;
   doc["umidade"] = umidade;
@@ -731,7 +943,7 @@ void handleSimple() {
   doc["leituraOk"] = leituraOk;
   doc["ip"] = WiFi.localIP().toString();
   doc["nomeLocal"] = nomeLocal + ".local";
-  doc["tokenConfigurado"] = (strlen(DEVICE_TOKEN) > 0);
+  doc["tokenConfigurado"] = (tokenAparelho.length() > 0);
   doc["versaoFirmware"] = VERSAO_FIRMWARE;
 
   String saida;
@@ -861,6 +1073,11 @@ bool botaoFoiPressionado(int pino, bool &ultimoEstado, bool &estadoEstavel,
 }
 
 void verificarBotoes() {
+  // Enquanto os tres estao apertados (ou ja no modo de configuracao), nenhum
+  // botao age sozinho: senao a combinacao silenciaria o alarme e mexeria no
+  // alvo no caminho.
+  if (modoConfig || tresBotoesDesdeMs != 0) return;
+
   if (botaoFoiPressionado(BOTAO_BUZZER, ultimoBuzzer, estavelBuzzer, debounceBuzzer)) {
     if (alertaTemperatura && !alertaLuz) {
       // Mesmo comportamento do botao do app: silencia por 10 min. Apertar de
@@ -1045,6 +1262,14 @@ void controlarBuzzerIntermitente() {
 }
 
 void atualizarDisplay() {
+  // "ConF" no visor: e o unico sinal de que o aparelho virou ponto de acesso,
+  // e evita alguem achar que ele travou.
+  if (modoConfig) {
+    const uint8_t conf[] = {0x39, 0x5C, 0x37, 0x71};  // C o n F
+    display.setSegments(conf);
+    return;
+  }
+
   if (modoAjuste) {
     if (millis() - ultimoPiscaAjuste >= intervaloPiscaAjuste) {
       ultimoPiscaAjuste = millis();
