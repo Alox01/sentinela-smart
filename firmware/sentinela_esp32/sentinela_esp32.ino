@@ -28,6 +28,7 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WebServer.h>
+#include <DNSServer.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <time.h>
@@ -212,6 +213,11 @@ String tokenAparelho;
 // Entra segurando os TRES botoes por 3 s: quem nao esta na frente do aparelho
 // nao abre a pagina. Sai sozinho depois de um tempo ocioso, para um modo aberto
 // por engano nao ficar exposto ate alguem lembrar.
+// Responder a QUALQUER consulta de nome com o proprio IP e o que faz o celular
+// abrir a pagina sozinho ("conectar-se a rede"), como num Wi-Fi de hotel. Sem
+// isto o produtor teria que digitar 192.168.4.1 de cabeca.
+DNSServer dnsServer;
+const byte PORTA_DNS = 53;
 const char* NOME_AP_CONFIG = "Sentinela-Config";
 const unsigned long TEMPO_SEGURAR_CONFIG_MS = 3000;
 const unsigned long TEMPO_CONFIG_OCIOSO_MS = 5UL * 60UL * 1000UL;
@@ -316,6 +322,7 @@ void loop() {
   unsigned long agora = millis();
 
   server.handleClient();
+  if (modoConfig) dnsServer.processNextRequest();
   manterWifi();
 
   // Emergencia nao espera o proximo envio agendado. Sem isto, um incendio so
@@ -482,6 +489,7 @@ void entrarModoConfig() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_AP);
   WiFi.softAP(NOME_AP_CONFIG);
+  dnsServer.start(PORTA_DNS, "*", WiFi.softAPIP());
 
   Serial.print("Modo de configuracao. Rede: ");
   Serial.print(NOME_AP_CONFIG);

@@ -146,8 +146,14 @@ estiver gravado na NVS tem precedencia.
 1. **Segure os tres botoes ao mesmo tempo por 3 segundos** (buzzer, verde e
    vermelho). O visor mostra `ConF`.
 2. O aparelho cria a rede Wi-Fi **`Sentinela-Config`**.
-3. Conecte o celular nela e abra o navegador em **`http://192.168.4.1`**
-   (qualquer endereco cai no formulario, entao nao precisa acertar a URL).
+3. Conecte o celular nela. O aparelho responde **qualquer consulta de nome com
+   o proprio IP**, entao o celular costuma abrir a pagina sozinho ("conectar-se
+   a rede"), como num Wi-Fi de hotel. Se nao abrir, digite
+   **`http://192.168.4.1`** no navegador.
+
+   > O Android normalmente avisa que a rede **nao tem internet** e pergunta se
+   > quer continuar conectado — e preciso aceitar, senao ele volta para os dados
+   > moveis e a pagina nao carrega.
 4. Preencha rede, senha e chave de acesso. **Senha em branco mantem a atual** —
    util para trocar so a chave.
 5. Salvar reinicia o aparelho, que ja sobe na rede nova.
@@ -174,7 +180,10 @@ estiver gravado na NVS tem precedencia.
   segundos do loop em conexoes fadadas a falhar.
 - **A senha do Wi-Fi nao volta preenchida** no formulario: deixa-la no HTML
   entregaria a senha da propriedade a quem estivesse na rede aberta.
-- **Custo:** ~5 KB de flash (84% → 85%).
+- **Portal cativo (DNS coringa).** Sem ele, so o desvio de rota funcionaria — e
+  esse desvio nao pega dominios, porque a falha acontece antes, na resolucao do
+  nome. Na pratica o produtor teria que digitar `192.168.4.1` de cabeca.
+- **Custo:** ~12 KB de flash (84% → 85%).
 
 ### Limitacao conhecida
 
