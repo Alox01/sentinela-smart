@@ -504,7 +504,37 @@ provedor** — Firebase console (Usage), Supabase (Usage, que já salvou uma vez
 Render (Metrics). Olhar 1×/mês no começo; a cada 2 semanas quando o crescimento
 acelerar.
 
-### 7.12 Ainda em aberto
+### 7.12 Sazonalidade: pagar só na safra **[campo + análise]**
+
+**[campo]** O uso é sazonal: a secagem na estufa concentra-se na **colheita, de
+dezembro a fevereiro/março no RS** (~3-4 meses); plantio é julho-agosto. Fora da
+janela de secagem, quase não há o que monitorar. (Confirmado por pesquisa:
+Agrolink, calendário agrícola do RS.)
+
+**[análise]** Isso é **vantagem de custo** — a infraestrutura paga só precisa
+existir na safra. A regra é escolher cobrança que encolhe na entressafra:
+
+- **Por uso (naturalmente sazonal):** Firebase Blaze, VPS por hora (DigitalOcean,
+  Vultr, AWS) — sem aparelho conectado, a conta cai para ~zero sozinha. FCM e
+  Telegram, grátis sempre;
+- **Mensal fixo (exige ação):** Render Pro, Supabase Pro, VPS mensal — pagam
+  usando ou não; na entressafra, **pausar ou rebaixar**;
+- **O relé (VPS) pode ser destruído e recriado por safra** — ele é **sem estado**
+  (histórico no SD do hub), então paga-se ~4 meses, não 12 (~2/3 de economia).
+
+**Truque para recriar sem dor:** manter **estável o endereço** (domínio ou IP
+reservado) e trocar só a máquina atrás dele; um **script/snapshot** sobe o relé
+em um comando. Assim os hubs continuam achando o mesmo nome.
+
+**Bônus edge-first:** na entressafra o produtor não cura, então nem precisa do
+remoto; e o controle local funciona o ano todo. O vale de uso é real e profundo.
+
+**Ressalvas:** automatizar o "ligar" antes da safra (o risco é esquecer e começar
+no escuro); regiões **escalonam** a safra, então a "temporada ligada" com muitos
+produtores é um pouco maior que os 4 meses de um só; o **domínio** é custo anual
+fixo (~US$ 10-15), independente de estação.
+
+### 7.13 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
