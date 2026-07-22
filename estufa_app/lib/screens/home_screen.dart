@@ -10,6 +10,7 @@ import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
+import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/notificacoes/screens/notificacoes_screen.dart';
 import '../services/backup_file_service.dart';
 import '../services/isar_service.dart';
@@ -55,6 +56,23 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF0E1012),
         elevation: 0,
         actions: [
+          // Precisa estar AQUI, no topo, e nao so no menu de uma estufa: na
+          // primeira configuracao o aparelho ainda nao esta na rede, entao nao
+          // da para cadastrar a estufa nem abrir a tela de monitoramento onde
+          // fica o outro atalho. Sem esta entrada, o primeiro setup era
+          // impossivel pelo app.
+          IconButton(
+            icon: const Icon(
+              Icons.wifi_protected_setup_rounded,
+              color: Colors.white70,
+            ),
+            tooltip: 'Configurar aparelho',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ConfigurarAparelhoScreen(),
+              ),
+            ),
+          ),
           // As preferencias de notificacao sao globais, entao o lugar natural
           // delas e aqui, na lista de todas as estufas. Pelo menu de uma estufa
           // so, o produtor esperaria que valessem apenas para aquela.
