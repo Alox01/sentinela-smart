@@ -304,7 +304,43 @@ Gravação segura resolve ~95% sozinha; o supercap cobre a janela rara do "morre
 no meio da escrita". No projeto, isto **não é luxo, é requisito** — queda de
 energia é o cenário-título.
 
-### 7.7 Alternativas avaliadas e descartadas **[análise]**
+### 7.7 Telegram como relé grátis — parcialmente adotável **[análise]**
+
+Ideia do autor: usar a **Bot API do Telegram** para escapar da nuvem paga. Boa —
+mas serve numa direção só. Entender isso agora evita descobrir na hora de
+implementar.
+
+**A parede:** a Bot API é **bot↔usuário**, não um cano genérico entre dois
+programas seus (app e hub).
+
+- **Aviso (hub → celular): funciona lindamente, grátis.** O hub chama
+  `sendMessage` e a mensagem chega. **Fácil de fazer do ESP32** (é só uma
+  requisição HTTPS com o token na URL — ao contrário do FCM, que exige assinar
+  token OAuth2/JWT). **Candidata a aposentar o FCM** para o alerta crítico;
+- **Comando (app → hub, invisível): trava.** O `getUpdates` do hub só entrega
+  mensagens que **usuários** mandaram *para* o bot. O app não é usuário; se usar o
+  token do bot, a mensagem sai como *bot → chat* e **o `getUpdates` não a vê**.
+  Não há jeito limpo de o app injetar um comando pela Bot API.
+
+**As saídas do comando, e por que nenhuma é grátis de verdade:**
+
+1. App virar usuário Telegram (MTProto/TDLib) → precisa de **conta com número**;
+   a do produtor (fricção/privacidade) ou uma por aparelho (o Telegram **bane
+   criação em massa**). Serve para protótipo, não para produto;
+2. Produtor mandar o comando pelo Telegram (modelo **visível**) → funciona, mas
+   deixa de ser invisível, que era a graça;
+3. Voltar a ter um pedacinho de servidor (função serverless) como cérebro do bot.
+
+**O ponto que fecha:** se o comando exige cola no servidor de qualquer jeito
+(opção 3), o **relé MQTT mínimo** (seção 5–6) é melhor — é feito para mensagem
+bidirecional app↔hub atrás de NAT, ~US$ 5/mês para milhares. Torcer uma API de
+chatbot para virar fila de mensagem dá mais trabalho e menos garantia.
+
+**Veredito:** adotar o Telegram como **canal de alerta grátis** (hub → celular,
+uma direção, pode substituir o FCM) **e** o **relé MQTT** para o comando/remoto
+bidirecional. Um não substitui o outro — cada um na perna que faz bem.
+
+### 7.8 Alternativas avaliadas e descartadas **[análise]**
 
 Guardadas com o **motivo**, para não voltarem daqui a meses e refazerem o mesmo
 raciocínio.
@@ -328,7 +364,7 @@ está sempre ligado e conectado. **Descartado como produto** por três motivos:
 lugar — um aparelho **que o autor fabrica e controla** na propriedade. Serve para
 o **protótipo pessoal** (com um roteador próprio flashável), não para o produto.
 
-### 7.8 Ainda em aberto
+### 7.9 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
