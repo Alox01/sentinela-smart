@@ -151,15 +151,47 @@ recém-aquecido; no ponto de umidade a temperatura é a de depois da massa.
 Termopar tipo K seria **exagero** para 74 °C — só se justificaria em
 temperaturas bem mais altas.
 
-### Umidade: depende do comprimento do cabo
+### Umidade: cabo de 5 m decide (fatos do autor, jul/2026)
 
-| Distância | Opção |
-|---|---|
-| Até ~5 m | **SHT31** — faixa até 125 °C, 0–100 % UR, e **aquecedor interno** que evapora condensação |
-| 10 m ou mais | **Sonda industrial RS485/Modbus** — feita para distância e ambiente agressivo; custa mais e dá mais trabalho no firmware |
+Fechado com o contexto do autor: **só umidade** nesse ponto (temperatura é o
+DS18B20 à parte); sensor **entre duas camadas de fumo**, abrigado do sopro
+direto da fornalha (ponto mais frio e calmo — bom para o elemento); cabo de
+**~5 m, não-blindado**; e o galpão tem **motores** (ruído elétrico).
 
-I2C (do SHT31) **não tolera cabo longo**: poucos metros funcionam, dez ou mais
-vira loteria.
+A 5 m, **I2C não é confiável** — esse é o muro que reprova o SHT31 "cru". Sobram
+duas opções, e a escolha é **dinheiro × durabilidade** (o autor pediu **as duas
+registradas**):
+
+| Opção | 5 m? | Ruído/motor | Durabilidade | Custo | Firmware |
+|---|---|---|---|---|---|
+| **Sonda RS485/Modbus** ⭐ | sim (feito p/ isso) | **imune** (sinal diferencial) | alta (industrial; provável elemento SHT dentro) | sonda ~R$80–250 + MAX485 ~R$5 | Modbus |
+| **SHT31 + extensor I2C** (P82B715) | sim, com 2 chips | melhora, **não imune** | média-alta (elemento SHT, com aquecedor anti-condensação) | SHT31 + ~R$10 | I2C normal |
+
+**Recomendado: RS485.** O autor pediu que **dure a temporada sem trocar**; num
+ambiente úmido, quente e com motor, a 5 m sem blindagem, é a única que casa tudo
+sem compromisso. O custo maior compra não voltar ao galpão no meio da estufada.
+
+**Meio-termo: SHT31 + extensor P82B715.** Mantém o ótimo elemento SHT, custa bem
+menos, resolve a distância. Preço: menos imune a ruído — **compensar** passando
+o cabo **longe dos cabos de motor** e usando **par trançado**. Aposta razoável,
+não gambiarra.
+
+### Ressalvas (valem para as duas opções)
+
+- **5V não resolve nada aqui.** Nem o DHT22-5V nem o SHT31-5V vencem os 5 m: o
+  problema é a **interface** (fio único com temporização / I2C), não a tensão.
+  O datasheet do DHT22 até promete 20 m, mas em laboratório — no galpão com motor
+  e cabo não-blindado, dá **erro intermitente**;
+- **Roteamento do cabo:** o que corrompe o sinal é correr **junto do cabo de
+  força do motor**, não o ar. Separar sempre; par trançado ajuda;
+- **Ar precisa alcançar o elemento:** entre folhas muito compactas ele lê o
+  microclima da massa (provavelmente o desejado), mas precisa de **alguma troca
+  de ar** — daí a carcaça ranhurada dos sensores comerciais;
+- **DHT22 descartado** (§5): teto de 80 °C (perto dos 74 °C de uso) e elemento
+  exposto que estraga no úmido. Só serviria como umidade "descartável" de
+  protótipo;
+- **SHT31 cru descartado** a 5 m: I2C não atravessa; só com extensor ou MCU local
+  (que seria construir uma sonda RS485 à mão).
 
 ### Uma folga a favor da durabilidade **[inferência]**
 
@@ -170,26 +202,30 @@ que amplia bastante a vida útil.
 
 ---
 
-## 7. Em aberto
+## 7. Resolvido / em aberto
 
-Aguardando medição e observação do autor em campo:
+**Resolvido (fotos e conversa, jul/2026):**
 
-1. **Metragem real dos cabos** até cada sensor — é o que decide entre SHT31 e
-   RS485;
-2. **Onde a caixa do aparelho será montada** (parede da cabine, quadro afastado);
-3. **Que sensores os aparelhos comerciais da região usam** — o autor vai
-   fotografar as ponteiras. Vale observar também:
-   - se o cabo é **blindado ou par trançado** (indica que a distância exigiu
-     cuidado com ruído, e informa sobre a viabilidade do I2C);
-   - o **formato da ponteira** (sonda metálica sugere PT100 ou família DS18B20);
-4. **Existe registro/damper de renovação de ar acionável?** Se sim, a atuação
+- ✅ **Cabo ~5 m, não-blindado** — fecha a escolha da umidade (RS485 ou SHT31 +
+  extensor; §6);
+- ✅ **Sensores comerciais são analógicos:** temperatura = provável **termistor
+  NTC** (cabo 2 fios, ponta selada); umidade = **sonda dedicada em carcaça
+  ranhurada**, seca (não é bulbo úmido). Confirma por que a indústria evita
+  digital de cabo curto — analógico/diferencial tolera cabo e ruído;
+- ✅ **Umidade é UR direta**, não bulbo úmido (o sensor branco não usa pano
+  molhado) — encerra a dúvida da §8.
+
+**Em aberto:**
+
+1. **Onde a caixa do aparelho será montada** (a 5 m do sensor de umidade, mas o
+   ponto exato falta);
+2. **Existe registro/damper de renovação de ar acionável?** Se sim, a atuação
    futura mais realista não é umidificador, e sim **relé no damper** — hoje o
-   `umidadeMeta` é registrado mas não atua em nada.
+   `umidadeMeta` é registrado mas não atua em nada;
+3. **Escolha final da umidade:** RS485 (recomendado) ou SHT31 + extensor — o
+   autor pediu as duas registradas; a decisão de compra fica para o momento.
 
 ## 8. O que este documento não cobre
 
 - Dimensões da estufa, número de estaleiros e capacidade em grades;
-- Práticas específicas de outras regiões produtoras;
-- Se o controle local usa **bulbo seco e bulbo úmido** (padrão clássico do
-  flue-cured) ou umidade relativa direta — o sistema atual usa UR direta, que é
-  outra grandeza.
+- Práticas específicas de outras regiões produtoras.
