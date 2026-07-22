@@ -115,16 +115,108 @@ conforme vende mais.
 
 ---
 
-## 7. Em aberto
+## 7. Arquitetura de hub local (convergência da conversa)
 
-- **Ideias do próprio autor** — ele quer trazer as dele (esta conversa continua);
-- Definir se o histórico local fica no **cartão SD do aparelho**, no **celular**,
-  ou nos dois;
-- Custo real de um VPS com broker MQTT na escala pretendida (estimar com números,
-  não só ordem de grandeza);
-- Como o acesso remoto atravessa o NAT da propriedade sem um servidor central
-  caro (o relé MQTT resolve isso, mas precisa ser desenhado);
-- Migração: como sair de Render/Supabase sem quebrar quem já usa.
+Ideia trazida pelo **autor** e lapidada em conjunto: um **segundo ESP32 na
+residência** faz o papel de hub/servidor local. As estufas conversam com o hub;
+o celular conversa com o hub; o hub tem cartão SD e acesso à internet.
+
+### 7.1 O desenho que fechou
+
+```
+  Estufa 1 ]                                                    [ Celular
+  Estufa 2 ]--- ESP-NOW (perto) / LoRa (longe) ---[ HUB ]--- Wi-Fi local
+  Estufa 3 ]                                       (casa)         |
+                                                     |            | (fora)
+                                                   SD +           |
+                                                 internet         v
+                                                     |      [ relé mínimo
+                                                     +----->  MQTT + FCM ]
+                                                              (nuvem stateless)
+```
+
+- **Celular ↔ hub:** sempre **Wi-Fi normal**. O celular **nunca** fala ESP-NOW
+  nem LoRa — quem faz essa ponte é o hub. Modelo mental único: o celular só
+  conhece o hub; o hub varia o rádio conforme a distância da estufa;
+- **Hub ↔ estufas:** Wi-Fi (perto), **ESP-NOW** (até ~200 m, sem roteador, sem
+  hardware extra), **LoRa** (centenas de m a km);
+- **Histórico:** no **cartão SD do hub** (não no celular). O hub fica ligado 24h
+  na tomada, então coleta sem gastar bateria de ninguém;
+- **Remoto:** o hub mantém uma conexão de saída com um **relé mínimo** na nuvem;
+  o **push (FCM)** cobre o caso crítico de graça.
+
+### 7.2 Decisões do autor (contexto real)
+
+- **LoRa** interessa para estufa **longe na lavoura**. Vira **produto à parte /
+  pacote mais caro (encomenda)**, não o básico;
+- **ESP-NOW** é o caminho a seguir para os galpões próximos (< ~200 m);
+- **Wi-Fi** é o que já existe hoje;
+- **Remoto é ocasional:** o produtor fica em casa, perto, ou na lavoura. A nuvem
+  só entra quando ele vai à cidade ou passa o fim de semana fora;
+- **ESP vs Pi:** indefinido. Medo declarado: guardar histórico/relatórios no
+  celular consumir bateria e memória.
+
+### 7.3 Como cada dúvida do autor se resolveu **[análise]**
+
+**"Como o celular fala com o LoRa na lavoura?"** — Ele não fala. Três casos:
+1. Em casa/perto do hub: celular→hub (Wi-Fi), hub→estufa distante (LoRa);
+2. Do lado da estufa: os **botões e o visor da própria estufa** já bastam
+   (edge-first);
+3. Andando pela lavoura, longe do hub **e** da estufa, querendo o celular: aí
+   sim um **bridge portátil** (ESP+LoRa de bolso, LoRa↔Bluetooth/Wi-Fi). É
+   acessório do "pacote melhor" — só este caso pede hardware novo.
+
+**Medo de bateria/memória do celular** — infundado pelos números:
+
+| | |
+|---|---|
+| Leitura guardada | ~100 bytes |
+| Amostragem (política atual) | 1 / 10 min + eventos |
+| Uma estufada (~6 dias) | ~1.000 leituras = **~100 KB** |
+| Comparação | uma foto tem 3.000–5.000 KB |
+
+Anos de relatórios = poucos MB. E o **hub** é quem coleta 24h (na tomada); o
+celular só **puxa uma cópia leve ao abrir o app**, então não drena bateria. O
+hub tira do celular exatamente a carga temida — é o argumento mais forte **a
+favor** de ter hub.
+
+**Remoto ocasional é boa notícia de custo** — o caso crítico ("estou na cidade e
+pegou fogo") é **push, e push é grátis**. O relé pago serve só para a curiosidade
+de abrir o app de longe: raro e leve, cabe em VPS de ~US$ 5 servindo milhares, ou
+até em camada gratuita.
+
+### 7.4 ESP32 ou Pi como hub **[análise]**
+
+Armazenamento **saiu da disputa** (100 KB/estufada cabe num SD de qualquer ESP,
+anos de histórico). O que pesa é **quem faz push e relé**. Arranjo que dissolve a
+escolha:
+
+- **Hub burro e barato (ESP32):** conversa com as estufas, grava no SD, mantém
+  conexão de saída com o broker MQTT. Só isso;
+- **Parte esperta, sem estado, na nuvem:** broker MQTT barato + função grátis que
+  dispara o **FCM** (assinar token do FCM é pesado demais para um ESP32 fazer
+  sozinho — melhor deixar na nuvem).
+
+**Recomendação: começar com ESP32 como hub** (barato, terreno conhecido do
+autor). Pi vira opcional, só se um dia o hub precisar fazer tudo sozinho.
+
+**Ressalva honesta:** SD em ESP32 **corrompe se a energia cai no meio de uma
+escrita** — e queda de luz é o cenário-título. Tratar com escrita segura e talvez
+um **capacitor** que segura energia o tempo de fechar o arquivo.
+
+### 7.5 Ainda em aberto
+
+- **Outras ideias do autor** (a conversa continua);
+- Custo real do VPS/broker na escala pretendida (números, não só ordem de
+  grandeza);
+- Desenho do relé MQTT: autenticação por propriedade, TLS, como o hub e o celular
+  se encontram;
+- Detalhe do disparo do FCM (função serverless grátis vs. outra via);
+- Reescrita da camada de comunicação da estufa para ESP-NOW/LoRa (deixa de ser
+  HTTP/JSON e vira pacote binário — trabalho relevante no firmware);
+- Escrita segura no SD contra queda de energia;
+- Migração: sair de Render/Supabase sem quebrar quem já usa;
+- Regulatório: faixa 915 MHz (ANATEL) se o LoRa virar produto.
 
 ## 8. Relação com o TCC
 
