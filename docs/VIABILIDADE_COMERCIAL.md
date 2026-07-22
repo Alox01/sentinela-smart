@@ -407,7 +407,55 @@ ESP, igual). Logo o remoto **sempre** precisa de uma máquina alugada em algum
 ponto. A meta nunca foi "não pagar", e sim pagar o **mínimo**: uma máquina barata,
 sem estado, dividida por todos — e, para o alerta crítico, nem ela (Telegram, 7.7).
 
-### 7.10 Ainda em aberto
+### 7.10 Relés grátis: o gargalo é conexão, não armazenamento **[análise]**
+
+O relé só passa mensagem (leitura, comando); o histórico fica no **SD do hub**.
+Logo o relé quase **não precisa de armazenamento** — guarda no máximo a última
+leitura e um comando pendente por aparelho (bytes). O que limita é **conexões
+simultâneas** e **mensagens/mês**, não memória.
+
+**Conta das conexões:** cada hub mantém **1** conexão permanente com o broker; o
+celular só conecta **quando o app está aberto**. Simultâneos ≈ nº de hubs +
+celulares ativos no momento.
+
+**Opção A — gerenciado (pronto, teto de conexões, termos de terceiro):**
+
+| Serviço | Grátis típico (confirmar — muda) |
+|---|---|
+| HiveMQ Cloud (MQTT) | ~100 conexões |
+| EMQX Cloud serverless | generoso em "minutos de sessão" |
+| **Firebase Realtime Database** | ~100 conexões, 1 GB, 10 GB/mês |
+| Ably / PubNub | ~200 conexões, milhões de msg/mês |
+
+O **Firebase RTDB** é atraente porque o projeto **já usa Firebase** (FCM): o app
+escreve o comando num caminho, o hub tem um ouvinte que dispara na hora, atravessa
+NAT (saída). Teto de ~100 conexões é a pegadinha na escala.
+
+**Opção B — hospedar (sustentável para milhares):** rodar **Mosquitto** (broker
+grátis) numa VM **Oracle Cloud Always Free** (grátis para sempre) ou VPS de
+~US$ 5. Uma VM de 1 GB segura **milhares** de conexões MQTT leves, sem custo por
+mensagem, sem limite de storage artificial, e **sob teu controle**.
+
+**Quantos simultâneos:**
+
+- Gerenciado grátis: ~100–200 conexões → **~100 propriedades**. Bom para começar,
+  não para milhares;
+- Mosquitto próprio numa VM barata/grátis: **milhares**. O gargalo é conexão,
+  nunca storage.
+
+**Caminho para o hub ESP + SD:**
+
+1. Agora/protótipo: **Firebase RTDB** (já tem) ou **HiveMQ grátis** — sem alugar
+   nada;
+2. Ao escalar: **Mosquitto** no **Oracle Always Free** / VPS US$ 5 — "Render
+   próprio", milhares de hubs, custo fixo minúsculo;
+3. Alerta crítico: **Telegram**, grátis, sem tocar no relé (7.7).
+
+**Ressalva:** limites de plano grátis **mudam** — confirmar antes de apostar.
+Gerenciado = conveniência com teto e termos de terceiro; Mosquitto próprio = mais
+setup, mas controle e escala reais. Para produto, o próprio ganha.
+
+### 7.11 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
