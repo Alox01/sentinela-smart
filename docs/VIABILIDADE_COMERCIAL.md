@@ -304,7 +304,31 @@ Gravação segura resolve ~95% sozinha; o supercap cobre a janela rara do "morre
 no meio da escrita". No projeto, isto **não é luxo, é requisito** — queda de
 energia é o cenário-título.
 
-### 7.7 Ainda em aberto
+### 7.7 Alternativas avaliadas e descartadas **[análise]**
+
+Guardadas com o **motivo**, para não voltarem daqui a meses e refazerem o mesmo
+raciocínio.
+
+**Usar o roteador do produtor como servidor/hub (OpenWrt).** Tecnicamente
+possível — um roteador com OpenWrt roda Mosquitto, servidorzinho, SQLite, e já
+está sempre ligado e conectado. **Descartado como produto** por três motivos:
+
+1. **Não se controla o roteador do cliente.** No interior ele é quase sempre
+   **do provedor**, trancado. Não dá para vender um produto cujo passo 1 é
+   "regrave seu roteador" — risco de brickar, perda de garantia, produtor não
+   técnico;
+2. **Fragmentação:** cada casa tem um modelo; os do provedor são os que menos
+   aceitam OpenWrt;
+3. **Não resolve o rádio:** roteador só fala Wi-Fi — **não fala ESP-NOW nem
+   LoRa**. Continuaria precisando de um ESP/módulo para alcançar as estufas. E se
+   já é preciso um ESP com rádio, é ele que deve ser o hub — o roteador não
+   acrescenta nada.
+
+**Convergência:** "roteador virar servidor" e "hub ESP na rede" terminam no mesmo
+lugar — um aparelho **que o autor fabrica e controla** na propriedade. Serve para
+o **protótipo pessoal** (com um roteador próprio flashável), não para o produto.
+
+### 7.8 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
