@@ -234,21 +234,22 @@ class _IconeEstufadaAtual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor = temCiclo ? Colors.greenAccent : Colors.white54;
+    // Monocromatico de proposito: o "fogo verde" num circulo destoava do resto.
+    // A diferenca de brilho (branco vs cinza) ja sinaliza estufada em andamento;
+    // o texto "Iniciada em..." confirma. Estilo alinhado aos icones do app.
+    final cor = temCiclo ? Colors.white70 : Colors.white38;
     return Container(
       width: tamanho,
       height: tamanho,
       decoration: BoxDecoration(
-        color: cor.withValues(alpha: 0.10),
+        color: Colors.white.withValues(alpha: 0.04),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: (temCiclo ? Colors.greenAccent : Colors.white24).withValues(
-            alpha: 0.45,
-          ),
-        ),
+        border: Border.all(color: Colors.white24),
       ),
       child: Icon(
-        temCiclo ? Icons.local_fire_department : Icons.add_task_rounded,
+        temCiclo
+            ? Icons.local_fire_department_outlined
+            : Icons.add_task_outlined,
         color: cor,
       ),
     );

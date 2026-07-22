@@ -522,7 +522,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
-              leading: const Icon(Icons.eco_rounded, color: Colors.greenAccent),
+              leading: const Icon(
+                Icons.add_circle_outline,
+                color: Colors.white70,
+              ),
               title: const Text(
                 'Preparar nova estufada',
                 style: TextStyle(color: Colors.white),
