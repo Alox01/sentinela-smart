@@ -364,7 +364,50 @@ está sempre ligado e conectado. **Descartado como produto** por três motivos:
 lugar — um aparelho **que o autor fabrica e controla** na propriedade. Serve para
 o **protótipo pessoal** (com um roteador próprio flashável), não para o produto.
 
-### 7.9 Ainda em aberto
+### 7.9 Conceito: "servidor" e por que o remoto sempre precisa de máquina alugada **[análise]**
+
+Base que explica por que o relé é inescapável — e evita achar que "um servidor
+mais forte" resolveria o remoto.
+
+**"Servidor" é um papel, não um tipo de máquina.** É qualquer máquina rodando um
+programa que espera alguém conectar e responde. Datacenter, PC, Raspberry Pi ou
+ESP32 fazem esse papel. O ESP **já é** um servidor (serve `/status`). Então "ESP
+como hub" e "PC como servidor" são o mesmo papel, em portes diferentes.
+
+**Dois eixos independentes, e confundi-los é o erro comum:**
+
+| Eixo | ESP em casa | PC em casa | VPS (datacenter) |
+|---|---|---|---|
+| **Capacidade** (RAM, banco, conexões) | suficiente p/ sensores | exagerada | boa |
+| **Alcance remoto** | atrás do NAT | **atrás do NAT (igual)** | **IP público** |
+| Energia/custo | centavos | alto, 24h | ~US$ 5/mês |
+
+**Potência não compra alcance.** Um PC em casa tem a MESMA parede de NAT que o
+ESP — trocar um pelo outro não resolve o remoto. Render/VPS funcionam de fora não
+por serem fortes, e sim por estarem num **datacenter com IP público**.
+
+**Como o hub "ganha" endereço público:** ele não ganha. O endereço público mora
+numa **máquina alugada** (VPS), e o hub **conecta para fora** até ela — o público
+fica na máquina alugada, dividida por todos os hubs. Essa máquina é o "Render
+próprio", minúsculo e sem estado (o relé das seções 5–6).
+
+**Caminhos concretos:**
+
+- **Protótipo (grátis, rápido):** túnel — Cloudflare Tunnel, Tailscale, ngrok. O
+  hub abre túnel de saída, o serviço dá uma URL pública. Atravessa CGNAT, sem
+  mexer no roteador. **Não é para produto** (hóspede de API grátis, custo por
+  aparelho);
+- **Produto:** alugar um **VPS** (~US$ 5/mês ou camada gratuita) com IP público,
+  rodando o relé; todos os hubs conectam para fora. Um serve milhares;
+- **Evitar:** *port forwarding + DDNS* — exige acesso ao roteador e IP público do
+  provedor (CGNAT mata), expõe o hub, e não dá para pedir a cada produtor.
+
+**Conclusão:** endereço público só vem de máquina que tem um; casa não tem (PC ou
+ESP, igual). Logo o remoto **sempre** precisa de uma máquina alugada em algum
+ponto. A meta nunca foi "não pagar", e sim pagar o **mínimo**: uma máquina barata,
+sem estado, dividida por todos — e, para o alerta crítico, nem ela (Telegram, 7.7).
+
+### 7.10 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
