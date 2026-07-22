@@ -85,7 +85,25 @@ vendo, mais pago" e vira um valor fixo pequeno. Este é o ponto central de tudo.
 
 - **FCM (push) é grátis em qualquer escala.** O Firebase não cobra por mensagem
   nem por aparelho. A peça mais assustadora é a que escala de graça — **pode
-  manter**;
+  manter**. Os limites que existem são **técnicos, não de cobrança**, e o projeto
+  não encosta neles: 4 KB por mensagem (o alerta são bytes), anti-spam por
+  aparelho (o envio é ocasional), cota de API altíssima.
+
+  **Mas "Firebase" não é uma coisa só — só o FCM é ilimitado.** Outros serviços
+  têm teto no plano grátis (Spark), e um deles é justo o candidato a relé:
+
+  | Serviço Firebase | Grátis (Spark) |
+  |---|---|
+  | **Cloud Messaging (FCM)** — em uso hoje | **sem limite prático** |
+  | **Realtime Database** — se virar relé | ~100 conexões, 1 GB, 10 GB/mês |
+  | Firestore | ~50 mil leituras/dia, 20 mil escritas/dia |
+  | Cloud Functions | 2 mi execuções/mês (exige plano Blaze ativo) |
+
+  Não confundir "uso o Firebase e é grátis" com "tudo no Firebase é ilimitado":
+  se o relé for o Realtime Database, herda o teto de ~100 conexões (7.10), **não**
+  a liberdade do push. E ativar o **Blaze** (pague-conforme-usa) mantém o FCM
+  grátis, mas passa a **cobrar** os outros serviços após a cota — uma função em
+  loop poderia gerar conta. Enquanto for só FCM, nada disso toca o projeto;
 - **O relé, sendo leve, é barato.** **MQTT** é feito para milhares de aparelhos
   pequenos com mensagens minúsculas; roda num **VPS de ~US$ 5/mês** aguentando
   **milhares** de conexões. Substituiria o Render, cujo modelo HTTP+polling é
