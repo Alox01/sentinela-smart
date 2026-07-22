@@ -115,6 +115,43 @@ conforme vende mais.
 
 ---
 
+## 6b. Precedente de indústria: o P2P do CFTV (ex.: iSIC/Intelbras) **[análise]**
+
+O relé que a gente desenhou **não é invenção nova** — é o mesmo padrão que todo
+sistema de câmera de consumidor usa para "ver pela internet". Bom para justificar
+a arquitetura no TCC. (Descrição do **mecanismo geral** desses sistemas; não são
+detalhes internos específicos do produto da Intelbras.)
+
+| CFTV (P2P) | Este projeto |
+|---|---|
+| Modo local por IP na mesma rede | Modo `LOCAL` |
+| Servidor P2P de encontro (nuvem do fabricante) | O "relé mínimo" (seção 5–6) |
+| Número de série do DVR | `idHardware` |
+| DVR faz conexão de **saída** e se registra | O hub mantém túnel de saída |
+
+Como funciona o remoto: o aparelho, ao ligar, abre conexão de saída para o
+servidor do fabricante e se registra pelo número de série; o celular pergunta ao
+servidor "onde está o aparelho X?"; o servidor **apresenta os dois lados**. Daí:
+
+- **Hole punching:** o servidor só apresenta e o tráfego flui **direto** entre
+  celular e aparelho — economiza banda do fabricante (por isso é barato manter);
+- **Relay (fallback):** quando o furo de NAT falha (CGNAT dos dois lados), o
+  tráfego passa **pelo servidor** — custa banda, e é por isso que planos grátis
+  às vezes limitam o remoto.
+
+**As duas lições:**
+
+1. **Alguém paga o relé** — o fabricante paga, embutido no preço e no porte da
+   empresa. Confirma a seção 6;
+2. **O nosso é muito mais barato que o deles.** Câmera transmite **vídeo** (banda
+   pesada); este projeto manda **leituras minúsculas de sensor**. Se um
+   fabricante oferece vídeo remoto de graça e "vitalício", um sistema que move
+   mil vezes menos dados banca o seu relezinho com folga enorme. O problema mais
+   difícil dessa família (vídeo) já é resolvido a preço de consumidor — o nosso é
+   a versão leve.
+
+---
+
 ## 7. Arquitetura de hub local (convergência da conversa)
 
 Ideia trazida pelo **autor** e lapidada em conjunto: um **segundo ESP32 na
