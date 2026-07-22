@@ -138,8 +138,8 @@ o celular conversa com o hub; o hub tem cartão SD e acesso à internet.
 - **Celular ↔ hub:** sempre **Wi-Fi normal**. O celular **nunca** fala ESP-NOW
   nem LoRa — quem faz essa ponte é o hub. Modelo mental único: o celular só
   conhece o hub; o hub varia o rádio conforme a distância da estufa;
-- **Hub ↔ estufas:** Wi-Fi (perto), **ESP-NOW** (até ~200 m, sem roteador, sem
-  hardware extra), **LoRa** (centenas de m a km);
+- **Hub ↔ estufas:** Wi-Fi (perto), **ESP-NOW** (curto alcance real — ver 7.6),
+  **LoRa** (centenas de m a km);
 - **Histórico:** no **cartão SD do hub** (não no celular). O hub fica ligado 24h
   na tomada, então coleta sem gastar bateria de ninguém;
 - **Remoto:** o hub mantém uma conexão de saída com um **relé mínimo** na nuvem;
@@ -149,7 +149,8 @@ o celular conversa com o hub; o hub tem cartão SD e acesso à internet.
 
 - **LoRa** interessa para estufa **longe na lavoura**. Vira **produto à parte /
   pacote mais caro (encomenda)**, não o básico;
-- **ESP-NOW** é o caminho a seguir para os galpões próximos (< ~200 m);
+- **ESP-NOW** é o caminho a seguir para os galpões próximos (mas o alcance real
+  com paredes é bem menor que os 200 m de folheto — ver 7.6);
 - **Wi-Fi** é o que já existe hoje;
 - **Remoto é ocasional:** o produtor fica em casa, perto, ou na lavoura. A nuvem
   só entra quando ele vai à cidade ou passa o fim de semana fora;
@@ -204,7 +205,69 @@ autor). Pi vira opcional, só se um dia o hub precisar fazer tudo sozinho.
 escrita** — e queda de luz é o cenário-título. Tratar com escrita segura e talvez
 um **capacitor** que segura energia o tempo de fechar o arquivo.
 
-### 7.5 Ainda em aberto
+### 7.5 Alcance real do ESP-NOW **[análise]**
+
+Os **~200 m são campo aberto, antena com antena, sem obstáculo** — o melhor caso
+de folheto. O ambiente real é o pior possível para os 2,4 GHz que o ESP-NOW usa,
+porque essa frequência (a mesma do micro-ondas) é **absorvida pela água** e
+barrada por alvenaria e metal:
+
+- parede da casa (hub dentro) na saída;
+- pátio/lavoura no meio;
+- estrutura do galpão (metal/alvenaria);
+- **a massa de fumo molhado** dentro do galpão — uma esponja de água justamente
+  na frequência que a água mais absorve.
+
+Na prática, hub dentro de casa e galpão do outro lado, os 200 m viram
+facilmente **30–80 m**, e podem ficar instáveis. **Só o teste na propriedade real
+diz a verdade.**
+
+O que mais ajuda, em ordem de impacto:
+
+1. **Antena externa no hub** (ESP32 com conector u.FL), montada **fora da casa**,
+   virada para os galpões — tira a parede da frente. Maior alavanca isolada;
+2. Hub perto de uma **janela** que enxergue os galpões;
+3. **Repetidor** ESP-NOW no meio do caminho.
+
+**Consequência para o produto:** se a propriedade tem parede e distância no
+caminho, o **LoRa deixa de ser "premium" e vira a escolha certa** — é sub-GHz
+(915 MHz), atravessa obstáculo muito melhor. Talvez o ESP-NOW só sirva para
+galpão colado na casa, e o LoRa seja o padrão. O teste em campo decide.
+
+### 7.6 Proteção do SD contra queda de energia **[análise]**
+
+**Não é bateria, e não se mede em mAh.** Terminar uma gravação e fechar o arquivo
+leva de alguns ms a ~1 s. No pico da escrita o ESP puxa ~250 mA. Energia:
+
+> 250 mA × 1 s = **~0,07 mAh**
+
+Menos de um décimo de mAh. Bateria seria absurdamente superdimensionada, e ainda
+**envelhece** (isso dispara a cada queda de luz, por anos). O componente certo é
+um **supercapacitor**:
+
+| Opção | Segura por | Veredito |
+|---|---|---|
+| Eletrolítico 4.700 µF | ~30 ms | marginal — só um flush |
+| **Supercap 1 F / 5,5 V** | **1–3 s** | **folgado, fecha o arquivo com sobra** |
+
+Custa poucos reais, dura a vida do produto sem envelhecer. Liga com **um diodo**
+entre a fonte e o ESP, para o capacitor alimentar o ESP na queda sem empurrar
+energia de volta para a fonte morta.
+
+**Mas o capacitor é a parte fácil. O trabalho real é o firmware:**
+
+1. **Detectar a queda** — divisor de tensão na entrada avisando um pino (o ESP32
+   tem detector de *brownout* embutido);
+2. Ao detectar, **fechar o arquivo na hora** e marcar "desligamento limpo";
+3. **Gravar sempre de forma segura:** abrir → escrever → flush → fechar a cada
+   registro, sem manter o arquivo aberto. Assim o cartão fica sempre consistente
+   e, no pior caso, perde-se **só o último registro**, nunca o cartão inteiro.
+
+Gravação segura resolve ~95% sozinha; o supercap cobre a janela rara do "morreu
+no meio da escrita". No projeto, isto **não é luxo, é requisito** — queda de
+energia é o cenário-título.
+
+### 7.7 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
