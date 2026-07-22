@@ -473,7 +473,38 @@ mensagem, sem limite de storage artificial, e **sob teu controle**.
 Gerenciado = conveniência com teto e termos de terceiro; Mosquitto próprio = mais
 setup, mas controle e escala reais. Para produto, o próprio ganha.
 
-### 7.11 Ainda em aberto
+### 7.11 Quando sair do grátis: tabela de gatilhos **[análise]**
+
+Para planejar a migração **antes** de quebrar. Princípio: **agir aos ~80% do
+limite**, não em 100% — migra-se sem apagão para o produtor. Números típicos;
+**confirmar no painel de cada serviço** (eles mudam).
+
+**Boa notícia:** na arquitetura de hub, o 1º passo **pago** fica longe. O caminho
+é *grátis gerenciado → grátis auto-hospedado (Oracle Always Free) → pago*; o meio
+é coberto de graça, então "sair do grátis de verdade" só nos milhares.
+
+**Arquitetura-alvo (hub + SD + relé):**
+
+| Recurso | Limite grátis | ≈ propriedades | Vigiar / onde | Gatilho (80%) | Ação |
+|---|---|---|---|---|---|
+| FCM (push) | sem limite prático | qualquer | nada | — | nenhuma |
+| Histórico (SD do hub) | nenhum na nuvem | qualquer | espaço do cartão, no hub | cartão ~80% | cartão maior / retenção |
+| Relé gerenciado (RTDB, HiveMQ) | ~100 conexões | ~100 | conexões simultâneas, painel | ~80 conexões | Mosquitto no Oracle Always Free (ainda $0) |
+| Relé auto-hospedado (Mosquitto/Oracle) | ~milhares (RAM da VM) | milhares | RAM/CPU da VM | RAM ~80% / CPU alto contínuo | VPS maior (US$ 5 → 10–20) |
+
+**Arquitetura atual (Render + Supabase) — gatilhos vêm antes, por storage:**
+
+| Recurso | Limite | Vigiar / onde | Gatilho | Ação |
+|---|---|---|---|---|
+| Supabase (banco) | 500 MB | aba Usage | ~400 MB | dedup/retenção (feito) ou mover histórico p/ o SD |
+| Render (free) | ~750 h/mês + dorme | Metrics | 1 serviço já ocupa quase tudo | VPS |
+
+**Como monitorar:** o melhor alarme antecipado é o **painel de uso do próprio
+provedor** — Firebase console (Usage), Supabase (Usage, que já salvou uma vez),
+Render (Metrics). Olhar 1×/mês no começo; a cada 2 semanas quando o crescimento
+acelerar.
+
+### 7.12 Ainda em aberto
 
 - **Outras ideias do autor** (a conversa continua);
 - Custo real do VPS/broker na escala pretendida (números, não só ordem de
