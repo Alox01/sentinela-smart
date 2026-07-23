@@ -299,7 +299,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           PopupMenuButton<String>(
             iconSize: 22,
             padding: EdgeInsets.zero,
-            icon: const Icon(Icons.download, color: Colors.greenAccent),
+            icon: const Icon(Icons.download, color: Colors.white70),
             tooltip: 'Baixar relatório',
             color: const Color(0xFF252830),
             onSelected: (valor) {
@@ -335,7 +335,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           IconButton(
             iconSize: 22,
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            icon: const Icon(Icons.delete_outline, color: Colors.white70),
             onPressed: _cicloSelecionadoId == null
                 ? null
                 : _apagarCicloSelecionado,
@@ -344,7 +344,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           IconButton(
             iconSize: 22,
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.refresh, color: Colors.green),
+            icon: const Icon(Icons.refresh, color: Colors.white70),
             onPressed: () {
               setState(() {
                 _resetarExibicaoGrafico();

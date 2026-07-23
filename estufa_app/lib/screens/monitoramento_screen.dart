@@ -543,7 +543,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             ListTile(
               leading: const Icon(
                 Icons.delete_sweep_outlined,
-                color: Colors.redAccent,
+                color: Colors.white70,
               ),
               title: const Text(
                 'Apagar estufadas',
