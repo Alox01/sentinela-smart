@@ -338,20 +338,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           width: double.infinity,
           child: FilledButton(
             onPressed: _enviando ? null : _salvar,
+            // Mesmo estilo do botao "SALVAR" de Adicionar estufa, para os dois
+            // nao destoarem: verde greenAccent, texto escuro e em maiusculas.
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF2E7D32),
+              backgroundColor: Colors.greenAccent,
+              foregroundColor: const Color(0xFF102016),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: _enviando
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('Salvar no aparelho'),
+            child: Text(_enviando ? 'SALVANDO...' : 'SALVAR NO APARELHO'),
           ),
         ),
         const SizedBox(height: 12),
