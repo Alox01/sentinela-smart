@@ -49,6 +49,9 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.12.0: o alarme de TEMPERATURA pode ser desligado pelo app (buzzerAtivo,
+//        LWW, NVS). Fogo nunca e afetado: sensor de chama e temperatura de
+//        incendio (>175 F) tocam sempre. So a sirene fisica cala - o push segue.
 // 1.11.0: ao entrar no modo de configuracao, apita e pisca os 3 LEDs (sinal
 //        fisico inconfundivel); visor mostra "----" em vez de tentar "ConF",
 //        que um display de 7 segmentos nao escreve legivel.
@@ -74,7 +77,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.11.0";
+const char* VERSAO_FIRMWARE = "1.12.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -193,6 +196,13 @@ int umidadeAlvo = 90;
 long long tempTimestamp = 0;
 long long umidTimestamp = 0;
 long long modoSilenciosoTimestamp = 0;
+
+// Buzzer do alarme de TEMPERATURA: o produtor pode desliga-lo (ha quem nao
+// aguente o bipe durante a estufada). Fogo NUNCA e afetado - o sensor de chama
+// e a temperatura de incendio (>175 F) sempre tocam. So o alarme de temperatura
+// comum cala. Persistido em NVS; LWW pelo buzzerTimestamp.
+bool buzzerTemperaturaAtivo = true;
+long long buzzerTimestamp = 0;
 
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
@@ -781,6 +791,8 @@ void carregarConfigPersistida() {
   // de um reinicio: sem eles um comando antigo poderia vencer o ajuste atual.
   tempTimestamp = prefs.getLong64("tempTs", 0);
   umidTimestamp = prefs.getLong64("umidTs", 0);
+  buzzerTemperaturaAtivo = prefs.getBool("buzzerAtivo", true);
+  buzzerTimestamp = prefs.getLong64("buzzerTs", 0);
   // As constantes do topo sao so o valor de fabrica: o que o produtor gravou
   // pelo modo de configuracao tem precedencia.
   wifiSsid = prefs.getString("wifiSsid", WIFI_SSID);
@@ -814,6 +826,8 @@ void salvarConfigSeNecessario() {
   prefs.putInt("umidAlvo", umidadeAlvo);
   prefs.putLong64("tempTs", tempTimestamp);
   prefs.putLong64("umidTs", umidTimestamp);
+  prefs.putBool("buzzerAtivo", buzzerTemperaturaAtivo);
+  prefs.putLong64("buzzerTs", buzzerTimestamp);
   prefs.end();
 
   configSuja = false;
@@ -873,6 +887,8 @@ void empurrarLeituraNuvem() {
   config["umidTimestamp"] = umidTimestamp;
   config["modoSilencioso"] = estaSilenciado();
   config["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
+  config["buzzerAtivo"] = buzzerTemperaturaAtivo;
+  config["buzzerTimestamp"] = buzzerTimestamp;
 
   String corpo;
   serializeJson(doc, corpo);
@@ -1075,6 +1091,8 @@ void handleStatus() {
   config["umidTimestamp"] = umidTimestamp;
   config["modoSilencioso"] = estaSilenciado();
   config["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
+  config["buzzerAtivo"] = buzzerTemperaturaAtivo;
+  config["buzzerTimestamp"] = buzzerTimestamp;
 
   String saida;
   serializeJson(doc, saida);
@@ -1166,6 +1184,22 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
       ignoradas.add("modoSilencioso");
     }
   }
+
+  // Liga/desliga o buzzer do alarme de temperatura (LWW por buzzerTimestamp).
+  // Fogo nao passa por aqui - continua tocando sempre (ver atualizarSaidas).
+  if (!entrada["buzzerAtivo"].isNull()) {
+    long long ts = entrada["buzzerTimestamp"].isNull()
+                       ? nowMs()
+                       : entrada["buzzerTimestamp"].as<long long>();
+    if (ts > buzzerTimestamp) {
+      buzzerTemperaturaAtivo = entrada["buzzerAtivo"].as<bool>();
+      buzzerTimestamp = ts;
+      configSuja = true;
+      aplicadas.add("buzzerAtivo");
+    } else {
+      ignoradas.add("buzzerAtivo");
+    }
+  }
 }
 
 void handleSincronizar() {
@@ -1204,6 +1238,8 @@ void handleSincronizar() {
   cfg["umidTimestamp"] = umidTimestamp;
   cfg["modoSilencioso"] = estaSilenciado();
   cfg["modoSilenciosoTimestamp"] = modoSilenciosoTimestamp;
+  cfg["buzzerAtivo"] = buzzerTemperaturaAtivo;
+  cfg["buzzerTimestamp"] = buzzerTimestamp;
 
   String saida;
   serializeJson(resp, saida);
@@ -1395,6 +1431,14 @@ void atualizarSaidas() {
   if (!alertaTemperatura) {
     // Temperatura normalizou: o silencio perde a razao de existir.
     silencioAteMillis = 0;
+    buzzerLigadoAgora = false;
+    digitalWrite(BUZZER, LOW);
+    return;
+  }
+
+  // Buzzer de temperatura desligado pelo produtor: cala o alarme COMUM, mas a
+  // temperatura de incendio (>175 F) ainda toca - fogo nunca fica mudo.
+  if (!buzzerTemperaturaAtivo && !riscoIncendioAgora()) {
     buzzerLigadoAgora = false;
     digitalWrite(BUZZER, LOW);
     return;
