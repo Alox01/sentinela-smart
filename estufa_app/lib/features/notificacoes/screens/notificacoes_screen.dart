@@ -204,9 +204,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                     border: Border.all(color: Colors.white10),
                   ),
                   child: const Text(
-                    'A sirene física do aparelho é independente e continua '
-                    'tocando na estufa mesmo sem internet ou celular. Estes '
-                    'avisos são a camada remota, para você saber à distância.',
+                    'As notificações são do app, não do alarme do aparelho.',
                     style: TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ),
@@ -239,11 +237,7 @@ class _CartaoEvento extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: evento.critico
-              ? Colors.redAccent.withValues(alpha: 0.3)
-              : Colors.white10,
-        ),
+        border: Border.all(color: Colors.white10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,15 +245,6 @@ class _CartaoEvento extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              if (evento.critico)
-                const Padding(
-                  padding: EdgeInsets.only(right: 6),
-                  child: Icon(
-                    Icons.local_fire_department_rounded,
-                    color: Colors.redAccent,
-                    size: 18,
-                  ),
-                ),
               Expanded(
                 child: Text(
                   evento.titulo,
@@ -281,7 +266,6 @@ class _CartaoEvento extends StatelessWidget {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
-            activeThumbColor: Colors.greenAccent,
             title: const Text(
               'Notificar',
               style: TextStyle(color: Colors.white, fontSize: 14),
@@ -299,7 +283,6 @@ class _CartaoEvento extends StatelessWidget {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
-            activeThumbColor: Colors.greenAccent,
             title: const Text(
               'Tocar / vibrar',
               style: TextStyle(color: Colors.white, fontSize: 14),

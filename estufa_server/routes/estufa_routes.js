@@ -97,21 +97,27 @@ function createEstufaRouter({
   async function avaliarAlertas(idHardware, status) {
     if (!idHardware || idHardware === ID_SIMULADOR) return;
 
-    const fogo =
-      status.perigoChama === true ||
-      status.riscoIncendio === true ||
-      status.alertaIncendio === true;
+    const fogoSensor = status.perigoChama === true;
+    const tempMuitoAlta = status.riscoIncendio === true;
+    const fogo = fogoSensor || tempMuitoAlta || status.alertaIncendio === true;
     const alarme = status.alarmeAtivo === true;
 
     const anterior = ultimoEstadoNotificado.get(idHardware) || {};
     ultimoEstadoNotificado.set(idHardware, { fogo, alarme });
 
     if (fogo && !anterior.fogo) {
+      // Diz qual das duas causas disparou: chama no sensor ou temperatura muito
+      // elevada. O mesmo evento/canal dos dois casos - so o corpo muda.
+      const causa = fogoSensor
+        ? 'O sensor de incendio detectou chama'
+        : tempMuitoAlta
+          ? 'A temperatura esta muito elevada'
+          : 'Indicio de incendio';
       await notificarEvento({
         idHardware,
         evento: 'incendio',
         titulo: 'Risco de incendio',
-        corpo: 'A estufa detectou chama ou temperatura de incendio. Verifique agora.',
+        corpo: `${causa}. Verifique agora.`,
         critico: true,
       });
     }

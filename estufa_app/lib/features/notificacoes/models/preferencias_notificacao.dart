@@ -28,10 +28,10 @@ extension EventoNotificacaoInfo on EventoNotificacao {
   String get descricao => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Temperatura fora da faixa do ajuste.',
     EventoNotificacao.incendio =>
-      'Sensor de chama ou temperatura de inc\u00eandio. Cr\u00edtico.',
+      'Sensor de inc\u00eandio e temperatura muito elevada.',
     EventoNotificacao.semComunicacao =>
-      'A estufa parou de reportar. Cobre falta de energia e queda de '
-          'internet \u2014 o aparelho n\u00e3o distingue as duas.',
+      'A estufa parou de se comunicar. Pode ser falta de energia ou '
+          'internet se o app estiver em modo nuvem.',
   };
 
   bool get critico => this == EventoNotificacao.incendio;
