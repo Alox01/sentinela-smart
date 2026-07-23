@@ -70,6 +70,12 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   temperatura ainda estiver fora, ela volta a tocar. Apertar o botão de novo
   reinicia os 10 min — não religa a sirene na hora. Incêndio continua **não
   silenciável**.
+- **Desligar o alarme de temperatura (permanente):** pelo app (menu da estufa →
+  Notificações → "Alarme do aparelho") dá para **desligar de vez o buzzer do
+  alarme de temperatura** — há produtor que não aguenta o bipe. Vem como comando
+  `buzzerAtivo` (LWW, guardado na NVS). **Fogo nunca é afetado:** sensor de chama
+  e temperatura de incêndio (>175°F) tocam sempre. E o **push no celular
+  continua** — só a sirene física de temperatura fica muda.
 - **Acomodação de 5 min:** ao mudar o alvo, o aparelho perdoa por 5 minutos
   **apenas a distância que a mudança criou** (teto de 8°F) — aproximar o alvo
   da leitura atual não perdoa nada. Serve para não alarmar enquanto a estufa

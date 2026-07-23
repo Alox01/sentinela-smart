@@ -7,10 +7,26 @@ import '../models/preferencias_notificacao.dart';
 import '../services/preferencias_notificacao_service.dart';
 import '../services/push_notification_service.dart';
 
-/// Preferencias de notificacao, globais. Cada evento tem dois interruptores:
-/// mostrar a mensagem e fazer o celular tocar/vibrar.
+/// O buzzer atual de UM aparelho e a funcao que muda esse estado (envia o
+/// comando). So existe quando a tela e aberta pelo monitoramento de uma estufa.
+class ControleAlarmeAparelho {
+  final bool buzzerAtivo;
+  // Envia o comando ao aparelho; devolve se conseguiu.
+  final Future<bool> Function(bool ativo) definir;
+  const ControleAlarmeAparelho({
+    required this.buzzerAtivo,
+    required this.definir,
+  });
+}
+
+/// Preferencias de notificacao (o que avisar / tocar) — globais, valem para
+/// todas as estufas. Quando aberta pelo monitoramento de uma estufa recebe um
+/// [controleAparelho] e mostra tambem o alarme fisico daquele aparelho; pelo
+/// acesso global (home) esse controle e nulo e a secao nao aparece.
 class NotificacoesScreen extends StatefulWidget {
-  const NotificacoesScreen({super.key});
+  final ControleAlarmeAparelho? controleAparelho;
+
+  const NotificacoesScreen({super.key, this.controleAparelho});
 
   @override
   State<NotificacoesScreen> createState() => _NotificacoesScreenState();
@@ -25,11 +41,64 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   bool? _furaNaoPerturbe;
+  late bool _buzzerAtivo;
 
   @override
   void initState() {
     super.initState();
+    _buzzerAtivo = widget.controleAparelho?.buzzerAtivo ?? true;
     if (_ehAndroid) unawaited(_conferirNaoPerturbe());
+  }
+
+  Future<void> _mudarBuzzer(bool ativo) async {
+    final controle = widget.controleAparelho;
+    if (controle == null) return;
+    // So confirma ao DESLIGAR: religar nao tem risco.
+    if (!ativo) {
+      final ok = await _confirmarDesligarBuzzer();
+      if (ok != true) return;
+    }
+    final enviado = await controle.definir(ativo);
+    if (!mounted) return;
+    if (enviado) {
+      setState(() => _buzzerAtivo = ativo);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível enviar ao aparelho.')),
+      );
+    }
+  }
+
+  Future<bool?> _confirmarDesligarBuzzer() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text(
+          'Desligar o alarme do aparelho?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'O aparelho vai parar de tocar a sirene de temperatura na estufa. '
+          'O aviso de incêndio continua tocando sempre, e as notificações no '
+          'celular também. Só a sirene de temperatura fica muda.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Desligar',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _conferirNaoPerturbe() async {
@@ -164,6 +233,57 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     );
   }
 
+  // Alarme fisico daquele aparelho: so aparece quando ha controleAparelho (ou
+  // seja, aberto pelo monitoramento de uma estufa). Fogo nunca e afetado.
+  Widget _cartaoAlarmeAparelho() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.campaign_outlined, color: Colors.white70, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Alarme do aparelho',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'A sirene de temperatura na própria estufa. O alarme de incêndio '
+            'continua tocando sempre, independente disto.',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text(
+              'Tocar na estufa',
+              style: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            value: _buzzerAtivo,
+            onChanged: _mudarBuzzer,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -194,6 +314,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                     aoMudar: (nova, desligandoIncendio) =>
                         _mudar(evento, nova, desligandoIncendio),
                   ),
+                if (widget.controleAparelho != null) _cartaoAlarmeAparelho(),
                 if (_ehAndroid) _cartaoNaoPerturbe(),
                 const SizedBox(height: 8),
                 Container(

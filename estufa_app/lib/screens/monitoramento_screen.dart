@@ -496,8 +496,21 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               ),
               onTap: () {
                 Navigator.of(context).pop();
+                // Aberta pela estufa: alem das preferencias globais, entrega o
+                // controle do alarme fisico DESTE aparelho (buzzer de
+                // temperatura). O buzzer atual vem da ultima config lida.
+                final config = _monitor.ultima?.dados?['config'];
+                final buzzerAtivo =
+                    config is Map ? config['buzzerAtivo'] != false : true;
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const NotificacoesScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => NotificacoesScreen(
+                      controleAparelho: ControleAlarmeAparelho(
+                        buzzerAtivo: buzzerAtivo,
+                        definir: _enviarComandoBuzzer,
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
@@ -1139,6 +1152,15 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           });
         }),
       );
+    });
+  }
+
+  // Liga/desliga o buzzer de temperatura do aparelho (fogo nunca e afetado -
+  // ver firmware). Passa pelo mesmo caminho LWW dos outros comandos.
+  Future<bool> _enviarComandoBuzzer(bool ativo) {
+    return _enviarComandoComFeedback({
+      'buzzerAtivo': ativo,
+      'buzzerTimestamp': DateTime.now().millisecondsSinceEpoch,
     });
   }
 
