@@ -252,6 +252,60 @@ Se o produtor esquecer a chave, o caminho de recuperacao deve ser o modo de
 configuracao fisico do ESP32. Isso evita depender de abrir o codigo e reenviar o
 firmware.
 
+## Provisionamento planejado: nome e chave gerados pelo aparelho **[planejado]**
+
+Desenho (jul/2026) para a **primeira configuracao**: em vez de o produtor
+inventar e digitar a chave em varios lugares, o **aparelho gera a chave, mostra**
+e ela se propaga sozinha. Ainda **nao implementado** — planejamento e trade-offs.
+
+### Parte 1 — nome mDNS ate o cadastro (barata, independente)
+
+Metade ja existe: a tela de configuracao **le e mostra** o nome
+(`sentinela-xxxx.local`). Falta emendar:
+
+- Na tela de sucesso, um botao **"Cadastrar esta estufa"** abre o formulario de
+  nova estufa **ja preenchido** com o nome (e a chave);
+- Cuidado da troca de rede: o aparelho reinicia na rede da casa, entao o celular
+  precisa **voltar ao Wi-Fi de sempre** antes do nome resolver. A tela avisa.
+
+### Parte 2 — chave gerada pelo aparelho (grande, cruza 3 camadas)
+
+**Geracao e exibicao.** O aparelho gera uma chave aleatoria no 1o boot (NVS). O
+"ovo e galinha" — como o app le a chave se e ela que protege o aparelho? —
+resolve-se por **presenca fisica: so no modo de configuracao** (3 botoes) o
+aparelho **revela a chave**, sem autenticacao, porque quem segura os botoes esta
+na frente dele. Mesmo principio do **adesivo do roteador**. Em operacao normal a
+chave **nunca** aparece (`/status` so diz "tem chave: sim/nao").
+
+**Perder a chave = reentrar no modo de configuracao.** Segura os 3 botoes → o
+aparelho mostra a chave; com opcao **"gerar nova chave"** para revogar a antiga
+(app e nuvem atualizam). Igual a resetar um roteador.
+
+**Subir para o Render — a parte dificil.** Hoje o servidor usa **uma chave
+global** (`ESTUFA_API_TOKEN`); chave por aparelho exige guardar `idHardware →
+chave` e validar por aparelho (o grosso do trabalho, e **codigo de seguranca**).
+Como a chave chega la:
+
+| Caminho | Como | Trade-off |
+|---|---|---|
+| **A) Aparelho registra** | No 1o push manda a propria chave; nuvem guarda (1o a registrar vence — **TOFU**) | Simples, sem conta. Risco: pre-registrar um `idHardware` — baixo (id vem do MAC, nao adivinhavel) |
+| **B) App e o carteiro** | App le a chave no modo config (presenca fisica) e sobe `(idHardware, chave)` | O ato fisico do produtor e a ancora de confianca; ainda precisa do TOFU na nuvem |
+| **C) Chave de fabrica** | Segredo de provisionamento no firmware autoriza o registro | Mais forte, mas o segredo fica no firmware (extraivel) |
+
+**Recomendado: A + B.** Aparelho gera, mostra no modo config, app le e guarda **e**
+sobe para a nuvem com **TOFU** (1o registro vence; seguintes tem que bater com a
+chave existente). Mata a friccao de digitar a chave 3x e, de brinde, e **mais
+seguro** que chave escolhida pelo produtor (aleatoria, unica por aparelho).
+
+### Ressalvas honestas
+
+- **Sem conta de usuario** no projeto, o modelo e "quem tem a chave, comanda". A
+  **presenca fisica** (3 botoes) e a unica ancora forte. Aceitavel nesta escala,
+  mas deve constar como limitacao;
+- O maior risco esta no **servidor** (global → por aparelho): erro ali = aparelho
+  comandavel por qualquer um. Fazer com calma, com teste;
+- **Fasear:** Parte 1 rapida e independente; Parte 2 e um bloco a parte.
+
 ## Comunicacao com o app
 
 No modo local atual, o app conversa com o aparelho por HTTP na mesma rede Wi-Fi.
@@ -283,6 +337,10 @@ Esta solucao combina com a proposta hibrida porque:
 
 Pendentes:
 
+- **Provisionamento (ver secao acima):** Parte 1 — botao "Cadastrar esta estufa"
+  levando o nome mDNS ao formulario; Parte 2 — chave gerada pelo aparelho,
+  mostrada no modo config, propagada ao app e a nuvem (TOFU). A Parte 2 muda o
+  servidor de chave global para chave por aparelho.
 - **Testar o modo de configuracao em campo** (compila e a logica esta escrita,
   mas so vale depois de abrir a pagina num celular de verdade).
 - Testar DHCP reservado em campo.
