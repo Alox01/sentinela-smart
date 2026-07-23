@@ -43,6 +43,8 @@ class SeletorEstufadaPeriodoCard extends StatelessWidget {
         ? 'Nenhuma estufada selecionada'
         : 'Selecionada: Estufada ${rotuloCiclo(cicloSelecionado)}';
     final telaEstreita = MediaQuery.sizeOf(context).width < 430;
+    // Destaque do seletor no lilas do tema (mesmo dos botoes), em vez do laranja.
+    final destaque = Theme.of(context).colorScheme.primary;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -68,11 +70,9 @@ class SeletorEstufadaPeriodoCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.orangeAccent.withValues(alpha: 0.06),
+                color: destaque.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.orangeAccent.withValues(alpha: 0.28),
-                ),
+                border: Border.all(color: destaque.withValues(alpha: 0.45)),
               ),
               child: _SeletorEstufada(
                 ciclos: ciclos,
@@ -253,6 +253,7 @@ class _EstufadaExpansivelItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final destaque = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -262,20 +263,17 @@ class _EstufadaExpansivelItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: selecionada
-                ? Colors.orangeAccent.withValues(alpha: 0.14)
+                ? destaque.withValues(alpha: 0.14)
                 : Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: selecionada
-                  ? Colors.orangeAccent.withValues(alpha: 0.38)
-                  : Colors.white10,
+              color: selecionada ? destaque.withValues(alpha: 0.5) : Colors.white10,
             ),
           ),
           child: Row(
             children: [
               Expanded(child: _OpcaoEstufada(rotulo: rotulo)),
-              if (selecionada)
-                const Icon(Icons.check, color: Colors.orangeAccent, size: 18),
+              if (selecionada) Icon(Icons.check, color: destaque, size: 18),
             ],
           ),
         ),
@@ -291,19 +289,7 @@ class _OpcaoEstufada extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(
-          Icons.local_fire_department,
-          color: Colors.orangeAccent,
-          size: 22,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text('Estufada $rotulo', overflow: TextOverflow.ellipsis),
-        ),
-      ],
-    );
+    return Text('Estufada $rotulo', overflow: TextOverflow.ellipsis);
   }
 }
 
