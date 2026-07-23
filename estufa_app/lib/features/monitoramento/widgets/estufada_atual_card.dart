@@ -90,8 +90,6 @@ class _EstufadaAtualMobile extends StatelessWidget {
         const SizedBox(height: 14),
         Row(
           children: [
-            _IconeEstufadaAtual(temCiclo: temCiclo, tamanho: 48),
-            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 inicioTexto,
@@ -149,8 +147,6 @@ class _EstufadaAtualDesktop extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _IconeEstufadaAtual(temCiclo: temCiclo),
-        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,36 +217,6 @@ class _TituloEstufadaAtual extends StatelessWidget {
         fontSize: 12,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.2,
-      ),
-    );
-  }
-}
-
-class _IconeEstufadaAtual extends StatelessWidget {
-  final bool temCiclo;
-  final double tamanho;
-
-  const _IconeEstufadaAtual({required this.temCiclo, this.tamanho = 42});
-
-  @override
-  Widget build(BuildContext context) {
-    // Monocromatico de proposito: o "fogo verde" num circulo destoava do resto.
-    // A diferenca de brilho (branco vs cinza) ja sinaliza estufada em andamento;
-    // o texto "Iniciada em..." confirma. Estilo alinhado aos icones do app.
-    final cor = temCiclo ? Colors.white70 : Colors.white38;
-    return Container(
-      width: tamanho,
-      height: tamanho,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24),
-      ),
-      child: Icon(
-        temCiclo
-            ? Icons.local_fire_department_outlined
-            : Icons.add_task_outlined,
-        color: cor,
       ),
     );
   }
