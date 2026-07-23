@@ -222,16 +222,15 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                           onPressed: _salvando
                               ? null
                               : () => Navigator.of(context).pop(false),
-                          child: const Text('CANCELAR'),
+                          child: const Text('Cancelar'),
                         ),
                         const SizedBox(width: 8),
+                        // Sem cor propria: usa o estilo padrao do tema, o mesmo
+                        // do botao "Iniciar" da estufada (lilas, texto em caixa
+                        // normal), para os botoes de acao nao destoarem.
                         FilledButton(
                           onPressed: _salvando ? null : _salvar,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.greenAccent,
-                            foregroundColor: const Color(0xFF102016),
-                          ),
-                          child: Text(_salvando ? 'SALVANDO...' : 'SALVAR'),
+                          child: Text(_salvando ? 'Salvando...' : 'Salvar'),
                         ),
                       ],
                     ),
