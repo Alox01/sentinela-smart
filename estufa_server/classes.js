@@ -47,6 +47,10 @@ class ConfiguracaoAlvo {
         // Comandos gerais
         this.modoSilencioso = false;
         this.modoSilenciosoTimestamp = 0;
+
+        // Buzzer do alarme de temperatura ligado (fogo nunca e afetado)
+        this.buzzerAtivo = true;
+        this.buzzerTimestamp = 0;
     }
 
     // Metodo utilitario para verificar quem ganha (App ou Hardware)
@@ -55,7 +59,8 @@ class ConfiguracaoAlvo {
         const mapTime = {
             'temperaturaMeta': 'tempTimestamp',
             'umidadeMeta': 'umidTimestamp',
-            'modoSilencioso': 'modoSilenciosoTimestamp'
+            'modoSilencioso': 'modoSilenciosoTimestamp',
+            'buzzerAtivo': 'buzzerTimestamp'
         };
 
         const chaveTime = mapTime[chave];

@@ -5,6 +5,8 @@ const CAMPOS_PERMITIDOS = new Set([
   'umidTimestamp',
   'modoSilencioso',
   'modoSilenciosoTimestamp',
+  'buzzerAtivo',
+  'buzzerTimestamp',
   'comando',
   // Destino do comando. So roteia: nao e um ajuste em si, por isso nao conta
   // como conteudo ao verificar se o payload tem algo a aplicar.
@@ -75,6 +77,8 @@ function validarPayloadSincronizacao(payload) {
   const temUmidTimestamp = Object.hasOwn(payload, 'umidTimestamp');
   const temModoSilencioso = Object.hasOwn(payload, 'modoSilencioso');
   const temModoTimestamp = Object.hasOwn(payload, 'modoSilenciosoTimestamp');
+  const temBuzzer = Object.hasOwn(payload, 'buzzerAtivo');
+  const temBuzzerTimestamp = Object.hasOwn(payload, 'buzzerTimestamp');
   const ehComandoLegadoSilenciar = payload.comando === 'silenciar';
 
   if (Object.hasOwn(payload, 'comando') && !ehComandoLegadoSilenciar) {
@@ -131,8 +135,24 @@ function validarPayloadSincronizacao(payload) {
     }
   }
 
+  if (temBuzzer !== temBuzzerTimestamp) {
+    erros.push('buzzerAtivo e buzzerTimestamp devem ser enviados juntos.');
+  }
+  if (temBuzzer) {
+    if (typeof payload.buzzerAtivo !== 'boolean') {
+      erros.push('buzzerAtivo deve ser boolean.');
+    }
+    if (!isTimestampValido(payload.buzzerTimestamp)) {
+      erros.push('buzzerTimestamp deve ser inteiro positivo.');
+    }
+  }
+
   const temAlteracao =
-    temTemperatura || temUmidade || temModoSilencioso || ehComandoLegadoSilenciar;
+    temTemperatura ||
+    temUmidade ||
+    temModoSilencioso ||
+    temBuzzer ||
+    ehComandoLegadoSilenciar;
   if (!temAlteracao && chaves.length > 0) {
     erros.push('Payload nao contem uma alteracao reconhecida.');
   }
@@ -218,6 +238,14 @@ function validarConfigLeitura(config) {
     erros.push('modoSilenciosoTimestamp deve ser inteiro nao negativo.');
   }
 
+  if (Object.hasOwn(config, 'buzzerAtivo') && typeof config.buzzerAtivo !== 'boolean') {
+    erros.push('buzzerAtivo deve ser boolean.');
+  }
+  if (Object.hasOwn(config, 'buzzerTimestamp')
+      && !isTimestampRelatado(config.buzzerTimestamp)) {
+    erros.push('buzzerTimestamp deve ser inteiro nao negativo.');
+  }
+
   return erros;
 }
 
@@ -297,6 +325,7 @@ function aplicarSincronizacao(configLocal, payload, options = {}) {
   aplicarCampo('temperaturaMeta', 'tempTimestamp');
   aplicarCampo('umidadeMeta', 'umidTimestamp');
   aplicarCampo('modoSilencioso', 'modoSilenciosoTimestamp');
+  aplicarCampo('buzzerAtivo', 'buzzerTimestamp');
 
   return {
     sucesso: true,

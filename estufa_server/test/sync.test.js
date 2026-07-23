@@ -69,6 +69,30 @@ test('modo silencioso usa timestamp e tambem aceita comando legado', () => {
   assert.equal(config.modoSilenciosoTimestamp, 3000);
 });
 
+test('buzzerAtivo exige timestamp e segue o LWW', () => {
+  const config = new ConfiguracaoAlvo('ESP32_TESTE');
+
+  const valido = validarPayloadSincronizacao({
+    buzzerAtivo: false,
+    buzzerTimestamp: 5000,
+  });
+  const semTimestamp = validarPayloadSincronizacao({ buzzerAtivo: false });
+  assert.equal(valido.valido, true, JSON.stringify(valido.erros));
+  assert.equal(semTimestamp.valido, false);
+
+  const novo = aplicarSincronizacao(config, {
+    buzzerAtivo: false,
+    buzzerTimestamp: 5000,
+  });
+  const antigo = aplicarSincronizacao(config, {
+    buzzerAtivo: true,
+    buzzerTimestamp: 4000,
+  });
+  assert.deepEqual(novo.alteracoesAplicadas, ['buzzerAtivo']);
+  assert.deepEqual(antigo.alteracoesIgnoradas, ['buzzerAtivo']);
+  assert.equal(config.buzzerAtivo, false);
+});
+
 test('rejeita ajustes fora da faixa operacional', () => {
   const temperaturaBaixa = validarPayloadSincronizacao({
     temperaturaMeta: 40,

@@ -190,6 +190,7 @@ function createEstufaRouter({
     temperaturaMeta: 'tempTimestamp',
     umidadeMeta: 'umidTimestamp',
     modoSilencioso: 'modoSilenciosoTimestamp',
+    buzzerAtivo: 'buzzerTimestamp',
   };
 
   // Um comando so deixa de estar pendente quando o proprio aparelho reporta
