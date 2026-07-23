@@ -721,10 +721,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Ajustar',
-              style: TextStyle(color: Colors.greenAccent),
-            ),
+            child: const Text('Ajustar'),
           ),
         ],
       ),

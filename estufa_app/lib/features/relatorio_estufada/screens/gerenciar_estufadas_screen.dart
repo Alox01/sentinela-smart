@@ -96,7 +96,6 @@ class _GerenciarEstufadasScreenState extends State<GerenciarEstufadasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
             child: const Text('Apagar'),
           ),
         ],
@@ -157,7 +156,6 @@ class _GerenciarEstufadasScreenState extends State<GerenciarEstufadasScreen> {
                 final marcada = _selecionados.contains(ciclo.id);
                 return CheckboxListTile(
                   value: marcada,
-                  activeColor: Colors.redAccent,
                   controlAffinity: ListTileControlAffinity.leading,
                   title: Text(
                     _tituloCiclo(ciclo),
@@ -194,7 +192,6 @@ class _GerenciarEstufadasScreenState extends State<GerenciarEstufadasScreen> {
                       ? null
                       : _apagarSelecionadas,
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   icon: _apagando
