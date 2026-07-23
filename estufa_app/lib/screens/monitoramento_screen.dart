@@ -324,79 +324,87 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         onAbrirMenu: () => _scaffoldKey.currentState?.openEndDrawer(),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (isFire || isSuperaquecimentoNaoIntencional)
-                  AlertaMonitoramentoBanner(
-                    incendioDetectado: isFire,
-                    temperaturaAtual: temperatura,
-                    avisoEmergencia: avisoEmergencia,
+        child: RefreshIndicator(
+          onRefresh: _onPullRefresh,
+          color: Colors.white,
+          backgroundColor: const Color(0xFF1C1C1E),
+          child: SingleChildScrollView(
+            // Sempre rolavel, para o puxar-para-atualizar funcionar mesmo
+            // quando o conteudo cabe inteiro na tela.
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isFire || isSuperaquecimentoNaoIntencional)
+                    AlertaMonitoramentoBanner(
+                      incendioDetectado: isFire,
+                      temperaturaAtual: temperatura,
+                      avisoEmergencia: avisoEmergencia,
+                    ),
+                  // Sem banner de falta de energia: o aparelho nao tem sensor de
+                  // tensao nem bateria, entao `temEnergia` e sempre true e o
+                  // aviso nunca aparecia. O texto ainda prometia "o sistema esta
+                  // na bateria/gerador", que nao existe. Quem cobre queda de luz
+                  // e o banner de sem comunicacao, pela ausencia de leituras.
+                  if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
+                  if (_aguardandoAparelho) _buildBannerAguardandoAparelho(),
+                  LeituraAparelhoCard(
+                    temperatura: temperatura,
+                    umidade: umidade,
+                    temperaturaAjuste: tempAjuste,
+                    umidadeAjuste: umidAjuste,
+                    sireneLigada: sireneLigada,
+                    estadoTemperaturaAparelho: _estadoTemperaturaAparelho(),
+                    folgaUmidade: folgaUmid,
+                    onSilenciarAlarme: api.silenciarAlarme,
                   ),
-                // Sem banner de falta de energia: o aparelho nao tem sensor de
-                // tensao nem bateria, entao `temEnergia` e sempre true e o
-                // aviso nunca aparecia. O texto ainda prometia "o sistema esta
-                // na bateria/gerador", que nao existe. Quem cobre queda de luz
-                // e o banner de sem comunicacao, pela ausencia de leituras.
-                if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
-                if (_aguardandoAparelho) _buildBannerAguardandoAparelho(),
-                LeituraAparelhoCard(
-                  temperatura: temperatura,
-                  umidade: umidade,
-                  temperaturaAjuste: tempAjuste,
-                  umidadeAjuste: umidAjuste,
-                  sireneLigada: sireneLigada,
-                  estadoTemperaturaAparelho: _estadoTemperaturaAparelho(),
-                  folgaUmidade: folgaUmid,
-                  onSilenciarAlarme: api.silenciarAlarme,
-                ),
-                const SizedBox(height: 25),
-                PainelControle(
-                  tempAjuste: tempAjuste,
-                  umidAjuste: umidAjuste,
-                  onMudarTemperatura: (novaTemp) {
-                    final ajusteAnterior = tempAjuste;
-                    // Abre a acomodacao ja no toque, para o LED nao piscar antes
-                    // de o servidor confirmar a mudanca.
-                    _detectorOscilacao.registrarMudancaAjusteTemperatura(
-                      DateTime.now().millisecondsSinceEpoch,
-                      leitura: temperatura,
-                      ajusteAnterior: ajusteAnterior,
-                      ajusteNovo: novaTemp,
-                    );
-                    setState(() {
-                      tempAjuste = novaTemp;
-                      _tempAjustePendente = novaTemp;
-                    });
-                    _agendarEnvioTemperatura(novaTemp, ajusteAnterior);
-                  },
-                  onMudarUmidade: (novaUmid) {
-                    final ajusteAnterior = umidAjuste;
-                    _detectorOscilacao.registrarMudancaAjusteUmidade(
-                      DateTime.now().millisecondsSinceEpoch,
-                      leitura: umidade,
-                      ajusteAnterior: ajusteAnterior,
-                      ajusteNovo: novaUmid,
-                    );
-                    setState(() {
-                      umidAjuste = novaUmid;
-                      _umidAjustePendente = novaUmid;
-                    });
-                    _agendarEnvioUmidade(novaUmid, ajusteAnterior);
-                  },
-                ),
-                const SizedBox(height: 20),
-                EstufadaAtualCard(
-                  ciclo: _cicloAtual,
-                  onIniciar: _iniciarCiclo,
-                  onFinalizar: _confirmarFinalizarCiclo,
-                  onAbrirRelatorio: _abrirRelatorioEstufada,
-                ),
-                const SizedBox(height: 30),
-              ],
+                  const SizedBox(height: 25),
+                  PainelControle(
+                    tempAjuste: tempAjuste,
+                    umidAjuste: umidAjuste,
+                    onMudarTemperatura: (novaTemp) {
+                      final ajusteAnterior = tempAjuste;
+                      // Abre a acomodacao ja no toque, para o LED nao piscar antes
+                      // de o servidor confirmar a mudanca.
+                      _detectorOscilacao.registrarMudancaAjusteTemperatura(
+                        DateTime.now().millisecondsSinceEpoch,
+                        leitura: temperatura,
+                        ajusteAnterior: ajusteAnterior,
+                        ajusteNovo: novaTemp,
+                      );
+                      setState(() {
+                        tempAjuste = novaTemp;
+                        _tempAjustePendente = novaTemp;
+                      });
+                      _agendarEnvioTemperatura(novaTemp, ajusteAnterior);
+                    },
+                    onMudarUmidade: (novaUmid) {
+                      final ajusteAnterior = umidAjuste;
+                      _detectorOscilacao.registrarMudancaAjusteUmidade(
+                        DateTime.now().millisecondsSinceEpoch,
+                        leitura: umidade,
+                        ajusteAnterior: ajusteAnterior,
+                        ajusteNovo: novaUmid,
+                      );
+                      setState(() {
+                        umidAjuste = novaUmid;
+                        _umidAjustePendente = novaUmid;
+                      });
+                      _agendarEnvioUmidade(novaUmid, ajusteAnterior);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  EstufadaAtualCard(
+                    ciclo: _cicloAtual,
+                    onIniciar: _iniciarCiclo,
+                    onFinalizar: _confirmarFinalizarCiclo,
+                    onAbrirRelatorio: _abrirRelatorioEstufada,
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
           ),
         ),
@@ -457,7 +465,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             ),
             ListTile(
               leading: const Icon(
-                Icons.wifi_protected_setup_rounded,
+                Icons.settings_outlined,
                 color: Colors.white70,
               ),
               title: const Text(
@@ -465,7 +473,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(
-                'Trocar o Wi-Fi ou a chave, sem computador',
+                'Trocar o Wi-Fi ou a chave',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
@@ -486,46 +494,17 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 'Notificações',
                 style: TextStyle(color: Colors.white),
               ),
-              // Diz o alcance ANTES de abrir: a tela e a mesma da inicial, e
-              // chegar por dentro de uma estufa sugeriria que vale so para ela.
-              subtitle: const Text(
-                'Vale para todas as estufas',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const NotificacoesScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const NotificacoesScreen()),
                 );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                _sincronizandoPendencias ? Icons.sync : Icons.sync_problem,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Sincronizar pendências',
-                style: TextStyle(color: Colors.white),
-              ),
-              trailing: _pendenciasSincronizacao > 0
-                  ? _contadorMenu(_pendenciasSincronizacao)
-                  : null,
-              enabled: !_sincronizandoPendencias,
-              onTap: () {
-                Navigator.of(context).pop();
-                _sincronizarPendenciasSeNecessario(forcar: true);
               },
             ),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
-              leading: const Icon(
-                Icons.add_circle_outline,
-                color: Colors.white70,
-              ),
+              leading: const Icon(Icons.restart_alt, color: Colors.white70),
               title: const Text(
                 'Preparar nova estufada',
                 style: TextStyle(color: Colors.white),
@@ -541,16 +520,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.delete_sweep_outlined,
-                color: Colors.white70,
-              ),
+              leading: const Icon(Icons.delete_outline, color: Colors.white70),
               title: const Text(
                 'Apagar estufadas',
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(
-                'Remove relatórios antigos ou de teste',
+                'Remove relatórios',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
@@ -702,22 +678,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
   }
 
-  Widget _contadorMenu(int valor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.amberAccent.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        '$valor',
-        style: const TextStyle(
-          color: Colors.amberAccent,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
-    );
+  // Puxar a tela para baixo, no topo, atualiza a leitura na hora e sincroniza
+  // os ajustes que ficaram pendentes - o mesmo que o item do menu fazia, mas
+  // num gesto mais natural (como o "puxar para atualizar" de outros apps).
+  Future<void> _onPullRefresh() async {
+    await _monitor.atualizarAgora();
+    await _sincronizarPendenciasSeNecessario(forcar: true);
   }
 
   Future<void> _prepararNovaEstufada() async {
