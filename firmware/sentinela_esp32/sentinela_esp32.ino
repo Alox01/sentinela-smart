@@ -49,6 +49,9 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.11.0: ao entrar no modo de configuracao, apita e pisca os 3 LEDs (sinal
+//        fisico inconfundivel); visor mostra "----" em vez de tentar "ConF",
+//        que um display de 7 segmentos nao escreve legivel.
 // 1.10.0: a pagina de configuracao mostra o nome local do aparelho (antes so
 //        aparecia no Monitor Serial, que exige um computador com a IDE) e
 //        aceita IP fixo, para roteador do provedor onde nao da para reservar.
@@ -71,7 +74,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.10.0";
+const char* VERSAO_FIRMWARE = "1.11.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -523,6 +526,19 @@ void entrarModoConfig() {
   modoConfig = true;
   tresBotoesDesdeMs = 0;
   ultimaAtividadeConfig = millis();
+
+  // Confirmacao fisica de que entrou no modo: um apito curto e um pisca dos
+  // tres LEDs juntos. O visor de 7 segmentos nao mostra texto legivel, entao o
+  // sinal do produtor e este - inconfundivel e sem depender de olhar o display.
+  digitalWrite(LED_ALERTA, HIGH);
+  digitalWrite(LED_UMIDADE, HIGH);
+  digitalWrite(LED_CONTROLE_TEMP, HIGH);
+  digitalWrite(BUZZER, HIGH);
+  delay(250);
+  digitalWrite(BUZZER, LOW);
+  digitalWrite(LED_ALERTA, LOW);
+  digitalWrite(LED_UMIDADE, LOW);
+  digitalWrite(LED_CONTROLE_TEMP, LOW);
 
   // Apertar tres botoes quase nunca e simultaneo: o primeiro a fechar contato
   // pode ter entrado no modo de ajuste e mexido no alvo. Descarta essas
@@ -1409,11 +1425,13 @@ void controlarBuzzerIntermitente() {
 }
 
 void atualizarDisplay() {
-  // "ConF" no visor: e o unico sinal de que o aparelho virou ponto de acesso,
-  // e evita alguem achar que ele travou.
+  // No modo de configuracao o visor mostra "----": um estado claramente
+  // diferente de uma leitura, sem tentar escrever letras (o display de 7
+  // segmentos nao mostra texto legivel). A confirmacao de entrada e o
+  // apito + LEDs em entrarModoConfig(); isto so evita achar que travou.
   if (modoConfig) {
-    const uint8_t conf[] = {0x39, 0x5C, 0x37, 0x71};  // C o n F
-    display.setSegments(conf);
+    const uint8_t tracos[] = {0x40, 0x40, 0x40, 0x40};  // - - - -
+    display.setSegments(tracos);
     return;
   }
 

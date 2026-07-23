@@ -162,7 +162,8 @@ estiver gravado na NVS tem precedencia.
 > navegador) continuam valendo para quem nao tem o app instalado.
 
 1. **Segure os tres botoes ao mesmo tempo por 3 segundos** (buzzer, verde e
-   vermelho). O visor mostra `ConF`.
+   vermelho). O aparelho **apita e pisca os tres LEDs** ao entrar; o visor passa
+   a mostrar `----`.
 2. O aparelho cria a rede Wi-Fi **`Sentinela-Config`**.
 3. Conecte o celular nela. O aparelho responde **qualquer consulta de nome com
    o proprio IP**, entao o celular costuma abrir a pagina sozinho ("conectar-se
@@ -170,8 +171,7 @@ estiver gravado na NVS tem precedencia.
    **`http://192.168.4.1`** no navegador.
 
    > O Android normalmente avisa que a rede **nao tem internet** e pergunta se
-   > quer continuar conectado — e preciso aceitar, senao ele volta para os dados
-   > moveis e a pagina nao carrega.
+   > quer continuar conectado — e preciso aceitar.
 4. Preencha rede, senha e chave de acesso. **Senha em branco mantem a atual** —
    util para trocar so a chave.
 5. Salvar reinicia o aparelho, que ja sobe na rede nova.

@@ -117,7 +117,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       setState(
         () => _erro =
             'Não encontrei o aparelho. Confirme que o celular está conectado '
-            'na rede "Sentinela-Config" e que o visor mostra ConF.',
+            'na rede "Sentinela-Config" e que o aparelho está no modo de '
+            'configuração.',
       );
     } finally {
       if (mounted) setState(() => _enviando = false);
@@ -257,11 +258,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           child: const Text(
             'Antes de preencher:\n\n'
-            '1. No aparelho, segure os três botões por 3 segundos até o visor '
-            'mostrar ConF.\n'
+            '1. No aparelho, segure os três botões por 3 segundos, até apitar e '
+            'os LEDs piscarem.\n'
             '2. No Wi-Fi do celular, conecte na rede "Sentinela-Config".\n'
             '3. O Android avisa que a rede não tem internet — aceite continuar '
-            'conectado, senão ele volta para os dados móveis.',
+            'conectado.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
         ),

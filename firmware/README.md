@@ -94,7 +94,8 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
   o alarme volta a valer.
 - **Wi-Fi configurável sem computador:** `WIFI_SSID`/`WIFI_PASS`/`DEVICE_TOKEN`
   no `.ino` são só o valor **de fábrica**. Segurando os **três botões por 3 s** o
-  aparelho vira o ponto de acesso `Sentinela-Config` (visor mostra `ConF`); pelo
+  aparelho vira o ponto de acesso `Sentinela-Config` (apita e pisca os LEDs ao
+  entrar; visor mostra `----`); pelo
   navegador em `192.168.4.1` dá para trocar rede, senha e chave, que ficam na
   NVS. O modo se fecha sozinho após 5 min sem uso, e **o alarme continua
   funcionando** durante a configuração. Detalhes e limitações em
