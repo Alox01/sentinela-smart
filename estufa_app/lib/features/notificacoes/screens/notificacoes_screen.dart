@@ -167,11 +167,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: liberado
-              ? Colors.greenAccent.withValues(alpha: 0.3)
-              : Colors.amberAccent.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: Colors.white10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +178,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                 liberado
                     ? Icons.notifications_active_rounded
                     : Icons.do_not_disturb_on_rounded,
-                color: liberado ? Colors.greenAccent : Colors.amberAccent,
+                color: Colors.white70,
                 size: 18,
               ),
               const SizedBox(width: 6),
@@ -216,13 +212,6 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: _pedirNaoPerturbe,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: liberado ? Colors.white54 : Colors.amberAccent,
-                side: BorderSide(
-                  color: (liberado ? Colors.white54 : Colors.amberAccent)
-                      .withValues(alpha: 0.5),
-                ),
-              ),
               child: Text(
                 liberado
                     ? 'Ver nas configurações'
