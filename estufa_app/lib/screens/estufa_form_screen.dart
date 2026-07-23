@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../services/isar_service.dart';
@@ -198,6 +199,17 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                       ),
                     ),
                     const SizedBox(height: 22),
+                    // Só ao adicionar (não ao editar) e fora da web: é aqui que
+                    // o iniciante chega na primeira vez. O aparelho novo ainda
+                    // não está na rede, então antes de preencher o endereço
+                    // abaixo ele configura o Wi-Fi do aparelho por aqui. Não dá
+                    // para embutir num formulário só: configurar exige o celular
+                    // na rede do aparelho (Sentinela-Config), e cadastrar exige
+                    // o celular na rede da casa — redes diferentes, duas etapas.
+                    if (!_editando && !kIsWeb) ...[
+                      _buildAtalhoConfigurar(),
+                      const SizedBox(height: 22),
+                    ],
                     if (_usarEntradaNativaWeb)
                       _buildEntradaNativaWeb()
                     else
@@ -228,6 +240,60 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAtalhoConfigurar() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ConfigurarAparelhoScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.035),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.wifi_protected_setup_rounded,
+              color: Colors.white54,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Primeira vez com este aparelho?',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Configure o Wi-Fi e a chave dele antes de cadastrar. '
+                    'O aparelho vai mostrar o endereço para preencher abaixo.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white38,
+              size: 22,
+            ),
+          ],
         ),
       ),
     );
