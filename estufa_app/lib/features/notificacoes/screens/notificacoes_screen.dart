@@ -207,22 +207,29 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                       'estiver no "Não perturbe" — justamente de madrugada.',
             style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
-          if (!liberado) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _pedirNaoPerturbe,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.amberAccent,
-                  side: BorderSide(
-                    color: Colors.amberAccent.withValues(alpha: 0.5),
-                  ),
+          // Botao sempre presente: quando ainda nao liberado, ele libera;
+          // quando ja liberado, leva o produtor as configuracoes do sistema
+          // para conferir ou revogar. Sem isto, o card virava so texto e o
+          // toque nao fazia nada.
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _pedirNaoPerturbe,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: liberado ? Colors.white54 : Colors.amberAccent,
+                side: BorderSide(
+                  color: (liberado ? Colors.white54 : Colors.amberAccent)
+                      .withValues(alpha: 0.5),
                 ),
-                child: const Text('Liberar nas configurações'),
+              ),
+              child: Text(
+                liberado
+                    ? 'Ver nas configurações'
+                    : 'Liberar nas configurações',
               ),
             ),
-          ],
+          ),
           const SizedBox(height: 4),
           const Text(
             'Isso não vence o modo silencioso do aparelho.',
