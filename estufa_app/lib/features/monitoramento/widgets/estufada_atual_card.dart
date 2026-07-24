@@ -81,6 +81,11 @@ class _EstufadaAtualMobile extends StatelessWidget {
     required this.onPressed,
   });
 
+  // Tudo centralizado e o botao numa linha propria. Com o texto e o botao lado
+  // a lado, "Nenhuma estufada em andamento" quebrava em duas linhas espremidas
+  // contra o botao, e o card misturava tres alinhamentos (titulo centrado,
+  // status a esquerda, apoio centrado). Ocupando a largura, o botao ainda vira
+  // um alvo bem maior - o que conta para quem mexe nisso de luva.
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -88,42 +93,32 @@ class _EstufadaAtualMobile extends StatelessWidget {
       children: [
         const _TituloEstufadaAtual(textAlign: TextAlign.center),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                inicioTexto,
-                maxLines: 2,
-                overflow: TextOverflow.clip,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            FilledButton.icon(
-              onPressed: onPressed,
-              icon: Icon(
-                temCiclo ? Icons.flag_rounded : Icons.play_arrow_rounded,
-                size: 18,
-              ),
-              label: Text(temCiclo ? 'Finalizar' : 'Iniciar'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          inicioTexto,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         Text(
           apoioTexto,
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white38, fontSize: 12),
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: onPressed,
+          icon: Icon(
+            temCiclo ? Icons.flag_rounded : Icons.play_arrow_rounded,
+            size: 18,
+          ),
+          label: Text(temCiclo ? 'Finalizar' : 'Iniciar'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
         ),
       ],
     );
