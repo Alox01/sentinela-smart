@@ -77,6 +77,21 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     super.dispose();
   }
 
+  /// Recarrega o relatorio do zero. Serve ao botao da barra e ao
+  /// puxar-para-atualizar, que precisam do MESMO comportamento - e o gesto
+  /// ainda precisa esperar a carga terminar para a animacao fechar na hora
+  /// certa, em vez de sumir antes dos dados chegarem.
+  Future<void> _recarregarRelatorio() async {
+    if (!mounted) return;
+    final futuro = _carregarDadosRelatorio();
+    setState(() {
+      _resetarExibicaoGrafico();
+      _cicloSelecionadoId = null;
+      _dadosFuture = futuro;
+    });
+    await futuro;
+  }
+
   Future<_DadosRelatorioEstufada> _carregarDadosRelatorio({
     int? cicloPreferidoId,
   }) async {
@@ -345,133 +360,140 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             iconSize: 22,
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.refresh, color: Colors.white70),
-            onPressed: () {
-              setState(() {
-                _resetarExibicaoGrafico();
-                _cicloSelecionadoId = null;
-                _dadosFuture = _carregarDadosRelatorio();
-              });
-            },
+            onPressed: () => unawaited(_recarregarRelatorio()),
             tooltip: 'Atualizar',
           ),
         ],
       ),
-      body: FutureBuilder<_DadosRelatorioEstufada>(
-        future: _dadosFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      // Puxar para atualizar, como no monitoramento: o gesto e o mesmo em todo
+      // o app, e o botao da barra continua para quem prefere tocar.
+      body: RefreshIndicator(
+        onRefresh: _recarregarRelatorio,
+        color: Colors.white,
+        backgroundColor: const Color(0xFF1C1C1E),
+        child: FutureBuilder<_DadosRelatorioEstufada>(
+          future: _dadosFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          final dados = snapshot.data ?? _DadosRelatorioEstufada.vazio();
-          _ciclos = dados.ciclos;
-          _recalcularPosicoes();
-          _eventos = dados.eventos;
-          final cicloSelecionado = dados.cicloSelecionado;
-          _cicloSelecionadoId = cicloSelecionado?.id;
-          // Usa o histórico mesclado com a nuvem quando já disponível para este
-          // ciclo; senão, o local (renderiza na hora e completa em seguida).
-          _leiturasBrutas =
-              (_cicloNuvemCarregadoId == cicloSelecionado?.id &&
-                  _leiturasNuvem != null)
-              ? _leiturasNuvem!
-              : dados.leituras;
-          final leituras = _aplicarFiltro(_leiturasBrutas);
+            final dados = snapshot.data ?? _DadosRelatorioEstufada.vazio();
+            _ciclos = dados.ciclos;
+            _recalcularPosicoes();
+            _eventos = dados.eventos;
+            final cicloSelecionado = dados.cicloSelecionado;
+            _cicloSelecionadoId = cicloSelecionado?.id;
+            // Usa o histórico mesclado com a nuvem quando já disponível para este
+            // ciclo; senão, o local (renderiza na hora e completa em seguida).
+            _leiturasBrutas =
+                (_cicloNuvemCarregadoId == cicloSelecionado?.id &&
+                    _leiturasNuvem != null)
+                ? _leiturasNuvem!
+                : dados.leituras;
+            final leituras = _aplicarFiltro(_leiturasBrutas);
 
-          if (_leiturasBrutas.isEmpty) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSeletorEstufada(),
-                  const SizedBox(height: 28),
-                  const Text(
-                    'Sem dados hist\u00F3ricos ainda. Inicie uma estufada para registrar as leituras do ciclo.',
-                    style: TextStyle(color: Colors.white54),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (leituras.isEmpty) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSeletorEstufada(),
-                  const SizedBox(height: 28),
-                  const Text(
-                    'Nenhum dado no per\u00EDodo selecionado.',
-                    style: TextStyle(color: Colors.white54),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final inicio = leituras.first.timestamp;
-          final fim = leituras.last.timestamp;
-          final duracao = fim.difference(inicio);
-          final primeiraLeitura = leituras.first;
-          final ultimaLeitura = leituras.last;
-          final temperaturaAjusteInicial = primeiraLeitura.temperaturaMeta;
-          final temperaturaAjusteFinal = ultimaLeitura.temperaturaMeta;
-          final umidadeAjusteInicial = primeiraLeitura.umidadeMeta;
-          final umidadeAjusteFinal = ultimaLeitura.umidadeMeta;
-          final totalAlarmes = leituras.where((e) => e.alertaIncendio).length;
-          _adiarExibicaoGrafico();
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSeletorEstufada(),
-                const SizedBox(height: 20),
-                ResumoEstufadaCard(
-                  duracao: duracao,
-                  temperaturaAjusteInicial: temperaturaAjusteInicial,
-                  temperaturaAjusteFinal: temperaturaAjusteFinal,
-                  umidadeAjusteInicial: umidadeAjusteInicial,
-                  umidadeAjusteFinal: umidadeAjusteFinal,
-                  totalAlarmes: totalAlarmes,
-                  tituloSecaoStyle: _tituloSecaoStyle,
+            if (_leiturasBrutas.isEmpty) {
+              return SingleChildScrollView(
+                // Sempre rolavel (nos tres estados desta tela), para o
+                // puxar-para-atualizar funcionar tambem quando o conteudo cabe
+                // inteiro - que e justamente o caso da tela sem dados.
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSeletorEstufada(),
+                    const SizedBox(height: 28),
+                    const Text(
+                      'Sem dados hist\u00F3ricos ainda. Inicie uma estufada para registrar as leituras do ciclo.',
+                      style: TextStyle(color: Colors.white54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
+              );
+            }
 
-                if (cicloSelecionado != null) ...[
-                  EventosEstufadaCard(
-                    cicloSelecionado: cicloSelecionado,
-                    eventos: _aplicarFiltroEventos(_eventos),
-                    filtroAtivo: _inicioFiltro != null || _fimFiltro != null,
+            if (leituras.isEmpty) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSeletorEstufada(),
+                    const SizedBox(height: 28),
+                    const Text(
+                      'Nenhum dado no per\u00EDodo selecionado.',
+                      style: TextStyle(color: Colors.white54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final inicio = leituras.first.timestamp;
+            final fim = leituras.last.timestamp;
+            final duracao = fim.difference(inicio);
+            final primeiraLeitura = leituras.first;
+            final ultimaLeitura = leituras.last;
+            final temperaturaAjusteInicial = primeiraLeitura.temperaturaMeta;
+            final temperaturaAjusteFinal = ultimaLeitura.temperaturaMeta;
+            final umidadeAjusteInicial = primeiraLeitura.umidadeMeta;
+            final umidadeAjusteFinal = ultimaLeitura.umidadeMeta;
+            final totalAlarmes = leituras.where((e) => e.alertaIncendio).length;
+            _adiarExibicaoGrafico();
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSeletorEstufada(),
+                  const SizedBox(height: 20),
+                  ResumoEstufadaCard(
+                    duracao: duracao,
+                    temperaturaAjusteInicial: temperaturaAjusteInicial,
+                    temperaturaAjusteFinal: temperaturaAjusteFinal,
+                    umidadeAjusteInicial: umidadeAjusteInicial,
+                    umidadeAjusteFinal: umidadeAjusteFinal,
+                    totalAlarmes: totalAlarmes,
                     tituloSecaoStyle: _tituloSecaoStyle,
                   ),
-                  const SizedBox(height: 24),
-                ] else
-                  const SizedBox(height: 6),
-                _mostrarGrafico
-                    ? GraficoEstufadaCard(
-                        leituras: leituras,
-                        graficoTemperatura: _graficoTemperatura,
-                        filtroAtivo:
-                            _inicioFiltro != null || _fimFiltro != null,
-                        tituloSecaoStyle: _tituloSecaoStyle,
-                        onGraficoChanged: _alterarTipoGrafico,
-                      )
-                    : GraficoEstufadaLoadingCard(
-                        graficoTemperatura: _graficoTemperatura,
-                        tituloSecaoStyle: _tituloSecaoStyle,
-                        onGraficoChanged: _alterarTipoGrafico,
-                      ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: 18),
+
+                  if (cicloSelecionado != null) ...[
+                    EventosEstufadaCard(
+                      cicloSelecionado: cicloSelecionado,
+                      eventos: _aplicarFiltroEventos(_eventos),
+                      filtroAtivo: _inicioFiltro != null || _fimFiltro != null,
+                      tituloSecaoStyle: _tituloSecaoStyle,
+                    ),
+                    const SizedBox(height: 24),
+                  ] else
+                    const SizedBox(height: 6),
+                  _mostrarGrafico
+                      ? GraficoEstufadaCard(
+                          leituras: leituras,
+                          graficoTemperatura: _graficoTemperatura,
+                          filtroAtivo:
+                              _inicioFiltro != null || _fimFiltro != null,
+                          tituloSecaoStyle: _tituloSecaoStyle,
+                          onGraficoChanged: _alterarTipoGrafico,
+                        )
+                      : GraficoEstufadaLoadingCard(
+                          graficoTemperatura: _graficoTemperatura,
+                          tituloSecaoStyle: _tituloSecaoStyle,
+                          onGraficoChanged: _alterarTipoGrafico,
+                        ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -534,7 +556,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Apagar', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Apagar',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
