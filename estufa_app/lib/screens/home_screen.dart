@@ -116,51 +116,55 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'MINHAS ESTUFAS',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.0,
+      // Protege o fim da lista da barra de navegacao do sistema: sem isto o
+      // ultimo cartao fica atras dela e nao aceita toque.
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'MINHAS ESTUFAS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                ),
               ),
-            ),
-            const SizedBox(height: 15),
-            Expanded(
-              child: carregando
-                  ? const Center(child: CircularProgressIndicator())
-                  : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 280,
-                            crossAxisSpacing: 15,
-                            mainAxisSpacing: 15,
-                            childAspectRatio: 1.0,
-                          ),
-                      itemCount: minhasEstufas.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == minhasEstufas.length) {
-                          return AdicionarEstufaCard(
-                            onTap: () => _abrirFormularioEstufa(),
-                          );
-                        }
-                        return EstufaResumoCard(
-                          estufa: minhasEstufas[index],
-                          onEditar: () => _abrirFormularioEstufa(
+              const SizedBox(height: 15),
+              Expanded(
+                child: carregando
+                    ? const Center(child: CircularProgressIndicator())
+                    : GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 280,
+                              crossAxisSpacing: 15,
+                              mainAxisSpacing: 15,
+                              childAspectRatio: 1.0,
+                            ),
+                        itemCount: minhasEstufas.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == minhasEstufas.length) {
+                            return AdicionarEstufaCard(
+                              onTap: () => _abrirFormularioEstufa(),
+                            );
+                          }
+                          return EstufaResumoCard(
                             estufa: minhasEstufas[index],
-                          ),
-                          onRemover: () =>
-                              _confirmarRemocaoEstufa(minhasEstufas[index]),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                            onEditar: () => _abrirFormularioEstufa(
+                              estufa: minhasEstufas[index],
+                            ),
+                            onRemover: () =>
+                                _confirmarRemocaoEstufa(minhasEstufas[index]),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -205,7 +209,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remover', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Remover',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
