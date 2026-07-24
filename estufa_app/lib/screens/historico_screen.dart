@@ -77,10 +77,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     super.dispose();
   }
 
-  /// Recarrega o relatorio do zero. Serve ao botao da barra e ao
-  /// puxar-para-atualizar, que precisam do MESMO comportamento - e o gesto
-  /// ainda precisa esperar a carga terminar para a animacao fechar na hora
-  /// certa, em vez de sumir antes dos dados chegarem.
+  /// Recarrega o relatorio do zero, pelo puxar-para-atualizar. Devolve um
+  /// Future porque o gesto precisa esperar a carga terminar para a animacao
+  /// fechar na hora certa, em vez de sumir antes dos dados chegarem.
   Future<void> _recarregarRelatorio() async {
     if (!mounted) return;
     final futuro = _carregarDadosRelatorio();
@@ -356,18 +355,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 : _apagarCicloSelecionado,
             tooltip: 'Apagar esta estufada',
           ),
-          IconButton(
-            iconSize: 22,
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.refresh, color: Colors.white70),
-            onPressed: () => unawaited(_recarregarRelatorio()),
-            tooltip: 'Atualizar',
-          ),
+          // Sem botao de atualizar: quem atualiza e o puxar-para-atualizar,
+          // como no monitoramento. Manter os dois deixava a barra apertada
+          // (titulo longo + tres icones) para uma acao ja coberta pelo gesto.
         ],
       ),
       // Puxar para atualizar, como no monitoramento: o gesto e o mesmo em todo
-      // o app, e o botao da barra continua para quem prefere tocar.
-      // Sem isto o conteudo passa POR BAIXO da barra de navegacao do sistema:
+      // o app.
+      // O SafeArea evita que o conteudo passe POR BAIXO da barra do sistema:
       // fica so meio encoberto, mas o que cair ali no fim da pagina nao aceita
       // toque - o gesto pertence ao sistema, nao ao app.
       body: SafeArea(
