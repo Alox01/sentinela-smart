@@ -196,7 +196,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
+        border: Border.all(color: Colors.white10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +212,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 child: SelectableText(
                   nome,
                   style: const TextStyle(
-                    color: Colors.greenAccent,
+                    color: Colors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),

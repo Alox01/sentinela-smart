@@ -430,7 +430,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
             const Text(
               'EDITAR',
               style: TextStyle(
-                color: Colors.greenAccent,
+                color: Colors.white54,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
