@@ -4,29 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/preferencias_notificacao.dart';
+import '../services/controle_buzzer_global.dart';
 import '../services/preferencias_notificacao_service.dart';
 import '../services/push_notification_service.dart';
 
-/// O buzzer atual de UM aparelho e a funcao que muda esse estado (envia o
-/// comando). So existe quando a tela e aberta pelo monitoramento de uma estufa.
-class ControleAlarmeAparelho {
-  final bool buzzerAtivo;
-  // Envia o comando ao aparelho; devolve se conseguiu.
-  final Future<bool> Function(bool ativo) definir;
-  const ControleAlarmeAparelho({
-    required this.buzzerAtivo,
-    required this.definir,
-  });
-}
-
 /// Preferencias de notificacao (o que avisar / tocar) — globais, valem para
-/// todas as estufas. Quando aberta pelo monitoramento de uma estufa recebe um
-/// [controleAparelho] e mostra tambem o alarme fisico daquele aparelho; pelo
-/// acesso global (home) esse controle e nulo e a secao nao aparece.
+/// todas as estufas. O alarme fisico (buzzer de temperatura) tambem e global:
+/// um so interruptor para todos os aparelhos. Para desligar so um, o produtor
+/// segura o botao do buzzer no proprio aparelho.
 class NotificacoesScreen extends StatefulWidget {
-  final ControleAlarmeAparelho? controleAparelho;
-
-  const NotificacoesScreen({super.key, this.controleAparelho});
+  const NotificacoesScreen({super.key});
 
   @override
   State<NotificacoesScreen> createState() => _NotificacoesScreenState();
@@ -34,6 +21,7 @@ class NotificacoesScreen extends StatefulWidget {
 
 class _NotificacoesScreenState extends State<NotificacoesScreen> {
   final _servico = PreferenciasNotificacaoService.instance;
+  final _buzzer = ControleBuzzerGlobal.instance;
 
   // O "Nao perturbe" so existe no Android; nas outras plataformas o cartao nem
   // aparece, em vez de mostrar um botao que nao faz nada.
@@ -41,35 +29,32 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   bool? _furaNaoPerturbe;
-  late bool _buzzerAtivo;
 
   @override
   void initState() {
     super.initState();
-    _buzzerAtivo = widget.controleAparelho?.buzzerAtivo ?? true;
+    unawaited(_buzzer.carregar());
     if (_ehAndroid) unawaited(_conferirNaoPerturbe());
   }
 
   Future<void> _mudarBuzzer(bool ativo) async {
-    final controle = widget.controleAparelho;
-    if (controle == null) return;
     // So confirma ao DESLIGAR: religar nao tem risco.
     if (!ativo) {
       final ok = await _confirmarDesligarBuzzer();
       if (ok != true) return;
     }
-    // Move o interruptor NA HORA (otimista) e envia em segundo plano. Sem isto
-    // ele ficava parado esperando a rede (segundos em modo nuvem) e dava
-    // impressao de travado. Se o envio falhar, desfaz e avisa.
-    setState(() => _buzzerAtivo = ativo);
-    final enviado = await controle.definir(ativo);
-    if (!mounted) return;
-    if (!enviado) {
-      setState(() => _buzzerAtivo = !ativo);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível enviar ao aparelho.')),
-      );
-    }
+    // O proprio servico ja move o interruptor na hora (notifyListeners) e envia
+    // em segundo plano. A intencao fica salva mesmo se nenhuma estufa estiver
+    // alcancavel: as offline recebem ao reconectar.
+    final alcancou = await _buzzer.definir(ativo);
+    if (!mounted || alcancou || ativo) return;
+    // Desligou e nenhuma respondeu agora: avisa que vale quando reconectarem
+    // (sem desfazer — a intencao global continua valendo).
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Aplicado. As estufas offline recebem ao reconectar.'),
+      ),
+    );
   }
 
   Future<bool?> _confirmarDesligarBuzzer() {
@@ -78,11 +63,11 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         title: const Text(
-          'Desligar o alarme do aparelho?',
+          'Desligar o alarme dos aparelhos?',
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          'O aparelho vai parar de tocar a sirene de temperatura na estufa. '
+          'Os aparelhos vão parar de tocar a sirene de temperatura nas estufas. '
           'O aviso de incêndio continua tocando sempre, e as notificações no '
           'celular também. Só a sirene de temperatura fica muda.',
           style: TextStyle(color: Colors.white70),
@@ -110,7 +95,14 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
   }
 
   Future<void> _pedirNaoPerturbe() async {
-    await PushNotificationService.instance.solicitarPermissaoNaoPerturbe();
+    if (_furaNaoPerturbe == true) {
+      // Ja liberado: o metodo do plugin nao reabre as configuracoes (so as abre
+      // quando a permissao ainda falta). Vamos direto pelo canal nativo, para o
+      // produtor poder conferir ou revogar o acesso.
+      await PushNotificationService.instance.abrirAcessoNaoPerturbe();
+    } else {
+      await PushNotificationService.instance.solicitarPermissaoNaoPerturbe();
+    }
     // Reconsulta em vez de confiar no retorno: o produtor pode ter voltado da
     // tela do sistema sem concluir.
     await _conferirNaoPerturbe();
@@ -235,53 +227,57 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     );
   }
 
-  // Alarme fisico daquele aparelho: so aparece quando ha controleAparelho (ou
-  // seja, aberto pelo monitoramento de uma estufa). Fogo nunca e afetado.
+  // Alarme fisico (buzzer de temperatura), global: vale para todas as estufas.
+  // Fogo nunca e afetado. Para desligar so uma, o produtor segura o botao do
+  // buzzer naquele aparelho.
   Widget _cartaoAlarmeAparelho() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.campaign_outlined, color: Colors.white70, size: 20),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Alarme do aparelho',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+    return AnimatedBuilder(
+      animation: _buzzer,
+      builder: (context, _) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.campaign_outlined, color: Colors.white70, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Alarme dos aparelhos',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            'A sirene de temperatura na própria estufa. O alarme de incêndio '
-            'continua tocando sempre, independente disto.',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text(
-              'Tocar na estufa',
-              style: TextStyle(color: Colors.white, fontSize: 14),
+              ],
             ),
-            value: _buzzerAtivo,
-            onChanged: _mudarBuzzer,
-          ),
-        ],
+            const SizedBox(height: 2),
+            const Text(
+              'A sirene de temperatura em todas as estufas. O alarme de incêndio '
+              'continua tocando sempre, independente disto.',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text(
+                'Tocar nas estufas',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              value: _buzzer.ativo,
+              onChanged: _mudarBuzzer,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -316,7 +312,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                     aoMudar: (nova, desligandoIncendio) =>
                         _mudar(evento, nova, desligandoIncendio),
                   ),
-                if (widget.controleAparelho != null) _cartaoAlarmeAparelho(),
+                _cartaoAlarmeAparelho(),
                 if (_ehAndroid) _cartaoNaoPerturbe(),
                 const SizedBox(height: 8),
                 Container(

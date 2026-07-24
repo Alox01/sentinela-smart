@@ -203,10 +203,10 @@ class _AlarmeStatus extends StatelessWidget {
             iconSize: 32,
             padding: const EdgeInsets.all(10),
             constraints: const BoxConstraints(),
+            // Alto-falante (nao sino): este botao e da sirene/buzzer fisico. O
+            // sino ficou reservado as notificacoes do app.
             icon: Icon(
-              sireneLigada
-                  ? Icons.notifications_active
-                  : Icons.notifications_off,
+              sireneLigada ? Icons.campaign : Icons.campaign_outlined,
               color: sireneLigada ? Colors.redAccent : Colors.white38,
             ),
             onPressed: onSilenciar,

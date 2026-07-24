@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,6 +12,7 @@ import '../../../models/estufa_entity.dart';
 import '../../../services/isar_service.dart';
 import '../models/preferencias_notificacao.dart';
 import 'preferencias_notificacao_service.dart';
+import 'silenciamento_estufas.dart';
 
 bool get _androidCompativel =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -34,6 +36,14 @@ class PushNotificationService {
 
   static const String _cloudApiUrl = String.fromEnvironment('CLOUD_API_URL');
   static const String _apiToken = String.fromEnvironment('ESTUFA_API_TOKEN');
+
+  /// Canal nativo (Kotlin, em `MainActivity`) que abre as configuracoes de
+  /// "Nao perturbe" do sistema. O plugin so as abre quando a permissao ainda
+  /// falta; ja concedida, ele nao faz nada, entao o botao "Ver nas
+  /// configuracoes" precisa deste caminho.
+  static const MethodChannel _canalNaoPerturbe = MethodChannel(
+    'sentinela/nao_perturbe',
+  );
 
   static const AndroidNotificationChannel _canalAlertas =
       AndroidNotificationChannel(
@@ -161,6 +171,22 @@ class PushNotificationService {
     }
   }
 
+  /// Abre a tela do sistema de acesso ao "Não perturbe" sem depender do estado
+  /// da permissão. Serve ao botão "Ver nas configurações", quando o acesso já
+  /// está concedido e o produtor quer conferir ou revogar.
+  Future<bool> abrirAcessoNaoPerturbe() async {
+    if (!_androidCompativel) return false;
+    try {
+      final aberto = await _canalNaoPerturbe.invokeMethod<bool>(
+        'abrirConfiguracoes',
+      );
+      return aberto ?? false;
+    } catch (erro) {
+      debugPrint('Não foi possível abrir o Não perturbe: $erro');
+      return false;
+    }
+  }
+
   void _preferenciasAlteradas() {
     unawaited(sincronizarEstufas());
   }
@@ -177,9 +203,27 @@ class PushNotificationService {
     }
   }
 
-  Future<void> registrarEstufa(EstufaEntity estufa) async {
+  Future<void> registrarEstufa(EstufaEntity estufa) => _registrarDispositivo(
+    idHardware: estufa.idHardware?.trim(),
+    tokenAcesso: estufa.tokenAcesso,
+  );
+
+  /// Reenvia as preferencias de um aparelho (ex.: depois de silenciar ou religar
+  /// os avisos daquela estufa). O servidor passa a suprimir ou liberar os avisos
+  /// desse aparelho conforme o conjunto enviado.
+  Future<void> atualizarPreferenciasDispositivo({
+    required String idHardware,
+    String? tokenAcesso,
+  }) => _registrarDispositivo(
+    idHardware: idHardware.trim(),
+    tokenAcesso: tokenAcesso,
+  );
+
+  Future<void> _registrarDispositivo({
+    String? idHardware,
+    String? tokenAcesso,
+  }) async {
     final token = _tokenPush;
-    final idHardware = estufa.idHardware?.trim();
     final uri = _uriPush('/push/dispositivos');
     if (!_inicializado ||
         token == null ||
@@ -189,19 +233,18 @@ class PushNotificationService {
       return;
     }
 
+    await SilenciamentoEstufas.instance.carregar();
+
     try {
       final resposta = await http
           .post(
             uri,
-            headers: _headersJson(estufa.tokenAcesso),
+            headers: _headersJson(tokenAcesso),
             body: jsonEncode({
               'tokenPush': token,
               'idHardware': idHardware,
               'plataforma': 'android',
-              'preferencias': PreferenciasNotificacaoService
-                  .instance
-                  .preferencias
-                  .toJson(),
+              'preferencias': _prefsParaDispositivo(idHardware),
             }),
           )
           .timeout(const Duration(seconds: 8));
@@ -211,6 +254,22 @@ class PushNotificationService {
     } catch (erro) {
       debugPrint('Registro do push adiado: $erro');
     }
+  }
+
+  /// Preferencias a enviar para UM aparelho: as globais, mas se aquela estufa
+  /// estiver silenciada, mantem so os avisos que nunca calam (incendio e sem
+  /// comunicacao) e desliga o resto — sem tocar nas preferencias globais.
+  Map<String, dynamic> _prefsParaDispositivo(String idHardware) {
+    final base = PreferenciasNotificacaoService.instance.preferencias.toJson();
+    if (SilenciamentoEstufas.instance.silenciada(idHardware)) {
+      const sempreAvisam = {'incendio', 'semComunicacao'};
+      for (final chave in base.keys.toList()) {
+        if (!sempreAvisam.contains(chave)) {
+          base[chave] = {'notificar': false, 'tocarVibrar': false};
+        }
+      }
+    }
+    return base;
   }
 
   Future<void> removerEstufa(EstufaEntity estufa) async {

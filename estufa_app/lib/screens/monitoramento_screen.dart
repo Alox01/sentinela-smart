@@ -11,7 +11,8 @@ import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
-import '../features/notificacoes/screens/notificacoes_screen.dart';
+import '../features/notificacoes/services/push_notification_service.dart';
+import '../features/notificacoes/services/silenciamento_estufas.dart';
 import '../models/ciclo_secagem_entity.dart';
 import '../services/api_service.dart';
 import '../services/isar_service.dart';
@@ -114,6 +115,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
     unawaited(_carregarCicloAtual());
     unawaited(_atualizarPendencias());
+    // O estado de silenciamento por estufa alimenta o interruptor do menu.
+    unawaited(SilenciamentoEstufas.instance.carregar());
     // Assinar ja entrega a ultima leitura do card, entao a tela abre preenchida
     // em vez de esperar a propria busca.
     _monitor.assinar(_aoMudarLeitura);
@@ -412,6 +415,52 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
   }
 
+  // Silenciar os avisos do app SO desta estufa (fogo e sem comunicacao nunca
+  // calam). Escopo por aparelho, diferente das preferencias globais da home.
+  Widget _itemSilenciarAvisos() {
+    final idHw = widget.idHardware ?? api.idHardware;
+    return AnimatedBuilder(
+      animation: SilenciamentoEstufas.instance,
+      builder: (context, _) {
+        final silenciada = SilenciamentoEstufas.instance.silenciada(idHw);
+        return SwitchListTile(
+          secondary: Icon(
+            silenciada
+                ? Icons.notifications_off_outlined
+                : Icons.notifications_active_outlined,
+            color: Colors.white70,
+          ),
+          title: const Text(
+            'Silenciar avisos/notificações desta estufa',
+            style: TextStyle(color: Colors.white),
+          ),
+          subtitle: Text(
+            idHw == null
+                ? 'Conecte o aparelho uma vez para poder silenciar.'
+                : 'Para receber avisos/notificações desta estufa ative aqui '
+                      'novamente. Incêndio e sem comunicação com o aparelho '
+                      'ainda mandam avisos para o celular.',
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+          value: silenciada,
+          onChanged: idHw == null
+              ? null
+              : (v) => unawaited(_silenciarAvisos(idHw, v)),
+        );
+      },
+    );
+  }
+
+  Future<void> _silenciarAvisos(String idHardware, bool silenciar) async {
+    await SilenciamentoEstufas.instance.definir(idHardware, silenciar);
+    // Reenvia as preferencias deste aparelho: o servidor passa a suprimir (ou
+    // liberar) os avisos nao-criticos so desta estufa.
+    await PushNotificationService.instance.atualizarPreferenciasDispositivo(
+      idHardware: idHardware,
+      tokenAcesso: widget.tokenAcesso,
+    );
+  }
+
   Widget _buildMenuEstufa() {
     return Drawer(
       backgroundColor: const Color(0xFF17191D),
@@ -489,35 +538,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(
-                Icons.notifications_active_outlined,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Notificações',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                // Aberta pela estufa: alem das preferencias globais, entrega o
-                // controle do alarme fisico DESTE aparelho (buzzer de
-                // temperatura). O buzzer atual vem da ultima config lida.
-                final config = _monitor.ultima?.dados?['config'];
-                final buzzerAtivo =
-                    config is Map ? config['buzzerAtivo'] != false : true;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => NotificacoesScreen(
-                      controleAparelho: ControleAlarmeAparelho(
-                        buzzerAtivo: buzzerAtivo,
-                        definir: _enviarComandoBuzzer,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            _itemSilenciarAvisos(),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
@@ -537,10 +558,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              leading: const Icon(Icons.delete_outline, color: Colors.white70),
               title: const Text(
                 'Apagar estufadas',
-                style: TextStyle(color: Colors.redAccent),
+                style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(
                 'Remove relatórios',
@@ -1153,15 +1174,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           });
         }),
       );
-    });
-  }
-
-  // Liga/desliga o buzzer de temperatura do aparelho (fogo nunca e afetado -
-  // ver firmware). Passa pelo mesmo caminho LWW dos outros comandos.
-  Future<bool> _enviarComandoBuzzer(bool ativo) {
-    return _enviarComandoComFeedback({
-      'buzzerAtivo': ativo,
-      'buzzerTimestamp': DateTime.now().millisecondsSinceEpoch,
     });
   }
 
