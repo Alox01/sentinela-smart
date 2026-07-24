@@ -174,9 +174,9 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
           value: 'remover',
           child: Row(
             children: [
-              Icon(Icons.delete_outline, size: 16, color: Colors.white70),
+              Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
               SizedBox(width: 8),
-              Text('Remover'),
+              Text('Remover', style: TextStyle(color: Colors.redAccent)),
             ],
           ),
         ),

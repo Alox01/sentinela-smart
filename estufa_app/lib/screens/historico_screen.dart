@@ -534,7 +534,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Apagar'),
+            child: const Text('Apagar', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),

@@ -537,10 +537,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.white70),
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
               title: const Text(
                 'Apagar estufadas',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.redAccent),
               ),
               subtitle: const Text(
                 'Remove relatórios',

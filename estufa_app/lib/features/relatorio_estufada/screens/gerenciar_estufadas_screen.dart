@@ -96,7 +96,7 @@ class _GerenciarEstufadasScreenState extends State<GerenciarEstufadasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Apagar'),
+            child: const Text('Apagar', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -191,7 +191,10 @@ class _GerenciarEstufadasScreenState extends State<GerenciarEstufadasScreen> {
                   onPressed: (_selecionados.isEmpty || _apagando)
                       ? null
                       : _apagarSelecionadas,
+                  // Acao principal E destrutiva: fundo vermelho.
                   style: FilledButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   icon: _apagando
