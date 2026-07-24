@@ -21,14 +21,16 @@ extension EventoNotificacaoInfo on EventoNotificacao {
 
   String get titulo => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Alarme de temperatura',
-    EventoNotificacao.incendio => 'Inc\u00eandio / chama',
+    EventoNotificacao.incendio =>
+      'Inc\u00eandio / Temperatura muito elevada',
     EventoNotificacao.semComunicacao => 'Sem comunica\u00e7\u00e3o',
   };
 
   String get descricao => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Temperatura fora da faixa do ajuste.',
     EventoNotificacao.incendio =>
-      'Sensor de inc\u00eandio e temperatura muito elevada.',
+      'Sensor de inc\u00eandio acionado ou a temperatura est\u00e1 muito '
+          'elevada.',
     EventoNotificacao.semComunicacao =>
       'O aparelho não está se comunicando, pode ser falta de energia '
           'ou internet (internet caso o app esteja no modo Nuvem).',

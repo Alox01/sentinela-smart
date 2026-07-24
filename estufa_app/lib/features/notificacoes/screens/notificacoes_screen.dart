@@ -300,10 +300,19 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
+                // Uma frase por linha: sao tres ideias independentes (o que
+                // escolher, o alcance e a ressalva da internet), e emendadas
+                // viravam um paragrafo que ninguem le ate o fim.
                 const Text(
-                  'Escolha o que avisar e o que faz o celular tocar ou vibrar. '
-                  'Vale para todas as estufas.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  'Escolha que tipo de notificação deseja no seu celular.\n\n'
+                  'As notificações são para todas as estufas cadastradas.\n\n'
+                  'As notificações não serão enviadas caso o seu celular '
+                  'esteja sem internet (Wi-Fi ou dados móveis).',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 for (final evento in EventoNotificacao.values)
