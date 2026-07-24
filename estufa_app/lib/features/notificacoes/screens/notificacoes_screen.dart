@@ -143,14 +143,17 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
+          // Rotulos curtos de proposito: o AlertDialog empilha os botoes quando
+          // eles nao cabem lado a lado. "Manter ligado" + "Desligar mesmo
+          // assim" estouravam a linha e quebravam o padrao das outras telas.
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Manter ligado'),
+            child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Desligar mesmo assim',
+              'Desligar',
               style: TextStyle(color: Colors.redAccent),
             ),
           ),
