@@ -178,7 +178,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         const SizedBox(height: 8),
         OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
-          style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent),
           child: const Text('Voltar'),
         ),
       ],

@@ -205,10 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Remover',
-              style: TextStyle(color: Colors.redAccent),
-            ),
+            child: const Text('Remover'),
           ),
         ],
       ),
@@ -297,10 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Importar',
-              style: TextStyle(color: Colors.greenAccent),
-            ),
+            child: const Text('Importar'),
           ),
         ],
       ),
