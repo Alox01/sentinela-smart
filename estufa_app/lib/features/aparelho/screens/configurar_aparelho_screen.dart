@@ -249,11 +249,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.amberAccent.withValues(alpha: 0.08),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.amberAccent.withValues(alpha: 0.3),
-            ),
+            border: Border.all(color: Colors.white10),
           ),
           child: const Text(
             'Antes de preencher:\n\n'
