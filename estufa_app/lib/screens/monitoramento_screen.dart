@@ -66,6 +66,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
 
   bool isFire = false;
   bool sireneLigada = false;
+  // Silenciamento pedido e ainda nao confirmado pelo aparelho. Mesma ideia dos
+  // ajustes pendentes: o botao responde na hora e a leitura seguinte confirma.
+  bool _silencioPendente = false;
   // Veredito do proprio aparelho sobre a temperatura (o app nao emite um
   // segundo parecer: a borda e a fonte da verdade). 'orange' alta, 'purple'
   // baixa, 'green' ok, 'red' fogo.
@@ -235,13 +238,18 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           _umidAjustePendente == novoUmidAjuste) {
         _umidAjustePendente = null;
       }
+      // O aparelho confirmou (calou) ou o caso mudou para fogo, que nao se
+      // silencia: nos dois a leitura volta a mandar.
+      if (_silencioPendente && (!novaSireneLigada || fogoDetectado)) {
+        _silencioPendente = false;
+      }
 
       temperatura = novaTemperatura;
       umidade = novaUmidade;
       tempAjuste = _tempAjustePendente ?? novoTempAjuste;
       umidAjuste = _umidAjustePendente ?? novoUmidAjuste;
       avisoEmergencia = novoAviso;
-      sireneLigada = novaSireneLigada;
+      sireneLigada = _silencioPendente ? false : novaSireneLigada;
       _corStatusAparelho = (status['corStatus'] ?? 'green').toString();
       isFire = fogoDetectado;
       // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
@@ -361,7 +369,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                     sireneLigada: sireneLigada,
                     estadoTemperaturaAparelho: _estadoTemperaturaAparelho(),
                     folgaUmidade: folgaUmid,
-                    onSilenciarAlarme: api.silenciarAlarme,
+                    onSilenciarAlarme: _silenciarAlarme,
                   ),
                   const SizedBox(height: 25),
                   PainelControle(
@@ -413,6 +421,39 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         ),
       ),
     );
+  }
+
+  // Cala a sirene na hora e envia em segundo plano. Sem isto o icone so mudava
+  // quando a leitura seguinte chegasse (ate 3 s em local, mais pela nuvem), e o
+  // produtor com a sirene tocando no ouvido apertava de novo achando que o
+  // toque nao pegou.
+  //
+  // Fogo nao entra: o aparelho ignora o silencio quando ha chama ou temperatura
+  // de incendio, entao fingir que calou seria mentira - o icone voltaria
+  // sozinho e a sirene continuaria tocando.
+  Future<void> _silenciarAlarme() async {
+    final silenciavel = !isFire;
+    if (silenciavel) {
+      setState(() {
+        _silencioPendente = true;
+        sireneLigada = false;
+      });
+    }
+
+    // Mesmo caminho dos outros comandos: ele ja busca de novo ao dar certo,
+    // atualiza as pendencias e explica a falha (sem conexao, chave invalida...)
+    // em vez de um "nao deu" generico.
+    final enviado = await _enviarComandoComFeedback({
+      'modoSilencioso': true,
+      'modoSilenciosoTimestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+    if (!mounted || enviado || !silenciavel) return;
+
+    // Nao chegou ao aparelho: a sirene continua tocando, entao o icone volta.
+    setState(() {
+      _silencioPendente = false;
+      sireneLigada = true;
+    });
   }
 
   // Silenciar os avisos do app SO desta estufa (fogo e sem comunicacao nunca
