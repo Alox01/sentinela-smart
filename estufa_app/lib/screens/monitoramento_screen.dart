@@ -423,17 +423,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                // Nome primeiro, rotulo embaixo — mesma ordem da barra do
+                // monitoramento. O nome e o contexto (de qual estufa sao as
+                // acoes); com "ACOES" em cima parecia que o nome pertencia a
+                // uma secao chamada Acoes.
                 children: [
-                  const Text(
-                    'AÇÕES',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
                   Text(
                     widget.nomeEstufa,
                     maxLines: 2,
@@ -442,6 +436,16 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'AÇÕES',
+                    style: TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ],
