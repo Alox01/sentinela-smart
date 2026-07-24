@@ -219,7 +219,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Isso não vence o modo silencioso do aparelho.',
+            'Essa função não funciona no modo silencioso do celular.',
             style: TextStyle(color: Colors.white24, fontSize: 11),
           ),
         ],
@@ -262,8 +262,9 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             ),
             const SizedBox(height: 2),
             const Text(
-              'A sirene de temperatura em todas as estufas. O alarme de incêndio '
-              'continua tocando sempre, independente disto.',
+              'Liga e desliga a sirene do alarme de temperatura em todas as '
+              'estufas cadastradas no app. A sirene de aviso de incêndio ainda '
+              'continua ligada.',
               style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
             SwitchListTile(

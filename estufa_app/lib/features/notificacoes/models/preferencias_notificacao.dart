@@ -30,8 +30,8 @@ extension EventoNotificacaoInfo on EventoNotificacao {
     EventoNotificacao.incendio =>
       'Sensor de inc\u00eandio e temperatura muito elevada.',
     EventoNotificacao.semComunicacao =>
-      'A estufa parou de se comunicar. Pode ser falta de energia ou '
-          'internet se o app estiver em modo nuvem.',
+      'O aparelho não está se comunicando, pode ser falta de energia '
+          'ou internet (internet caso o app esteja no modo Nuvem).',
   };
 
   bool get critico => this == EventoNotificacao.incendio;
