@@ -58,11 +58,14 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       final ok = await _confirmarDesligarBuzzer();
       if (ok != true) return;
     }
+    // Move o interruptor NA HORA (otimista) e envia em segundo plano. Sem isto
+    // ele ficava parado esperando a rede (segundos em modo nuvem) e dava
+    // impressao de travado. Se o envio falhar, desfaz e avisa.
+    setState(() => _buzzerAtivo = ativo);
     final enviado = await controle.definir(ativo);
     if (!mounted) return;
-    if (enviado) {
-      setState(() => _buzzerAtivo = ativo);
-    } else {
+    if (!enviado) {
+      setState(() => _buzzerAtivo = !ativo);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Não foi possível enviar ao aparelho.')),
       );
