@@ -46,14 +46,14 @@ module.exports = {
             tocarSirene = true;
             perigoChama = true;
             corStatus = "red";
-            aviso = "SENSOR DE CHAMA ATIVADO! SAIA IMEDIATAMENTE!";
+            aviso = "Sensor de chama ativado! Saia imediatamente!";
             faseAtual = "FOGO DETECTADO";
         }
         else if (tempAtual > limiteFogo) {
             tocarSirene = true;
             riscoIncendio = true;
             corStatus = "red";
-            aviso = `RISCO DE INCENDIO! (>${limiteFogo}F)`;
+            aviso = `Risco de incêndio! (>${limiteFogo}F)`;
             faseAtual = "PERIGO: SUPERAQUECIMENTO";
         }
         else {
@@ -84,24 +84,24 @@ module.exports = {
 
                 if (erroTemp > 0) {
                     corStatus = "orange";
-                    aviso = "Temperatura Alta";
+                    aviso = "Temperatura alta";
                 } else {
                     corStatus = "purple";
-                    aviso = "Temperatura Baixa";
+                    aviso = "Temperatura baixa";
                 }
             }
 
             if (Math.abs(erroUmid) > TOLERANCIA_UMID) {
                 let msgUmid = "";
-                if (erroUmid > 0) msgUmid = "Umidade Alta";
-                else msgUmid = "Umidade Baixa";
+                if (erroUmid > 0) msgUmid = "Umidade alta";
+                else msgUmid = "Umidade baixa";
 
                 if (aviso !== "") aviso += ` | ${msgUmid}`;
                 else aviso = msgUmid;
             }
 
             if (corStatus === "green" && aviso === "") {
-                aviso = "Estavel";
+                aviso = "Estável";
             }
         }
 

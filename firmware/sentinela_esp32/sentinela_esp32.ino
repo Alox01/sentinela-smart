@@ -1023,14 +1023,17 @@ bool alarmeAtivoAgora() {
   return fogo || sireneTemp;
 }
 
+// Textos que o produtor le (aparecem no app e no corpo do push), entao vao
+// acentuados. O JSON e UTF-8; o visor de 7 segmentos nao mostra texto de
+// qualquer forma, entao nao ha motivo para escrever sem acento.
 String avisoAtual() {
-  if (alertaLuz) return "SENSOR DE LUZ/CHAMA ATIVADO";
-  if (riscoIncendioAgora()) return "RISCO DE INCENDIO";
+  if (alertaLuz) return "Sensor de chama ativado";
+  if (riscoIncendioAgora()) return "Risco de incêndio";
   if (alertaTemperatura) {
-    return temperaturaF > temperaturaAlvoF ? "Temperatura Alta" : "Temperatura Baixa";
+    return temperaturaF > temperaturaAlvoF ? "Temperatura alta" : "Temperatura baixa";
   }
   if (!leituraOk) return "Sem leitura do sensor";
-  return "Estavel";
+  return "Estável";
 }
 
 String corStatusAtual() {

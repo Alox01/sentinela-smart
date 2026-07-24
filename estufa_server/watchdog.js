@@ -79,11 +79,11 @@ function iniciarWatchdog({
           await notificar({
             idHardware,
             evento: 'semComunicacao',
-            titulo: 'Estufa sem comunicacao',
+            titulo: 'Estufa sem comunicação',
             // Honesto sobre a duvida: melhor um "va conferir" a toa do que
             // perder a estufada por achar que estava tudo bem.
             corpo:
-              `Parei de receber dados ha ${desde}. Pode ser falta de energia ` +
+              `Parei de receber dados há ${desde}. Pode ser falta de energia ` +
               'ou de internet no local. Verifique.',
             critico: true,
           });
@@ -92,8 +92,8 @@ function iniciarWatchdog({
           await notificar({
             idHardware,
             evento: 'semComunicacao',
-            titulo: 'Estufa voltou a reportar',
-            corpo: 'A comunicacao com a estufa foi restabelecida.',
+            titulo: 'Estufa voltou a se comunicar',
+            corpo: 'A comunicação com a estufa foi restabelecida.',
             critico: false,
           });
         }

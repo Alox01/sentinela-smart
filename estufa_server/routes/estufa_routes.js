@@ -109,14 +109,14 @@ function createEstufaRouter({
       // Diz qual das duas causas disparou: chama no sensor ou temperatura muito
       // elevada. O mesmo evento/canal dos dois casos - so o corpo muda.
       const causa = fogoSensor
-        ? 'O sensor de incendio detectou chama'
+        ? 'O sensor de incêndio detectou chama'
         : tempMuitoAlta
-          ? 'A temperatura esta muito elevada'
-          : 'Indicio de incendio';
+          ? 'A temperatura está muito elevada'
+          : 'Indício de incêndio';
       await notificarEvento({
         idHardware,
         evento: 'incendio',
-        titulo: 'Risco de incendio',
+        titulo: 'Risco de incêndio',
         corpo: `${causa}. Verifique agora.`,
         critico: true,
       });
@@ -491,7 +491,7 @@ function createEstufaRouter({
       const { enviados, invalidos } = await push.enviar({
         tokens: inscritos.map((i) => i.tokenPush),
         titulo: 'Sentinela Smart',
-        corpo: 'Notificacao de teste. O aviso remoto esta funcionando.',
+        corpo: 'Notificação de teste. O aviso remoto está funcionando.',
         evento: 'alarmeProcesso',
       });
       if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
