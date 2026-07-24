@@ -49,6 +49,10 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.13.0: segurar SO o botao do buzzer por 3 s liga/desliga a sirene de
+//        temperatura deste aparelho, sem celular nem internet. O interruptor do
+//        app e global (vale para todas as estufas); desligar uma so e uma
+//        decisao tomada na frente dela. Confirma com apitos e LED.
 // 1.12.0: o alarme de TEMPERATURA pode ser desligado pelo app (buzzerAtivo,
 //        LWW, NVS). Fogo nunca e afetado: sensor de chama e temperatura de
 //        incendio (>175 F) tocam sempre. So a sirene fisica cala - o push segue.
@@ -77,7 +81,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.12.0";
+const char* VERSAO_FIRMWARE = "1.13.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -249,6 +253,16 @@ bool modoConfig = false;
 unsigned long tresBotoesDesdeMs = 0;
 unsigned long ultimaAtividadeConfig = 0;
 
+// --- Liga/desliga a sirene de temperatura no proprio aparelho ---
+// Segurar SO o botao do buzzer por 3 s alterna `buzzerTemperaturaAtivo`. Existe
+// porque o interruptor do app e global (vale para todas as estufas): desligar
+// uma so estufa e uma decisao tomada na frente daquele aparelho, e o produtor no
+// meio da lavoura pode nao ter celular, sinal, nem internet. Fogo nunca e
+// afetado - so a sirene de temperatura cala.
+const unsigned long TEMPO_SEGURAR_BUZZER_MS = 3000;
+unsigned long buzzerSeguradoDesdeMs = 0;
+bool buzzerAlternadoNesteAperto = false;
+
 // Prototipos explicitos: o gerador automatico do Arduino as vezes nao monta a
 // assinatura certa para funcoes que recebem tipos do ArduinoJson.
 void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
@@ -263,6 +277,8 @@ void atualizarEstadoTemperatura();
 bool estaSilenciado();
 void silenciarPorPrazo();
 void reativarAlarme();
+void verificarSegurarBuzzer();
+void confirmarAlternanciaBuzzer(bool ligou);
 long long nowMs();
 void iniciarMdns();
 void aplicarIpFixoSeConfigurado();
@@ -1274,11 +1290,79 @@ bool botaoFoiPressionado(int pino, bool &ultimoEstado, bool &estadoEstavel,
   return pressionado;
 }
 
+// Segurar SO o botao do buzzer por 3 s liga/desliga a sirene de temperatura
+// deste aparelho. Exige os outros dois soltos: com os tres apertados quem manda
+// e o modo de configuracao.
+//
+// O aperto CURTO ja disparou no instante em que o botao desceu (silencia por 10
+// min, e so quando ha alarme tocando). Nao ha conflito: os dois apontam para o
+// mesmo lado - calar. Segurar leva mais longe, tornando o silencio permanente.
+void verificarSegurarBuzzer() {
+  bool soBuzzerPressionado = digitalRead(BOTAO_BUZZER) == LOW &&
+                             digitalRead(BOTAO_VERDE) == HIGH &&
+                             digitalRead(BOTAO_VERMELHO) == HIGH;
+
+  if (!soBuzzerPressionado) {
+    buzzerSeguradoDesdeMs = 0;
+    buzzerAlternadoNesteAperto = false;
+    return;
+  }
+
+  // Uma alternancia por aperto: sem isto, continuar segurando ficaria ligando e
+  // desligando a cada passagem do loop.
+  if (buzzerAlternadoNesteAperto) return;
+
+  if (buzzerSeguradoDesdeMs == 0) {
+    buzzerSeguradoDesdeMs = millis();
+    return;
+  }
+  if (millis() - buzzerSeguradoDesdeMs < TEMPO_SEGURAR_BUZZER_MS) return;
+
+  buzzerAlternadoNesteAperto = true;
+  buzzerTemperaturaAtivo = !buzzerTemperaturaAtivo;
+  // Participa do LWW como qualquer ajuste: um toque fisico e mais recente que
+  // um comando remoto antigo, e o app reflete a mudanca na proxima leitura.
+  buzzerTimestamp = nowMs();
+  configSuja = true;
+
+  // Religar deve religar de verdade: se havia um silencio de 10 min correndo,
+  // ele perderia o sentido logo apos o produtor pedir a sirene de volta.
+  if (buzzerTemperaturaAtivo) reativarAlarme();
+
+  confirmarAlternanciaBuzzer(buzzerTemperaturaAtivo);
+  Serial.print("Sirene de temperatura ");
+  Serial.println(buzzerTemperaturaAtivo ? "LIGADA (botao)" : "DESLIGADA (botao)");
+}
+
+// Confirmacao fisica, sem depender do visor: dois apitos curtos quando liga, um
+// longo quando desliga. O apito sai direto no pino - a sirene recem-desligada
+// ainda precisa dizer que entendeu o comando.
+void confirmarAlternanciaBuzzer(bool ligou) {
+  if (ligou) {
+    for (int i = 0; i < 2; i++) {
+      digitalWrite(LED_ALERTA, HIGH);
+      digitalWrite(BUZZER, HIGH);
+      delay(120);
+      digitalWrite(BUZZER, LOW);
+      digitalWrite(LED_ALERTA, LOW);
+      delay(120);
+    }
+  } else {
+    digitalWrite(LED_ALERTA, HIGH);
+    digitalWrite(BUZZER, HIGH);
+    delay(500);
+    digitalWrite(BUZZER, LOW);
+    digitalWrite(LED_ALERTA, LOW);
+  }
+}
+
 void verificarBotoes() {
   // Enquanto os tres estao apertados (ou ja no modo de configuracao), nenhum
   // botao age sozinho: senao a combinacao silenciaria o alarme e mexeria no
   // alvo no caminho.
   if (modoConfig || tresBotoesDesdeMs != 0) return;
+
+  verificarSegurarBuzzer();
 
   if (botaoFoiPressionado(BOTAO_BUZZER, ultimoBuzzer, estavelBuzzer, debounceBuzzer)) {
     if (alertaTemperatura && !alertaLuz) {
