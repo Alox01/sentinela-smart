@@ -38,6 +38,12 @@ class LeituraAoVivo {
 class EstufaMonitor extends ChangeNotifier {
   static const Duration intervaloPadrao = Duration(seconds: 3);
 
+  /// Espaco minimo entre repasses de leitura para a nuvem. A leitura local
+  /// acontece a cada 3s, mas o aparelho real reporta a cada 60s - repassar no
+  /// ritmo da tela inundaria o banco (que tem cota) sem ganho nenhum. 60s
+  /// mantem o `ultimoContatoMs` fresco para o watchdog, que so alarma apos 5min.
+  static const Duration intervaloRepasseNuvem = Duration(seconds: 60);
+
   final ApiService api;
   final Duration intervalo;
   final Future<Map<String, dynamic>?> Function() _buscar;
@@ -52,6 +58,7 @@ class EstufaMonitor extends ChangeNotifier {
   int _assinantes = 0;
   bool _buscando = false;
   bool _pausado = false;
+  int _ultimoRepasseMs = 0;
 
   EstufaMonitor({
     required this.api,
@@ -117,12 +124,28 @@ class EstufaMonitor extends ChangeNotifier {
       _buscando = false;
     }
 
+    final agoraMs = DateTime.now().millisecondsSinceEpoch;
     _ultima = LeituraAoVivo(
       dados: dados,
       modoConexao: api.modoConexao,
-      recebidaEmMs: DateTime.now().millisecondsSinceEpoch,
+      recebidaEmMs: agoraMs,
     );
     notifyListeners();
+
+    if (dados != null) _repassarParaNuvemSeNecessario(dados, agoraMs);
+  }
+
+  /// Leitura obtida em LOCAL vira telemetria na nuvem, para o watchdog nao
+  /// acusar "sem comunicacao" quando o que faltou foi a internet da propriedade
+  /// (o aparelho esta vivo - o app acabou de le-lo). Nao aguarda: e oportunista
+  /// e nao pode segurar a tela.
+  void _repassarParaNuvemSeNecessario(Map<String, dynamic> dados, int agoraMs) {
+    if (api.modoConexao != 'LOCAL') return;
+    if (agoraMs - _ultimoRepasseMs < intervaloRepasseNuvem.inMilliseconds) {
+      return;
+    }
+    _ultimoRepasseMs = agoraMs;
+    unawaited(api.repassarLeituraParaNuvem(dados));
   }
 
   @override

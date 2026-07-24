@@ -175,6 +175,57 @@ class ApiService {
     return lista.whereType<Map<String, dynamic>>().toList();
   }
 
+  /// Repassa para a nuvem uma leitura obtida na rede LOCAL ("ponte").
+  ///
+  /// Existe por causa de um falso alarme real: com energia na propriedade mas
+  /// sem internet la, o aparelho nao consegue postar, e o watchdog da nuvem -
+  /// que so ve ausencia - avisa "sem comunicacao" mesmo com a estufa
+  /// funcionando e o app mostrando tudo certo em LOCAL. Se o celular tem
+  /// internet propria (4G), ele e a unica ponte disponivel: repassando a
+  /// leitura, o `ultimoContatoMs` do servidor fica fresco e o alarme falso nao
+  /// chega a nascer. De brinde, quem acompanha de longe volta a ver os dados.
+  ///
+  /// So faz sentido quando a leitura veio do proprio aparelho (modo LOCAL); em
+  /// modo nuvem a leitura JA veio de la. Silencioso de proposito: e um esforco
+  /// oportunista, e falhar nao pode atrapalhar a tela.
+  Future<bool> repassarLeituraParaNuvem(Map<String, dynamic> dados) async {
+    final nuvem = cloudBaseUrl;
+    final id = idHardware;
+    if (nuvem == null ||
+        nuvem.isEmpty ||
+        id == null ||
+        id.isEmpty ||
+        modoConexao != 'LOCAL') {
+      return false;
+    }
+
+    final status = dados['status'];
+    if (status is! Map) return false;
+
+    // `fonte` marca que veio pela ponte, nao direto do hardware: o servidor
+    // guarda como telemetria normal, mas a origem fica registrada.
+    final payload = <String, dynamic>{
+      ...Map<String, dynamic>.from(status),
+      'idHardware': id,
+      'fonte': 'ponte_app',
+      if (dados['config'] != null) 'config': dados['config'],
+    };
+
+    try {
+      final resposta = await http
+          .post(
+            Uri.parse('$nuvem/leitura'),
+            headers: _headers({'Content-Type': 'application/json'}),
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+      return _respostaSucesso(resposta.statusCode);
+    } catch (_) {
+      // Sem internet no celular tambem: nada a fazer, e esperado.
+      return false;
+    }
+  }
+
   Future<bool> enviarSincronizacao(
     Map<String, dynamic> dadosParaAtualizar, {
     bool enfileirarSeOffline = true,
