@@ -258,10 +258,25 @@ Desenho (jul/2026) para a **primeira configuracao**: em vez de o produtor
 inventar e digitar a chave em varios lugares, o **aparelho gera a chave, mostra**
 e ela se propaga sozinha. Ainda **nao implementado** — planejamento e trade-offs.
 
+### Como o aparelho sabe que e a primeira vez
+
+Nao precisa detectar nada: **no boot, se a NVS nao tem chave, gera uma; se ja
+tem, mantem.** Primeiro boot de fabrica = NVS vazia → gera; dali em diante,
+persiste. "Gera-se-nao-existe", sem evento especial de "primeira configuracao".
+
+### Nome x chave: naturezas diferentes
+
+| | Muda? | Por que |
+|---|---|---|
+| **Nome** (`sentinela-xxxxxx`) | **nunca** — ja vem do MAC do chip | e endereco, nao segredo (como o endereco da casa) |
+| **Chave de acesso** | permanente por padrao, **mas regeravel sob demanda** | e segredo; venda ou vazamento exige revogar |
+
+O **nome ja e permanente e unico de graca** (vem do MAC): nao precisa ser
+"gerado", so **mostrado**. Isso simplifica a Parte 1.
+
 ### Parte 1 — nome mDNS ate o cadastro (barata, independente)
 
-Metade ja existe: a tela de configuracao **le e mostra** o nome
-(`sentinela-xxxx.local`). Falta emendar:
+Metade ja existe: a tela de configuracao **le e mostra** o nome. Falta emendar:
 
 - Na tela de sucesso, um botao **"Cadastrar esta estufa"** abre o formulario de
   nova estufa **ja preenchido** com o nome (e a chave);
@@ -270,16 +285,30 @@ Metade ja existe: a tela de configuracao **le e mostra** o nome
 
 ### Parte 2 — chave gerada pelo aparelho (grande, cruza 3 camadas)
 
-**Geracao e exibicao.** O aparelho gera uma chave aleatoria no 1o boot (NVS). O
-"ovo e galinha" — como o app le a chave se e ela que protege o aparelho? —
-resolve-se por **presenca fisica: so no modo de configuracao** (3 botoes) o
-aparelho **revela a chave**, sem autenticacao, porque quem segura os botoes esta
-na frente dele. Mesmo principio do **adesivo do roteador**. Em operacao normal a
-chave **nunca** aparece (`/status` so diz "tem chave: sim/nao").
+**Geracao e exibicao.** O aparelho gera uma chave aleatoria quando a NVS nao tem
+uma (ver acima). O "ovo e galinha" — como o app le a chave se e ela que protege
+o aparelho? — resolve-se por **presenca fisica: so no modo de configuracao** (3
+botoes) o aparelho **revela a chave**, sem autenticacao, porque quem segura os
+botoes esta na frente dele. Mesmo principio do **adesivo do roteador**. Em
+operacao normal a chave **nunca** aparece (`/status` so diz "tem chave: sim/nao").
 
 **Perder a chave = reentrar no modo de configuracao.** Segura os 3 botoes → o
-aparelho mostra a chave; com opcao **"gerar nova chave"** para revogar a antiga
-(app e nuvem atualizam). Igual a resetar um roteador.
+aparelho **mostra a chave atual** de novo. Basta recadastrar no app.
+
+**Venda / troca de dono / vazamento = "gerar nova chave".** Aqui esta o ponto
+critico: se a chave fosse **so** permanente, o **dono antigo continuaria sabendo
+ela** depois de vender — e, com remoto configurado, poderia mexer na estufa do
+novo dono. Entao o modo de configuracao tem a opcao **"gerar nova chave"**: quem
+compra entra no config, gera uma nova, e o dono antigo fica **trancado para
+fora**. A chave e permanente **por conveniencia** (nao se perde), nao por
+obrigacao.
+
+**Rotacao com a nuvem.** Quando a chave e regerada, a nuvem (que guardava a
+antiga por TOFU) precisa aceitar a nova. Jeito limpo: **o proprio aparelho faz a
+troca** — no instante da regeracao ele conhece a chave **velha e a nova**, entao
+avisa a nuvem "sou o aparelho X, prova com a chave antiga, atualize para a nova".
+A nuvem aceita porque a velha bate, e a antiga morre. O app nao precisa
+autenticar a rotacao; o aparelho faz.
 
 **Subir para o Render — a parte dificil.** Hoje o servidor usa **uma chave
 global** (`ESTUFA_API_TOKEN`); chave por aparelho exige guardar `idHardware →
@@ -302,6 +331,14 @@ seguro** que chave escolhida pelo produtor (aleatoria, unica por aparelho).
 - **Sem conta de usuario** no projeto, o modelo e "quem tem a chave, comanda". A
   **presenca fisica** (3 botoes) e a unica ancora forte. Aceitavel nesta escala,
   mas deve constar como limitacao;
+- **Presenca fisica = poder total.** Quem alcanca os 3 botoes ve a chave e pode
+  gerar outra. Numa estufa isso e razoavel (o aparelho fica na propriedade), mas
+  significa que **nao ha protecao contra quem tem acesso fisico** — inclusive
+  para revogar o dono legitimo. Aceitavel aqui, mas e o preco de nao ter conta;
+- **A revogacao depende de acao fisica no aparelho.** Se o produtor vende e
+  **esquece** de gerar chave nova, o antigo dono mantem acesso. O fluxo de venda
+  deveria **empurrar** a regeracao (ex.: um passo "novo dono? gere uma chave"),
+  senao a protecao existe mas nao e usada;
 - O maior risco esta no **servidor** (global → por aparelho): erro ali = aparelho
   comandavel por qualquer um. Fazer com calma, com teste;
 - **Fasear:** Parte 1 rapida e independente; Parte 2 e um bloco a parte.
