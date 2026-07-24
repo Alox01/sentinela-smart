@@ -88,7 +88,7 @@ function criarEnviadorPush({
      * recusou por nao existirem mais, para o chamador limpar o cadastro - sem
      * isso a lista so cresce com aparelhos que desinstalaram o app.
      */
-    async enviar({ tokens, titulo, corpo, evento, critico = false }) {
+    async enviar({ tokens, titulo, corpo, evento, critico = false, validadeMs }) {
       const destinos = [...new Set((tokens ?? []).filter(Boolean))];
       if (destinos.length === 0) return { enviados: 0, invalidos: [] };
 
@@ -98,6 +98,15 @@ function criarEnviadorPush({
         data: { evento: String(evento ?? '') },
         android: {
           priority: critico ? 'high' : 'normal',
+          // Quando o celular esta sem internet o FCM guarda a mensagem e
+          // entrega na reconexao. Para avisos de estado isso vira susto
+          // atrasado: o produtor recebe "sem comunicacao" junto com o "voltou
+          // a se comunicar". Com validade, o FCM descarta o que envelheceu em
+          // vez de entregar um alarme que ja nao vale. Alertas sem validade
+          // (fogo) seguem sendo guardados indefinidamente.
+          ...(Number.isFinite(validadeMs)
+            ? { ttl: Math.max(0, Math.floor(validadeMs)) }
+            : {}),
           notification: {
             // Com o app fechado quem desenha a notificacao e o Android, usando
             // SO as configuracoes do canal - o codigo Dart nem roda. Entao e

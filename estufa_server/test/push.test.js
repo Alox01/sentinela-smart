@@ -148,6 +148,37 @@ describe('criarEnviadorPush com credencial', () => {
     assert.deepEqual(r.invalidos, ['morto']);
   });
 
+  // Avisos de ESTADO (sem comunicacao / voltou) valem enquanto o estado vale.
+  // Sem validade, o FCM guarda a mensagem enquanto o celular esta sem internet
+  // e entrega na reconexao - o produtor recebia o alarme junto com o desmentido.
+  it('aplica a validade quando informada', async () => {
+    const sdk = sdkFalso();
+    const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+    await enviador.enviar({
+      tokens: ['a'],
+      titulo: 'Estufa sem comunicação',
+      corpo: 'Verifique',
+      evento: 'semComunicacao',
+      critico: true,
+      validadeMs: 30 * 60 * 1000,
+    });
+    assert.equal(sdk.chamadas.enviadas[0].android.ttl, 1800000);
+  });
+
+  it('sem validade o FCM guarda indefinidamente (caso do incendio)', async () => {
+    const sdk = sdkFalso();
+    const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });
+    await enviador.enviar({
+      tokens: ['a'],
+      titulo: 'Fogo',
+      corpo: 'Verifique',
+      evento: 'incendio',
+      critico: true,
+    });
+    // Ausente de proposito: um alerta de fogo perdido nao pode expirar.
+    assert.equal('ttl' in sdk.chamadas.enviadas[0].android, false);
+  });
+
   it('sem tokens nao chama o FCM', async () => {
     const sdk = sdkFalso();
     const enviador = criarEnviadorPush({ env, logger: silencioso, sdk });

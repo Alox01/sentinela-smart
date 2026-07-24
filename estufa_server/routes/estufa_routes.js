@@ -35,7 +35,14 @@ function createEstufaRouter({
     return opcao.notificar !== false;
   }
 
-  async function notificarEvento({ idHardware, evento, titulo, corpo, critico }) {
+  async function notificarEvento({
+    idHardware,
+    evento,
+    titulo,
+    corpo,
+    critico,
+    validadeMs,
+  }) {
     if (!push?.habilitado || !db.listarDispositivosPush) return;
     try {
       const inscritos = await db.listarDispositivosPush(idHardware);
@@ -50,6 +57,7 @@ function createEstufaRouter({
         corpo,
         evento,
         critico,
+        validadeMs,
       });
       if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
         await db.removerTokensPushInvalidos(invalidos);

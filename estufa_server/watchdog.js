@@ -14,6 +14,13 @@
 const LIMITE_SILENCIO_PADRAO_MS = 5 * 60 * 1000;
 const INTERVALO_VERIFICACAO_PADRAO_MS = 60 * 1000;
 
+// Validade dos avisos de comunicacao. Sao avisos de ESTADO: valem enquanto o
+// estado vale. Se o celular estava sem internet e o problema ja passou, entregar
+// na reconexao so assusta - o produtor recebe o alarme junto com o desmentido.
+// 30 min cobre quem ficou um tempo sem sinal e ainda precisa saber, sem
+// ressuscitar um susto de ontem. O aviso de incendio NAO usa validade.
+const VALIDADE_AVISO_COMUNICACAO_MS = 30 * 60 * 1000;
+
 /// Decide o que avisar sobre um aparelho. Puro: sem relogio, sem rede.
 /// Devolve 'silencio' na entrada do silencio, 'retorno' quando volta a
 /// reportar, e null quando nada mudou (para nao repetir aviso a cada rodada).
@@ -86,6 +93,7 @@ function iniciarWatchdog({
               `Parei de receber dados há ${desde}. Pode ser falta de energia ` +
               'ou de internet no local. Verifique.',
             critico: true,
+            validadeMs: VALIDADE_AVISO_COMUNICACAO_MS,
           });
         } else {
           silenciosos.delete(idHardware);
@@ -95,6 +103,7 @@ function iniciarWatchdog({
             titulo: 'Estufa voltou a se comunicar',
             corpo: 'A comunicação com a estufa foi restabelecida.',
             critico: false,
+            validadeMs: VALIDADE_AVISO_COMUNICACAO_MS,
           });
         }
       }
