@@ -11,6 +11,8 @@ import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
+import '../features/notificacoes/models/preferencias_notificacao.dart';
+import '../features/notificacoes/services/preferencias_notificacao_service.dart';
 import '../features/notificacoes/services/push_notification_service.dart';
 import '../features/notificacoes/services/silenciamento_estufas.dart';
 import '../models/ciclo_secagem_entity.dart';
@@ -461,7 +463,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   Widget _itemSilenciarAvisos() {
     final idHw = widget.idHardware ?? api.idHardware;
     return AnimatedBuilder(
-      animation: SilenciamentoEstufas.instance,
+      // Escuta tambem as preferencias globais: elas mandam no que este
+      // interruptor pode prometer, entao a legenda tem que acompanhar.
+      animation: Listenable.merge([
+        SilenciamentoEstufas.instance,
+        PreferenciasNotificacaoService.instance,
+      ]),
       builder: (context, _) {
         final silenciada = SilenciamentoEstufas.instance.silenciada(idHw);
         return SwitchListTile(
@@ -478,9 +485,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           subtitle: Text(
             idHw == null
                 ? 'Conecte o aparelho uma vez para poder silenciar.'
-                : 'Para receber avisos/notificações desta estufa ative aqui '
-                      'novamente. Incêndio e sem comunicação com o aparelho '
-                      'ainda mandam avisos para o celular.',
+                : _legendaSilenciarAvisos(),
             style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
           value: silenciada,
@@ -490,6 +495,34 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         );
       },
     );
+  }
+
+  /// A promessa de que incendio e sem comunicacao continuam avisando so vale se
+  /// eles estiverem ligados nas configuracoes gerais - o silenciamento por
+  /// estufa nunca LIGA um aviso que o produtor desligou no global, so desliga os
+  /// demais. Quando o global ja desligou um deles, a legenda diz isso em vez de
+  /// prometer um aviso que nao vira.
+  String _legendaSilenciarAvisos() {
+    const inicio =
+        'Para receber avisos/notificações desta estufa ative aqui novamente. ';
+    final prefs = PreferenciasNotificacaoService.instance.preferencias;
+    final fogo = prefs.opcao(EventoNotificacao.incendio).notificar;
+    final semComunicacao = prefs
+        .opcao(EventoNotificacao.semComunicacao)
+        .notificar;
+
+    if (fogo && semComunicacao) {
+      return '${inicio}Incêndio e sem comunicação com o aparelho ainda mandam '
+          'avisos para o celular.';
+    }
+    if (!fogo && !semComunicacao) {
+      return '${inicio}Incêndio e sem comunicação estão desligados nas '
+          'configurações gerais, então nada desta estufa será avisado.';
+    }
+    final continua = fogo ? 'Incêndio' : 'Sem comunicação com o aparelho';
+    final desligado = fogo ? 'sem comunicação' : 'incêndio';
+    return '$inicio$continua ainda manda avisos. O de $desligado está '
+        'desligado nas configurações gerais.';
   }
 
   Future<void> _silenciarAvisos(String idHardware, bool silenciar) async {
