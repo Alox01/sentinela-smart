@@ -472,6 +472,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       builder: (context, _) {
         final silenciada = SilenciamentoEstufas.instance.silenciada(idHw);
         return SwitchListTile(
+          // Icone e interruptor acompanham o TITULO, nao o centro do item. A
+          // legenda muda de tamanho conforme as configuracoes gerais, e sem
+          // isto o sino afundava justamente nos casos de texto mais longo.
+          isThreeLine: true,
           secondary: Icon(
             silenciada
                 ? Icons.notifications_off_outlined
@@ -514,15 +518,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     if (fogo && semComunicacao) {
       return 'Incêndio e sem comunicação continuam avisando.';
     }
-    if (!fogo && !semComunicacao) {
-      return 'Nada será avisado: incêndio e sem comunicação estão desligados '
-          'nas configurações gerais.';
-    }
+    if (!fogo && !semComunicacao) return 'Nada será avisado.';
     return fogo
-        ? 'Só incêndio continua avisando (sem comunicação está desligado nas '
-              'configurações gerais).'
-        : 'Só sem comunicação continua avisando (incêndio está desligado nas '
-              'configurações gerais).';
+        ? 'Só incêndio continua avisando.'
+        : 'Só sem comunicação continua avisando.';
   }
 
   Future<void> _silenciarAvisos(String idHardware, bool silenciar) async {
