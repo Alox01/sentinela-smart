@@ -65,12 +65,6 @@ Future<void> mostrarDetalhesConexaoDialog({
                       children: [
                         _LinhaDetalhe('Modo atual', modoConexao),
                         _LinhaDetalhe('Aparelho', estadoAparelho),
-                        _LinhaDetalhe('Ativo', baseUrlAtiva ?? '-'),
-                        _LinhaDetalhe('Local', localBaseUrl),
-                        _LinhaDetalhe(
-                          'Nuvem',
-                          cloudBaseUrl ?? 'N\u00E3o configurada',
-                        ),
                         _LinhaDetalhe(
                           'Chave',
                           temTokenConfigurado
@@ -92,6 +86,16 @@ Future<void> mostrarDetalhesConexaoDialog({
                         _TesteDeAlcance(
                           alcanceConhecido: alcanceConhecido,
                           testar: testarAlcance,
+                        ),
+                        // Enderecos ficam fechados: para o produtor sao ruido -
+                        // ele quer saber se esta funcionando, nao por onde. Quem
+                        // diagnostica em campo abre e ve tudo. Nada aqui da
+                        // acesso a nada (a chave nunca e mostrada), mas nao ha
+                        // motivo para o nome do aparelho viajar em cada print.
+                        _DetalhesTecnicos(
+                          baseUrlAtiva: baseUrlAtiva,
+                          localBaseUrl: localBaseUrl,
+                          cloudBaseUrl: cloudBaseUrl,
                         ),
                         if (pendencias.isNotEmpty) ...[
                           const SizedBox(height: 14),
@@ -170,6 +174,63 @@ Future<void> mostrarDetalhesConexaoDialog({
       );
     },
   );
+}
+
+/// Enderecos de rede, fechados por padrao. Sao a ferramenta de quem investiga
+/// "por que nao conecta", nao informacao de rotina para quem cuida da estufa.
+class _DetalhesTecnicos extends StatefulWidget {
+  final String? baseUrlAtiva;
+  final String localBaseUrl;
+  final String? cloudBaseUrl;
+
+  const _DetalhesTecnicos({
+    required this.baseUrlAtiva,
+    required this.localBaseUrl,
+    required this.cloudBaseUrl,
+  });
+
+  @override
+  State<_DetalhesTecnicos> createState() => _DetalhesTecnicosState();
+}
+
+class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
+  bool _aberto = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: () => setState(() => _aberto = !_aberto),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Icon(
+                  _aberto ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.white38,
+                  size: 18,
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  'Detalhes técnicos',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_aberto) ...[
+          const SizedBox(height: 4),
+          _LinhaDetalhe('Ativo', widget.baseUrlAtiva ?? '-'),
+          _LinhaDetalhe('Local', widget.localBaseUrl),
+          _LinhaDetalhe('Nuvem', widget.cloudBaseUrl ?? 'Não configurada'),
+        ],
+      ],
+    );
+  }
 }
 
 class _LinhaDetalhe extends StatelessWidget {
