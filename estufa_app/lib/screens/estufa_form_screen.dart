@@ -259,8 +259,10 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
         ),
         child: Row(
           children: [
+            // Mesma engrenagem do "Configurar aparelho" no menu da estufa: e a
+            // mesma tela, entao tem que ser o mesmo simbolo.
             const Icon(
-              Icons.wifi_protected_setup_rounded,
+              Icons.settings_outlined,
               color: Colors.white54,
               size: 22,
             ),
@@ -270,7 +272,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Primeira vez com este aparelho?',
+                    'Primeira configuração do aparelho',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
