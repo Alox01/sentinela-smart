@@ -478,8 +478,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 : Icons.notifications_active_outlined,
             color: Colors.white70,
           ),
+          // Curto como os vizinhos: o cabecalho do menu ja diz de qual estufa
+          // sao estas acoes, e a secao acima ja diz que sao avisos.
           title: const Text(
-            'Silenciar avisos/notificações desta estufa',
+            'Silenciar avisos',
             style: TextStyle(color: Colors.white),
           ),
           subtitle: Text(
@@ -503,8 +505,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   /// demais. Quando o global ja desligou um deles, a legenda diz isso em vez de
   /// prometer um aviso que nao vira.
   String _legendaSilenciarAvisos() {
-    const inicio =
-        'Para receber avisos/notificações desta estufa ative aqui novamente. ';
     final prefs = PreferenciasNotificacaoService.instance.preferencias;
     final fogo = prefs.opcao(EventoNotificacao.incendio).notificar;
     final semComunicacao = prefs
@@ -512,17 +512,17 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         .notificar;
 
     if (fogo && semComunicacao) {
-      return '${inicio}Incêndio e sem comunicação com o aparelho ainda mandam '
-          'avisos para o celular.';
+      return 'Incêndio e sem comunicação continuam avisando.';
     }
     if (!fogo && !semComunicacao) {
-      return '${inicio}Incêndio e sem comunicação estão desligados nas '
-          'configurações gerais, então nada desta estufa será avisado.';
+      return 'Nada será avisado: incêndio e sem comunicação estão desligados '
+          'nas configurações gerais.';
     }
-    final continua = fogo ? 'Incêndio' : 'Sem comunicação com o aparelho';
-    final desligado = fogo ? 'sem comunicação' : 'incêndio';
-    return '$inicio$continua ainda manda avisos. O de $desligado está '
-        'desligado nas configurações gerais.';
+    return fogo
+        ? 'Só incêndio continua avisando (sem comunicação está desligado nas '
+              'configurações gerais).'
+        : 'Só sem comunicação continua avisando (incêndio está desligado nas '
+              'configurações gerais).';
   }
 
   Future<void> _silenciarAvisos(String idHardware, bool silenciar) async {
@@ -612,6 +612,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 );
               },
             ),
+            // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
+            // solto no fim daquela lista.
+            const Divider(color: Colors.white12, height: 1),
+            _tituloMenu('AVISOS'),
             _itemSilenciarAvisos(),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
