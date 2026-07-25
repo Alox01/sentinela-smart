@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'features/agendamento/services/agendamento_service.dart';
 import 'features/notificacoes/services/preferencias_notificacao_service.dart';
 import 'features/notificacoes/services/push_notification_service.dart';
 import 'screens/home_screen.dart';
@@ -60,6 +63,10 @@ class _BootstrapScreenState extends State<_BootstrapScreen> {
     await PreferenciasNotificacaoService.instance.carregar();
     await IsarService.instance.init().timeout(const Duration(seconds: 20));
     await PushNotificationService.instance.inicializar();
+    // Reagenda os avisos de ajuste: reiniciar o celular apaga os alarmes do
+    // sistema, e nem todo fabricante entrega o BOOT_COMPLETED que o plugin
+    // usa para se reerguer sozinho.
+    unawaited(AgendamentoService.instance.carregar());
   }
 
   void _tentarNovamente() {

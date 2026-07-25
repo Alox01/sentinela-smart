@@ -10,6 +10,7 @@ import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
+import '../features/agendamento/screens/agendamentos_screen.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/notificacoes/models/preferencias_notificacao.dart';
 import '../features/notificacoes/services/preferencias_notificacao_service.dart';
@@ -618,6 +619,35 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             _itemSilenciarAvisos(),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
+            ListTile(
+              leading: const Icon(
+                Icons.alarm_add_outlined,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Agendar ajuste',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: const Text(
+                'Para uma hora em que você não estará por perto',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AgendamentosScreen(
+                      idEstufa: widget.idEstufa,
+                      nomeEstufa: widget.nomeEstufa,
+                      idHardware: widget.idHardware ?? api.idHardware,
+                      tokenAcesso: widget.tokenAcesso,
+                      temperaturaAtual: tempAjuste,
+                      umidadeAtual: umidAjuste,
+                    ),
+                  ),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.restart_alt, color: Colors.white70),
               title: const Text(

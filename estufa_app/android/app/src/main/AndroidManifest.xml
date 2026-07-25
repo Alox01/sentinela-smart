@@ -7,6 +7,17 @@
          perturbe". Ter a permissao no manifesto nao basta: o produtor precisa
          liberar o app numa tela do sistema (ver PushNotificationService). -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
+    <!-- Agendamento de ajuste ("erguer para 120 F as 14h"). O alarme exato e o
+         que faz o aviso sair na hora marcada mesmo com o celular em repouso
+         (Doze); sem ele o Android agrupa e pode atrasar bastante. USE_EXACT_ALARM
+         nao precisa de aprovacao do usuario e vale para app de alarme, que e
+         exatamente o caso aqui. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Reiniciar o celular apaga os alarmes do sistema. O receptor do plugin
+         reagenda o que ficou pendente; o app tambem reagenda ao abrir, porque
+         nem todo fabricante entrega o BOOT_COMPLETED de forma confiavel. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="Sentinela Smart"
         android:name="${applicationName}"
@@ -37,6 +48,25 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="sentinela_alertas" />
+        <!-- Entrega o aviso agendado ("erguer para 120 F") na hora marcada. O
+             plugin nao declara os proprios receptores, e sem eles o
+             agendamento e aceito e nunca dispara - falha calada. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <!-- Reagenda o que estava pendente depois de reiniciar o celular. As
+             acoes extras cobrem fabricantes que usam o proprio nome de boot em
+             vez do BOOT_COMPLETED padrao. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
