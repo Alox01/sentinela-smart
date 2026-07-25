@@ -167,6 +167,12 @@ validação em campo e a escrita.
 - **Criptografia da NVS:** a senha do Wi-Fi e a chave de acesso ficam em claro
   na memória do ESP32. Exigiria *flash encryption*, que complica gravação e
   manutenção. Documentado como limitação em `CONFIGURACAO_ESP32.md`.
+- **Agendamento da curva de cura:** trocar sozinho o alvo a cada fase. Como o
+  aparelho não tem atuador, agendaria a **referência do alarme**, não o
+  aquecimento. O lugar certo é o firmware, com tempo **relativo** ao início da
+  estufada (sem depender de NTP nem de internet); o obstáculo é o LWW, que hoje
+  sincroniza campos simples e não listas. Análise e passo intermediário barato
+  (presets por fase) em `AGENDAMENTO_CURA.md`.
 
 ## Desvios em relação à proposta (avisar o orientador)
 

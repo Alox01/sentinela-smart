@@ -76,9 +76,14 @@ Depois da revisao leve:
 
 - **Provisionamento** (nome mDNS ate o cadastro; chave gerada pelo aparelho com
   TOFU) — maior pendencia de software, ver `CONFIGURACAO_ESP32.md`.
+- **Agendamento da curva de cura** — trocar o alvo sozinho a cada fase. Nao
+  depende de hardware novo (agendaria a referencia do alarme, nao o
+  aquecimento), mas cruza app, servidor e firmware. Ver `AGENDAMENTO_CURA.md`,
+  que tambem descreve um passo intermediario barato: presets por fase.
 - MQTT como opcao remota (hoje o transporte e HTTP).
 - HTTPS no aparelho local / validacao de certificado no ESP.
-- Controle de atuadores (ventoinha/rele) e agendamento — depende de hardware.
+- Controle de atuadores (ventoinha/rele) — depende de hardware. Com rele, o
+  agendamento acima passaria a controlar a estufa de fato, e nao so o alarme.
 - Build de producao assinado para distribuicao (Play Store).
 
 ## Proximos blocos do projeto
