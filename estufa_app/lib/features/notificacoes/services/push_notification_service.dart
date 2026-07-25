@@ -53,25 +53,44 @@ class PushNotificationService {
         importance: Importance.high,
       );
 
+  /// Aparelho mudo tira da cama: as 3h da manha pode ser queda de energia
+  /// com a estufada em andamento. Antes este aviso ia no canal do INCENDIO
+  /// (o watchdog o marca como critico) - acordava, mas aparecia como "Incendio"
+  /// nas configuracoes do Android, e o produtor nao conseguia silenciar um sem
+  /// perder o outro.
+  /// **Tem que casar com `CANAL_SEM_COMUNICACAO` em `estufa_server/push.js`.**
+  static const String canalSemComunicacaoId = 'sentinela_sem_comunicacao_v1';
+
+  static AndroidNotificationChannel _canalSemComunicacaoCom({
+    required bool furarNaoPerturbe,
+  }) => AndroidNotificationChannel(
+    canalSemComunicacaoId,
+    'Sem comunicação',
+    description:
+        'Toca como alarme, em volume alto, quando a estufa para de '
+        'se comunicar.',
+    importance: Importance.max,
+    playSound: true,
+    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList([
+      0,
+      400,
+      200,
+      400,
+      200,
+      400,
+      200,
+      400,
+    ]),
+    bypassDnd: furarNaoPerturbe,
+  );
+
   /// Temperatura fora da faixa: toca em volume de **alarme**, como o incendio.
   /// E de madrugada que esse aviso precisa acordar alguem, e o volume de
   /// notificacao costuma estar baixo justamente nessa hora.
   ///
-  /// Mesma mensagem, sem som nem vibracao: para quem desligou "Tocar" naquele
-  /// evento. Existe porque, com o app FECHADO, o som pertence ao canal - nao da
-  /// para silenciar um aviso avulso. O servidor escolhe este canal ao ver a
-  /// preferencia do aparelho.
-  /// **Tem que casar com `CANAL_SILENCIOSO` em `estufa_server/push.js`.**
-  static const AndroidNotificationChannel _canalSilencioso =
-      AndroidNotificationChannel(
-        'sentinela_silencioso_v1',
-        'Avisos sem som',
-        description: 'Avisos que o produtor pediu para não tocar.',
-        importance: Importance.defaultImportance,
-        playSound: false,
-        enableVibration: false,
-      );
-
   /// Canal separado do incendio, e nao o mesmo, porque cada um tem a sua
   /// historia de configuracao no Android: o produtor pode querer silenciar um
   /// sem perder o outro, e um canal ja criado nao se reconfigura.
@@ -164,11 +183,10 @@ class PushNotificationService {
     }
   }
 
-  AndroidFlutterLocalNotificationsPlugin? get _android =>
-      _notificacoesLocais
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+  AndroidFlutterLocalNotificationsPlugin? get _android => _notificacoesLocais
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >();
 
   Future<void> _inicializarNotificacoesLocais() async {
     const settings = InitializationSettings(
@@ -191,7 +209,9 @@ class PushNotificationService {
     await android?.createNotificationChannel(
       _canalTemperaturaCom(furarNaoPerturbe: podeFurarNaoPerturbe),
     );
-    await android?.createNotificationChannel(_canalSilencioso);
+    await android?.createNotificationChannel(
+      _canalSemComunicacaoCom(furarNaoPerturbe: podeFurarNaoPerturbe),
+    );
   }
 
   /// Se o canal de incêndio já pode tocar com o aparelho em "Não perturbe".
@@ -209,17 +229,22 @@ class PushNotificationService {
     final android = _android;
     if (android == null) return false;
     try {
-      final concedido = await android.requestNotificationPolicyAccess() ?? false;
+      final concedido =
+          await android.requestNotificationPolicyAccess() ?? false;
       if (!concedido) return false;
       await android.deleteNotificationChannel(channelId: canalCriticoId);
       await android.createNotificationChannel(
         _canalCriticoCom(furarNaoPerturbe: true),
       );
-      // A temperatura tambem acorda de madrugada, entao ela furа o "Nao
-      // perturbe" pelo mesmo motivo do fogo.
+      // Temperatura e aparelho mudo tambem precisam acordar de madrugada, entao
+      // furam o "Nao perturbe" pelo mesmo motivo do fogo.
       await android.deleteNotificationChannel(channelId: canalTemperaturaId);
       await android.createNotificationChannel(
         _canalTemperaturaCom(furarNaoPerturbe: true),
+      );
+      await android.deleteNotificationChannel(channelId: canalSemComunicacaoId);
+      await android.createNotificationChannel(
+        _canalSemComunicacaoCom(furarNaoPerturbe: true),
       );
       return true;
     } catch (erro) {
@@ -389,10 +414,26 @@ class PushNotificationService {
         mensagem.data['mensagem']?.toString() ??
         evento.descricao;
     final critico = evento.critico;
-    // Incendio e temperatura fora da faixa sao os dois que precisam ACORDAR: o
-    // toque e a sirene longa, em volume de alarme, nao um bipe que passa
-    // despercebido de madrugada.
-    final acorda = critico || evento == EventoNotificacao.alarmeProcesso;
+    // Quem acorda: fogo, temperatura fora da faixa e aparelho mudo. O servidor
+    // manda isso resolvido porque "sem comunicacao" e "voltou a se comunicar"
+    // compartilham o mesmo evento, e so um dos dois deve tocar - daqui nao daria
+    // para saber qual e.
+    //
+    // "Tocar" desligado nao silencia o aviso: ele so deixa de ser alarme e passa
+    // a ser notificacao comum, com bipe e vibracao seguindo a configuracao do
+    // proprio celular - como em qualquer app.
+    final acorda =
+        opcao.tocarVibrar &&
+        (mensagem.data['acorda'] == 'true' ||
+            critico ||
+            evento == EventoNotificacao.alarmeProcesso);
+    final canalId = !acorda
+        ? _canalAlertas.id
+        : critico
+        ? canalCriticoId
+        : evento == EventoNotificacao.alarmeProcesso
+        ? canalTemperaturaId
+        : canalSemComunicacaoId;
 
     // Com o app aberto quem monta a notificacao e este codigo; com o app
     // fechado quem monta e o Android, so com o que esta no canal. Por isso o
@@ -400,24 +441,28 @@ class PushNotificationService {
     // madrugada e fraco com o app na mao.
     final detalhes = NotificationDetails(
       android: AndroidNotificationDetails(
+        canalId,
         acorda
-            ? (critico ? canalCriticoId : canalTemperaturaId)
-            : _canalAlertas.id,
-        acorda
-            ? (critico ? 'Incêndio' : 'Temperatura fora da faixa')
+            ? (critico
+                  ? 'Incêndio'
+                  : evento == EventoNotificacao.alarmeProcesso
+                  ? 'Temperatura fora da faixa'
+                  : 'Sem comunicação')
             : _canalAlertas.name,
         channelDescription: acorda ? null : _canalAlertas.description,
         importance: acorda ? Importance.max : Importance.high,
         priority: acorda ? Priority.max : Priority.high,
-        playSound: opcao.tocarVibrar,
-        sound: acorda && opcao.tocarVibrar
+        // Sem `silent`: mesmo com o toque desligado o aviso continua sendo uma
+        // notificacao comum. Quem decide se ela bipa, vibra ou so aparece na
+        // tela e a configuracao do celular, nao o app.
+        playSound: true,
+        sound: acorda
             ? const RawResourceAndroidNotificationSound('alarme_estufa')
             : null,
         audioAttributesUsage: acorda
             ? AudioAttributesUsage.alarm
             : AudioAttributesUsage.notification,
-        enableVibration: opcao.tocarVibrar,
-        silent: !opcao.tocarVibrar,
+        enableVibration: true,
       ),
     );
     await _notificacoesLocais.show(

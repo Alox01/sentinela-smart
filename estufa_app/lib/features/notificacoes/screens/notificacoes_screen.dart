@@ -117,9 +117,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       final confirma = await _confirmarDesligarIncendio();
       if (confirma != true) return;
     }
-    await _servico.atualizar(
-      _servico.preferencias.comEvento(evento, nova),
-    );
+    await _servico.atualizar(_servico.preferencias.comEvento(evento, nova));
   }
 
   Future<bool?> _confirmarDesligarIncendio() {
@@ -413,8 +411,15 @@ class _CartaoEvento extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             dense: true,
             title: const Text(
-              'Tocar / vibrar',
+              'Tocar',
               style: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            // O rotulo era "Tocar / vibrar", o que sugeria mexer no bipe e na
+            // vibracao comuns - esses seguem a configuracao do celular. Este
+            // interruptor faz outra coisa: decide se o aviso toca como ALARME.
+            subtitle: const Text(
+              'Toca como alarme, para acordar',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
             // So faz sentido tocar se for notificar.
             value: opcao.tocarVibrar && opcao.notificar,

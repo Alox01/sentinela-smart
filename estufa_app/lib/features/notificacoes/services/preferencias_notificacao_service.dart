@@ -25,8 +25,9 @@ class PreferenciasNotificacaoService extends ChangeNotifier {
     if (_carregado) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      _preferencias =
-          PreferenciasNotificacao.fromJsonString(prefs.getString(_chave));
+      _preferencias = PreferenciasNotificacao.fromJsonString(
+        prefs.getString(_chave),
+      );
     } catch (_) {
       _preferencias = PreferenciasNotificacao.padrao();
     }

@@ -65,9 +65,9 @@ function createEstufaRouter({
       );
       if (inscritos.length === 0) return;
 
-      // Dois envios porque o som e propriedade do canal, e o canal vai na
-      // mensagem: celulares que querem tocar e celulares que querem silencio
-      // nao cabem no mesmo disparo.
+      // Dois envios porque o canal (e portanto o som) viaja na mensagem:
+      // celulares que querem alarme e celulares que querem aviso comum nao
+      // cabem no mesmo disparo.
       const comToque = inscritos
         .filter((i) => preferenciaToca(i.preferencias, evento))
         .map((i) => i.tokenPush);
@@ -76,9 +76,9 @@ function createEstufaRouter({
         .map((i) => i.tokenPush);
 
       const invalidos = [];
-      for (const [tokens, silencioso] of [
-        [comToque, false],
-        [semToque, true],
+      for (const [tokens, toca] of [
+        [comToque, true],
+        [semToque, false],
       ]) {
         if (tokens.length === 0) continue;
         const resultado = await push.enviar({
@@ -88,7 +88,7 @@ function createEstufaRouter({
           evento,
           critico,
           validadeMs,
-          silencioso,
+          comToque: toca,
         });
         invalidos.push(...resultado.invalidos);
       }

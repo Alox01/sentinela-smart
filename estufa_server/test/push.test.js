@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const {
   CANAL_ALERTAS,
   CANAL_CRITICO,
-  CANAL_SILENCIOSO,
+  CANAL_SEM_COMUNICACAO,
   CANAL_TEMPERATURA,
   acordaDeMadrugada,
   canalDoEvento,
@@ -205,15 +205,28 @@ describe('canal do evento', () => {
     assert.notEqual(canalDoEvento('alarmeProcesso', false), CANAL_CRITICO);
   });
 
-  it('os demais avisos vao no canal comum', () => {
-    assert.equal(canalDoEvento('semComunicacao', false), CANAL_ALERTAS);
+  // Aparelho mudo acorda: as 3h pode ser queda de energia com estufada em
+  // andamento. Antes ia no canal do incendio, o que acordava mas aparecia como
+  // "Incendio" nas configuracoes do Android.
+  it('sem comunicacao tem canal proprio, nao o do incendio', () => {
+    assert.equal(canalDoEvento('semComunicacao', true), CANAL_SEM_COMUNICACAO);
+    assert.notEqual(canalDoEvento('semComunicacao', true), CANAL_CRITICO);
   });
 
-  // Quem desligou "Tocar" naquele evento recebe pelo canal mudo: o interruptor
-  // do app precisa valer tambem com o app fechado.
-  it('silencioso vence qualquer outro canal', () => {
-    assert.equal(canalDoEvento('incendio', true, true), CANAL_SILENCIOSO);
-    assert.equal(canalDoEvento('alarmeProcesso', false, true), CANAL_SILENCIOSO);
+  // Mesmo evento do aviso de silencio, mas e boa noticia: acordar alguem para
+  // dizer que esta tudo bem seria o oposto do util.
+  it('"voltou a se comunicar" nao acorda ninguem', () => {
+    assert.equal(canalDoEvento('semComunicacao', false), CANAL_ALERTAS);
+    assert.equal(acordaDeMadrugada('semComunicacao', false), false);
+  });
+
+  // "Tocar" desligado NAO e mudo: e o canal comum, onde quem manda no bipe e na
+  // vibracao e a configuracao do proprio celular, como em qualquer app. O
+  // interruptor escolhe entre alarme e aviso comum, nada alem disso.
+  it('sem toque, tudo cai no canal comum', () => {
+    assert.equal(canalDoEvento('incendio', true, false), CANAL_ALERTAS);
+    assert.equal(canalDoEvento('alarmeProcesso', false, false), CANAL_ALERTAS);
+    assert.equal(canalDoEvento('semComunicacao', true, false), CANAL_ALERTAS);
   });
 });
 
@@ -223,7 +236,11 @@ describe('prioridade', () => {
     assert.equal(acordaDeMadrugada('alarmeProcesso', false), true);
   });
 
-  it('sem comunicacao nao precisa furar o repouso do Android', () => {
-    assert.equal(acordaDeMadrugada('semComunicacao', false), false);
+  it('o aviso de silencio tambem vai com prioridade alta', () => {
+    assert.equal(acordaDeMadrugada('semComunicacao', true), true);
+  });
+
+  it('evento desconhecido nao acorda', () => {
+    assert.equal(acordaDeMadrugada('qualquerOutro', false), false);
   });
 });

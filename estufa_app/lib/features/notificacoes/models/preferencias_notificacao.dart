@@ -21,8 +21,7 @@ extension EventoNotificacaoInfo on EventoNotificacao {
 
   String get titulo => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Alarme de temperatura',
-    EventoNotificacao.incendio =>
-      'Inc\u00eandio / Temperatura muito elevada',
+    EventoNotificacao.incendio => 'Inc\u00eandio / Temperatura muito elevada',
     EventoNotificacao.semComunicacao => 'Sem comunica\u00e7\u00e3o',
   };
 
