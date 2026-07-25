@@ -147,9 +147,9 @@ class PainelControle extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _BotaoContinuo(icon: Icons.remove, onAction: onMenos),
+              BotaoContinuo(icon: Icons.remove, onAction: onMenos),
               const SizedBox(width: 8),
-              _BotaoContinuo(icon: Icons.add, onAction: onMais),
+              BotaoContinuo(icon: Icons.add, onAction: onMais),
             ],
           ),
         ],
@@ -214,15 +214,24 @@ class LedItem extends StatelessWidget {
   }
 }
 
-class _BotaoContinuo extends StatefulWidget {
+/// Botao de + / - que **repete enquanto segurado**, um passo a cada 200 ms.
+///
+/// Publico porque a tela de agendamento usa o mesmo: o produtor ja aprendeu a
+/// segurar para andar depressa no ajuste, e um seletor que so anda de um em um
+/// toque seria um segundo jeito de fazer a mesma coisa.
+class BotaoContinuo extends StatefulWidget {
   final IconData icon;
   final VoidCallback onAction;
-  const _BotaoContinuo({required this.icon, required this.onAction});
+  const BotaoContinuo({
+    super.key,
+    required this.icon,
+    required this.onAction,
+  });
   @override
-  State<_BotaoContinuo> createState() => _BotaoContinuoState();
+  State<BotaoContinuo> createState() => _BotaoContinuoState();
 }
 
-class _BotaoContinuoState extends State<_BotaoContinuo> {
+class _BotaoContinuoState extends State<BotaoContinuo> {
   Timer? _timer;
   bool _isPressed = false;
 

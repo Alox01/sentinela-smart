@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../widgets/painel_controle.dart';
 import '../models/agendamento_ajuste.dart';
 import '../services/agendamento_service.dart';
 
@@ -43,12 +44,12 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
   static const List<int> _minutosAtalho = [30, 60, 120, 180, 360, 720];
   int _minutos = 120;
 
-  bool _relativo = false;
+  // So valor absoluto: "deixe em 120 F". A variacao relativa existiu aqui e saiu
+  // por ser um segundo jeito de dizer a mesma coisa, com a desvantagem de o
+  // produtor ter de fazer a conta de cabeca para saber onde vai parar.
   double _tempAbsoluta = 120;
-  double _tempDelta = 10;
   bool _mexerUmidade = false;
   double _umidAbsoluta = 40;
-  double _umidDelta = -10;
 
   bool _salvando = false;
 
@@ -56,12 +57,11 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
   void initState() {
     super.initState();
     unawaited(_servico.carregar());
-    _tempAbsoluta = widget.temperaturaAtual > 0
-        ? widget.temperaturaAtual
-        : _tempAbsoluta;
-    _umidAbsoluta = widget.umidadeAtual > 0
-        ? widget.umidadeAtual
-        : _umidAbsoluta;
+    // Comeca no ajuste que ja esta valendo: o produtor quase sempre quer mexer
+    // a partir dali, entao ele so anda a diferenca em vez de montar o numero do
+    // zero. Zero significa que a leitura ainda nao chegou - ai vale o padrao.
+    if (widget.temperaturaAtual > 0) _tempAbsoluta = widget.temperaturaAtual;
+    if (widget.umidadeAtual > 0) _umidAbsoluta = widget.umidadeAtual;
   }
 
   DateTime get _quando => DateTime.now().add(Duration(minutes: _minutos));
@@ -75,10 +75,8 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
       idHardware: idHw,
       tokenAcesso: widget.tokenAcesso,
       quando: _quando,
-      temperaturaMeta: _relativo ? null : _tempAbsoluta,
-      temperaturaDelta: _relativo ? _tempDelta : null,
-      umidadeMeta: _mexerUmidade && !_relativo ? _umidAbsoluta : null,
-      umidadeDelta: _mexerUmidade && _relativo ? _umidDelta : null,
+      temperaturaMeta: _tempAbsoluta,
+      umidadeMeta: _mexerUmidade ? _umidAbsoluta : null,
     );
     if (!mounted) return;
     setState(() => _salvando = false);
@@ -225,37 +223,17 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
     filho: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(value: false, label: Text('Deixar em')),
-            ButtonSegment(value: true, label: Text('Variar')),
-          ],
-          selected: {_relativo},
-          onSelectionChanged: (s) => setState(() => _relativo = s.first),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _relativo
-              // O relativo e resolvido na hora de aplicar: se o produtor mexer no
-              // alvo antes disso, a variacao parte do valor novo.
-              ? 'A variação parte do alvo que estiver valendo na hora.'
-              : 'O alvo vai ficar exatamente neste valor.',
-          style: const TextStyle(color: Colors.white38, fontSize: 12),
+        const Text(
+          'O ajuste vai ficar exatamente neste valor abaixo.',
+          style: TextStyle(color: Colors.white38, fontSize: 12),
         ),
         const SizedBox(height: 8),
         _seletorNumero(
           rotulo: 'Temperatura (°F)',
-          valor: _relativo ? _tempDelta : _tempAbsoluta,
-          minimo: _relativo ? -50 : 60,
-          maximo: _relativo ? 50 : 200,
-          comSinal: _relativo,
-          aoMudar: (v) => setState(() {
-            if (_relativo) {
-              _tempDelta = v;
-            } else {
-              _tempAbsoluta = v;
-            }
-          }),
+          valor: _tempAbsoluta,
+          minimo: 60,
+          maximo: 200,
+          aoMudar: (v) => setState(() => _tempAbsoluta = v),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -270,33 +248,24 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
         if (_mexerUmidade)
           _seletorNumero(
             rotulo: 'Umidade (%)',
-            valor: _relativo ? _umidDelta : _umidAbsoluta,
-            minimo: _relativo ? -100 : 0,
-            maximo: _relativo ? 100 : 100,
-            comSinal: _relativo,
-            aoMudar: (v) => setState(() {
-              if (_relativo) {
-                _umidDelta = v;
-              } else {
-                _umidAbsoluta = v;
-              }
-            }),
+            valor: _umidAbsoluta,
+            minimo: 0,
+            maximo: 100,
+            aoMudar: (v) => setState(() => _umidAbsoluta = v),
           ),
       ],
     ),
   );
 
+  /// Mesmos botoes do painel de ajuste: seguram para andar depressa, um passo a
+  /// cada 200 ms. O produtor ja conhece o gesto de la.
   Widget _seletorNumero({
     required String rotulo,
     required double valor,
     required double minimo,
     required double maximo,
-    required bool comSinal,
     required ValueChanged<double> aoMudar,
   }) {
-    final texto = comSinal && valor >= 0
-        ? '+${valor.toStringAsFixed(0)}'
-        : valor.toStringAsFixed(0);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -307,27 +276,27 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
           ),
-          IconButton(
-            onPressed: valor <= minimo ? null : () => aoMudar(valor - 1),
-            icon: const Icon(Icons.remove),
-            color: Colors.white70,
+          // O limite e aplicado aqui, e nao desabilitando o botao: segurando, o
+          // valor simplesmente para na borda em vez de o toque morrer no meio.
+          BotaoContinuo(
+            icon: Icons.remove,
+            onAction: () => aoMudar((valor - 1).clamp(minimo, maximo)),
           ),
           SizedBox(
-            width: 52,
+            width: 64,
             child: Text(
-              texto,
+              valor.toStringAsFixed(0),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          IconButton(
-            onPressed: valor >= maximo ? null : () => aoMudar(valor + 1),
-            icon: const Icon(Icons.add),
-            color: Colors.white70,
+          BotaoContinuo(
+            icon: Icons.add,
+            onAction: () => aoMudar((valor + 1).clamp(minimo, maximo)),
           ),
         ],
       ),
