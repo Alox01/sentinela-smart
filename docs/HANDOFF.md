@@ -2,10 +2,11 @@
 
 Ponto de retomada para continuar o trabalho em qualquer máquina (o histórico do
 chat fica local; este arquivo e o Git são a memória portátil do projeto).
-Atualizado em 24/07/2026: segurança, controle remoto, firmware real, CI,
+Atualizado em 25/07/2026: segurança, controle remoto, firmware real, CI,
 retenção, push completo (incl. som de alarme), persistência dos ajustes,
-escopo das notificações (global × por estufa), ponte de leitura e validade dos
-avisos de comunicação.
+escopo das notificações (global × por estufa), ponte de leitura, validade dos
+avisos de comunicação, **agendamento de ajuste** e **canais de alarme por
+assunto**.
 
 ## Repositório oficial
 
@@ -111,9 +112,30 @@ confirmado em campo** (chegou no celular com o app fechado)
 - **Som de alarme** para incêndio: canal `sentinela_critico_v2`, sirene de 30s
   em volume de **alarme** (não de notificação), com opção de furar o "Não
   perturbe". Ver `NOTIFICACOES_PUSH.md`.
+- **Dois interruptores com sentido próprio:** "Notificar" manda ou não a
+  mensagem (o bipe comum é do celular, como em qualquer app); "Tocar" decide se
+  ela chega como **alarme**. Três eventos acordam quando "Tocar" está ligado —
+  incêndio, temperatura fora da faixa e aparelho sem comunicação —, cada um em
+  **canal próprio** do Android, para o produtor silenciar um sem perder os
+  outros. O "voltou a se comunicar" nunca acorda.
 - **Segredos:** `google-services.json` em `estufa_app/android/app/`
   (gitignored); o **service-account nunca entra no Git nem no chat** — é env var
   no Render.
+
+**Agendamento de ajuste** — "às 14h deixe em 120 °F", para quando o produtor não
+vai estar por perto
+- **Aviso** = alarme local no celular (funciona sem internet nenhuma);
+  **troca do ajuste** = agendador na nuvem (funciona com o app fechado). O
+  Android dispara a notificação na hora, mas não roda código do app para enviar
+  o comando — daí a divisão. O servidor não manda push, para o evento não chegar
+  duas vezes.
+- O firmware **não mudou**: o agendamento vencido entra na mesma caixa de
+  comandos de um ajuste manual.
+- O carimbo do LWW é a **hora agendada**, não a de aplicação: um agendamento
+  atrasado não desfaz um ajuste feito à mão nesse meio tempo.
+- Agendar sem sinal arma o aviso e **retenta** o registro na nuvem; se vencer
+  sem registrar, o produtor é avisado de que não foi aplicado.
+- Detalhes e comportamento nas falhas em `AGENDAMENTO_CURA.md`.
 
 ## O que falta
 
@@ -193,3 +215,12 @@ flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.on
 
 - Servidor: `cd estufa_server && npm test` · App: `cd estufa_app && flutter analyze lib test && flutter test` · Firmware: compilar no Arduino IDE / arduino-cli (core esp32 3.2.0).
 - Deploy no ar: `GET https://estufa-server.onrender.com/versao` → commit atual.
+- Em 25/07/2026: **157 testes no servidor**, **56 no app**, analyze limpo,
+  firmware 1.13.0 compilando em 86% do flash.
+- Testar alarme sem esperar acontecer: `POST /push/verificar-silencio` (roda o
+  watchdog na hora) e `POST /agendamentos/verificar` (aplica o que venceu).
+  Ambos autenticados.
+- Canal novo do Android só nasce quando o app **abre** depois de instalado, e um
+  canal existente **não se reconfigura** — mudar som ou importância exige
+  incrementar o sufixo do id (`_v1` → `_v2`), senão a mudança não vale para quem
+  já tinha o app.

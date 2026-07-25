@@ -71,15 +71,18 @@ Depois da revisao leve:
   comunicacao e ponte de leitura. Ver `NOTIFICACOES_PUSH.md`.
 - **Modo de configuracao Wi-Fi por AP** (`Sentinela-Config`) — v1.9.0, com
   portal cativo e IP fixo opcional. Falta so testar num celular real.
+- **Agendamento de ajuste** ("as 14h deixe em 120 F") — aviso por alarme local
+  no celular, troca do ajuste pelo agendador da nuvem. Sem mudanca no firmware.
+  Ver `AGENDAMENTO_CURA.md`.
 
 **Ainda futuro:**
 
 - **Provisionamento** (nome mDNS ate o cadastro; chave gerada pelo aparelho com
   TOFU) — maior pendencia de software, ver `CONFIGURACAO_ESP32.md`.
-- **Agendamento da curva de cura** — trocar o alvo sozinho a cada fase. Nao
-  depende de hardware novo (agendaria a referencia do alarme, nao o
-  aquecimento), mas cruza app, servidor e firmware. Ver `AGENDAMENTO_CURA.md`,
-  que tambem descreve um passo intermediario barato: presets por fase.
+- **Curva de cura por fases** — trocar o ajuste sozinho a cada etapa. O
+  agendamento **de uma vez** ja foi entregue (ver "Ja feito"); a curva completa
+  segue futura e exigiria sincronizar uma lista, nao um campo simples. Ver
+  `AGENDAMENTO_CURA.md`.
 - MQTT como opcao remota (hoje o transporte e HTTP).
 - HTTPS no aparelho local / validacao de certificado no ESP.
 - Controle de atuadores (ventoinha/rele) — depende de hardware. Com rele, o

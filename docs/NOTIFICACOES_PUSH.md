@@ -106,9 +106,53 @@ evento tem **dois interruptores independentes**:
 | Incêndio / sensor de chama | on/off | on/off |
 | Sem comunicação (luz ou internet) | on/off | on/off |
 
-Assim ele pode, por exemplo, receber a mensagem de todos mas só deixar o celular
-**tocar** para incêndio e falta de energia (o que importa de madrugada), com o
-alarme de processo chegando mudo.
+### O que cada interruptor faz (25/07/2026)
+
+Os dois nomes foram acertados depois de o produtor apontar que não descreviam o
+comportamento:
+
+- **Notificar** — manda ou não a mensagem. Se ela bipa, vibra ou só aparece na
+  gaveta é decisão do **celular**, como em qualquer app; o Sentinela não mexe
+  nisso. Desligado, o aviso **não é enviado** (o servidor tira aquele aparelho
+  da lista) — não é "silenciar", é não existir.
+- **Tocar** — decide **uma coisa só**: se aquele aviso chega como **alarme**
+  (sirene longa, em volume de alarme, furando o "Não perturbe"). O rótulo era
+  "Tocar / vibrar", o que sugeria mexer no bipe comum; agora é só "Tocar".
+
+Desligar "Notificar" desliga "Tocar" junto — sem mensagem não há o que tocar.
+
+Nada disso afeta a **sirene do aparelho**: ela é hardware, não depende do
+celular nem de internet. Mesmo com tudo desligado no app, a estufa apita no
+local.
+
+### Quem acorda de madrugada
+
+Três eventos tocam como alarme quando "Tocar" está ligado — os três em que o
+produtor teria de sair da cama:
+
+| Evento | Toca como alarme |
+|---|---|
+| Incêndio | sim |
+| Temperatura fora da faixa | sim |
+| Sem comunicação (o aparelho parou) | sim |
+| "Voltou a se comunicar" | **não** — acordar alguém para dizer que está tudo bem é o oposto do útil |
+
+**Um canal do Android por assunto**, e não um só: assim o produtor silencia o
+que quiser nas configurações do sistema sem levar os outros junto. Isso corrigiu
+um problema silencioso — o aviso de "sem comunicação" ia pelo canal do
+**incêndio** (o watchdog o marca como crítico), então acordava, mas aparecia
+como "Incêndio" nas configurações e não dava para separar um do outro.
+
+**Ressalva honesta:** os três usam a **mesma sirene**, o único som longo do app.
+As vibrações diferem, mas pelo som eles são parecidos — vale um segundo arquivo
+de áudio para separar "vá ver" de "corra".
+
+**Detalhe de implementação:** com o app fechado quem escolhe som e volume é o
+canal, que viaja na mensagem. Por isso o servidor lê a preferência de cada
+celular e faz **dois envios** (quem quer alarme e quem quer aviso comum não
+cabem no mesmo disparo), e manda um campo `acorda` no payload — "sem
+comunicação" e "voltou a se comunicar" compartilham o mesmo evento, e só um dos
+dois deve tocar.
 
 **Onde aplicar cada preferência:**
 

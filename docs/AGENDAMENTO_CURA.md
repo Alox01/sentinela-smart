@@ -1,12 +1,87 @@
-# Agendamento da curva de cura
+# Agendamento de ajuste e curva de cura
 
-> **Documento de análise, não de decisão.** Registra o estudo de viabilidade
-> feito em 24/07/2026. Há ajustes de escopo ainda a discutir com o produtor —
-> nada aqui está fechado.
+> **Estado (25/07/2026):** o agendamento **de uma vez** ("às 14h deixe em
+> 120 °F") está **implementado**. A curva por fases, analisada primeiro, segue
+> como trabalho futuro — e o estudo dela está preservado abaixo porque explica
+> por que a versão implementada ficou onde ficou.
 
-Ideia levantada: agendar mudanças de temperatura e umidade nas "ações rápidas"
-do menu da estufa, para a cura seguir sozinha as fases em vez de depender de o
-produtor lembrar de mexer no alvo a cada etapa.
+A ideia começou como curva de cura: o aparelho trocaria o ajuste sozinho a cada
+fase. Conversando, o escopo real apareceu e era outro, bem menor:
+
+> "O produtor quer a temperatura em 120 °F daqui a duas horas, mas nessa hora
+> ele não vai estar por perto."
+
+Não é automação da cura — é um **despertador com ação**. A maioria dos
+produtores olha o fumo para decidir quando erguer o calor; a tabela é
+referência, não roteiro. Uma curva automática pressupõe uma regularidade que a
+folha nem sempre respeita.
+
+## O que foi implementado
+
+Menu da estufa → **AÇÕES RÁPIDAS → "Agendar ajuste"**. Escolhe-se em quanto
+tempo (atalhos de 30 min a 12 h — o produtor pensa em "daqui duas horas", não
+em "às 16h13") e o valor: temperatura, e umidade se quiser.
+
+O trabalho é **dividido entre celular e nuvem**, porque nenhum dos dois resolve
+sozinho:
+
+| Parte | Onde | Por quê |
+|---|---|---|
+| **O aviso** ("Hora de ajustar") | alarme local no celular | funciona **sem internet nenhuma**, o caso comum na propriedade |
+| **A troca do ajuste** | agendador no servidor | funciona com o **app fechado**, que é justamente o cenário |
+
+O Android dispara a notificação na hora marcada, mas **não roda código do app**
+para enviar o comando — por isso a segunda metade não pode morar no celular. E o
+servidor **não** manda push: se mandasse, o mesmo evento chegaria duas vezes.
+
+Detalhe das rotas em `CONTRATO_API.md`. O firmware **não mudou**: um agendamento
+vencido entra na mesma caixa de comandos de um ajuste feito à mão.
+
+### Decisões que valem registro
+
+- **Só valor absoluto na tela.** A variação relativa ("+10 °F") existiu e saiu:
+  era um segundo jeito de dizer a mesma coisa, com a desvantagem de o produtor
+  ter de fazer a conta de cabeça. O servidor ainda aceita relativo (validado e
+  testado), resolvendo contra o ajuste vigente no instante de aplicar.
+- **Os seletores abrem no ajuste que já está valendo**, e os botões de + e −
+  são os mesmos do painel de monitoramento (seguram para andar depressa).
+- **O carimbo do LWW é a hora agendada, não a hora em que aplicou.** Um
+  agendamento que vence atrasado (servidor fora do ar) não pode desfazer um
+  ajuste que o produtor tenha feito à mão nesse meio tempo. Com a hora agendada,
+  o mecanismo que já existia resolve sozinho: o mais novo vence.
+- **Sem internet ao agendar**, o aviso local é armado e o registro na nuvem é
+  **retentado** ao abrir o app e ao entrar na tela. Se vencer sem nunca ter sido
+  registrado, o agendamento é descartado (aplicar "120 °F às 10:30" às 11:15
+  passaria por cima de quem já está na fornalha) — e o produtor **é avisado**,
+  em vez de o item sumir calado.
+
+### Comportamento nas falhas
+
+| Situação | Aviso | Ajuste |
+|---|---|---|
+| Tudo funcionando | ✅ | ✅ |
+| Celular sem internet, volta **antes** da hora | ✅ | ✅ (reenvio automático) |
+| Celular sem internet, volta **depois** | ✅ | ❌ — avisa que não aplicou |
+| Servidor cai e volta atrasado | ✅ | ✅ aplica, mas **perde** para ajuste manual mais novo |
+| ESP sem internet na hora | ✅ | ✅ ao reconectar (fica na caixa de comandos) |
+
+### O que o agendamento **não** faz
+
+O aparelho não tem relé: o ajuste é a **referência do alarme**, não um comando
+para a fornalha. Quem ergue o calor é o produtor, com a lenha. Por isso o aviso
+existe — e por isso o recurso não cria risco de incêndio, já que nada nele
+injeta calor.
+
+Se depois de aplicado a estufa demorar a subir (pouca lenha), o ajuste **é
+mantido** — e passados os 5 min de acomodação o alarme de temperatura baixa
+dispara, que é exatamente o que se quer saber.
+
+---
+
+## Estudo original: curva por fases (trabalho futuro)
+
+O que segue é a análise que levou ao recorte acima. A curva automática continua
+sendo trabalho futuro.
 
 ## O que este recurso pode e não pode fazer
 

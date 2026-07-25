@@ -296,6 +296,49 @@ as leituras são gravadas em um arquivo local (`.buffer_leituras.jsonl`) e
 reenviadas em ordem cronológica assim que a conexão volta. É o espelho, para o
 lado das leituras, da fila offline que o app já mantém para os comandos.
 
+### Agendamentos de ajuste
+
+Marcam um ajuste para depois: "às 14h deixe em 120 °F". Autenticados, como todo
+comando. O **aviso** ao produtor não sai daqui — é um alarme local no celular,
+que funciona sem internet; estas rotas cuidam só de **trocar o ajuste** na hora
+marcada, que é o que o celular não consegue fazer com o app fechado.
+
+Vencido, o agendamento entra na **mesma caixa de comandos** de um ajuste manual
+(`GET /comandos`), então o firmware não precisou aprender nada novo.
+
+#### POST /agendamentos
+
+```json
+{
+  "idHardware": "ESP32_A1B2C3",
+  "aplicarEmMs": 1800000000000,
+  "temperaturaMeta": 120,
+  "umidadeMeta": 40
+}
+```
+
+`temperaturaDelta` / `umidadeDelta` são aceitos no lugar dos absolutos (o valor
+é resolvido contra o ajuste vigente **no instante de aplicar**), mas o app hoje
+só envia valores absolutos. Informe valor **ou** variação de um mesmo campo,
+nunca os dois. Resposta: `{ "sucesso": true, "id": "12" }`.
+
+Recusa com `503 sem_persistencia` quando não há banco: um agendamento que vive
+horas não pode depender de um processo que o plano gratuito recicla.
+
+#### GET /agendamentos?idHardware=...
+
+Lista os pendentes daquele aparelho, em ordem de vencimento.
+
+#### DELETE /agendamentos/:id?idHardware=...
+
+Cancela. O `idHardware` entra na condição de propósito: sem ele, quem tem a
+chave de uma estufa poderia apagar o agendamento de outra adivinhando o id.
+
+#### POST /agendamentos/verificar
+
+Roda o agendador na hora, sem esperar o ciclo de 30 s — para testar sem
+cronometrar. Mesmo espírito do `POST /push/verificar-silencio`.
+
 ## Validações recomendadas
 
 - `temperaturaMeta`: number entre 60 e 200.
