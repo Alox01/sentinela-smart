@@ -53,6 +53,53 @@ class PushNotificationService {
         importance: Importance.high,
       );
 
+  /// Temperatura fora da faixa: toca em volume de **alarme**, como o incendio.
+  /// E de madrugada que esse aviso precisa acordar alguem, e o volume de
+  /// notificacao costuma estar baixo justamente nessa hora.
+  ///
+  /// Mesma mensagem, sem som nem vibracao: para quem desligou "Tocar" naquele
+  /// evento. Existe porque, com o app FECHADO, o som pertence ao canal - nao da
+  /// para silenciar um aviso avulso. O servidor escolhe este canal ao ver a
+  /// preferencia do aparelho.
+  /// **Tem que casar com `CANAL_SILENCIOSO` em `estufa_server/push.js`.**
+  static const AndroidNotificationChannel _canalSilencioso =
+      AndroidNotificationChannel(
+        'sentinela_silencioso_v1',
+        'Avisos sem som',
+        description: 'Avisos que o produtor pediu para não tocar.',
+        importance: Importance.defaultImportance,
+        playSound: false,
+        enableVibration: false,
+      );
+
+  /// Canal separado do incendio, e nao o mesmo, porque cada um tem a sua
+  /// historia de configuracao no Android: o produtor pode querer silenciar um
+  /// sem perder o outro, e um canal ja criado nao se reconfigura.
+  ///
+  /// Usa a mesma sirene do incendio - e o unico som longo disponivel, e o toque
+  /// precisa ser **persistente** para acordar, nao um bipe. A vibracao e mais
+  /// espacada que a do fogo, o que ajuda a distinguir de perto; pelo som, os
+  /// dois sao parecidos (ver ressalva em NOTIFICACOES_PUSH.md).
+  /// **Tem que casar com `CANAL_TEMPERATURA` em `estufa_server/push.js`.**
+  static const String canalTemperaturaId = 'sentinela_temperatura_v1';
+
+  static AndroidNotificationChannel _canalTemperaturaCom({
+    required bool furarNaoPerturbe,
+  }) => AndroidNotificationChannel(
+    canalTemperaturaId,
+    'Temperatura fora da faixa',
+    description:
+        'Toca como alarme, em volume alto, quando a temperatura sai da '
+        'faixa do ajuste.',
+    importance: Importance.max,
+    playSound: true,
+    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList([0, 800, 600, 800, 600, 800]),
+    bypassDnd: furarNaoPerturbe,
+  );
+
   /// O id mudou de `sentinela_critico` para `_v2` de proposito: o Android nao
   /// deixa alterar som nem importancia de um canal ja criado, entao quem ja
   /// tinha o app continuaria com o bipe curto padrao. Canal novo e a unica
@@ -141,6 +188,10 @@ class PushNotificationService {
     await android?.createNotificationChannel(
       _canalCriticoCom(furarNaoPerturbe: podeFurarNaoPerturbe),
     );
+    await android?.createNotificationChannel(
+      _canalTemperaturaCom(furarNaoPerturbe: podeFurarNaoPerturbe),
+    );
+    await android?.createNotificationChannel(_canalSilencioso);
   }
 
   /// Se o canal de incêndio já pode tocar com o aparelho em "Não perturbe".
@@ -163,6 +214,12 @@ class PushNotificationService {
       await android.deleteNotificationChannel(channelId: canalCriticoId);
       await android.createNotificationChannel(
         _canalCriticoCom(furarNaoPerturbe: true),
+      );
+      // A temperatura tambem acorda de madrugada, entao ela furа o "Nao
+      // perturbe" pelo mesmo motivo do fogo.
+      await android.deleteNotificationChannel(channelId: canalTemperaturaId);
+      await android.createNotificationChannel(
+        _canalTemperaturaCom(furarNaoPerturbe: true),
       );
       return true;
     } catch (erro) {
@@ -332,6 +389,10 @@ class PushNotificationService {
         mensagem.data['mensagem']?.toString() ??
         evento.descricao;
     final critico = evento.critico;
+    // Incendio e temperatura fora da faixa sao os dois que precisam ACORDAR: o
+    // toque e a sirene longa, em volume de alarme, nao um bipe que passa
+    // despercebido de madrugada.
+    final acorda = critico || evento == EventoNotificacao.alarmeProcesso;
 
     // Com o app aberto quem monta a notificacao e este codigo; com o app
     // fechado quem monta e o Android, so com o que esta no canal. Por isso o
@@ -339,16 +400,20 @@ class PushNotificationService {
     // madrugada e fraco com o app na mao.
     final detalhes = NotificationDetails(
       android: AndroidNotificationDetails(
-        critico ? canalCriticoId : _canalAlertas.id,
-        critico ? 'Incêndio' : _canalAlertas.name,
-        channelDescription: critico ? null : _canalAlertas.description,
-        importance: critico ? Importance.max : Importance.high,
-        priority: critico ? Priority.max : Priority.high,
+        acorda
+            ? (critico ? canalCriticoId : canalTemperaturaId)
+            : _canalAlertas.id,
+        acorda
+            ? (critico ? 'Incêndio' : 'Temperatura fora da faixa')
+            : _canalAlertas.name,
+        channelDescription: acorda ? null : _canalAlertas.description,
+        importance: acorda ? Importance.max : Importance.high,
+        priority: acorda ? Priority.max : Priority.high,
         playSound: opcao.tocarVibrar,
-        sound: critico && opcao.tocarVibrar
+        sound: acorda && opcao.tocarVibrar
             ? const RawResourceAndroidNotificationSound('alarme_estufa')
             : null,
-        audioAttributesUsage: critico
+        audioAttributesUsage: acorda
             ? AudioAttributesUsage.alarm
             : AudioAttributesUsage.notification,
         enableVibration: opcao.tocarVibrar,

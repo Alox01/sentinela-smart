@@ -4,6 +4,10 @@ const assert = require('node:assert/strict');
 const {
   CANAL_ALERTAS,
   CANAL_CRITICO,
+  CANAL_SILENCIOSO,
+  CANAL_TEMPERATURA,
+  acordaDeMadrugada,
+  canalDoEvento,
   criarEnviadorPush,
   lerCredencial,
 } = require('../push');
@@ -185,5 +189,41 @@ describe('criarEnviadorPush com credencial', () => {
     const r = await enviador.enviar({ tokens: [], titulo: 't', corpo: 'c' });
     assert.equal(r.enviados, 0);
     assert.equal(sdk.chamadas.enviadas.length, 0);
+  });
+});
+
+describe('canal do evento', () => {
+  // Com o app fechado o canal e tudo: e ele que decide se o aviso sai em volume
+  // de alarme e se fura o "Nao perturbe". Errar aqui deixa o alerta mudo de
+  // madrugada sem nenhum erro aparecer.
+  it('incendio vai no canal critico', () => {
+    assert.equal(canalDoEvento('incendio', true), CANAL_CRITICO);
+  });
+
+  it('temperatura fora da faixa tem canal proprio, nao o do incendio', () => {
+    assert.equal(canalDoEvento('alarmeProcesso', false), CANAL_TEMPERATURA);
+    assert.notEqual(canalDoEvento('alarmeProcesso', false), CANAL_CRITICO);
+  });
+
+  it('os demais avisos vao no canal comum', () => {
+    assert.equal(canalDoEvento('semComunicacao', false), CANAL_ALERTAS);
+  });
+
+  // Quem desligou "Tocar" naquele evento recebe pelo canal mudo: o interruptor
+  // do app precisa valer tambem com o app fechado.
+  it('silencioso vence qualquer outro canal', () => {
+    assert.equal(canalDoEvento('incendio', true, true), CANAL_SILENCIOSO);
+    assert.equal(canalDoEvento('alarmeProcesso', false, true), CANAL_SILENCIOSO);
+  });
+});
+
+describe('prioridade', () => {
+  it('os dois avisos que tiram da cama vao com prioridade alta', () => {
+    assert.equal(acordaDeMadrugada('incendio', true), true);
+    assert.equal(acordaDeMadrugada('alarmeProcesso', false), true);
+  });
+
+  it('sem comunicacao nao precisa furar o repouso do Android', () => {
+    assert.equal(acordaDeMadrugada('semComunicacao', false), false);
   });
 });

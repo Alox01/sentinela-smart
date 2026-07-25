@@ -39,6 +39,17 @@ function createEstufaRouter({
     return opcao.notificar !== false;
   }
 
+  // Com o app FECHADO quem decide o som e o canal do Android, nao o codigo do
+  // app - entao respeitar o interruptor "Tocar" exige escolher o canal certo
+  // aqui, na hora de enviar. Sem isto o produtor desligava o toque e continuava
+  // sendo acordado, porque o canal seguia com a sirene.
+  function preferenciaToca(preferencias, chaveEvento) {
+    if (!preferencias) return true;
+    const opcao = preferencias[chaveEvento];
+    if (!opcao || typeof opcao !== 'object') return true;
+    return opcao.tocarVibrar !== false;
+  }
+
   async function notificarEvento({
     idHardware,
     evento,
@@ -49,20 +60,38 @@ function createEstufaRouter({
   }) {
     if (!push?.habilitado || !db.listarDispositivosPush) return;
     try {
-      const inscritos = await db.listarDispositivosPush(idHardware);
-      const tokens = inscritos
-        .filter((i) => preferenciaPermite(i.preferencias, evento))
-        .map((i) => i.tokenPush);
-      if (tokens.length === 0) return;
+      const inscritos = (await db.listarDispositivosPush(idHardware)).filter(
+        (i) => preferenciaPermite(i.preferencias, evento),
+      );
+      if (inscritos.length === 0) return;
 
-      const { invalidos } = await push.enviar({
-        tokens,
-        titulo,
-        corpo,
-        evento,
-        critico,
-        validadeMs,
-      });
+      // Dois envios porque o som e propriedade do canal, e o canal vai na
+      // mensagem: celulares que querem tocar e celulares que querem silencio
+      // nao cabem no mesmo disparo.
+      const comToque = inscritos
+        .filter((i) => preferenciaToca(i.preferencias, evento))
+        .map((i) => i.tokenPush);
+      const semToque = inscritos
+        .filter((i) => !preferenciaToca(i.preferencias, evento))
+        .map((i) => i.tokenPush);
+
+      const invalidos = [];
+      for (const [tokens, silencioso] of [
+        [comToque, false],
+        [semToque, true],
+      ]) {
+        if (tokens.length === 0) continue;
+        const resultado = await push.enviar({
+          tokens,
+          titulo,
+          corpo,
+          evento,
+          critico,
+          validadeMs,
+          silencioso,
+        });
+        invalidos.push(...resultado.invalidos);
+      }
       if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
         await db.removerTokensPushInvalidos(invalidos);
       }

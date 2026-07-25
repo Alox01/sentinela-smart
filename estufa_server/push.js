@@ -12,6 +12,33 @@
 // alerta perde o som de alarme sem erro nenhum aparecer.
 const CANAL_CRITICO = 'sentinela_critico_v2';
 const CANAL_ALERTAS = 'sentinela_alertas';
+// Temperatura fora da faixa toca em volume de ALARME, como o incendio, porque e
+// de madrugada que ela precisa acordar alguem - o volume de notificacao costuma
+// ficar baixo justamente quando mais importa. Canal separado do incendio de
+// proposito: se dividissem o canal, um desvio de temperatura tocaria a sirene de
+// fogo, e o produtor perderia a diferenca entre "va ver" e "corra".
+const CANAL_TEMPERATURA = 'sentinela_temperatura_v1';
+
+// Mesma mensagem, sem som: para quem desligou "Tocar" naquele evento. Precisa
+// ser outro canal porque o Android nao deixa silenciar um canal ja criado por
+// mensagem - a configuracao de som pertence ao canal, nao ao aviso.
+const CANAL_SILENCIOSO = 'sentinela_silencioso_v1';
+
+/// Canal do Android que o aviso vai usar. Com o app fechado e ele, sozinho, que
+/// decide som, volume e se fura o "Nao perturbe".
+function canalDoEvento(evento, critico, silencioso = false) {
+  if (silencioso) return CANAL_SILENCIOSO;
+  if (critico) return CANAL_CRITICO;
+  if (evento === 'alarmeProcesso') return CANAL_TEMPERATURA;
+  return CANAL_ALERTAS;
+}
+
+/// Avisos que precisam chegar mesmo com o celular em repouso. Prioridade normal
+/// e agrupada pelo Android e pode esperar - inaceitavel para os dois casos em
+/// que o produtor teria de sair da cama.
+function acordaDeMadrugada(evento, critico) {
+  return critico || evento === 'alarmeProcesso';
+}
 
 function carregarSdk() {
   try {
@@ -88,7 +115,15 @@ function criarEnviadorPush({
      * recusou por nao existirem mais, para o chamador limpar o cadastro - sem
      * isso a lista so cresce com aparelhos que desinstalaram o app.
      */
-    async enviar({ tokens, titulo, corpo, evento, critico = false, validadeMs }) {
+    async enviar({
+      tokens,
+      titulo,
+      corpo,
+      evento,
+      critico = false,
+      validadeMs,
+      silencioso = false,
+    }) {
       const destinos = [...new Set((tokens ?? []).filter(Boolean))];
       if (destinos.length === 0) return { enviados: 0, invalidos: [] };
 
@@ -97,7 +132,7 @@ function criarEnviadorPush({
         notification: { title: titulo, body: corpo },
         data: { evento: String(evento ?? '') },
         android: {
-          priority: critico ? 'high' : 'normal',
+          priority: acordaDeMadrugada(evento, critico) ? 'high' : 'normal',
           // Quando o celular esta sem internet o FCM guarda a mensagem e
           // entrega na reconexao. Para avisos de estado isso vira susto
           // atrasado: o produtor recebe "sem comunicacao" junto com o "voltou
@@ -114,7 +149,7 @@ function criarEnviadorPush({
             // O `_v2` acompanha o app (PushNotificationService.canalCriticoId):
             // o canal antigo tocava o bipe curto padrao, e o Android nao deixa
             // reconfigurar um canal ja criado.
-            channelId: critico ? CANAL_CRITICO : CANAL_ALERTAS,
+            channelId: canalDoEvento(evento, critico, silencioso),
           },
         },
       });
@@ -135,4 +170,13 @@ function criarEnviadorPush({
   };
 }
 
-module.exports = { CANAL_ALERTAS, CANAL_CRITICO, criarEnviadorPush, lerCredencial };
+module.exports = {
+  CANAL_ALERTAS,
+  CANAL_CRITICO,
+  CANAL_SILENCIOSO,
+  CANAL_TEMPERATURA,
+  acordaDeMadrugada,
+  canalDoEvento,
+  criarEnviadorPush,
+  lerCredencial,
+};
