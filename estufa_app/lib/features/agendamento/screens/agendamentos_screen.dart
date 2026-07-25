@@ -9,7 +9,7 @@ import '../services/agendamento_service.dart';
 
 /// Agenda um ajuste para mais tarde e lista o que ja esta marcado.
 ///
-/// O caso que originou a tela: o produtor quer o alvo em 120 °F daqui duas
+/// O caso que originou a tela: o produtor quer o ajuste em 120 °F daqui duas
 /// horas, e nessa hora nao vai estar por perto.
 class AgendamentosScreen extends StatefulWidget {
   final int idEstufa;
@@ -17,7 +17,7 @@ class AgendamentosScreen extends StatefulWidget {
   final String? idHardware;
   final String? tokenAcesso;
 
-  /// Alvos vigentes, so para mostrar de onde o valor relativo vai partir.
+  /// Ajustes vigentes, so para mostrar de onde o valor relativo vai partir.
   final double temperaturaAtual;
   final double umidadeAtual;
 
@@ -57,6 +57,9 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
   void initState() {
     super.initState();
     unawaited(_servico.carregar());
+    // Abrir a tela e uma boa hora para tentar de novo: quem agendou sem sinal
+    // costuma voltar aqui para conferir.
+    unawaited(_servico.reenviarPendentes());
     // Comeca no ajuste que ja esta valendo: o produtor quase sempre quer mexer
     // a partir dali, entao ele so anda a diferenca em vez de montar o numero do
     // zero. Zero significa que a leitura ainda nao chegou - ai vale o padrao.
@@ -82,14 +85,14 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
     setState(() => _salvando = false);
 
     // Honesto sobre o alcance: sem registro na nuvem o aviso sai na hora, mas o
-    // alvo nao muda sozinho com o app fechado.
+    // ajuste nao muda sozinho com o app fechado.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           agendamento.registradoNaNuvem
               ? 'Agendado para ${_formato.format(agendamento.quando)}.'
-              : 'Aviso agendado, mas o alvo não vai mudar sozinho — '
-                    'não foi possível registrar na nuvem.',
+              : 'Aviso agendado. Sem internet agora, o ajuste será registrado '
+                    'assim que o celular reconectar.',
         ),
         duration: const Duration(seconds: 4),
       ),
@@ -117,11 +120,10 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
-                Text(
-                  'O celular avisa na hora marcada, mesmo sem internet. '
-                  'O alvo muda sozinho pela nuvem — o aquecimento em si continua '
-                  'na sua mão, na fornalha.',
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                const Text(
+                  'O celular avisa na hora marcada, mesmo sem internet, e o '
+                  'ajuste muda sozinho pela nuvem.',
+                  style: TextStyle(color: Colors.white54, fontSize: 13),
                 ),
                 const SizedBox(height: 18),
                 _cartaoQuando(),
@@ -333,7 +335,7 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
               ),
               if (!agendamento.registradoNaNuvem)
                 const Text(
-                  'Só o aviso — o alvo não muda sozinho.',
+                  'Aguardando internet para registrar o ajuste.',
                   style: TextStyle(color: Colors.amberAccent, fontSize: 11),
                 ),
             ],

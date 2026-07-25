@@ -32,7 +32,7 @@ class LeituraAparelhoCard extends StatelessWidget {
 
   // Acende com 5 de diferenca do ajuste, mais a folga da acomodacao (que e
   // proporcional ao tanto que o ajuste andou), para nao confundir a estufa
-  // "perseguindo" o novo alvo com uma oscilacao de clima.
+  // "perseguindo" o novo ajuste com uma oscilacao de clima.
   static double _limiarLed(double folga) => 5.0 + folga;
 
   @override

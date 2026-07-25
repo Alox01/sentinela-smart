@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../../services/isar_service.dart';
 import '../models/agendamento_ajuste.dart';
 
 /// Agendamento de ajuste, com o trabalho dividido entre celular e nuvem porque
@@ -15,12 +16,12 @@ import '../models/agendamento_ajuste.dart';
 ///
 /// - **o aviso** e um alarme local no proprio celular. Funciona sem internet
 ///   nenhuma, que e o caso comum na propriedade;
-/// - **a troca do alvo** e registrada no servidor. O Android dispara a
+/// - **a troca do ajuste** e registrada no servidor. O Android dispara a
 ///   notificacao na hora, mas nao roda codigo do app para enviar o comando — e o
 ///   cenario e justamente o produtor longe, com o app fechado.
 ///
 /// Por isso o servidor **nao** manda push: se mandasse, o mesmo evento chegaria
-/// duas vezes. Ele so troca o alvo, em silencio.
+/// duas vezes. Ele so troca o ajuste, em silencio.
 class AgendamentoService extends ChangeNotifier {
   static const String _chave = 'agendamentos_ajuste_v1';
   static const String _cloudApiUrl = String.fromEnvironment('CLOUD_API_URL');
@@ -80,11 +81,62 @@ class AgendamentoService extends ChangeNotifier {
       await _agendarAvisoLocal(agendamento);
     }
     notifyListeners();
+    unawaited(reenviarPendentes());
+  }
+
+  /// Tenta de novo registrar na nuvem o que foi agendado sem internet.
+  ///
+  /// Agendar sem sinal e o caso comum na propriedade, nao a excecao. Sem esta
+  /// segunda tentativa, o agendamento criado offline ficaria para sempre so como
+  /// aviso, mesmo com o celular voltando a ter internet minutos depois.
+  ///
+  /// A chave nao viaja junto do agendamento salvo — e segredo, e nao tem por que
+  /// ficar duplicada no disco. Vem da estufa cadastrada na hora de reenviar.
+  Future<void> reenviarPendentes() async {
+    final agora = DateTime.now();
+    final pendentes = _agendamentos
+        .where(
+          (a) =>
+              !a.registradoNaNuvem &&
+              a.idHardware != null &&
+              a.quando.isAfter(agora),
+        )
+        .toList();
+    if (pendentes.isEmpty) return;
+
+    Map<int, String?> tokenPorEstufa;
+    try {
+      final estufas = await IsarService.instance.listarEstufas();
+      tokenPorEstufa = {
+        for (final estufa in estufas) estufa.id: estufa.tokenAcesso,
+      };
+    } catch (_) {
+      return;
+    }
+
+    var mudou = false;
+    for (final pendente in pendentes) {
+      final id = await _registrarNaNuvem(
+        pendente,
+        tokenPorEstufa[pendente.idEstufa],
+      );
+      if (id == null) continue;
+      _agendamentos = [
+        for (final a in _agendamentos)
+          a.idLocal == pendente.idLocal ? a.comId(id) : a,
+      ];
+      mudou = true;
+    }
+
+    if (mudou) {
+      await _persistir();
+      notifyListeners();
+    }
   }
 
   /// Cria o agendamento: alarme local primeiro (o que sempre funciona), registro
   /// na nuvem depois. Devolve o agendamento criado — `registradoNaNuvem` diz se o
-  /// alvo vai mudar sozinho ou se o produtor tera de aplicar na mao.
+  /// ajuste vai mudar sozinho ou se o produtor tera de aplicar na mao.
   Future<AgendamentoAjuste> criar({
     required int idEstufa,
     required String nomeEstufa,

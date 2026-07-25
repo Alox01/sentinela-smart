@@ -39,12 +39,12 @@ class _EstadoGrandeza {
 /// Maquina de estados que decide quando a temperatura/umidade esta "oscilando"
 /// (fora do ajuste) de forma relevante, com persistencia no tempo e uma janela
 /// de acomodacao apos mudar o ajuste (para nao confundir a estufa perseguindo o
-/// novo alvo com uma oscilacao de clima). Logica pura, sem dependencia de UI.
+/// novo ajuste com uma oscilacao de clima). Logica pura, sem dependencia de UI.
 class DetectorOscilacao {
   static const int _tempoOscilacaoAtencaoMs = 10 * 60 * 1000;
   static const int _tempoOscilacaoCriticaMs = 5 * 60 * 1000;
   static const int _intervaloContinuaMs = 10 * 60 * 1000;
-  // 5 min: medido na estufa real, que alcanca um alvo 10-15 F acima em menos
+  // 5 min: medido na estufa real, que alcanca um ajuste 10-15 F acima em menos
   // que isso. Tem que bater com o firmware e o simulador, senao o app acusa
   // oscilacao enquanto o aparelho ainda esta perdoando o desvio.
   static const int _tempoAcomodacaoAjusteMs = 5 * 60 * 1000;
@@ -186,7 +186,7 @@ class DetectorOscilacao {
     }
 
     // Durante a acomodacao apos mudar o ajuste, a diferenca de "atencao" e
-    // esperada (estufa indo ate o novo alvo): zera o relogio e nao gera evento.
+    // esperada (estufa indo ate o novo ajuste): zera o relogio e nao gera evento.
     // Mas so ate a folga daquela mudanca: um desvio que ela nao criou continua
     // valendo como oscilacao. O nivel critico (>20) nunca e suprimido.
     if (estadoAlvo == 'atencao' &&

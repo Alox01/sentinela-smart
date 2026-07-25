@@ -259,7 +259,7 @@ class GraficoSteam extends StatelessWidget {
             ),
           ),
           // Linha do ajuste (setpoint) em degraus tracejados, para comparar a
-          // leitura com o alvo. Sem pontos e sem tooltip proprio.
+          // leitura com o ajuste. Sem pontos e sem tooltip proprio.
           if (pontosAjusteDesenho.isNotEmpty)
             LineChartBarData(
               spots: pontosAjusteDesenho,

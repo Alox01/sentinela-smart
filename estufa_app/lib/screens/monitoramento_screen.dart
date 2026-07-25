@@ -187,7 +187,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final ajusteUmidAnterior = _ultimoUmidAjusteServidor;
     // Ao detectar uma mudanca de ajuste (feita no app ou no aparelho), abre a
     // janela de acomodacao para nao confundir a leitura "perseguindo" o novo
-    // alvo com uma oscilacao causada pelo clima/fogo.
+    // ajuste com uma oscilacao causada pelo clima/fogo.
     final agoraAjusteMs = DateTime.now().millisecondsSinceEpoch;
     if (ajusteTempAnterior != null &&
         (novoTempAjuste - ajusteTempAnterior).abs() > 0.5) {

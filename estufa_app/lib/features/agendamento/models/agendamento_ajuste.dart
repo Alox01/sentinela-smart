@@ -4,7 +4,7 @@ import 'dart:convert';
 ///
 /// O valor pode ser **absoluto** (`temperaturaMeta`) ou **relativo**
 /// (`temperaturaDelta`). O relativo e resolvido pelo servidor no instante de
-/// aplicar, contra o alvo vigente — entre agendar e vencer o produtor pode ter
+/// aplicar, contra o ajuste vigente — entre agendar e vencer o produtor pode ter
 /// mexido na estufa, e "subir 10" significa 10 acima do que estiver.
 class AgendamentoAjuste {
   /// Id do servidor. Nulo enquanto o agendamento so existe no celular (criado
@@ -38,7 +38,7 @@ class AgendamentoAjuste {
     this.umidadeDelta,
   });
 
-  /// Se o alvo chegou a ser registrado na nuvem. Sem isso, o alvo nao muda
+  /// Se o ajuste chegou a ser registrado na nuvem. Sem isso, o ajuste nao muda
   /// sozinho com o app fechado — so o aviso no celular acontece.
   bool get registradoNaNuvem => id != null;
 
