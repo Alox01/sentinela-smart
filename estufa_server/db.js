@@ -624,9 +624,91 @@ async function carregarComandosPendentes() {
   }));
 }
 
+// ---- Agendamentos de ajuste ----
+// Vivem horas ou dias entre criar e vencer, muito mais que o reciclo do processo
+// no plano gratuito, entao aqui o banco e a fonte da verdade (na caixa de
+// comandos, que dura segundos, o mapa em memoria e que manda).
+
+let tabelaAgendamentosPronta = false;
+
+async function garantirTabelaAgendamentos() {
+  if (tabelaAgendamentosPronta) return;
+  await pool.query(`
+    create table if not exists comandos_agendados (
+      id bigserial primary key,
+      identificador_hardware text not null,
+      aplicar_em_ms bigint not null,
+      payload jsonb not null,
+      criado_em timestamptz not null default now()
+    )
+  `);
+  // O agendador varre por vencimento a cada 30 s; sem indice isso seria uma
+  // varredura completa da tabela toda vez.
+  await pool.query(`
+    create index if not exists comandos_agendados_aplicar_em_ms_idx
+      on comandos_agendados (aplicar_em_ms)
+  `);
+  tabelaAgendamentosPronta = true;
+}
+
+async function salvarAgendamento(identificadorHardware, aplicarEmMs, payload) {
+  if (!pool) return null;
+  await garantirTabelaAgendamentos();
+  const result = await pool.query(
+    `
+      insert into comandos_agendados (identificador_hardware, aplicar_em_ms, payload)
+      values ($1, $2, $3)
+      returning id
+    `,
+    [identificadorHardware, aplicarEmMs, payload],
+  );
+  return result.rows[0]?.id ?? null;
+}
+
+async function listarAgendamentos(identificadorHardware) {
+  if (!pool) return [];
+  await garantirTabelaAgendamentos();
+  const result = identificadorHardware
+    ? await pool.query(
+        `select id, identificador_hardware, aplicar_em_ms, payload
+           from comandos_agendados
+          where identificador_hardware = $1
+          order by aplicar_em_ms`,
+        [identificadorHardware],
+      )
+    : await pool.query(
+        `select id, identificador_hardware, aplicar_em_ms, payload
+           from comandos_agendados
+          order by aplicar_em_ms`,
+      );
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    idHardware: row.identificador_hardware,
+    aplicarEmMs: Number(row.aplicar_em_ms),
+    ...row.payload,
+  }));
+}
+
+async function removerAgendamento(id, identificadorHardware) {
+  if (!pool) return false;
+  await garantirTabelaAgendamentos();
+  // O idHardware entra na condicao quando informado: sem isso, quem tem a chave
+  // de uma estufa poderia apagar o agendamento de outra so adivinhando o id.
+  const result = identificadorHardware
+    ? await pool.query(
+        'delete from comandos_agendados where id = $1 and identificador_hardware = $2',
+        [id, identificadorHardware],
+      )
+    : await pool.query('delete from comandos_agendados where id = $1', [id]);
+  return (result.rowCount ?? 0) > 0;
+}
+
 module.exports = {
   apagarLeiturasAntigas,
   carregarComandosPendentes,
+  listarAgendamentos,
+  removerAgendamento,
+  salvarAgendamento,
   carregarConfiguracao,
   listarAparelhosComPush,
   listarDispositivosPush,

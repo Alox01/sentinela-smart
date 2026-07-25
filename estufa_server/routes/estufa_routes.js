@@ -8,6 +8,10 @@ const {
 const { criarPayloadEsp32 } = require('../esp32_payload');
 const { iniciarWatchdog } = require('../watchdog');
 const {
+  iniciarAgendador,
+  validarAgendamento,
+} = require('../agendamentos');
+const {
   criarRegistroLeitura,
   deveSalvarLeitura,
 } = require('../storage_policy');
@@ -192,6 +196,25 @@ function createEstufaRouter({
       });
     }
   }
+
+  // Aplica os agendamentos vencidos. Entram pela mesma caixa de comandos de um
+  // ajuste feito a mao, entao o firmware nao precisou aprender nada novo: para
+  // ele, um agendamento e indistinguivel de alguem mexendo no app naquela hora.
+  const agendador = iniciarAgendador({
+    listarAgendamentos: () =>
+      db?.listarAgendamentos && db.estaHabilitado?.()
+        ? db.listarAgendamentos()
+        : [],
+    // O alvo vigente resolve o "+10 F" no instante de aplicar, nao no de agendar.
+    configDoAparelho: (idHardware) => dispositivosAoVivo.get(idHardware)?.config,
+    aplicarComando: (idHardware, comando) => {
+      guardarComandoPendente(idHardware, comando);
+      console.log(
+        `Agendamento aplicado (${idHardware}): ${JSON.stringify(comando)}`,
+      );
+    },
+    remover: (id) => db?.removerAgendamento?.(id),
+  });
 
   // Campos de ajuste e o timestamp que decide o LWW de cada um.
   const CAMPO_TIMESTAMP = {
@@ -410,6 +433,95 @@ function createEstufaRouter({
     res.json({ idHardware, comando });
   });
 
+  // ---- Agendamentos de ajuste ----
+  // "As 14h deixe em 120 F" / "suba 10 F". O aviso ao produtor e um alarme local
+  // no celular (funciona sem internet); estas rotas cuidam apenas de TROCAR O
+  // ALVO na hora marcada, o que o celular nao consegue fazer com o app fechado.
+  // Vencido, o agendamento cai na mesma caixa de comandos de um ajuste manual.
+
+  router.post('/agendamentos', authMiddleware, async (req, res) => {
+    const agoraMs = Date.now();
+    const validacao = validarAgendamento(req.body, agoraMs);
+    if (!validacao.valido) {
+      res.status(400).json({
+        sucesso: false,
+        erro: 'Agendamento invalido',
+        detalhes: validacao.erros,
+      });
+      return;
+    }
+    if (!db.salvarAgendamento || !db.estaHabilitado?.()) {
+      // Sem banco o agendamento nao sobreviveria ao proximo reciclo do processo.
+      // Melhor recusar do que aceitar algo que vai sumir calado.
+      res.status(503).json({ sucesso: false, erro: 'sem_persistencia' });
+      return;
+    }
+
+    const { idHardware, aplicarEmMs, ...resto } = req.body;
+    const payload = {};
+    for (const campo of [
+      'temperaturaMeta',
+      'temperaturaDelta',
+      'umidadeMeta',
+      'umidadeDelta',
+    ]) {
+      if (resto[campo] !== undefined) payload[campo] = Number(resto[campo]);
+    }
+
+    try {
+      const id = await db.salvarAgendamento(
+        idHardware.trim(),
+        Number(aplicarEmMs),
+        payload,
+      );
+      res.json({ sucesso: true, id: id === null ? null : String(id) });
+    } catch (error) {
+      console.error('Falha ao salvar agendamento:', error.message);
+      res.status(500).json({ sucesso: false, erro: 'Falha ao salvar' });
+    }
+  });
+
+  router.get('/agendamentos', authMiddleware, async (req, res) => {
+    const idHardware = req.query.idHardware;
+    if (!idHardware) {
+      res.status(400).json({ erro: 'idHardware obrigatorio' });
+      return;
+    }
+    if (!db.listarAgendamentos) {
+      res.json({ idHardware, agendamentos: [] });
+      return;
+    }
+    try {
+      const agendamentos = await db.listarAgendamentos(String(idHardware));
+      res.json({ idHardware, agendamentos });
+    } catch (error) {
+      console.error('Falha ao listar agendamentos:', error.message);
+      res.status(500).json({ erro: 'Falha ao listar' });
+    }
+  });
+
+  router.delete('/agendamentos/:id', authMiddleware, async (req, res) => {
+    const idHardware = req.query.idHardware;
+    if (!idHardware) {
+      res.status(400).json({ erro: 'idHardware obrigatorio' });
+      return;
+    }
+    if (!db.removerAgendamento) {
+      res.status(503).json({ sucesso: false, erro: 'sem_persistencia' });
+      return;
+    }
+    try {
+      const removido = await db.removerAgendamento(
+        req.params.id,
+        String(idHardware),
+      );
+      res.json({ sucesso: removido });
+    } catch (error) {
+      console.error('Falha ao remover agendamento:', error.message);
+      res.status(500).json({ sucesso: false, erro: 'Falha ao remover' });
+    }
+  });
+
   // O app registra aqui o token FCM do celular para cada estufa que acompanha.
   // Autenticado: sem isso qualquer um inscreveria um celular nos alertas de uma
   // estufa alheia.
@@ -478,6 +590,22 @@ function createEstufaRouter({
     } catch (error) {
       console.error('Falha ao verificar silencio:', error.message);
       res.status(500).json({ erro: 'Falha ao verificar silencio' });
+    }
+  });
+
+  // Roda o agendador na hora, sem esperar o ciclo de 30 s. Mesmo motivo da rota
+  // do watchdog: testar sem cronometrar.
+  router.post('/agendamentos/verificar', authMiddleware, async (_req, res) => {
+    if (!agendador) {
+      res.status(503).json({ erro: 'Agendador indisponivel' });
+      return;
+    }
+    try {
+      await agendador.verificar();
+      res.json({ sucesso: true });
+    } catch (error) {
+      console.error('Falha ao verificar agendamentos:', error.message);
+      res.status(500).json({ erro: 'Falha ao verificar agendamentos' });
     }
   });
 
