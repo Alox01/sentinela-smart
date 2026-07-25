@@ -1,7 +1,9 @@
-# Notificações push (alarme, incêndio e falta de energia)
+# Notificações push (alarme, incêndio e sem comunicação)
 
-Plano de arquitetura para o app avisar o produtor **mesmo com o celular
-bloqueado ou o app fechado**. Documento de projeto — ainda não implementado.
+Como o app avisa o produtor **mesmo com o celular bloqueado ou o app fechado**.
+Nasceu como documento de projeto e hoje descreve o que **está implementado e
+confirmado em campo** — o texto guarda o raciocínio das decisões, que continua
+valendo para o TCC. O estado de cada parte está em "Estado atual no app", no fim.
 
 ## O problema
 
@@ -94,9 +96,9 @@ Fluxo:
 ## Preferências de notificação (por evento)
 
 O produtor controla os alertas de forma fina. **Escopo: global** — um conjunto
-de preferências vale para todas as estufas (dá para acrescentar exceção por
-estufa mais tarde, se necessário). Cada evento tem **dois interruptores
-independentes**:
+de preferências vale para todas as estufas. A exceção por estufa prevista aqui
+**foi implementada** em 24/07/2026; ver "Silenciar uma estufa" abaixo. Cada
+evento tem **dois interruptores independentes**:
 
 | Evento | Notificar (mensagem) | Tocar / vibrar |
 | --- | --- | --- |
@@ -123,6 +125,59 @@ sincronizar com a nuvem para o servidor respeitar os eventos mutados.
 **Segurança:** incêndio é o evento crítico. Permitir desligar (escolha do
 usuário), mas exibir um aviso de que desativar o alerta de incêndio é arriscado —
 a sirene física do aparelho continua sendo a rede de segurança independente.
+
+## Silenciar uma estufa (escopo por aparelho)
+
+Caso real: a estufada terminou naquela estufa e o produtor não quer mais ser
+avisado **dela**, mas continua querendo as outras. O menu de cada estufa tem
+**"Silenciar avisos"** para isso.
+
+**A regra que governa os dois escopos:** o escopo menor **pode silenciar, nunca
+dessilenciar**. Numa estufa silenciada, incêndio e sem comunicação continuam
+avisando — mas só se seguirem ligados nas preferências globais. Se o produtor
+desligou o incêndio para todas, silenciar uma não pode ressuscitá-lo. Isso está
+travado em `estufa_app/test/silenciamento_estufa_test.dart`.
+
+**O servidor não mudou.** Ele já filtrava por `preferencias` de cada dispositivo
+(`preferenciaPermite`, em `routes/estufa_routes.js`); o app apenas registra, para
+o aparelho silenciado, um conjunto **reduzido** — os eventos que sempre avisam
+mantêm o valor global, e os demais vão como `notificar: false`. Como a supressão
+acontece antes do envio, a estufa silenciada não recebe o push nem em segundo
+plano nem com o app aberto.
+
+**Onde cada coisa mora:** o sino da lista de estufas abre as preferências
+**globais** (eventos, "Não perturbe" e a sirene dos aparelhos, que também é
+global — não faz sentido calar uma estufa e deixar as outras apitando). O menu
+de uma estufa tem apenas o silenciamento **daquela**. Para calar a sirene de um
+único aparelho, o caminho é físico: segurar o botão do buzzer por 3 s (firmware
+v1.13.0).
+
+## Validade dos avisos (TTL) e a ponte de leitura
+
+Dois ajustes de 24/07/2026 que atacam **falsos avisos**, os dois nascidos da
+mesma pergunta: o que o alerta significa quando a rede falha em vez do aparelho.
+
+**Validade de 30 min nos avisos de comunicação.** Quando o celular está sem
+internet, o FCM guarda a mensagem e entrega na reconexão — e o produtor recebia
+"estufa sem comunicação" **junto** com o "voltou a se comunicar" que a desmente,
+ou pior, lia o alarme horas depois e ia até lá à toa. Avisos de estado valem
+enquanto o estado vale, então expiram. **Incêndio não tem validade:** é o único
+que precisa chegar por mais tarde que seja, e um teste fixa isso
+(`estufa_server/test/push.test.js`).
+
+**Ponte de leitura (app → nuvem).** Com energia na propriedade mas sem internet
+lá, o aparelho não consegue publicar e o watchdog acusaria "sem comunicação" com
+a estufa funcionando e o app mostrando tudo certo em LOCAL. Quando o app lê o
+aparelho localmente **e tem internet própria** (4G), ele repassa a leitura via
+`POST /leitura`: o `ultimoContatoMs` fica fresco e o falso alarme não chega a
+nascer — melhor que desmenti-lo depois. É oportunista e barato (só em conexão
+LOCAL, no máximo 1×/min, contra a cota do banco), e de brinde quem acompanha de
+longe volta a ver os dados enquanto alguém estiver perto da estufa.
+
+**O que continua sem solução por software:** se cair luz **e** internet e o
+celular não tiver dados móveis, ninguém acorda o produtor remotamente — push
+exige internet no celular, e o aparelho morreu junto. A saída real é um hub com
+bateria e canal fora da banda (GSM/SMS); ver `VIABILIDADE_COMERCIAL.md`.
 
 ## Dependências e custos
 
@@ -237,8 +292,18 @@ registrou o token (abrir o app com internet e a estufa cadastrada).
 
 ## Estado atual no app
 
-O app já **mostra** a falta de energia quando está aberto (banner âmbar na tela
-de monitoramento + eventos `queda_energia` / `retorno_energia` no ciclo), lendo
-`temEnergia` do status. Ainda **não** existem: a tela de preferências, o
-som/vibração locais, a mensagem de causa incerta no `OFFLINE` e a camada de push
-(FCM) para avisar com o app fechado — tudo descrito acima, a implementar.
+**Tudo o que este documento propõe está implementado** (24/07/2026), incluindo o
+que ele mesmo listava como pendente: a tela de preferências, o som e a vibração
+locais e a camada de push (FCM) com o app fechado — esta última **confirmada em
+campo**.
+
+Além do proposto, foram acrescentados: som em **volume de alarme** com opção de
+furar o "Não perturbe" (canal `sentinela_critico_v2`), o **watchdog de silêncio**
+no servidor, o **silenciamento por estufa**, a **validade** dos avisos de
+comunicação e a **ponte de leitura** — todos descritos acima.
+
+O banner de **falta de energia foi removido**, junto com o evento separado: sem
+sensor de tensão e bateria, `temEnergia` era sempre `true` e o aviso nunca
+aparecia, enquanto o texto prometia um gerador que não existe. Quem cobre queda
+de luz é o "sem comunicação", pela ausência de leituras — a decisão está
+explicada em "Por que não existe um evento separado de falta de energia".

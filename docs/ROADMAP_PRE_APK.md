@@ -57,7 +57,7 @@ Depois da revisao leve:
 
 ### 5. Melhorias futuras
 
-> Atualizado jul/2026. Vários itens que estavam aqui já foram entregues.
+> Atualizado 24/07/2026. Vários itens que estavam aqui já foram entregues.
 
 **Já feito** (saiu do "futuro"):
 
@@ -66,13 +66,18 @@ Depois da revisao leve:
 - mDNS (`sentinela-XXXXXX.local`) e id unico por aparelho.
 - Retencao automatica de dados na nuvem.
 - Refatoracao de arquivos grandes (split native/web do Isar; store de leitura).
+- **Notificacoes push (FCM)** — completo e confirmado em campo, com som de
+  alarme para incendio, escopo global × por estufa, validade nos avisos de
+  comunicacao e ponte de leitura. Ver `NOTIFICACOES_PUSH.md`.
+- **Modo de configuracao Wi-Fi por AP** (`Sentinela-Config`) — v1.9.0, com
+  portal cativo e IP fixo opcional. Falta so testar num celular real.
 
 **Ainda futuro:**
 
-- **Notificacoes push (FCM)** — proximo item, ver `NOTIFICACOES_PUSH.md`.
+- **Provisionamento** (nome mDNS ate o cadastro; chave gerada pelo aparelho com
+  TOFU) — maior pendencia de software, ver `CONFIGURACAO_ESP32.md`.
 - MQTT como opcao remota (hoje o transporte e HTTP).
 - HTTPS no aparelho local / validacao de certificado no ESP.
-- Modo de configuracao Wi-Fi por AP (`Sentinela-Config`).
 - Controle de atuadores (ventoinha/rele) e agendamento — depende de hardware.
 - Build de producao assinado para distribuicao (Play Store).
 

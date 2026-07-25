@@ -53,7 +53,7 @@ Comportamento do firmware atual (montagem de referencia):
 ### Estado da integracao (concluida)
 
 > Esta secao descrevia uma lacuna que **nao existe mais**. O firmware
-> (v1.8.0) fala o contrato completo do app: rotas `/status`, `/dados`,
+> (desde a v1.8.0) fala o contrato completo do app: rotas `/status`, `/dados`,
 > `/sincronizar`, o JSON de `CONTRATO_API.md`, o cabecalho `X-Device-Token`,
 > o push de leituras para a nuvem e a busca de comandos remotos. A
 > configuracao **persiste em NVS/`Preferences`** — o alvo nao volta mais ao
@@ -223,11 +223,16 @@ tiver o aparelho em maos e souber ler a memoria consegue extrai-las. E o padrao
 nesse tipo de dispositivo, mas nao deve ficar implicito. Mitigar exigiria
 *flash encryption* do ESP32, que complica a gravacao e a manutencao.
 
-### Nao implementado
+### IP fixo pela pagina — implementado (v1.10.0)
 
-Configurar **IP fixo, gateway e mascara** pela pagina. O DHCP com o mDNS ja
-cobre o caso real (o aparelho continua encontravel quando o IP muda), e os
-campos extras custariam espaco de flash sem resolver problema observado.
+Esta secao dizia "nao implementado" ate 24/07/2026, quando a v1.10.0 acrescentou
+os campos de **IP fixo, gateway e mascara**. A decisao mudou por um caso real: em
+roteador de provedor o produtor as vezes **nao consegue reservar DHCP**, e ai o
+mDNS sozinho nao basta.
+
+Os campos sao opcionais — em branco, o aparelho segue no DHCP. Preenchendo so o
+IP, o firmware assume o `.1` da mesma faixa como gateway e `255.255.255.0` como
+mascara, que e o arranjo da esmagadora maioria das redes domesticas.
 
 ## Chave de acesso
 
@@ -379,11 +384,18 @@ Pendentes:
   mostrada no modo config, propagada ao app e a nuvem (TOFU). A Parte 2 muda o
   servidor de chave global para chave por aparelho.
 - **Testar o modo de configuracao em campo** (compila e a logica esta escrita,
-  mas so vale depois de abrir a pagina num celular de verdade).
+  mas so vale depois de abrir a pagina num celular de verdade). Vale para o
+  portal cativo e para os campos de IP fixo, nunca exercitados fora do codigo.
 - Testar DHCP reservado em campo.
+- **Gravar a v1.13.0 no aparelho** — a ultima versao provada em hardware e a
+  1.9.0; da 1.10.0 em diante (IP fixo, confirmacao sonora do modo config, sirene
+  desligavel, hold de 3 s no botao do buzzer) so ha compilacao.
 - Avaliar *flash encryption* se a senha em claro na NVS virar preocupacao real.
 
 Concluidas:
+
+- ~~IP fixo, gateway e mascara pela pagina~~ — feito (v1.10.0). Estava marcado
+  como "nao implementado" ate o caso do roteador de provedor sem reserva DHCP.
 
 - ~~Alinhar endpoints finais entre app, simulador e ESP32~~ — feito, contrato
   unico em `CONTRATO_API.md`.

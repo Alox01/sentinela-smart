@@ -2,8 +2,10 @@
 
 Ponto de retomada para continuar o trabalho em qualquer máquina (o histórico do
 chat fica local; este arquivo e o Git são a memória portátil do projeto).
-Atualizado após a rodada de jul/2026: segurança, controle remoto, firmware real,
-CI, retenção, push completo (incl. som de alarme) e persistência dos ajustes.
+Atualizado em 24/07/2026: segurança, controle remoto, firmware real, CI,
+retenção, push completo (incl. som de alarme), persistência dos ajustes,
+escopo das notificações (global × por estufa), ponte de leitura e validade dos
+avisos de comunicação.
 
 ## Repositório oficial
 
@@ -46,12 +48,21 @@ em `GET /versao` (mostra o commit no ar).
   Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.9.0, **compilado e validado
-em hardware** (85% flash / 15% RAM no core esp32 3.2.0)
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.13.0, **compilado**
+(86% flash / 15% RAM no core esp32 3.2.0). A v1.9.0 foi validada em hardware;
+**da 1.10.0 em diante ainda não foi gravado no aparelho.**
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
-  acesso `Sentinela-Config`; Wi-Fi e chave saem da NVS. Trocar de roteador não
-  exige mais regravar. Fecha sozinho após 5 min ocioso, e o alarme segue ativo.
+  acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
+  conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
+  Trocar de roteador não exige mais regravar. Fecha sozinho após 5 min ocioso, e
+  o alarme segue ativo. Entrada confirmada por apito + 3 LEDs (v1.11.0), já que
+  o display de 7 segmentos não escreve texto legível.
   **Falta testar num celular de verdade.**
+- **Sirene de temperatura desligável** (v1.12.0): pelo app (campo `buzzerAtivo`,
+  LWW, NVS) ou **segurando só o botão do buzzer por 3 s** no próprio aparelho
+  (v1.13.0) — para quem está na lavoura sem celular, sinal ou internet. Confirma
+  com 2 apitos ao ligar e 1 longo ao desligar. **Incêndio nunca é afetado:**
+  sensor de chama e temperatura de incêndio (>175 °F) tocam sempre.
 - **Ajustes persistem** em memória não-volátil (NVS): queda de energia não
   devolve mais o alvo ao padrão no meio de uma estufada.
 - **Acomodação de 5 min / teto de 8** após mudar o alvo, igual ao app e ao
@@ -73,13 +84,30 @@ em hardware** (85% flash / 15% RAM no core esp32 3.2.0)
 
 **Notificações push (FCM)** — Objetivo Específico #4 da proposta, **completo e
 confirmado em campo** (chegou no celular com o app fechado)
-- Preferências por evento (notificar × tocar/vibrar), incêndio com confirmação
-  para desligar.
-- Disparo na **borda de subida** para incêndio, falta de energia e alarme;
-  tokens recusados pelo FCM são removidos sozinhos.
+- **Dois escopos, deliberadamente separados:** as preferências por evento
+  (notificar × tocar/vibrar), o "Não perturbe" e a sirene dos aparelhos são
+  **globais** e vivem na tela aberta pelo sino da lista de estufas; o menu de
+  cada estufa tem só **"Silenciar avisos"**, que cala aquela estufa. A regra é
+  que o escopo menor **pode silenciar, nunca dessilenciar**: numa estufa
+  silenciada incêndio e sem comunicação continuam avisando, mas apenas se
+  seguirem ligados no global. Travado por testes
+  (`test/silenciamento_estufa_test.dart`). O servidor não mudou — o app registra
+  um conjunto reduzido de preferências para o aparelho silenciado.
+- Disparo na **borda de subida** para incêndio e alarme; tokens recusados pelo
+  FCM são removidos sozinhos.
 - **Watchdog de silêncio**: 5 min sem reportar → "estufa sem comunicação", com
   mensagem honesta sobre a causa (luz ou internet). Ajustável por
   `WATCHDOG_SILENCIO_MIN` / `WATCHDOG_VERIFICACAO_MIN`.
+- **Validade de 30 min nos avisos de comunicação** (TTL do FCM): sem ela, o
+  celular que ficou sem internet recebia o "sem comunicação" **junto** com o
+  "voltou a se comunicar" que o desmente. O aviso de **incêndio não tem
+  validade** — é guardado indefinidamente e sempre entregue.
+- **Ponte de leitura (app → nuvem):** com energia na propriedade mas sem
+  internet lá, o aparelho não consegue publicar e o watchdog acusaria um falso
+  "sem comunicação" com a estufa funcionando. Quando o app lê o aparelho em
+  **LOCAL** e tem internet própria (4G), ele repassa a leitura (`POST /leitura`,
+  no máximo 1×/min por causa da cota do banco): o `ultimoContatoMs` fica fresco
+  e o alarme falso não chega a nascer.
 - **Som de alarme** para incêndio: canal `sentinela_critico_v2`, sirene de 30s
   em volume de **alarme** (não de notificação), com opção de furar o "Não
   perturbe". Ver `NOTIFICACOES_PUSH.md`.
@@ -93,15 +121,27 @@ Nada de **produção**: o escopo da proposta está implementado. O que resta é
 validação em campo e a escrita.
 
 1. **Validar em hardware o que mudou por último** (código pronto, não provado):
-   - regravar o ESP com a 1.8.0 e instalar o APK novo;
+   - regravar o ESP com a **1.13.0** e instalar o APK novo;
    - **teste da queda de energia** — vale por três de uma vez: mede o tempo real
      até o push de "sem comunicação", confirma que o alvo volta do NVS (e não
      nos 76 °F padrão) e fecha o ciclo com o aviso de retorno;
    - **teste do som de incêndio de madrugada**: volume de notificação baixo,
      volume de alarme alto, tela trancada. É essa combinação que a mudança do
-     canal ataca.
+     canal ataca;
+   - **modo de configuração num celular de verdade** (portal cativo e IP fixo
+     nunca foram abertos fora do código);
+   - **hold de 3 s no botão do buzzer** (v1.13.0) e o efeito no app pelo LWW;
+   - **cenário da ponte**: aparelho com energia e a internet da propriedade
+     caída, celular no 4G — não deve nascer o falso "sem comunicação".
 2. **Escrita do TCC** e seção de resultados (números dos testes acima).
-3. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
+3. **Provisionamento** (`CONFIGURACAO_ESP32.md`) — a maior pendência de
+   software. Parte 1: botão "Cadastrar esta estufa" levando o nome mDNS ao
+   formulário (metade pronta, a tela já lê e mostra o nome). Parte 2: chave
+   gerada pelo aparelho, revelada só no modo de configuração (presença física) e
+   propagada por TOFU — muda o servidor de chave global para chave por aparelho.
+4. **Decisão em aberto:** limiar de incêndio (175 °F) — subir o valor ou trocar
+   por **velocidade de subida**. Ver `AMBIENTE_ESTUFA.md` §3.
+5. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
    fio em pino errado de regulador queimado. Não bloqueia o TCC — um aparelho
    basta.
 
