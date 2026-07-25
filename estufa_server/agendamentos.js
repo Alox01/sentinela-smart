@@ -25,14 +25,25 @@ function estaDevido(agendamento, agoraMs) {
 }
 
 /// Traduz o agendamento no comando que vai para o aparelho, resolvendo o valor
-/// relativo (`+10`) contra o alvo VIGENTE no momento de aplicar - e por isso que
-/// isso acontece aqui, e nao na hora de agendar: entre criar e vencer, o produtor
-/// pode ter mexido no alvo na estufa, e o "+10" dele significa "10 a mais do que
-/// estiver", nao "10 a mais do que estava ontem".
+/// relativo (`+10`) contra o ajuste VIGENTE no momento de aplicar - e por isso
+/// que isso acontece aqui, e nao na hora de agendar: entre criar e vencer, o
+/// produtor pode ter mexido no ajuste na estufa, e o "+10" dele significa "10 a
+/// mais do que estiver", nao "10 a mais do que estava ontem".
 ///
-/// Devolve null quando nao ha nada aplicavel (ex.: relativo sem alvo conhecido).
+/// Devolve null quando nao ha nada aplicavel (ex.: relativo sem ajuste
+/// conhecido).
 function resolverComando(agendamento, configAtual, agoraMs) {
   const comando = {};
+
+  // O carimbo do LWW e a HORA AGENDADA, nao a hora em que este codigo rodou.
+  // Um agendamento pode vencer atrasado (servidor fora do ar, por exemplo), e
+  // carimbar com "agora" faria ele ganhar de um ajuste que o produtor tenha
+  // feito a mao nesse meio tempo - desfazendo, sem aviso, uma decisao mais
+  // recente que a dele. Com a hora agendada, o LWW resolve isso sozinho: o que
+  // for mais novo vence, e o atrasado perde se ja houve algo depois.
+  const quandoValido = Number.isFinite(Number(agendamento?.aplicarEmMs)) &&
+    Number(agendamento.aplicarEmMs) > 0;
+  const carimbo = quandoValido ? Number(agendamento.aplicarEmMs) : agoraMs;
 
   const alvoTemp = Number(configAtual?.temperaturaMeta);
   const alvoUmid = Number(configAtual?.umidadeMeta);
@@ -64,14 +75,14 @@ function resolverComando(agendamento, configAtual, agoraMs) {
       LIMITE_TEMPERATURA_MAX,
       Math.max(LIMITE_TEMPERATURA_MIN, Math.round(comando.temperaturaMeta)),
     );
-    comando.tempTimestamp = agoraMs;
+    comando.tempTimestamp = carimbo;
   }
   if (comando.umidadeMeta !== undefined) {
     comando.umidadeMeta = Math.min(
       LIMITE_UMIDADE_MAX,
       Math.max(LIMITE_UMIDADE_MIN, Math.round(comando.umidadeMeta)),
     );
-    comando.umidTimestamp = agoraMs;
+    comando.umidTimestamp = carimbo;
   }
 
   return comando;

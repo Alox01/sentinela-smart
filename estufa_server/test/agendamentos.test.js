@@ -94,6 +94,42 @@ describe('resolverComando', () => {
     assert.equal(resolverComando({}, { temperaturaMeta: 100 }, AGORA), null);
   });
 
+  // O carimbo do LWW e a hora AGENDADA, nao a hora em que rodou. Um
+  // agendamento que vence atrasado (servidor fora do ar) nao pode ganhar de um
+  // ajuste que o produtor fez a mao nesse meio tempo.
+  it('carimba com a hora agendada, nao com a hora de aplicar', () => {
+    const agendado = AGORA - 3 * 60 * 60 * 1000; // venceu 3h atras
+    const comando = resolverComando(
+      { aplicarEmMs: agendado, temperaturaMeta: 130 },
+      { temperaturaMeta: 100 },
+      AGORA,
+    );
+    assert.equal(comando.tempTimestamp, agendado);
+    assert.notEqual(comando.tempTimestamp, AGORA);
+  });
+
+  it('um ajuste manual posterior vence o agendamento atrasado', () => {
+    const agendado = AGORA - 3 * 60 * 60 * 1000;
+    const manualDepois = AGORA - 60 * 60 * 1000; // produtor mexeu 2h depois
+    const comando = resolverComando(
+      { aplicarEmMs: agendado, temperaturaMeta: 130 },
+      { temperaturaMeta: 140 },
+      AGORA,
+    );
+    // Quem decide e o aparelho, comparando timestamps: o do agendamento e mais
+    // antigo, entao o valor manual permanece.
+    assert.ok(comando.tempTimestamp < manualDepois);
+  });
+
+  it('sem hora agendada valida, cai para o instante atual', () => {
+    const comando = resolverComando(
+      { temperaturaMeta: 120 },
+      { temperaturaMeta: 100 },
+      AGORA,
+    );
+    assert.equal(comando.tempTimestamp, AGORA);
+  });
+
   it('temperatura e umidade juntas no mesmo comando', () => {
     const comando = resolverComando(
       { temperaturaMeta: 120, umidadeDelta: -10 },

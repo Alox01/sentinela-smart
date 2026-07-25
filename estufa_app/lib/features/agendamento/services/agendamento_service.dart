@@ -72,9 +72,18 @@ class AgendamentoService extends ChangeNotifier {
     final futuros = _agendamentos
         .where((a) => a.quando.isAfter(agora))
         .toList();
+    // Venceu sem nunca ter sido registrado na nuvem: o ajuste NAO foi aplicado e
+    // nao sera - tarde demais para valer. Sair da lista em silencio deixaria o
+    // produtor achando que aconteceu, entao ele e avisado antes de o item sumir.
+    final perdidos = _agendamentos
+        .where((a) => !a.quando.isAfter(agora) && !a.registradoNaNuvem)
+        .toList();
     if (futuros.length != _agendamentos.length) {
       _agendamentos = futuros;
       await _persistir();
+    }
+    for (final perdido in perdidos) {
+      await _avisarNaoAplicado(perdido);
     }
 
     for (final agendamento in _agendamentos) {
@@ -270,6 +279,37 @@ class AgendamentoService extends ChangeNotifier {
       } catch (erro2) {
         debugPrint('Nao foi possivel agendar o aviso: $erro2');
       }
+    }
+  }
+
+  /// Avisa que o ajuste agendado nao chegou a ser registrado e ja passou da
+  /// hora. Aparece na abertura do app, que e quando o app descobre.
+  Future<void> _avisarNaoAplicado(AgendamentoAjuste agendamento) async {
+    if (!_suportado) return;
+    final android = _notificacoes
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android?.createNotificationChannel(canal);
+    try {
+      await _notificacoes.show(
+        id: agendamento.idLocal,
+        title: 'Ajuste não aplicado — ${agendamento.nomeEstufa}',
+        body:
+            'O celular estava sem internet e não deu tempo de registrar '
+            '${agendamento.descricao}. Confira o ajuste na estufa.',
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            canal.id,
+            canal.name,
+            channelDescription: canal.description,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    } catch (erro) {
+      debugPrint('Nao foi possivel avisar sobre o agendamento perdido: $erro');
     }
   }
 
