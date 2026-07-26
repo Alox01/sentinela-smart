@@ -54,6 +54,18 @@ vencido entra na mesma caixa de comandos de um ajuste feito à mão.
   registrado, o agendamento é descartado (aplicar "120 °F às 10:30" às 11:15
   passaria por cima de quem já está na fornalha) — e o produtor **é avisado**,
   em vez de o item sumir calado.
+- **O lembrete tem card próprio** nas notificações ("Ajuste agendado"), com os
+  mesmos dois interruptores dos outros eventos. Desligar "Notificar" **não**
+  desliga o agendamento: o ajuste continua sendo aplicado, só o lembrete some.
+  O "Tocar" nasce **desligado** — alarme é para problema, e um lembrete que o
+  próprio produtor marcou não é problema; quem precisa ser acordado às 3h para
+  pôr lenha liga o interruptor.
+- **A tela abre sempre no primeiro atalho** (30 min), e não com uma escolha já
+  feita: é o prazo que menos surpreende se alguém tocar em "Agendar" sem reparar.
+- **O texto do topo separa as duas metades**, porque elas têm exigências
+  diferentes: o aviso chega sem internet nenhuma; a troca do ajuste passa pela
+  nuvem e pode não acontecer se o celular nunca registrar ou o aparelho ficar
+  offline.
 
 ### Comportamento nas falhas
 

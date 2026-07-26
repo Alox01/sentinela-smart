@@ -15,13 +15,21 @@ A rede de segurança física continua sendo a **sirene do próprio aparelho**
 (ESP32/buzuca), que é local e independe da internet e do celular. O push é uma
 camada extra de aviso remoto — conveniência, não substitui o alarme físico.
 
-## Os três eventos a notificar
+## Os eventos a notificar
 
 | Evento | Como a nuvem detecta |
 | --- | --- |
-| **Alarme de processo** (temperatura fora de ±5 °F) | Regra em `logica.js` já roda no ingest de `/leitura`. |
-| **Risco de incêndio / sensor de chama** | Mesmo `analisarEstado` (`riscoIncendio` / `perigoChama`). |
+| **Alarme de temperatura** (fora da faixa do ajuste) | Regra em `logica.js` já roda no ingest de `/leitura`. |
+| **Incêndio** | `perigoChama` — o sensor de chama disparou. |
+| **Temperatura muito elevada** | `riscoIncendio` — passou de 175 °F. |
 | **Sem comunicação** | Ausência de leituras por 5 min (watchdog). Cobre falta de energia **e** queda de internet. |
+| **Ajuste agendado** | Não vem da nuvem: é um alarme local, na hora que o produtor marcou. |
+
+> **Nota (25/07/2026):** o risco de fogo era **um** evento com as duas causas
+> juntas. Foram separados porque são independentes — o produtor pode querer
+> desligar o aviso de uma sem perder o da outra —, e porque cada causa tem a
+> sua própria borda: a temperatura passar do limite avisa mesmo que o sensor de
+> chama já tivesse disparado antes.
 
 ### Por que não existe um evento separado de "falta de energia"
 
@@ -102,8 +110,10 @@ evento tem **dois interruptores independentes**:
 
 | Evento | Notificar (mensagem) | Tocar / vibrar |
 | --- | --- | --- |
-| Alarme de processo (temperatura) | on/off | on/off |
-| Incêndio / sensor de chama | on/off | on/off |
+| Alarme de temperatura | on/off | on/off |
+| Incêndio (sensor de chama) | on/off | on/off |
+| Temperatura muito elevada (>175 °F) | on/off | on/off |
+| Ajuste agendado (lembrete local) | on/off | on/off, **nasce off** |
 | Sem comunicação (luz ou internet) | on/off | on/off |
 
 ### O que cada interruptor faz (25/07/2026)
@@ -133,9 +143,11 @@ produtor teria de sair da cama:
 | Evento | Toca como alarme |
 |---|---|
 | Incêndio | sim |
+| Temperatura muito elevada | sim |
 | Temperatura fora da faixa | sim |
 | Sem comunicação (o aparelho parou) | sim |
 | "Voltou a se comunicar" | **não** — acordar alguém para dizer que está tudo bem é o oposto do útil |
+| Ajuste agendado | **não por padrão** — alarme é para problema, e um lembrete que o próprio produtor marcou não é problema. Quem precisa ser acordado às 3h para pôr lenha liga o interruptor. |
 
 **Um canal do Android por assunto**, e não um só: assim o produtor silencia o
 que quiser nas configurações do sistema sem levar os outros junto. Isso corrigiu

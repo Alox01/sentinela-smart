@@ -114,10 +114,14 @@ confirmado em campo** (chegou no celular com o app fechado)
   perturbe". Ver `NOTIFICACOES_PUSH.md`.
 - **Dois interruptores com sentido próprio:** "Notificar" manda ou não a
   mensagem (o bipe comum é do celular, como em qualquer app); "Tocar" decide se
-  ela chega como **alarme**. Três eventos acordam quando "Tocar" está ligado —
-  incêndio, temperatura fora da faixa e aparelho sem comunicação —, cada um em
-  **canal próprio** do Android, para o produtor silenciar um sem perder os
-  outros. O "voltou a se comunicar" nunca acorda.
+  ela chega como **alarme**. Quatro eventos acordam quando "Tocar" está ligado —
+  incêndio, temperatura muito elevada, temperatura fora da faixa e aparelho sem
+  comunicação —, cada um em **canal próprio** do Android, para o produtor
+  silenciar um sem perder os outros. O "voltou a se comunicar" nunca acorda.
+- **Cinco eventos:** o risco de fogo virou **dois** (sensor de chama × >175 °F),
+  porque as causas são independentes e cada uma tem a sua própria borda; e o
+  lembrete de ajuste agendado ganhou card próprio, com o toque **desligado por
+  padrão** (alarme é para problema, e um lembrete que o produtor marcou não é).
 - **Segredos:** `google-services.json` em `estufa_app/android/app/`
   (gitignored); o **service-account nunca entra no Git nem no chat** — é env var
   no Render.
@@ -156,6 +160,7 @@ validação em campo e a escrita.
    - **cenário da ponte**: aparelho com energia e a internet da propriedade
      caída, celular no 4G — não deve nascer o falso "sem comunicação".
 2. **Escrita do TCC** e seção de resultados (números dos testes acima).
+   Ordem sugerida do trabalho daqui em diante: `PLANO_POS_TESTES.md`.
 3. **Provisionamento** (`CONFIGURACAO_ESP32.md`) — a maior pendência de
    software. Parte 1: botão "Cadastrar esta estufa" levando o nome mDNS ao
    formulário (metade pronta, a tela já lê e mostra o nome). Parte 2: chave
@@ -215,7 +220,7 @@ flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.on
 
 - Servidor: `cd estufa_server && npm test` · App: `cd estufa_app && flutter analyze lib test && flutter test` · Firmware: compilar no Arduino IDE / arduino-cli (core esp32 3.2.0).
 - Deploy no ar: `GET https://estufa-server.onrender.com/versao` → commit atual.
-- Em 25/07/2026: **157 testes no servidor**, **56 no app**, analyze limpo,
+- Em 25/07/2026: **160 testes no servidor**, **57 no app**, analyze limpo,
   firmware 1.13.0 compilando em 86% do flash.
 - Testar alarme sem esperar acontecer: `POST /push/verificar-silencio` (roda o
   watchdog na hora) e `POST /agendamentos/verificar` (aplica o que venceu).
