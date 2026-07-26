@@ -9,6 +9,7 @@ class LeituraAparelhoCard extends StatelessWidget {
   final double temperaturaAjuste;
   final double umidadeAjuste;
   final bool sireneLigada;
+
   /// Veredito do APARELHO sobre a temperatura: 'alta', 'baixa' ou 'ok'. O app
   /// nao recalcula - a borda e a fonte da verdade, e assim a sirene e o LED
   /// nunca aparecem em desacordo na tela.
@@ -113,12 +114,8 @@ class LeituraAparelhoCard extends StatelessWidget {
                       titulo: 'UMIDADE',
                       icone: Icons.water_drop,
                       corIcone: Colors.lightBlueAccent,
-                      alta:
-                          umidade >
-                          umidadeAjuste + _limiarLed(folgaUmidade),
-                      baixa:
-                          umidade <
-                          umidadeAjuste - _limiarLed(folgaUmidade),
+                      alta: umidade > umidadeAjuste + _limiarLed(folgaUmidade),
+                      baixa: umidade < umidadeAjuste - _limiarLed(folgaUmidade),
                     ),
                   ),
                 ],

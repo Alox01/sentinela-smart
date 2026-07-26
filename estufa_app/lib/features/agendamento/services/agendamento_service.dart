@@ -9,6 +9,8 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../services/isar_service.dart';
+import '../../notificacoes/models/preferencias_notificacao.dart';
+import '../../notificacoes/services/preferencias_notificacao_service.dart';
 import '../models/agendamento_ajuste.dart';
 
 /// Agendamento de ajuste, com o trabalho dividido entre celular e nuvem porque
@@ -35,6 +37,28 @@ class AgendamentoService extends ChangeNotifier {
     description: 'Lembretes de ajuste marcados pelo produtor.',
     importance: Importance.high,
   );
+
+  /// Mesmo lembrete, mas tocando como alarme — para quem liga "Tocar" no evento
+  /// "Ajuste agendado". Nasce desligado: alarme e para problema, e um lembrete
+  /// que o proprio produtor marcou nao e problema. Quem precisa ser acordado as
+  /// 3h para por lenha liga o interruptor.
+  static const AndroidNotificationChannel canalComAlarme =
+      AndroidNotificationChannel(
+        'sentinela_agendamentos_alarme_v1',
+        'Ajustes agendados (alarme)',
+        description:
+            'Lembretes de ajuste que tocam como alarme, em volume alto.',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('alarme_estufa'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        enableVibration: true,
+      );
+
+  static OpcaoEvento get _preferencia => PreferenciasNotificacaoService
+      .instance
+      .preferencias
+      .opcao(EventoNotificacao.ajusteAgendado);
 
   static final AgendamentoService instance = AgendamentoService._();
   AgendamentoService._();
@@ -224,13 +248,17 @@ class AgendamentoService extends ChangeNotifier {
   Future<void> _agendarAvisoLocal(AgendamentoAjuste agendamento) async {
     if (!_suportado) return;
     if (!agendamento.quando.isAfter(DateTime.now())) return;
+    // O produtor desligou o aviso deste evento: o ajuste continua sendo
+    // agendado na nuvem, so o lembrete nao aparece.
+    if (!_preferencia.notificar) return;
 
     await _prepararFuso();
     final android = _notificacoes
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    await android?.createNotificationChannel(canal);
+    final canalUsado = _preferencia.tocarVibrar ? canalComAlarme : canal;
+    await android?.createNotificationChannel(canalUsado);
 
     try {
       await _notificacoes.zonedSchedule(
@@ -243,11 +271,13 @@ class AgendamentoService extends ChangeNotifier {
         scheduledDate: tz.TZDateTime.from(agendamento.quando, tz.UTC),
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            canal.id,
-            canal.name,
-            channelDescription: canal.description,
-            importance: Importance.high,
+            canalUsado.id,
+            canalUsado.name,
+            channelDescription: canalUsado.description,
+            importance: canalUsado.importance,
             priority: Priority.high,
+            sound: canalUsado.sound,
+            audioAttributesUsage: canalUsado.audioAttributesUsage,
           ),
         ),
         // Atravessa o repouso do Android. Sem isto o aviso pode atrasar bastante,
@@ -267,11 +297,13 @@ class AgendamentoService extends ChangeNotifier {
           scheduledDate: tz.TZDateTime.from(agendamento.quando, tz.UTC),
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
-              canal.id,
-              canal.name,
-              channelDescription: canal.description,
-              importance: Importance.high,
+              canalUsado.id,
+              canalUsado.name,
+              channelDescription: canalUsado.description,
+              importance: canalUsado.importance,
               priority: Priority.high,
+              sound: canalUsado.sound,
+              audioAttributesUsage: canalUsado.audioAttributesUsage,
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -290,6 +322,8 @@ class AgendamentoService extends ChangeNotifier {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
+    // Sempre no canal comum, sem alarme: e a noticia de que algo NAO aconteceu,
+    // e chega quando o produtor abre o app - nao ha ninguem para acordar.
     await android?.createNotificationChannel(canal);
     try {
       await _notificacoes.show(

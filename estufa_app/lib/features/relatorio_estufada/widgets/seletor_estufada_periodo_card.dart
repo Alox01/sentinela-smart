@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/ciclo_secagem_entity.dart';
@@ -267,7 +267,9 @@ class _EstufadaExpansivelItem extends StatelessWidget {
                 : Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: selecionada ? destaque.withValues(alpha: 0.5) : Colors.white10,
+              color: selecionada
+                  ? destaque.withValues(alpha: 0.5)
+                  : Colors.white10,
             ),
           ),
           child: Row(

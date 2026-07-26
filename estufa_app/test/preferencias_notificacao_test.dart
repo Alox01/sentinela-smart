@@ -2,11 +2,24 @@ import 'package:estufa_app/features/notificacoes/models/preferencias_notificacao
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('padrao liga tudo', () {
+  test('padrao avisa de tudo', () {
     final p = PreferenciasNotificacao.padrao();
     for (final e in EventoNotificacao.values) {
-      expect(p.opcao(e).notificar, isTrue);
-      expect(p.opcao(e).tocarVibrar, isTrue);
+      expect(p.opcao(e).notificar, isTrue, reason: e.chave);
+    }
+  });
+
+  // Alarme e para problema. Um lembrete que o proprio produtor marcou nao e
+  // problema, entao nasce como aviso comum - quem quiser ser acordado por ele
+  // liga o interruptor.
+  test('so o ajuste agendado nasce sem tocar como alarme', () {
+    final p = PreferenciasNotificacao.padrao();
+    for (final e in EventoNotificacao.values) {
+      expect(
+        p.opcao(e).tocarVibrar,
+        e != EventoNotificacao.ajusteAgendado,
+        reason: e.chave,
+      );
     }
   });
 
@@ -76,7 +89,7 @@ void main() {
       EventoNotificacao.values.map((e) => e.chave),
       isNot(contains('faltaEnergia')),
     );
-    expect(EventoNotificacao.values, hasLength(4));
+    expect(EventoNotificacao.values, hasLength(5));
   });
 
   test('preferencia antiga com faltaEnergia continua carregando', () {

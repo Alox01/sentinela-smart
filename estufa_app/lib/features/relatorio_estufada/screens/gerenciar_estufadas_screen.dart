@@ -96,7 +96,10 @@ class _GerenciarEstufadasScreenState extends State<GerenciarEstufadasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Apagar', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Apagar',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),

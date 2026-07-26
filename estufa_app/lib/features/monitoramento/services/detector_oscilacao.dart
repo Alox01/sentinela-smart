@@ -92,7 +92,10 @@ class DetectorOscilacao {
   ) {
     final desvioAntes = (leitura - ajusteAnterior).abs();
     final desvioDepois = (leitura - ajusteNovo).abs();
-    final folga = (desvioDepois - desvioAntes).clamp(0.0, _folgaAcomodacaoMaxima);
+    final folga = (desvioDepois - desvioAntes).clamp(
+      0.0,
+      _folgaAcomodacaoMaxima,
+    );
     // Ajustes seguidos: vale a maior folga enquanto a janela ainda estiver
     // aberta, senao um toque de 1 grau anularia a folga de um salto grande.
     estado.folgaAcomodacao = nowMs < estado.acomodacaoAteMs
