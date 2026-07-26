@@ -42,7 +42,10 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
   // Quanto tempo a partir de agora. Atalhos em vez de seletor de hora: o
   // produtor pensa em "daqui duas horas", nao em "as 16h13".
   static const List<int> _minutosAtalho = [30, 60, 120, 180, 360, 720];
-  int _minutos = 120;
+  // Comeca sempre no primeiro atalho: a tela abre no mesmo estado toda vez, e o
+  // menor prazo e o que menos surpreende se o produtor tocar em "Agendar" sem
+  // reparar. Ligado a lista para nao desencontrar se os atalhos mudarem.
+  int _minutos = _minutosAtalho.first;
 
   // So valor absoluto: "deixe em 120 F". A variacao relativa existiu aqui e saiu
   // por ser um segundo jeito de dizer a mesma coisa, com a desvantagem de o
