@@ -656,11 +656,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             ListTile(
               leading: const Icon(Icons.restart_alt, color: Colors.white70),
               title: const Text(
-                'Preparar nova estufada',
+                'Reiniciar ajustes do aparelho',
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: Text(
-                'Ajusta para ${_tempNovaEstufada.toStringAsFixed(0)}°F e '
+                'Reinicia os valores de temperatura e umidade para '
+                '${_tempNovaEstufada.toStringAsFixed(0)}°F e '
                 '${_umidNovaEstufada.toStringAsFixed(0)}%',
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
@@ -842,13 +843,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         title: const Text(
-          'Preparar nova estufada',
+          'Reiniciar ajustes do aparelho',
           style: TextStyle(color: Colors.white),
         ),
         content: Text(
-          'Ajustar para ${_tempNovaEstufada.toStringAsFixed(0)}°F e '
-          '${_umidNovaEstufada.toStringAsFixed(0)}% para iniciar uma nova '
-          'estufada?',
+          'Reinicia os valores de temperatura e umidade para '
+          '${_tempNovaEstufada.toStringAsFixed(0)}°F e '
+          '${_umidNovaEstufada.toStringAsFixed(0)}%. Deseja continuar?',
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -858,7 +859,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Ajustar'),
+            child: const Text('Reiniciar'),
           ),
         ],
       ),
