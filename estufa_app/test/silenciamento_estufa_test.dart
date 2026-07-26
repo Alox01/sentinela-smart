@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// aqui porque a de la depende de Firebase e de rede.
 Map<String, dynamic> prefsParaEstufaSilenciada(PreferenciasNotificacao global) {
   final base = global.toJson();
-  const sempreAvisam = {'incendio', 'semComunicacao'};
+  const sempreAvisam = {'incendio', 'temperaturaMuitoAlta', 'semComunicacao'};
   for (final chave in base.keys.toList()) {
     if (!sempreAvisam.contains(chave)) {
       base[chave] = {'notificar': false, 'tocarVibrar': false};
@@ -24,9 +24,10 @@ bool notifica(Map<String, dynamic> prefs, EventoNotificacao evento) =>
 
 void main() {
   group('estufa silenciada', () {
-    test('mantem incendio e sem comunicacao quando o global os permite', () {
+    test('mantem os avisos de risco quando o global os permite', () {
       final prefs = prefsParaEstufaSilenciada(PreferenciasNotificacao.padrao());
       expect(notifica(prefs, EventoNotificacao.incendio), isTrue);
+      expect(notifica(prefs, EventoNotificacao.temperaturaMuitoAlta), isTrue);
       expect(notifica(prefs, EventoNotificacao.semComunicacao), isTrue);
     });
 

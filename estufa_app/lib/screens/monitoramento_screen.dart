@@ -511,7 +511,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   /// prometer um aviso que nao vira.
   String _legendaSilenciarAvisos() {
     final prefs = PreferenciasNotificacaoService.instance.preferencias;
-    final fogo = prefs.opcao(EventoNotificacao.incendio).notificar;
+    // Os dois avisos de risco de fogo (chama no sensor e temperatura acima do
+    // limite) contam como um so aqui: a legenda diz o que o produtor precisa
+    // saber - se sobra algum aviso de fogo -, sem virar uma lista.
+    final fogo =
+        prefs.opcao(EventoNotificacao.incendio).notificar ||
+        prefs.opcao(EventoNotificacao.temperaturaMuitoAlta).notificar;
     final semComunicacao = prefs
         .opcao(EventoNotificacao.semComunicacao)
         .notificar;

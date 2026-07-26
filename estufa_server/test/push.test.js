@@ -6,6 +6,7 @@ const {
   CANAL_CRITICO,
   CANAL_SEM_COMUNICACAO,
   CANAL_TEMPERATURA,
+  CANAL_TEMP_MUITO_ALTA,
   acordaDeMadrugada,
   canalDoEvento,
   criarEnviadorPush,
@@ -198,6 +199,17 @@ describe('canal do evento', () => {
   // madrugada sem nenhum erro aparecer.
   it('incendio vai no canal critico', () => {
     assert.equal(canalDoEvento('incendio', true), CANAL_CRITICO);
+  });
+
+  // Duas causas de risco de fogo, dois canais: o produtor pode querer desligar
+  // o aviso de uma sem perder o da outra.
+  it('temperatura muito elevada tem canal proprio, nao o do incendio', () => {
+    assert.equal(
+      canalDoEvento('temperaturaMuitoAlta', true),
+      CANAL_TEMP_MUITO_ALTA,
+    );
+    assert.notEqual(canalDoEvento('temperaturaMuitoAlta', true), CANAL_CRITICO);
+    assert.equal(acordaDeMadrugada('temperaturaMuitoAlta', true), true);
   });
 
   it('temperatura fora da faixa tem canal proprio, nao o do incendio', () => {

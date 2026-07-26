@@ -26,10 +26,16 @@ const CANAL_TEMPERATURA = 'sentinela_temperatura_v1';
 // conseguia silenciar um sem perder o outro.
 const CANAL_SEM_COMUNICACAO = 'sentinela_sem_comunicacao_v1';
 
+// Temperatura acima do limite de incendio (175 F). Evento separado do sensor de
+// chama porque as causas sao independentes: o produtor pode querer desligar o
+// aviso de uma sem perder o da outra.
+const CANAL_TEMP_MUITO_ALTA = 'sentinela_temp_muito_alta_v1';
+
 // Um aviso por assunto: assim o produtor silencia o que quiser nas
 // configuracoes do Android sem levar os outros junto.
 const CANAIS_QUE_ACORDAM = {
   incendio: CANAL_CRITICO,
+  temperaturaMuitoAlta: CANAL_TEMP_MUITO_ALTA,
   alarmeProcesso: CANAL_TEMPERATURA,
   semComunicacao: CANAL_SEM_COMUNICACAO,
 };
@@ -199,6 +205,7 @@ module.exports = {
   CANAL_CRITICO,
   CANAL_SEM_COMUNICACAO,
   CANAL_TEMPERATURA,
+  CANAL_TEMP_MUITO_ALTA,
   acordaDeMadrugada,
   canalDoEvento,
   criarEnviadorPush,

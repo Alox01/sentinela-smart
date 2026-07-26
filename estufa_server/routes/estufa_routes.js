@@ -144,21 +144,46 @@ function createEstufaRouter({
     const alarme = status.alarmeAtivo === true;
 
     const anterior = ultimoEstadoNotificado.get(idHardware) || {};
-    ultimoEstadoNotificado.set(idHardware, { fogo, alarme });
+    ultimoEstadoNotificado.set(idHardware, {
+      fogo,
+      alarme,
+      fogoSensor,
+      tempMuitoAlta,
+    });
 
-    if (fogo && !anterior.fogo) {
-      // Diz qual das duas causas disparou: chama no sensor ou temperatura muito
-      // elevada. O mesmo evento/canal dos dois casos - so o corpo muda.
-      const causa = fogoSensor
-        ? 'O sensor de incêndio detectou chama'
-        : tempMuitoAlta
-          ? 'A temperatura está muito elevada'
-          : 'Indício de incêndio';
+    // Duas causas, dois eventos: chama no sensor e temperatura de incendio sao
+    // independentes, e o produtor pode querer desligar um sem perder o outro.
+    // Cada um tem a sua propria borda, entao a temperatura subir depois de o
+    // sensor ja ter disparado ainda avisa.
+    if (fogoSensor && !anterior.fogoSensor) {
       await notificarEvento({
         idHardware,
         evento: 'incendio',
         titulo: 'Risco de incêndio',
-        corpo: `${causa}. Verifique agora.`,
+        corpo: 'O sensor de incêndio detectou chama. Verifique agora.',
+        critico: true,
+      });
+    }
+    if (tempMuitoAlta && !anterior.tempMuitoAlta) {
+      await notificarEvento({
+        idHardware,
+        evento: 'temperaturaMuitoAlta',
+        titulo: 'Temperatura muito elevada',
+        corpo:
+          'A temperatura passou do limite de risco de incêndio. ' +
+          'Verifique agora.',
+        critico: true,
+      });
+    }
+    // O aparelho pode reportar risco de fogo sem dizer qual causa (campo
+    // agregado). Nesse caso o aviso sai como incendio, que e o mais grave dos
+    // dois - calar seria pior.
+    if (fogo && !anterior.fogo && !fogoSensor && !tempMuitoAlta) {
+      await notificarEvento({
+        idHardware,
+        evento: 'incendio',
+        titulo: 'Risco de incêndio',
+        corpo: 'Indício de incêndio. Verifique agora.',
         critico: true,
       });
     }

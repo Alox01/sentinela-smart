@@ -54,9 +54,16 @@ void main() {
     );
   });
 
-  test('incendio e o unico marcado como critico', () {
+  // Os dois avisos de risco de fogo sao criticos: chama no sensor e temperatura
+  // acima do limite de incendio. Eventos separados porque as causas sao
+  // independentes e o produtor pode querer desligar um sem perder o outro.
+  test('so os avisos de risco de fogo sao criticos', () {
+    const criticos = {
+      EventoNotificacao.incendio,
+      EventoNotificacao.temperaturaMuitoAlta,
+    };
     for (final e in EventoNotificacao.values) {
-      expect(e.critico, e == EventoNotificacao.incendio, reason: e.chave);
+      expect(e.critico, criticos.contains(e), reason: e.chave);
     }
   });
 
@@ -69,7 +76,7 @@ void main() {
       EventoNotificacao.values.map((e) => e.chave),
       isNot(contains('faltaEnergia')),
     );
-    expect(EventoNotificacao.values, hasLength(3));
+    expect(EventoNotificacao.values, hasLength(4));
   });
 
   test('preferencia antiga com faltaEnergia continua carregando', () {

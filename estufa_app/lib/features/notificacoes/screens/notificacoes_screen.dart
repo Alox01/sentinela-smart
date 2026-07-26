@@ -260,9 +260,9 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             ),
             const SizedBox(height: 2),
             const Text(
-              'Liga e desliga a sirene do alarme de temperatura em todas as '
-              'estufas cadastradas no app. A sirene de aviso de incêndio ainda '
-              'continua ligada.',
+              'Liga e desliga a sirene do alarme de temperatura em todos os '
+              'aparelhos cadastrados no app. A sirene de aviso de incêndio '
+              'ainda continua ligada.',
               style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
             SwitchListTile(
@@ -418,7 +418,7 @@ class _CartaoEvento extends StatelessWidget {
             // vibracao comuns - esses seguem a configuracao do celular. Este
             // interruptor faz outra coisa: decide se o aviso toca como ALARME.
             subtitle: const Text(
-              'Toca como alarme, para acordar',
+              'Toca como alarme de aviso',
               style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
             // So faz sentido tocar se for notificar.

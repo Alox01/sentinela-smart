@@ -611,7 +611,7 @@ test('POST /push/dispositivos exige token e idHardware', async () => {
   assert.equal(semToken.status, 400);
 });
 
-test('incendio dispara push uma vez, na borda', async () => {
+test('temperatura de incendio dispara push uma vez, na borda', async () => {
   const db = dbPushFalso();
   const push = pushEspiao();
   const app = criarAppComPush({ db, push });
@@ -631,13 +631,74 @@ test('incendio dispara push uma vez, na borda', async () => {
   await postLeitura(app, leituraComFogo);
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(push.enviados.length, 1);
-  assert.equal(push.enviados[0].evento, 'incendio');
+  // `riscoIncendio` e a temperatura acima do limite, nao o sensor de chama:
+  // sao eventos separados para o produtor poder desligar um sem perder o outro.
+  assert.equal(push.enviados[0].evento, 'temperaturaMuitoAlta');
   assert.equal(push.enviados[0].critico, true);
 
   // Enquanto o fogo continua, nao repete o aviso a cada leitura.
   await postLeitura(app, leituraComFogo);
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(push.enviados.length, 1);
+});
+
+test('sensor de chama dispara o evento de incendio', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tokenPush: 'tok-1', idHardware: 'ESP32_CAMPO_01' }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 130,
+    umidadeAtual: 40,
+    perigoChama: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(push.enviados.length, 1);
+  assert.equal(push.enviados[0].evento, 'incendio');
+});
+
+// Cada causa tem a sua propria borda: a temperatura subir depois de o sensor ja
+// ter disparado ainda avisa, em vez de ficar escondida atras do primeiro aviso.
+test('as duas causas de fogo avisam separadamente', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tokenPush: 'tok-1', idHardware: 'ESP32_CAMPO_01' }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 130,
+    umidadeAtual: 40,
+    perigoChama: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 200,
+    umidadeAtual: 40,
+    perigoChama: true,
+    riscoIncendio: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados.length, 2);
+  assert.deepEqual(
+    push.enviados.map((e) => e.evento),
+    ['incendio', 'temperaturaMuitoAlta'],
+  );
 });
 
 test('evento silenciado nas preferencias nao vira push', async () => {
@@ -651,7 +712,9 @@ test('evento silenciado nas preferencias nao vira push', async () => {
     body: JSON.stringify({
       tokenPush: 'tok-1',
       idHardware: 'ESP32_CAMPO_01',
-      preferencias: { incendio: { notificar: false, tocarVibrar: false } },
+      preferencias: {
+        temperaturaMuitoAlta: { notificar: false, tocarVibrar: false },
+      },
     }),
   });
 

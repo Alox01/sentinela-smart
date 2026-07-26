@@ -53,6 +53,30 @@ class PushNotificationService {
         importance: Importance.high,
       );
 
+  /// Temperatura acima do limite de incendio (175 °F). Evento separado do sensor
+  /// de chama porque as causas sao independentes - o produtor pode querer
+  /// desligar o aviso de uma sem perder o da outra. Toca como alarme, igual ao
+  /// fogo.
+  /// **Tem que casar com `CANAL_TEMP_MUITO_ALTA` em `estufa_server/push.js`.**
+  static const String canalTempMuitoAltaId = 'sentinela_temp_muito_alta_v1';
+
+  static AndroidNotificationChannel _canalTempMuitoAltaCom({
+    required bool furarNaoPerturbe,
+  }) => AndroidNotificationChannel(
+    canalTempMuitoAltaId,
+    'Temperatura muito elevada',
+    description:
+        'Toca como alarme quando a temperatura passa do limite de risco '
+        'de incêndio.',
+    importance: Importance.max,
+    playSound: true,
+    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList([0, 1000, 400, 1000, 400, 1000]),
+    bypassDnd: furarNaoPerturbe,
+  );
+
   /// Aparelho mudo tira da cama: as 3h da manha pode ser queda de energia
   /// com a estufada em andamento. Antes este aviso ia no canal do INCENDIO
   /// (o watchdog o marca como critico) - acordava, mas aparecia como "Incendio"
@@ -212,6 +236,9 @@ class PushNotificationService {
     await android?.createNotificationChannel(
       _canalSemComunicacaoCom(furarNaoPerturbe: podeFurarNaoPerturbe),
     );
+    await android?.createNotificationChannel(
+      _canalTempMuitoAltaCom(furarNaoPerturbe: podeFurarNaoPerturbe),
+    );
   }
 
   /// Se o canal de incêndio já pode tocar com o aparelho em "Não perturbe".
@@ -344,7 +371,13 @@ class PushNotificationService {
   Map<String, dynamic> _prefsParaDispositivo(String idHardware) {
     final base = PreferenciasNotificacaoService.instance.preferencias.toJson();
     if (SilenciamentoEstufas.instance.silenciada(idHardware)) {
-      const sempreAvisam = {'incendio', 'semComunicacao'};
+      // Os dois avisos de risco de fogo e o de aparelho mudo atravessam o
+      // silenciamento: sao os que valem uma ida a estufa mesmo de madrugada.
+      const sempreAvisam = {
+        'incendio',
+        'temperaturaMuitoAlta',
+        'semComunicacao',
+      };
       for (final chave in base.keys.toList()) {
         if (!sempreAvisam.contains(chave)) {
           base[chave] = {'notificar': false, 'tocarVibrar': false};
@@ -401,6 +434,16 @@ class PushNotificationService {
     };
   }
 
+  /// Canal de alarme de cada evento. Espelha `CANAIS_QUE_ACORDAM` do servidor —
+  /// se os dois divergirem, o Android entrega no canal padrao e o alerta perde o
+  /// som de alarme sem erro nenhum aparecer.
+  static String _canalDoEvento(EventoNotificacao evento) => switch (evento) {
+    EventoNotificacao.incendio => canalCriticoId,
+    EventoNotificacao.temperaturaMuitoAlta => canalTempMuitoAltaId,
+    EventoNotificacao.alarmeProcesso => canalTemperaturaId,
+    EventoNotificacao.semComunicacao => canalSemComunicacaoId,
+  };
+
   Future<void> _mostrarMensagemEmPrimeiroPlano(RemoteMessage mensagem) async {
     final evento = _eventoDaMensagem(mensagem);
     final opcao = PreferenciasNotificacaoService.instance.preferencias.opcao(
@@ -427,13 +470,9 @@ class PushNotificationService {
         (mensagem.data['acorda'] == 'true' ||
             critico ||
             evento == EventoNotificacao.alarmeProcesso);
-    final canalId = !acorda
-        ? _canalAlertas.id
-        : critico
-        ? canalCriticoId
-        : evento == EventoNotificacao.alarmeProcesso
-        ? canalTemperaturaId
-        : canalSemComunicacaoId;
+    // Um canal por assunto, para o produtor silenciar um sem perder os outros
+    // nas configuracoes do Android.
+    final canalId = !acorda ? _canalAlertas.id : _canalDoEvento(evento);
 
     // Com o app aberto quem monta a notificacao e este codigo; com o app
     // fechado quem monta e o Android, so com o que esta no canal. Por isso o
@@ -442,13 +481,7 @@ class PushNotificationService {
     final detalhes = NotificationDetails(
       android: AndroidNotificationDetails(
         canalId,
-        acorda
-            ? (critico
-                  ? 'Incêndio'
-                  : evento == EventoNotificacao.alarmeProcesso
-                  ? 'Temperatura fora da faixa'
-                  : 'Sem comunicação')
-            : _canalAlertas.name,
+        acorda ? evento.titulo : _canalAlertas.name,
         channelDescription: acorda ? null : _canalAlertas.description,
         importance: acorda ? Importance.max : Importance.high,
         priority: acorda ? Priority.max : Priority.high,

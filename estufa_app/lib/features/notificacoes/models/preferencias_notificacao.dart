@@ -10,32 +10,45 @@ import 'dart:convert';
 /// distincao que o sistema nao sabe fazer, e alguem poderia desligar o aviso que
 /// funciona achando que o outro o cobria. `semComunicacao` cobre os dois casos,
 /// e a mensagem assume a duvida.
-enum EventoNotificacao { alarmeProcesso, incendio, semComunicacao }
+enum EventoNotificacao {
+  alarmeProcesso,
+  incendio,
+  temperaturaMuitoAlta,
+  semComunicacao,
+}
 
 extension EventoNotificacaoInfo on EventoNotificacao {
   String get chave => switch (this) {
     EventoNotificacao.alarmeProcesso => 'alarmeProcesso',
     EventoNotificacao.incendio => 'incendio',
+    EventoNotificacao.temperaturaMuitoAlta => 'temperaturaMuitoAlta',
     EventoNotificacao.semComunicacao => 'semComunicacao',
   };
 
   String get titulo => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Alarme de temperatura',
-    EventoNotificacao.incendio => 'Inc\u00eandio / Temperatura muito elevada',
+    EventoNotificacao.incendio => 'Inc\u00eandio',
+    EventoNotificacao.temperaturaMuitoAlta => 'Temperatura muito elevada',
     EventoNotificacao.semComunicacao => 'Sem comunica\u00e7\u00e3o',
   };
 
   String get descricao => switch (this) {
     EventoNotificacao.alarmeProcesso => 'Temperatura fora da faixa do ajuste.',
-    EventoNotificacao.incendio =>
-      'Sensor de inc\u00eandio acionado ou a temperatura est\u00e1 muito '
-          'elevada.',
+    EventoNotificacao.incendio => 'Sensor de inc\u00eandio acionado.',
+    EventoNotificacao.temperaturaMuitoAlta =>
+      'A temperatura passou de 175\u00b0F, o limite de risco de inc\u00eandio.',
     EventoNotificacao.semComunicacao =>
       'O aparelho não está se comunicando, pode ser falta de energia '
           'ou internet (internet caso o app esteja no modo Nuvem).',
   };
 
-  bool get critico => this == EventoNotificacao.incendio;
+  /// Avisos de risco de fogo. Sao dois porque as causas sao independentes -
+  /// chama no sensor e temperatura de incendio - e o produtor pode querer
+  /// desligar um sem perder o outro. Ambos tocam como alarme e pedem
+  /// confirmacao para serem desligados.
+  bool get critico =>
+      this == EventoNotificacao.incendio ||
+      this == EventoNotificacao.temperaturaMuitoAlta;
 }
 
 /// Os dois interruptores de um evento.
