@@ -120,10 +120,20 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
+                // Duas metades com exigencias diferentes, e o produtor precisa
+                // saber qual e qual: o aviso e um alarme do proprio Android
+                // (nao depende de rede), a troca do ajuste passa pela nuvem.
                 const Text(
-                  'O celular avisa na hora marcada, mesmo sem internet, e o '
-                  'ajuste muda sozinho pela nuvem.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  'O aviso no celular chega na hora marcada mesmo sem '
+                  'internet.\n\n'
+                  'Já a troca do ajuste passa pela nuvem: se o celular não '
+                  'conseguir registrar até a hora marcada, ou o aparelho ficar '
+                  'sem internet, o ajuste pode não ser aplicado.',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 _cartaoQuando(),

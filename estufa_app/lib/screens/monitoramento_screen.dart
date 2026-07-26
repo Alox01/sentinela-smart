@@ -634,7 +634,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(
-                'Para uma hora em que você não estará por perto',
+                'Agenda ajustes de temperatura/umidade para um determinado '
+                'tempo',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
