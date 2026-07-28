@@ -3,10 +3,6 @@
          adiciona INTERNET automaticamente em debug/profile). -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Permite que o canal de incendio toque mesmo com o aparelho em "Nao
-         perturbe". Ter a permissao no manifesto nao basta: o produtor precisa
-         liberar o app numa tela do sistema (ver PushNotificationService). -->
-    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <!-- Agendamento de ajuste ("erguer para 120 F as 14h"). O alarme exato e o
          que faz o aviso sair na hora marcada mesmo com o celular em repouso
          (Doze); sem ele o Android agrupa e pode atrasar bastante. USE_EXACT_ALARM

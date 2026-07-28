@@ -60,22 +60,20 @@ class PushNotificationService {
   /// **Tem que casar com `CANAL_TEMP_MUITO_ALTA` em `estufa_server/push.js`.**
   static const String canalTempMuitoAltaId = 'sentinela_temp_muito_alta_v1';
 
-  static AndroidNotificationChannel _canalTempMuitoAltaCom({
-    required bool furarNaoPerturbe,
-  }) => AndroidNotificationChannel(
-    canalTempMuitoAltaId,
-    'Temperatura muito elevada',
-    description:
-        'Toca como alarme quando a temperatura passa do limite de risco '
-        'de incêndio.',
-    importance: Importance.max,
-    playSound: true,
-    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
-    audioAttributesUsage: AudioAttributesUsage.alarm,
-    enableVibration: true,
-    vibrationPattern: Int64List.fromList([0, 1000, 400, 1000, 400, 1000]),
-    bypassDnd: furarNaoPerturbe,
-  );
+  static AndroidNotificationChannel _canalTempMuitoAlta() =>
+      AndroidNotificationChannel(
+        canalTempMuitoAltaId,
+        'Temperatura muito elevada',
+        description:
+            'Toca como alarme quando a temperatura passa do limite de risco '
+            'de incêndio.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 1000, 400, 1000, 400, 1000]),
+      );
 
   /// Aparelho mudo tira da cama: as 3h da manha pode ser queda de energia
   /// com a estufada em andamento. Antes este aviso ia no canal do INCENDIO
@@ -85,31 +83,29 @@ class PushNotificationService {
   /// **Tem que casar com `CANAL_SEM_COMUNICACAO` em `estufa_server/push.js`.**
   static const String canalSemComunicacaoId = 'sentinela_sem_comunicacao_v1';
 
-  static AndroidNotificationChannel _canalSemComunicacaoCom({
-    required bool furarNaoPerturbe,
-  }) => AndroidNotificationChannel(
-    canalSemComunicacaoId,
-    'Sem comunicação',
-    description:
-        'Toca como alarme, em volume alto, quando a estufa para de '
-        'se comunicar.',
-    importance: Importance.max,
-    playSound: true,
-    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
-    audioAttributesUsage: AudioAttributesUsage.alarm,
-    enableVibration: true,
-    vibrationPattern: Int64List.fromList([
-      0,
-      400,
-      200,
-      400,
-      200,
-      400,
-      200,
-      400,
-    ]),
-    bypassDnd: furarNaoPerturbe,
-  );
+  static AndroidNotificationChannel _canalSemComunicacao() =>
+      AndroidNotificationChannel(
+        canalSemComunicacaoId,
+        'Sem comunicação',
+        description:
+            'Toca como alarme, em volume alto, quando a estufa para de '
+            'se comunicar.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([
+          0,
+          400,
+          200,
+          400,
+          200,
+          400,
+          200,
+          400,
+        ]),
+      );
 
   /// Temperatura fora da faixa: toca em volume de **alarme**, como o incendio.
   /// E de madrugada que esse aviso precisa acordar alguem, e o volume de
@@ -126,22 +122,20 @@ class PushNotificationService {
   /// **Tem que casar com `CANAL_TEMPERATURA` em `estufa_server/push.js`.**
   static const String canalTemperaturaId = 'sentinela_temperatura_v1';
 
-  static AndroidNotificationChannel _canalTemperaturaCom({
-    required bool furarNaoPerturbe,
-  }) => AndroidNotificationChannel(
-    canalTemperaturaId,
-    'Temperatura fora da faixa',
-    description:
-        'Toca como alarme, em volume alto, quando a temperatura sai da '
-        'faixa do ajuste.',
-    importance: Importance.max,
-    playSound: true,
-    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
-    audioAttributesUsage: AudioAttributesUsage.alarm,
-    enableVibration: true,
-    vibrationPattern: Int64List.fromList([0, 800, 600, 800, 600, 800]),
-    bypassDnd: furarNaoPerturbe,
-  );
+  static AndroidNotificationChannel _canalTemperatura() =>
+      AndroidNotificationChannel(
+        canalTemperaturaId,
+        'Temperatura fora da faixa',
+        description:
+            'Toca como alarme, em volume alto, quando a temperatura sai da '
+            'faixa do ajuste.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 800, 600, 800, 600, 800]),
+      );
 
   /// O id mudou de `sentinela_critico` para `_v2` de proposito: o Android nao
   /// deixa alterar som nem importancia de um canal ja criado, entao quem ja
@@ -153,22 +147,20 @@ class PushNotificationService {
   /// Som longo e em volume de ALARME (nao de notificacao). Essa distincao e o
   /// ponto principal: o volume de notificacao costuma ficar baixo, enquanto o
   /// de alarme e o que as pessoas mantem alto justamente para acordar.
-  static AndroidNotificationChannel _canalCriticoCom({
-    required bool furarNaoPerturbe,
-  }) => AndroidNotificationChannel(
-    canalCriticoId,
-    'Inc\u00eandio',
-    description:
-        'Toca como alarme, em volume alto, mesmo de madrugada. '
-        'Reservado a inc\u00eandio.',
-    importance: Importance.max,
-    playSound: true,
-    sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
-    audioAttributesUsage: AudioAttributesUsage.alarm,
-    enableVibration: true,
-    vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
-    bypassDnd: furarNaoPerturbe,
-  );
+  static AndroidNotificationChannel _canalCritico() =>
+      AndroidNotificationChannel(
+        canalCriticoId,
+        'Inc\u00eandio',
+        description:
+            'Toca como alarme, em volume alto, mesmo de madrugada. '
+            'Reservado a inc\u00eandio.',
+        importance: Importance.max,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
+      );
 
   final FlutterLocalNotificationsPlugin _notificacoesLocais =
       FlutterLocalNotificationsPlugin();
@@ -223,81 +215,12 @@ class PushNotificationService {
     // `bypassDnd: true` sem a permissao concedida nasce sem o bypass, calado,
     // e o Android nao deixa corrigir depois sem recriar o canal.
     await android?.requestNotificationsPermission();
-    final podeFurarNaoPerturbe =
-        await android?.hasNotificationPolicyAccess() ?? false;
 
     await android?.createNotificationChannel(_canalAlertas);
-    await android?.createNotificationChannel(
-      _canalCriticoCom(furarNaoPerturbe: podeFurarNaoPerturbe),
-    );
-    await android?.createNotificationChannel(
-      _canalTemperaturaCom(furarNaoPerturbe: podeFurarNaoPerturbe),
-    );
-    await android?.createNotificationChannel(
-      _canalSemComunicacaoCom(furarNaoPerturbe: podeFurarNaoPerturbe),
-    );
-    await android?.createNotificationChannel(
-      _canalTempMuitoAltaCom(furarNaoPerturbe: podeFurarNaoPerturbe),
-    );
-  }
-
-  /// Se o canal de incêndio já pode tocar com o aparelho em "Não perturbe".
-  Future<bool> get podeFurarNaoPerturbe async =>
-      await _android?.hasNotificationPolicyAccess() ?? false;
-
-  /// Leva o produtor à tela do sistema onde ele libera o app a furar o "Não
-  /// perturbe", e recria o canal para o bypass valer.
-  ///
-  /// Recriar é necessário porque o Android congela a configuração de um canal
-  /// existente. Em algumas versões o sistema restaura os ajustes do canal
-  /// apagado; nesses aparelhos pode ser preciso ligar na mão, em
-  /// Configurações → Notificações → Incêndio.
-  Future<bool> solicitarPermissaoNaoPerturbe() async {
-    final android = _android;
-    if (android == null) return false;
-    try {
-      final concedido =
-          await android.requestNotificationPolicyAccess() ?? false;
-      if (!concedido) return false;
-      await android.deleteNotificationChannel(channelId: canalCriticoId);
-      await android.createNotificationChannel(
-        _canalCriticoCom(furarNaoPerturbe: true),
-      );
-      // Temperatura e aparelho mudo tambem precisam acordar de madrugada, entao
-      // furam o "Nao perturbe" pelo mesmo motivo do fogo.
-      await android.deleteNotificationChannel(channelId: canalTemperaturaId);
-      await android.createNotificationChannel(
-        _canalTemperaturaCom(furarNaoPerturbe: true),
-      );
-      await android.deleteNotificationChannel(channelId: canalSemComunicacaoId);
-      await android.createNotificationChannel(
-        _canalSemComunicacaoCom(furarNaoPerturbe: true),
-      );
-      return true;
-    } catch (erro) {
-      debugPrint('Não foi possível liberar o Não perturbe: $erro');
-      return false;
-    }
-  }
-
-  /// Abre a tela de notificações do app no sistema, com a lista de canais.
-  ///
-  /// É onde mora o **desfazer**: cada canal tem o próprio "Ignorar Não
-  /// perturbe" e o próprio som. O app não consegue oferecer isso por conta
-  /// própria — o Android restaura as configurações de um canal apagado quando
-  /// ele volta com o mesmo id —, então o honesto é levar o produtor até o
-  /// controle que existe de verdade.
-  Future<bool> abrirNotificacoesDoApp() async {
-    if (!_androidCompativel) return false;
-    try {
-      final aberto = await _canalNaoPerturbe.invokeMethod<bool>(
-        'abrirNotificacoesDoApp',
-      );
-      return aberto ?? false;
-    } catch (erro) {
-      debugPrint('Nao foi possivel abrir as notificacoes do app: $erro');
-      return false;
-    }
+    await android?.createNotificationChannel(_canalCritico());
+    await android?.createNotificationChannel(_canalTemperatura());
+    await android?.createNotificationChannel(_canalSemComunicacao());
+    await android?.createNotificationChannel(_canalTempMuitoAlta());
   }
 
   /// Modo de som do celular: `normal`, `vibrar` ou `silencioso`.
@@ -314,22 +237,6 @@ class PushNotificationService {
     } catch (erro) {
       debugPrint('Nao foi possivel ler o modo de som: $erro');
       return 'normal';
-    }
-  }
-
-  /// Abre a tela do sistema de acesso ao "Não perturbe" sem depender do estado
-  /// da permissão. Serve ao botão "Ver nas configurações", quando o acesso já
-  /// está concedido e o produtor quer conferir ou revogar.
-  Future<bool> abrirAcessoNaoPerturbe() async {
-    if (!_androidCompativel) return false;
-    try {
-      final aberto = await _canalNaoPerturbe.invokeMethod<bool>(
-        'abrirConfiguracoes',
-      );
-      return aberto ?? false;
-    } catch (erro) {
-      debugPrint('Não foi possível abrir o Não perturbe: $erro');
-      return false;
     }
   }
 
