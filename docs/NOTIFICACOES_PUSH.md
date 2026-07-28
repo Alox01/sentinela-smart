@@ -168,8 +168,23 @@ Teste com o push de teste (`POST /push/teste`), variando só o modo de som:
 
 **A conclusão que importa:** o modo **silencioso vence tudo**, inclusive o
 alarme de incêndio — é o Android, não o app: o modo silencioso zera também o
-volume de alarme no One UI. O "Não perturbe", esse sim, é furado pelos canais
-com permissão.
+volume de alarme no One UI.
+
+**Sobre o "Não perturbe", uma correção do que se supunha:** testando com a
+permissão de bypass **desligada**, o aviso **continuou tocando**. A explicação
+é que o DND libera **alarmes** por padrão, e os avisos críticos saem no volume
+de alarme — então eles passam por essa porta, sem depender da permissão. Existem
+dois caminhos, e o app só controla um:
+
+| Caminho | Depende de |
+|---|---|
+| DND permite alarmes (padrão de fábrica) | configuração do "Não perturbe" |
+| Canal com `bypassDnd` | a permissão que o app pede |
+
+Portanto a permissão é **garantia**, não requisito: ela cobre o produtor que
+apertou o "Não perturbe" a ponto de bloquear alarmes. O texto da tela dizia que
+sem ela o aviso "fica mudo", o que o teste mostrou ser exagero — e foi
+corrigido.
 
 Daí a recomendação que ficou escrita na própria tela: **à noite, usar "Não
 perturbe" em vez de deixar o celular no silencioso**. É a diferença entre

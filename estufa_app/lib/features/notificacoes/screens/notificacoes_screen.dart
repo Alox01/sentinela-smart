@@ -191,12 +191,19 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             ],
           ),
           const SizedBox(height: 6),
+          // Medido no aparelho: com o "Nao perturbe" ligado o aviso toca mesmo
+          // SEM esta permissao, porque o DND libera alarmes por padrao e os
+          // avisos criticos saem no volume de alarme. A permissao e a garantia
+          // para quem apertou o "Nao perturbe" a ponto de bloquear alarmes -
+          // dizer que sem ela o aviso "fica mudo" seria exagero.
           Text(
             liberado
-                ? 'Liberado. O aviso de incêndio toca como alarme mesmo com o '
-                      'celular no "Não perturbe".'
-                : 'Sem isso, o aviso de incêndio fica mudo enquanto o celular '
-                      'estiver no "Não perturbe" — justamente de madrugada.',
+                ? 'Liberado. O aviso de incêndio toca como alarme mesmo que o '
+                      '"Não perturbe" esteja configurado para bloquear alarmes.'
+                : 'O "Não perturbe" costuma deixar alarmes tocarem, então o '
+                      'aviso já passa na maioria dos casos. Liberar aqui '
+                      'garante que ele toque mesmo se o "Não perturbe" estiver '
+                      'configurado para bloquear alarmes.',
             style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
           // Botao sempre presente: quando ainda nao liberado, ele libera;
