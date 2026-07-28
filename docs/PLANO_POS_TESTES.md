@@ -31,6 +31,17 @@ estava aberto ou fechado. Esses números viram a seção de resultados do TCC �
 se algo falhar, são eles que dizem se o problema é canal, permissão ou
 preferência.
 
+### Resultados já obtidos (25/07/2026)
+
+| Teste | Resultado |
+|---|---|
+| Lembrete de agendamento (simulador) | ✅ chegou na hora marcada |
+| Agendamento aplicar o ajuste (simulador) | ❌ **falhava** — o agendador jogava na caixa que só aparelho real consulta. Corrigido e coberto por teste. |
+| Alarme com "Não perturbe" ligado | ✅ **toca** — a permissão de furar o DND funciona |
+| Alarme no modo silencioso | ❌ não toca (limitação do Android, ver `NOTIFICACOES_PUSH.md`) |
+| Alarme no modo vibrar | vibra, não toca |
+| Conexão local pelo nome mDNS | ⚠️ caía na nuvem por alguns segundos, de forma **intermitente**. Causa: a resolução do nome estourava o timeout de 2 s da sonda. Corrigido (4 s só para nomes). |
+
 ## 2. Correções do que os testes acharem
 
 Deixado em branco de propósito. É a razão de os itens abaixo não estarem

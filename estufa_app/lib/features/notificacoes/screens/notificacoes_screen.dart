@@ -216,8 +216,14 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             ),
           ),
           const SizedBox(height: 4),
+          // Medido no aparelho (Samsung, 25/07/2026): com o "Nao perturbe"
+          // ligado e o som normal, o alarme toca; no modo silencioso nao toca
+          // nada, e no vibrar so vibra. Vale mais como recomendacao do que como
+          // ressalva - e a diferenca entre acordar e nao acordar.
           const Text(
-            'Essa função não funciona no modo silencioso do celular.',
+            'Essa função não funciona no modo silencioso do celular: nele '
+            'nenhum aviso toca, nem o de incêndio. À noite, prefira deixar o '
+            'celular no "Não perturbe" em vez do silencioso.',
             style: TextStyle(color: Colors.white24, fontSize: 11),
           ),
         ],

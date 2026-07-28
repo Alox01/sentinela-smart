@@ -155,6 +155,26 @@ um problema silencioso — o aviso de "sem comunicação" ia pelo canal do
 **incêndio** (o watchdog o marca como crítico), então acordava, mas aparecia
 como "Incêndio" nas configurações e não dava para separar um do outro.
 
+### Medido no aparelho (Samsung, 25/07/2026)
+
+Teste com o push de teste (`POST /push/teste`), variando só o modo de som:
+
+| Modo do celular | Resultado |
+|---|---|
+| Normal | toca alto e longo |
+| **"Não perturbe" ligado**, som normal | **toca** — a permissão de furar o DND funciona |
+| **Silencioso** | **não toca** (a notificação chega, muda) |
+| Vibrar | não toca, mas vibra |
+
+**A conclusão que importa:** o modo **silencioso vence tudo**, inclusive o
+alarme de incêndio — é o Android, não o app: o modo silencioso zera também o
+volume de alarme no One UI. O "Não perturbe", esse sim, é furado pelos canais
+com permissão.
+
+Daí a recomendação que ficou escrita na própria tela: **à noite, usar "Não
+perturbe" em vez de deixar o celular no silencioso**. É a diferença entre
+acordar e não acordar, e nenhum ajuste no app contorna isso.
+
 **Ressalva honesta:** os três usam a **mesma sirene**, o único som longo do app.
 As vibrações diferem, mas pelo som eles são parecidos — vale um segundo arquivo
 de áudio para separar "vá ver" de "corra".
