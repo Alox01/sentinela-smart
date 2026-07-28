@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -244,12 +246,26 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     );
   }
 
+  /// Abre a primeira configuracao e traz de volta o que ela definiu. Sem isto o
+  /// produtor via o endereco numa tela e tinha de digita-lo na outra, de
+  /// memoria — um nome como `sentinela-215788.local` erra facil.
+  Future<void> _abrirConfiguracaoAparelho() async {
+    final dados = await Navigator.of(context).push<DadosAparelhoConfigurado>(
+      MaterialPageRoute(
+        builder: (_) => const ConfigurarAparelhoScreen(oferecerCadastro: true),
+      ),
+    );
+    if (dados == null || !mounted) return;
+    setState(() {
+      if (dados.endereco != null) _ipController.text = dados.endereco!;
+      if (dados.chave != null) _chaveController.text = dados.chave!;
+    });
+  }
+
   Widget _buildAtalhoConfigurar() {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ConfigurarAparelhoScreen()),
-      ),
+      onTap: () => unawaited(_abrirConfiguracaoAparelho()),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

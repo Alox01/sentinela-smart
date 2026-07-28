@@ -12,11 +12,27 @@ import 'package:http/http.dart' as http;
 /// Esta tela e o caminho que sempre funciona: o produtor ja tem o app, e um
 /// toque no menu basta.
 class ConfigurarAparelhoScreen extends StatefulWidget {
-  const ConfigurarAparelhoScreen({super.key});
+  /// Quando aberta a partir do cadastro de uma estufa, a tela de sucesso oferece
+  /// levar o endereco e a chave de volta ao formulario. Pelo menu de uma estufa
+  /// ja cadastrada isso nao faz sentido - la o produtor esta reconfigurando o
+  /// que ja existe.
+  final bool oferecerCadastro;
+
+  const ConfigurarAparelhoScreen({super.key, this.oferecerCadastro = false});
 
   @override
   State<ConfigurarAparelhoScreen> createState() =>
       _ConfigurarAparelhoScreenState();
+}
+
+/// O que a configuracao acabou de definir, para o cadastro nao pedir de novo.
+/// A chave sai daqui em memoria, direto para o formulario - nao e persistida
+/// nem exibida em lugar nenhum pelo caminho.
+class DadosAparelhoConfigurado {
+  final String? endereco;
+  final String? chave;
+
+  const DadosAparelhoConfigurado({this.endereco, this.chave});
 }
 
 class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
@@ -176,6 +192,35 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // ultima tela em que o produtor pode copiar o endereco.
         _cartaoNome(),
         const SizedBox(height: 8),
+        // Fecha o circulo: o endereco que o produtor acabou de ver vai sozinho
+        // para o cadastro, em vez de ele ter de decorar ou copiar a mao. A
+        // chave tambem, porque ele a definiu nesta mesma tela.
+        if (widget.oferecerCadastro && _nomeLocal != null) ...[
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(
+              DadosAparelhoConfigurado(
+                endereco: _nomeLocal,
+                chave: _chave.text.trim().isEmpty ? null : _chave.text.trim(),
+              ),
+            ),
+            icon: const Icon(Icons.playlist_add_rounded, size: 18),
+            label: const Text('Usar estes dados no cadastro'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // O nome so resolve depois de o aparelho voltar para a rede de casa,
+          // e o celular precisa estar nela tambem. Dizer isso aqui evita o
+          // cadastro "que nao conecta" logo no primeiro uso.
+          const Text(
+            'Reconecte o celular no Wi-Fi de sempre antes de testar a conexão: '
+            'o endereço só responde quando os dois estão na mesma rede.',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+        ],
         OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Voltar'),
