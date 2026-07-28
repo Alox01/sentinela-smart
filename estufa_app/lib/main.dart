@@ -48,13 +48,31 @@ class _BootstrapScreen extends StatefulWidget {
   State<_BootstrapScreen> createState() => _BootstrapScreenState();
 }
 
-class _BootstrapScreenState extends State<_BootstrapScreen> {
+class _BootstrapScreenState extends State<_BootstrapScreen>
+    with WidgetsBindingObserver {
   late Future<void> _initFuture;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initFuture = _inicializar();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Voltar ao app cala a sirene dos avisos: quem abriu ja viu o problema.
+  /// Fica aqui, na raiz, para valer em qualquer tela — o produtor pode ter
+  /// tocado na notificacao e caido direto no monitoramento.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(PushNotificationService.instance.calarAvisosSonoros());
+    }
   }
 
   Future<void> _inicializar() async {
@@ -67,6 +85,9 @@ class _BootstrapScreenState extends State<_BootstrapScreen> {
     // sistema, e nem todo fabricante entrega o BOOT_COMPLETED que o plugin
     // usa para se reerguer sozinho.
     unawaited(AgendamentoService.instance.carregar());
+    // O app pode ter sido aberto pela propria notificacao, com a sirene ainda
+    // tocando: o ciclo de vida nao passa por "resumed" nesse caminho.
+    unawaited(PushNotificationService.instance.calarAvisosSonoros());
   }
 
   void _tentarNovamente() {

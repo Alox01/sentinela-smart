@@ -434,6 +434,43 @@ class PushNotificationService {
     };
   }
 
+  /// Cala a sirene dos avisos ao abrir o app.
+  ///
+  /// A sirene dura 30 s e so parava ao puxar a barra de notificacoes — mas quem
+  /// abriu o app **ja viu** o problema, e continuar tocando enquanto ele olha a
+  /// tela so ensina o produtor a silenciar tudo. Abrir o app e o unico gesto que
+  /// significa "eu vi" sem ambiguidade: destrancar o celular pode ser para outra
+  /// coisa, e ai o aviso morreria sem ninguem ter lido.
+  ///
+  /// So os canais que tocam como alarme sao cancelados. A sirene do proprio
+  /// aparelho, na estufa, nao e afetada — ela e hardware.
+  Future<void> calarAvisosSonoros() async {
+    if (!_androidCompativel) return;
+    const canaisQueTocam = {
+      canalCriticoId,
+      canalTempMuitoAltaId,
+      canalTemperaturaId,
+      canalSemComunicacaoId,
+    };
+    try {
+      final ativas = await _notificacoesLocais.getActiveNotifications();
+      var precisaLimparTudo = false;
+      for (final ativa in ativas) {
+        if (!canaisQueTocam.contains(ativa.channelId)) continue;
+        // Aviso postado pelo proprio Android a partir do push chega sem id: nao
+        // da para cancelar um a um, entao cai no cancelamento geral.
+        if (ativa.id == null) {
+          precisaLimparTudo = true;
+          break;
+        }
+        await _notificacoesLocais.cancel(id: ativa.id!);
+      }
+      if (precisaLimparTudo) await _notificacoesLocais.cancelAll();
+    } catch (erro) {
+      debugPrint('Nao foi possivel calar os avisos: $erro');
+    }
+  }
+
   /// Canal de alarme de cada evento. Espelha `CANAIS_QUE_ACORDAM` do servidor —
   /// se os dois divergirem, o Android entrega no canal padrao e o alerta perde o
   /// som de alarme sem erro nenhum aparecer.
