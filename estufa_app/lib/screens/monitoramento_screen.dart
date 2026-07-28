@@ -242,9 +242,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           _umidAjustePendente == novoUmidAjuste) {
         _umidAjustePendente = null;
       }
-      // O aparelho confirmou (calou) ou o caso mudou para fogo, que nao se
-      // silencia: nos dois a leitura volta a mandar.
-      if (_silencioPendente && (!novaSireneLigada || fogoDetectado)) {
+      // O aparelho confirmou que calou: a leitura volta a mandar. Fogo nao e
+      // mais excecao - desde o firmware 1.14.0 ele tambem obedece ao silencio
+      // de 10 min.
+      if (_silencioPendente && !novaSireneLigada) {
         _silencioPendente = false;
       }
 
@@ -432,17 +433,14 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // produtor com a sirene tocando no ouvido apertava de novo achando que o
   // toque nao pegou.
   //
-  // Fogo nao entra: o aparelho ignora o silencio quando ha chama ou temperatura
-  // de incendio, entao fingir que calou seria mentira - o icone voltaria
-  // sozinho e a sirene continuaria tocando.
+  // Vale tambem para fogo desde o firmware 1.14.0: quem aperta ja esta ciente e
+  // foi agir, e a sirene ao lado atrapalha. O prazo de 10 min vence sozinho,
+  // entao nao da para silenciar e esquecer.
   Future<void> _silenciarAlarme() async {
-    final silenciavel = !isFire;
-    if (silenciavel) {
-      setState(() {
-        _silencioPendente = true;
-        sireneLigada = false;
-      });
-    }
+    setState(() {
+      _silencioPendente = true;
+      sireneLigada = false;
+    });
 
     // Mesmo caminho dos outros comandos: ele ja busca de novo ao dar certo,
     // atualiza as pendencias e explica a falha (sem conexao, chave invalida...)
@@ -451,7 +449,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       'modoSilencioso': true,
       'modoSilenciosoTimestamp': DateTime.now().millisecondsSinceEpoch,
     });
-    if (!mounted || enviado || !silenciavel) return;
+    if (!mounted || enviado) return;
 
     // Nao chegou ao aparelho: a sirene continua tocando, entao o icone volta.
     setState(() {

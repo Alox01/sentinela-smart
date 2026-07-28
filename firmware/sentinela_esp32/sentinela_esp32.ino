@@ -49,6 +49,11 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.14.0: o silencio de 10 min passa a valer tambem para FOGO. Quem aperta o
+//        botao (ou o do app) ja esta ciente - viu o aviso ou ouviu a sirene - e
+//        foi buscar agua ou chamar socorro; a sirene ao lado so atrapalha. Nao
+//        e liga/desliga: o prazo vence sozinho e o alarme volta, entao nao da
+//        para silenciar e esquecer.
 // 1.13.0: segurar SO o botao do buzzer por 3 s liga/desliga a sirene de
 //        temperatura deste aparelho, sem celular nem internet. O interruptor do
 //        app e global (vale para todas as estufas); desligar uma so e uma
@@ -81,7 +86,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.13.0";
+const char* VERSAO_FIRMWARE = "1.14.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -1034,9 +1039,14 @@ void reativarAlarme() {
 // Sirene fisica ligada agora? Incendio (nao silenciavel) ou temperatura fora
 // (silenciavel). Espelha a logica de atualizarSaidas().
 bool alarmeAtivoAgora() {
-  bool fogo = alertaLuz || riscoIncendioAgora();
-  bool sireneTemp = alertaTemperatura && !estaSilenciado();
-  return fogo || sireneTemp;
+  if (!alertaLuz && !alertaTemperatura) return false;
+  // O silencio de 10 min cobre todos os alarmes, fogo inclusive.
+  if (estaSilenciado()) return false;
+  // Buzzer de temperatura desligado cala so o alarme comum.
+  if (!alertaLuz && !buzzerTemperaturaAtivo && !riscoIncendioAgora()) {
+    return false;
+  }
+  return true;
 }
 
 // Textos que o produtor le (aparecem no app e no corpo do push), entao vao
@@ -1365,7 +1375,8 @@ void verificarBotoes() {
   verificarSegurarBuzzer();
 
   if (botaoFoiPressionado(BOTAO_BUZZER, ultimoBuzzer, estavelBuzzer, debounceBuzzer)) {
-    if (alertaTemperatura && !alertaLuz) {
+    // Vale para qualquer alarme, inclusive fogo: quem aperta ja esta ciente.
+    if (alertaTemperatura || alertaLuz) {
       // Mesmo comportamento do botao do app: silencia por 10 min. Apertar de
       // novo reinicia o prazo em vez de religar a sirene na hora.
       silenciarPorPrazo();
@@ -1509,31 +1520,38 @@ void atualizarSaidas() {
     digitalWrite(LED_UMIDADE, LOW);
   }
 
-  if (alertaLuz) {
-    digitalWrite(BUZZER, HIGH);
-    buzzerLigadoAgora = true;
-    return;
-  }
-
-  if (!alertaTemperatura) {
-    // Temperatura normalizou: o silencio perde a razao de existir.
+  if (!existeAlerta) {
+    // Nada a alarmar: o silencio perde a razao de existir.
     silencioAteMillis = 0;
     buzzerLigadoAgora = false;
     digitalWrite(BUZZER, LOW);
     return;
   }
 
-  // Buzzer de temperatura desligado pelo produtor: cala o alarme COMUM, mas a
-  // temperatura de incendio (>175 F) ainda toca - fogo nunca fica mudo.
-  if (!buzzerTemperaturaAtivo && !riscoIncendioAgora()) {
+  // Buzzer de temperatura desligado pelo produtor: cala o alarme COMUM, mas
+  // fogo (chama ou >175 F) ainda toca - desligar o buzzer nunca esconde
+  // incendio.
+  if (!alertaLuz && !buzzerTemperaturaAtivo && !riscoIncendioAgora()) {
     buzzerLigadoAgora = false;
     digitalWrite(BUZZER, LOW);
     return;
   }
 
+  // Silencio de 10 min vale tambem para o fogo. Quem apertou o botao ja esta
+  // ciente - viu no app ou ouviu a sirene - e provavelmente foi buscar agua ou
+  // chamar socorro; a sirene gritando ao lado so atrapalha. Nao e um
+  // liga/desliga: o prazo vence sozinho e o alarme volta, entao nao da para
+  // silenciar e esquecer.
   if (estaSilenciado()) {
     buzzerLigadoAgora = false;
     digitalWrite(BUZZER, LOW);
+    return;
+  }
+
+  // Fogo toca continuo; temperatura fora da faixa, intermitente.
+  if (alertaLuz) {
+    digitalWrite(BUZZER, HIGH);
+    buzzerLigadoAgora = true;
     return;
   }
 
