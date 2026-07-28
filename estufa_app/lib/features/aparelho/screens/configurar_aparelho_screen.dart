@@ -11,14 +11,22 @@ import 'package:http/http.dart' as http;
 /// tenta abri-la sozinha — mas quem decide isso e o Android, e nao ha garantia.
 /// Esta tela e o caminho que sempre funciona: o produtor ja tem o app, e um
 /// toque no menu basta.
-class ConfigurarAparelhoScreen extends StatefulWidget {
-  /// Quando aberta a partir do cadastro de uma estufa, a tela de sucesso oferece
-  /// levar o endereco e a chave de volta ao formulario. Pelo menu de uma estufa
-  /// ja cadastrada isso nao faz sentido - la o produtor esta reconfigurando o
-  /// que ja existe.
-  final bool oferecerCadastro;
+/// De onde a configuracao foi aberta. Muda o que a tela de sucesso oferece
+/// depois, porque o produtor esta em situacoes diferentes em cada caso.
+enum UsoDaConfiguracao {
+  /// Estufa nova: leva endereco e chave para o formulario de cadastro.
+  cadastro,
 
-  const ConfigurarAparelhoScreen({super.key, this.oferecerCadastro = false});
+  /// Estufa ja cadastrada: se a chave mudou, a guardada no app ficou velha e os
+  /// comandos passariam a ser recusados. Oferece atualizar.
+  atualizacao,
+}
+
+class ConfigurarAparelhoScreen extends StatefulWidget {
+  /// Nulo quando a tela e aberta solta: nada e oferecido no fim.
+  final UsoDaConfiguracao? uso;
+
+  const ConfigurarAparelhoScreen({super.key, this.uso});
 
   @override
   State<ConfigurarAparelhoScreen> createState() =>
@@ -195,7 +203,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // Fecha o circulo: o endereco que o produtor acabou de ver vai sozinho
         // para o cadastro, em vez de ele ter de decorar ou copiar a mao. A
         // chave tambem, porque ele a definiu nesta mesma tela.
-        if (widget.oferecerCadastro && _nomeLocal != null) ...[
+        if (widget.uso != null && _nomeLocal != null) ...[
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(
               DadosAparelhoConfigurado(
@@ -203,8 +211,17 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 chave: _chave.text.trim().isEmpty ? null : _chave.text.trim(),
               ),
             ),
-            icon: const Icon(Icons.playlist_add_rounded, size: 18),
-            label: const Text('Usar estes dados no cadastro'),
+            icon: Icon(
+              widget.uso == UsoDaConfiguracao.cadastro
+                  ? Icons.playlist_add_rounded
+                  : Icons.sync_rounded,
+              size: 18,
+            ),
+            label: Text(
+              widget.uso == UsoDaConfiguracao.cadastro
+                  ? 'Usar estes dados no cadastro'
+                  : 'Atualizar esta estufa',
+            ),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),

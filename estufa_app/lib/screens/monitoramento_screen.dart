@@ -11,6 +11,7 @@ import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../features/agendamento/screens/agendamentos_screen.dart';
+import '../features/home/services/estufas_repository.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/notificacoes/models/preferencias_notificacao.dart';
 import '../features/notificacoes/services/preferencias_notificacao_service.dart';
@@ -459,6 +460,53 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     });
   }
 
+  /// Reconfigura o aparelho e, se a chave mudou, atualiza a que o app guarda.
+  ///
+  /// Sem isto, trocar a chave no aparelho deixava a do app velha: os comandos
+  /// passavam a ser recusados com "chave invalida" e nada indicava o porque -
+  /// justamente depois de uma acao que o produtor acabou de fazer no app.
+  Future<void> _reconfigurarAparelho() async {
+    final dados = await Navigator.of(context).push<DadosAparelhoConfigurado>(
+      MaterialPageRoute(
+        builder: (_) =>
+            const ConfigurarAparelhoScreen(uso: UsoDaConfiguracao.atualizacao),
+      ),
+    );
+    if (dados == null || !mounted) return;
+
+    final chaveNova = dados.chave;
+    final enderecoNovo = dados.endereco;
+    final mudouChave = chaveNova != null && chaveNova != widget.tokenAcesso;
+    final mudouEndereco =
+        enderecoNovo != null && enderecoNovo != widget.ipEstufa;
+    if (!mudouChave && !mudouEndereco) return;
+
+    try {
+      await EstufasRepository(IsarService.instance).atualizar(
+        id: widget.idEstufa,
+        nome: widget.nomeEstufa,
+        ip: enderecoNovo ?? widget.ipEstufa,
+        tokenAcesso: chaveNova ?? widget.tokenAcesso,
+        idHardware: widget.idHardware ?? api.idHardware,
+      );
+    } catch (erro) {
+      debugPrint('Nao foi possivel atualizar a estufa: $erro');
+      return;
+    }
+    if (!mounted) return;
+
+    // A tela ja esta montada com o endereco e a chave antigos, e o monitor
+    // guarda um ApiService criado com eles. Voltar para a lista e o caminho
+    // honesto: ao entrar de novo, tudo nasce com os dados novos.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Estufa atualizada. Abra ela de novo para reconectar.'),
+        duration: Duration(seconds: 4),
+      ),
+    );
+    Navigator.of(context).pop();
+  }
+
   // Silenciar os avisos do app SO desta estufa (fogo e sem comunicacao nunca
   // calam). Escopo por aparelho, diferente das preferencias globais da home.
   Widget _itemSilenciarAvisos() {
@@ -610,11 +658,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               ),
               onTap: () {
                 Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ConfigurarAparelhoScreen(),
-                  ),
-                );
+                unawaited(_reconfigurarAparelho());
               },
             ),
             // Secao propria: silenciar aviso nao e assunto de conexao, e ficava

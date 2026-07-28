@@ -252,7 +252,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   Future<void> _abrirConfiguracaoAparelho() async {
     final dados = await Navigator.of(context).push<DadosAparelhoConfigurado>(
       MaterialPageRoute(
-        builder: (_) => const ConfigurarAparelhoScreen(oferecerCadastro: true),
+        builder: (_) =>
+            const ConfigurarAparelhoScreen(uso: UsoDaConfiguracao.cadastro),
       ),
     );
     if (dados == null || !mounted) return;
