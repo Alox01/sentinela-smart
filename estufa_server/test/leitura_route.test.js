@@ -727,3 +727,47 @@ test('evento silenciado nas preferencias nao vira push', async () => {
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(push.enviados.length, 0);
 });
+
+// O simulador nao busca a caixa de comandos: ele e servido do proprio modelo,
+// dentro do servidor. Um agendamento para ele tem de ser aplicado direto, senao
+// ficaria na caixa para sempre - o aviso chegava e o ajuste nunca mudava, bem na
+// superficie que existe para testar sem hardware.
+test('agendamento vencido do simulador e aplicado nele, nao na caixa', async () => {
+  const aplicados = [];
+  const simuladorFalso = {
+    lerCompleto: () => ({ simulador: true }),
+    sincronizarConfiguracao: (config) => {
+      aplicados.push(config);
+      return { sucesso: true };
+    },
+  };
+  const dbFalso = {
+    estaHabilitado: () => true,
+    listarAgendamentos: async () => [
+      {
+        id: '1',
+        idHardware: 'ESP32_REALISTIC_V2',
+        aplicarEmMs: Date.now() - 1000,
+        temperaturaMeta: 130,
+      },
+    ],
+    removerAgendamento: async () => true,
+  };
+
+  const app = criarApp({ db: dbFalso, simulador: simuladorFalso });
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    await fetch(`http://127.0.0.1:${port}/agendamentos/verificar`, {
+      method: 'POST',
+    });
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((erro) => (erro ? reject(erro) : resolve()));
+    });
+  }
+
+  assert.equal(aplicados.length, 1);
+  assert.equal(aplicados[0].temperaturaMeta, 130);
+});

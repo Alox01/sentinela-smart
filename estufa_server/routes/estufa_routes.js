@@ -262,7 +262,15 @@ function createEstufaRouter({
     // O alvo vigente resolve o "+10 F" no instante de aplicar, nao no de agendar.
     configDoAparelho: (idHardware) => dispositivosAoVivo.get(idHardware)?.config,
     aplicarComando: (idHardware, comando) => {
-      guardarComandoPendente(idHardware, comando);
+      // O simulador nao busca a caixa de comandos - ele e servido do proprio
+      // modelo, aqui dentro. Sem este desvio, um agendamento para ele ficava na
+      // caixa para sempre: o aviso chegava e o ajuste nunca mudava, dando a
+      // impressao de recurso quebrado justo na superficie feita para testar.
+      if (!idHardware || idHardware === ID_SIMULADOR) {
+        simulador.sincronizarConfiguracao(comando);
+      } else {
+        guardarComandoPendente(idHardware, comando);
+      }
       console.log(
         `Agendamento aplicado (${idHardware}): ${JSON.stringify(comando)}`,
       );
