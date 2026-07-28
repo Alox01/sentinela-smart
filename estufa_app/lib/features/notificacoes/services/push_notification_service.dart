@@ -280,6 +280,23 @@ class PushNotificationService {
     }
   }
 
+  /// Modo de som do celular: `normal`, `vibrar` ou `silencioso`.
+  ///
+  /// No silencioso **nenhum aviso toca**, nem o de incêndio — medido no
+  /// aparelho, e é o Android, não o app. Como é o estado em que se entra sem
+  /// querer (baixando o volume, sobrando de uma reunião), a tela avisa em vez de
+  /// deixar o alerta simplesmente não tocar de madrugada.
+  Future<String> modoDeSom() async {
+    if (!_androidCompativel) return 'normal';
+    try {
+      final modo = await _canalNaoPerturbe.invokeMethod<String>('modoDeSom');
+      return modo ?? 'normal';
+    } catch (erro) {
+      debugPrint('Nao foi possivel ler o modo de som: $erro');
+      return 'normal';
+    }
+  }
+
   /// Abre a tela do sistema de acesso ao "Não perturbe" sem depender do estado
   /// da permissão. Serve ao botão "Ver nas configurações", quando o acesso já
   /// está concedido e o produtor quer conferir ou revogar.

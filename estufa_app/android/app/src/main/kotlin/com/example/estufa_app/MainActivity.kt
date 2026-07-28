@@ -1,6 +1,8 @@
 package com.example.estufa_app
 
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
@@ -21,7 +23,24 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             canalNaoPerturbe,
         ).setMethodCallHandler { call, resultado ->
-            if (call.method == "abrirConfiguracoes") {
+            if (call.method == "modoDeSom") {
+                // O modo silencioso e o estado que mais cala o app - e o que o
+                // produtor entra sem querer (baixando o volume, sobrando de uma
+                // reuniao). Saber disso deixa a tela avisar em vez de o alerta
+                // simplesmente nao tocar de madrugada.
+                try {
+                    val audio =
+                        getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    val modo = when (audio.ringerMode) {
+                        AudioManager.RINGER_MODE_SILENT -> "silencioso"
+                        AudioManager.RINGER_MODE_VIBRATE -> "vibrar"
+                        else -> "normal"
+                    }
+                    resultado.success(modo)
+                } catch (erro: Exception) {
+                    resultado.success("normal")
+                }
+            } else if (call.method == "abrirConfiguracoes") {
                 try {
                     val intent = Intent(
                         Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,

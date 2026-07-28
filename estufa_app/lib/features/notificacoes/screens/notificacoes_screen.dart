@@ -29,12 +29,76 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   bool? _furaNaoPerturbe;
+  String _modoDeSom = 'normal';
 
   @override
   void initState() {
     super.initState();
     unawaited(_buzzer.carregar());
-    if (_ehAndroid) unawaited(_conferirNaoPerturbe());
+    if (_ehAndroid) {
+      unawaited(_conferirNaoPerturbe());
+      unawaited(_conferirModoDeSom());
+    }
+  }
+
+  Future<void> _conferirModoDeSom() async {
+    final modo = await PushNotificationService.instance.modoDeSom();
+    if (mounted) setState(() => _modoDeSom = modo);
+  }
+
+  /// Avisa que o celular esta mudo. E o estado mais perigoso para este app e o
+  /// que se entra sem querer - baixando o volume, sobrando de uma reuniao -,
+  /// entao dizer isso aqui vale mais do que uma legenda lida uma vez na
+  /// instalacao.
+  Widget _cartaoModoDeSom() {
+    final silencioso = _modoDeSom == 'silencioso';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.volume_off_rounded,
+            color: Colors.amberAccent,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  silencioso
+                      ? 'Seu celular está no silencioso'
+                      : 'Seu celular está no modo vibrar',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  silencioso
+                      ? 'Nenhum aviso vai tocar, nem o de incêndio. Tire do '
+                            'silencioso — se quiser sossego à noite, use o '
+                            '"Não perturbe".'
+                      : 'Os avisos não vão tocar, apenas vibrar. Tire do modo '
+                            'vibrar para ouvir o alarme.',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _mudarBuzzer(bool ativo) async {
@@ -155,8 +219,63 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
     );
   }
 
+  /// Enquanto falta conceder, e uma acao: sem a permissao os canais nascem sem
+  /// furar o "Nao perturbe", e um DND configurado para bloquear alarmes calaria
+  /// ate o aviso de incendio.
+  ///
+  /// Depois de concedida, vira **status**. O Android congela a configuracao do
+  /// canal no momento em que ele e criado: revogar o acesso nas configuracoes
+  /// nao desfaz o bypass, entao um interruptor aqui prometeria um controle que
+  /// nao existe. Quem quer silencio de verdade desliga o "Tocar" do evento, que
+  /// manda o aviso pelo canal comum - esse caminho funciona sempre.
   Widget _cartaoNaoPerturbe() {
     final liberado = _furaNaoPerturbe == true;
+
+    if (liberado) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white38,
+                  size: 18,
+                ),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Liberado para tocar no "Não perturbe"',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Para um aviso parar de furar o "Não perturbe", desligue o '
+              '"Tocar" dele acima — revogar nas configurações do sistema não '
+              'basta.',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'No modo silencioso nada toca, nem o aviso de incêndio.',
+              style: TextStyle(color: Colors.white24, fontSize: 11),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -168,17 +287,15 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(
-                liberado
-                    ? Icons.notifications_active_rounded
-                    : Icons.do_not_disturb_on_rounded,
+                Icons.do_not_disturb_on_rounded,
                 color: Colors.white70,
                 size: 18,
               ),
-              const SizedBox(width: 6),
-              const Expanded(
+              SizedBox(width: 6),
+              Expanded(
                 child: Text(
                   'Tocar no "Não perturbe"',
                   style: TextStyle(
@@ -191,46 +308,23 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          // Medido no aparelho: com o "Nao perturbe" ligado o aviso toca mesmo
-          // SEM esta permissao, porque o DND libera alarmes por padrao e os
-          // avisos criticos saem no volume de alarme. A permissao e a garantia
-          // para quem apertou o "Nao perturbe" a ponto de bloquear alarmes -
-          // dizer que sem ela o aviso "fica mudo" seria exagero.
-          Text(
-            liberado
-                ? 'Liberado. O aviso de incêndio toca como alarme mesmo que o '
-                      '"Não perturbe" esteja configurado para bloquear alarmes.'
-                : 'O "Não perturbe" costuma deixar alarmes tocarem, então o '
-                      'aviso já passa na maioria dos casos. Liberar aqui '
-                      'garante que ele toque mesmo se o "Não perturbe" estiver '
-                      'configurado para bloquear alarmes.',
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
+          const Text(
+            'Sem isso, o aviso pode ficar mudo se o "Não perturbe" estiver '
+            'configurado para bloquear alarmes.',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
           ),
-          // Botao sempre presente: quando ainda nao liberado, ele libera;
-          // quando ja liberado, leva o produtor as configuracoes do sistema
-          // para conferir ou revogar. Sem isto, o card virava so texto e o
-          // toque nao fazia nada.
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
               onPressed: _pedirNaoPerturbe,
-              child: Text(
-                liberado
-                    ? 'Ver nas configurações'
-                    : 'Liberar nas configurações',
-              ),
+              child: const Text('Liberar nas configurações'),
             ),
           ),
           const SizedBox(height: 4),
-          // Medido no aparelho (Samsung, 25/07/2026): com o "Nao perturbe"
-          // ligado e o som normal, o alarme toca; no modo silencioso nao toca
-          // nada, e no vibrar so vibra. Vale mais como recomendacao do que como
-          // ressalva - e a diferenca entre acordar e nao acordar.
           const Text(
-            'Essa função não funciona no modo silencioso do celular: nele '
-            'nenhum aviso toca, nem o de incêndio. À noite, prefira deixar o '
-            'celular no "Não perturbe" em vez do silencioso.',
+            'No modo silencioso nada toca, nem o aviso de incêndio. À noite, '
+            'prefira o "Não perturbe" em vez do silencioso.',
             style: TextStyle(color: Colors.white24, fontSize: 11),
           ),
         ],
@@ -326,6 +420,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (_ehAndroid && _modoDeSom != 'normal') _cartaoModoDeSom(),
                 for (final evento in EventoNotificacao.values)
                   _CartaoEvento(
                     evento: evento,
