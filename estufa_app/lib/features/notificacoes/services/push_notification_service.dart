@@ -280,6 +280,26 @@ class PushNotificationService {
     }
   }
 
+  /// Abre a tela de notificações do app no sistema, com a lista de canais.
+  ///
+  /// É onde mora o **desfazer**: cada canal tem o próprio "Ignorar Não
+  /// perturbe" e o próprio som. O app não consegue oferecer isso por conta
+  /// própria — o Android restaura as configurações de um canal apagado quando
+  /// ele volta com o mesmo id —, então o honesto é levar o produtor até o
+  /// controle que existe de verdade.
+  Future<bool> abrirNotificacoesDoApp() async {
+    if (!_androidCompativel) return false;
+    try {
+      final aberto = await _canalNaoPerturbe.invokeMethod<bool>(
+        'abrirNotificacoesDoApp',
+      );
+      return aberto ?? false;
+    } catch (erro) {
+      debugPrint('Nao foi possivel abrir as notificacoes do app: $erro');
+      return false;
+    }
+  }
+
   /// Modo de som do celular: `normal`, `vibrar` ou `silencioso`.
   ///
   /// No silencioso **nenhum aviso toca**, nem o de incêndio — medido no

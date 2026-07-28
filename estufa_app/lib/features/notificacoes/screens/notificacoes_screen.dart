@@ -261,12 +261,22 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Para um aviso parar de furar o "Não perturbe", desligue o '
-              '"Tocar" dele acima — revogar nas configurações do sistema não '
-              'basta.',
+              'Para voltar atrás: desligue o "Tocar" do aviso aqui em cima, ou '
+              'ajuste cada um direto no sistema — lá cada aviso tem o próprio '
+              '"Ignorar Não perturbe" e o próprio som.',
               style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => unawaited(
+                  PushNotificationService.instance.abrirNotificacoesDoApp(),
+                ),
+                child: const Text('Ajustar cada aviso no sistema'),
+              ),
+            ),
+            const SizedBox(height: 4),
             const Text(
               'No modo silencioso nada toca, nem o aviso de incêndio.',
               style: TextStyle(color: Colors.white24, fontSize: 11),

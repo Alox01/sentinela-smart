@@ -40,6 +40,24 @@ class MainActivity : FlutterActivity() {
                 } catch (erro: Exception) {
                     resultado.success("normal")
                 }
+            } else if (call.method == "abrirNotificacoesDoApp") {
+                // Tela de notificacoes DO APP, com a lista de canais. E la que
+                // mora o desfazer: cada canal tem o proprio "Ignorar Nao
+                // perturbe" e o proprio som, que o produtor pode desligar.
+                // Recriar o canal pelo app nao serviria - o Android restaura as
+                // configuracoes de um canal apagado quando ele volta com o
+                // mesmo id.
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_APP_NOTIFICATION_SETTINGS,
+                    )
+                    intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                    resultado.success(true)
+                } catch (erro: Exception) {
+                    resultado.success(false)
+                }
             } else if (call.method == "abrirConfiguracoes") {
                 try {
                     val intent = Intent(
