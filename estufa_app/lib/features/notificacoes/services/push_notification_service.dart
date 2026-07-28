@@ -37,11 +37,10 @@ class PushNotificationService {
   static const String _cloudApiUrl = String.fromEnvironment('CLOUD_API_URL');
   static const String _apiToken = String.fromEnvironment('ESTUFA_API_TOKEN');
 
-  /// Canal nativo (Kotlin, em `MainActivity`) que abre as configuracoes de
-  /// "Nao perturbe" do sistema. O plugin so as abre quando a permissao ainda
-  /// falta; ja concedida, ele nao faz nada, entao o botao "Ver nas
-  /// configuracoes" precisa deste caminho.
-  static const MethodChannel _canalNaoPerturbe = MethodChannel(
+  /// Canal nativo (Kotlin, em `MainActivity`) para o que o Flutter nao expoe.
+  /// Hoje so o modo de som do celular — o app precisa saber se esta mudo para
+  /// avisar que nenhum alerta vai tocar, nem o de incendio.
+  static const MethodChannel _canalSistema = MethodChannel(
     'sentinela/nao_perturbe',
   );
 
@@ -232,7 +231,7 @@ class PushNotificationService {
   Future<String> modoDeSom() async {
     if (!_androidCompativel) return 'normal';
     try {
-      final modo = await _canalNaoPerturbe.invokeMethod<String>('modoDeSom');
+      final modo = await _canalSistema.invokeMethod<String>('modoDeSom');
       return modo ?? 'normal';
     } catch (erro) {
       debugPrint('Nao foi possivel ler o modo de som: $erro');
@@ -390,26 +389,14 @@ class PushNotificationService {
   /// aparelho, na estufa, nao e afetada — ela e hardware.
   Future<void> calarAvisosSonoros() async {
     if (!_androidCompativel) return;
-    const canaisQueTocam = {
-      canalCriticoId,
-      canalTempMuitoAltaId,
-      canalTemperaturaId,
-      canalSemComunicacaoId,
-    };
+    // Cancela TUDO, sem tentar escolher. A versao anterior listava as
+    // notificacoes ativas para cancelar so as que tocam e preservar as
+    // informativas na barra - e falhou justamente com o alarme de incendio,
+    // porque essa consulta nem sempre enxerga o que o Android postou a partir
+    // do push. Preservar um lembrete na barra nao vale o risco de a sirene nao
+    // parar, e o que sai da barra continua visivel dentro do app.
     try {
-      final ativas = await _notificacoesLocais.getActiveNotifications();
-      var precisaLimparTudo = false;
-      for (final ativa in ativas) {
-        if (!canaisQueTocam.contains(ativa.channelId)) continue;
-        // Aviso postado pelo proprio Android a partir do push chega sem id: nao
-        // da para cancelar um a um, entao cai no cancelamento geral.
-        if (ativa.id == null) {
-          precisaLimparTudo = true;
-          break;
-        }
-        await _notificacoesLocais.cancel(id: ativa.id!);
-      }
-      if (precisaLimparTudo) await _notificacoesLocais.cancelAll();
+      await _notificacoesLocais.cancelAll();
     } catch (erro) {
       debugPrint('Nao foi possivel calar os avisos: $erro');
     }
