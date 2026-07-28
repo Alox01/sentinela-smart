@@ -70,8 +70,20 @@ class ApiService {
   // usar o mesmo timeout curto derrubava a conexao remota sem necessidade.
   bool _ehNuvem(String base) => base == cloudBaseUrl;
 
-  Duration _timeoutSonda(String base) =>
-      _ehNuvem(base) ? const Duration(seconds: 6) : const Duration(seconds: 2);
+  // Nome mDNS (`sentinela-xxxxxx.local`) precisa ser RESOLVIDO antes de a
+  // requisicao sair, e no Android a primeira resolucao depois de o celular
+  // acordar ou entrar na rede passa de 2 s com alguma frequencia. Com o timeout
+  // curto a sonda local falhava, o app caia na nuvem e so voltava ao local na
+  // resolucao seguinte - de forma intermitente, que e o pior jeito de falhar.
+  // Endereco por IP nao paga esse pedagio e continua com o prazo curto.
+  static bool _ehNomeMdns(String base) => base.contains('.local');
+
+  Duration _timeoutSonda(String base) {
+    if (_ehNuvem(base)) return const Duration(seconds: 6);
+    return _ehNomeMdns(base)
+        ? const Duration(seconds: 4)
+        : const Duration(seconds: 2);
+  }
 
   // A nuvem no plano gratuito hiberna e leva um tempo para responder a primeira
   // chamada depois de ociosa; um timeout curto derrubava a leitura remota justo
