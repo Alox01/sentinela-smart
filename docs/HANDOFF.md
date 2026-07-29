@@ -50,8 +50,8 @@ em `GET /versao` (mostra o commit no ar).
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
 **Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.16.0, **compilado**
-(86% flash / 15% RAM no core esp32 3.2.0). A **1.15.0 está gravada** no aparelho; a
-**1.16.0 ainda não** — é ela que faz fogo novo furar o silêncio de 10 min.
+(86% flash / 15% RAM no core esp32 3.2.0). A **1.16.0 está gravada** no aparelho e o
+fogo novo furando o silêncio foi confirmado em campo.
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
   acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
   conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
@@ -160,7 +160,6 @@ Nada de **produção**: o escopo da proposta está implementado. O que resta é
 validação em campo e a escrita.
 
 1. **Validar em hardware o que mudou por último** (código pronto, não provado):
-   - regravar o ESP com a **1.16.0**;
    - **teste da queda de energia** — vale por três de uma vez: mede o tempo real
      até o push de "sem comunicação", confirma que o alvo volta do NVS (e não
      nos 76 °F padrão) e fecha o ciclo com o aviso de retorno;
