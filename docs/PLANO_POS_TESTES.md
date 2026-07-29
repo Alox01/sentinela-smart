@@ -1,7 +1,7 @@
 # Plano depois dos testes de campo
 
 > Escrito em 25/07/2026, atualizado em 29/07/2026. App e servidor no ar, e o
-> firmware **1.17.0 gravado** no aparelho. A ordem abaixo pressupõe que os testes de
+> firmware **1.18.0 gravado** no aparelho. A ordem abaixo pressupõe que os testes de
 > campo aconteçam primeiro — vários itens só fazem sentido depois deles.
 
 ## Por que testar antes de continuar
@@ -12,7 +12,7 @@ bugs que nenhum teste automatizado pegaria — um silencioso (comando parado num
 caixa que o simulador nunca consulta) e um intermitente (a resolução do nome
 mDNS estourando o prazo da sonda).
 
-Sobram os que **dependem do aparelho em campo**. O ESP já está com a **1.17.0**,
+Sobram os que **dependem do aparelho em campo**. O ESP já está com a **1.18.0**,
 então nenhum deles espera gravação.
 
 ## 1. Testes de campo (só o produtor pode fazer)
@@ -20,10 +20,8 @@ então nenhum deles espera gravação.
 | Teste | O que prova | Depende de |
 |---|---|---|
 | Segurar o botão do buzzer 3 s | liga/desliga a sirene sem celular (2 apitos × 1 longo) | 1.13.0 ✅ |
-| Som contínuo no fogo | chama e temperatura de incêndio contínuos; alarme comum intermitente | 1.17.0 ✅ |
+| Som contínuo no fogo | chama e temperatura de incêndio contínuos; alarme comum intermitente | 1.18.0 ✅ |
 | Modo de configuração num celular real | portal cativo e IP fixo, **nunca abertos fora do código** | 1.13.0 ✅ |
-| Queda de energia | o ajuste volta da NVS, e o watchdog avisa | 1.13.0 ✅ |
-| Agendar com o ESP real | lembrete chega **e** o ajuste muda sozinho (o simulador já provou a lógica) | APK + servidor |
 | Ponte de leitura | energia sim, internet da propriedade não, celular no 4G → **sem** falso "sem comunicação" | APK |
 | Cadastrar / atualizar estufa | os fluxos novos de provisionamento | APK |
 
@@ -70,6 +68,9 @@ preferência.
 | Fogo **começando** dentro dos 10 min silenciados | ❌ **não tocava nada**. O silêncio cobria fogo de que o produtor nunca ficou ciente. Corrigido na 1.16.0 e ✅ **confirmado em campo**. |
 | Nome da estufa no push | ✅ chegou "Esp32-2 · …", teste e alarme real |
 | Versão do firmware pela nuvem | ✅ 1.17.0 confirmada de fora, sem terminal na rede local |
+| **Queda de energia** (29/07/2026) | ✅ passou inteiro: o "sem comunicação" chegou no prazo, o ajuste **voltou do NVS** (não nos valores padrão) e o aviso de retorno chegou ao religar |
+| Chave própria registrada na nuvem (TOFU, 1.18.0) | ✅ o aparelho registrou sozinho, no ciclo de comandos, sem intervenção |
+| Desembaraçar as três estufas | ✅ feito à mão pelo produtor |
 | Alarme com "Não perturbe" ligado | ✅ **toca** — a permissão de furar o DND funciona |
 | Alarme no modo silencioso | ❌ não toca (limitação do Android, ver `NOTIFICACOES_PUSH.md`) |
 | Alarme no modo vibrar | vibra, não toca |

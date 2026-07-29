@@ -50,8 +50,8 @@ em `GET /versao` (mostra o commit no ar).
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
 **Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.16.0, **compilado**
-(86% flash / 15% RAM no core esp32 3.2.0). A **1.16.0 está gravada** no aparelho e o
-fogo novo furando o silêncio foi confirmado em campo.
+(86% flash / 15% RAM no core esp32 3.2.0). A **1.18.0 está gravada** no aparelho, e a
+chave própria dele já está registrada na nuvem.
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
   acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
   conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
@@ -167,14 +167,7 @@ vai estar por perto
 Nada de **produção**: o escopo da proposta está implementado. O que resta é
 desembaraçar o cadastro, validar em campo e escrever.
 
-1. **Desembaraçar as três estufas** (29/07/2026) — as três ficaram apontadas
-   para o mesmo aparelho. Precisa ser desfeito à mão, estufa por estufa, com os
-   campos de endereço e id do form. Enquanto não for, nada medido na lista de
-   estufas vale. Tabela do que cada uma deve ter em `PLANO_POS_TESTES.md`.
-2. **Validar em hardware o que mudou por último** (código pronto, não provado):
-   - **queda de energia** — vale por três: mede o tempo real até o push de "sem
-     comunicação" (limite padrão do watchdog: **5 min**), confirma que o ajuste
-     volta do NVS (e não no padrão) e fecha o ciclo com o aviso de retorno;
+1. **Validar em hardware o que mudou por último** (código pronto, não provado):
    - **modo de configuração num celular de verdade** (portal cativo e IP fixo
      nunca foram abertos fora do código);
    - **cenário da ponte**: aparelho com energia e a internet da propriedade
@@ -184,8 +177,10 @@ desembaraçar o cadastro, validar em campo e escrever.
    a pegadinha do canal congelado em `NOTIFICACOES_PUSH.md`.
 4. **Escrita do TCC** e seção de resultados (números dos testes acima).
    Ordem sugerida do trabalho daqui em diante: `PLANO_POS_TESTES.md`.
-5. **Provisionamento Parte 2 — implementada** (29/07/2026, firmware 1.18.0 +
-   servidor). Falta **provar em campo** e, só depois, decidir desligar a chave
+5. **Provisionamento Parte 2 — implementada e registrando em campo**
+   (29/07/2026, firmware 1.18.0 + servidor): o aparelho registrou a chave
+   própria sozinho, no ciclo de comandos. Falta provar a **rotação** ("gerar
+   nova chave" no modo de configuração) e, só depois, decidir desligar a chave
    global (`ESTUFA_API_TOKEN`) — que continua valendo de propósito, senão os
    aparelhos que ainda não registraram a sua perderiam o acesso remoto. Detalhes
    e as decisões de segurança em `CONFIGURACAO_ESP32.md`.
