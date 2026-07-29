@@ -126,8 +126,8 @@ comportamento:
   nisso. Desligado, o aviso **não é enviado** (o servidor tira aquele aparelho
   da lista) — não é "silenciar", é não existir.
 - **Tocar** — decide **uma coisa só**: se aquele aviso chega como **alarme**
-  (sirene longa, em volume de alarme, furando o "Não perturbe"). O rótulo era
-  "Tocar / vibrar", o que sugeria mexer no bipe comum; agora é só "Tocar".
+  (sirene longa, em volume de alarme). O rótulo era "Tocar / vibrar", o que
+  sugeria mexer no bipe comum; agora é só "Tocar".
 
 Desligar "Notificar" desliga "Tocar" junto — sem mensagem não há o que tocar.
 
@@ -137,7 +137,7 @@ local.
 
 ### Quem acorda de madrugada
 
-Três eventos tocam como alarme quando "Tocar" está ligado — os três em que o
+Quatro eventos tocam como alarme quando "Tocar" está ligado — aqueles em que o
 produtor teria de sair da cama:
 
 | Evento | Toca como alarme |
@@ -170,27 +170,39 @@ Teste com o push de teste (`POST /push/teste`), variando só o modo de som:
 alarme de incêndio — é o Android, não o app: o modo silencioso zera também o
 volume de alarme no One UI.
 
-**Sobre o "Não perturbe", uma correção do que se supunha:** testando com a
-permissão de bypass **desligada**, o aviso **continuou tocando**. A explicação
-é que o DND libera **alarmes** por padrão, e os avisos críticos saem no volume
-de alarme — então eles passam por essa porta, sem depender da permissão. Existem
-dois caminhos, e o app só controla um:
+### O "Não perturbe" saiu do app (25/07/2026)
 
-| Caminho | Depende de |
-|---|---|
-| DND permite alarmes (padrão de fábrica) | configuração do "Não perturbe" |
-| Canal com `bypassDnd` | a permissão que o app pede |
+A tela chegou a ter um card para pedir a permissão de furar o "Não perturbe".
+**Foi removido.** A sequência de testes que levou a isso:
 
-Portanto a permissão é **garantia**, não requisito: ela cobre o produtor que
-apertou o "Não perturbe" a ponto de bloquear alarmes. O texto da tela dizia que
-sem ela o aviso "fica mudo", o que o teste mostrou ser exagero — e foi
-corrigido.
+1. Com a permissão **revogada**, o aviso continuou tocando.
+2. Removendo até a exceção de alarmes do DND, **ainda tocou**.
+
+A explicação é que o Android **congela a configuração de um canal no momento em
+que ele é criado**: concedida uma vez, o canal guarda o bypass e continua
+furando o DND mesmo sem a permissão. Recriar o canal não desfaz (o sistema
+restaura as configurações de um canal apagado com o mesmo id).
+
+Ou seja, o card **prometia um controle que não tinha**: depois da primeira
+concessão, ligar ou desligar dava no mesmo. Para um produtor não-técnico, três
+telas de explicação sobre uma permissão inerte era complexidade sem retorno.
+
+**O que ficou no lugar:** um aviso no rodapé e um card âmbar que aparece quando
+o celular está de fato no silencioso ou vibrar.
+
+**O custo, declarado:** sem o bypass, quem configurar o "Não perturbe" para
+**bloquear alarmes** perde o aviso de incêndio. É uma configuração enterrada e
+deliberada; no padrão, o DND deixa alarme passar.
+
+**Onde está o controle de verdade:** desligar o "Tocar" do evento (manda pelo
+canal comum) ou o "Ignorar Não perturbe" de cada canal, nas configurações do
+Android.
 
 Daí a recomendação que ficou escrita na própria tela: **à noite, usar "Não
 perturbe" em vez de deixar o celular no silencioso**. É a diferença entre
 acordar e não acordar, e nenhum ajuste no app contorna isso.
 
-**Ressalva honesta:** os três usam a **mesma sirene**, o único som longo do app.
+**Ressalva honesta:** os quatro usam a **mesma sirene**, o único som longo do app.
 As vibrações diferem, mas pelo som eles são parecidos — vale um segundo arquivo
 de áudio para separar "vá ver" de "corra".
 

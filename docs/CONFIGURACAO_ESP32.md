@@ -35,15 +35,18 @@ Comportamento do firmware atual (montagem de referencia):
 - **Fahrenheit:** ja resolvido — o firmware le com `dht.readTemperature(true)`,
   que retorna Fahrenheit direto da biblioteca. Nao precisa converter.
 - **Sensor de luz = alarme de maior prioridade (papel de chama):** quando o
-  sensor de luz dispara, o buzzer toca continuo e **nao pode ser silenciado** —
-  mesmo comportamento do alerta de incendio no `logica.js`. Ressalva: um LDR
-  comum e um detector de fogo fraco; para incendio de verdade, avaliar um sensor
-  de chama dedicado (IR).
+  sensor de luz dispara, o buzzer toca **continuo** (o de temperatura e
+  intermitente). Desde a v1.14.0 ele aceita o **silencio de 10 min**, como os
+  demais - quem aperta ja esta ciente e foi agir -, mas **nao pode ser
+  desligado**: o hold de 3 s no botao do buzzer segue recusado para fogo, porque
+  desligar nao tem prazo para voltar. Ressalva: um LDR comum e um detector de
+  fogo fraco; para incendio de verdade, avaliar um sensor de chama dedicado (IR).
 - **Alarme de temperatura (silenciavel):** buzzer intermitente quando a
   temperatura sai de `alvo +/- margem`; o botao do buzzer silencia so este.
-- **Botoes:** vermelho = entra em modo ajuste e incrementa o alvo (+1);
-  verde = decrementa o alvo (-1) no ajuste, ou mostra a umidade por 10 s fora
-  dele; botao do buzzer = silencia o alarme de temperatura.
+- **Botoes:** vermelho = entra em modo ajuste e incrementa o ajuste (+1);
+  verde = decrementa o ajuste (-1), ou mostra a umidade por 10 s fora dele;
+  botao do buzzer = silencia qualquer alarme por 10 min (segurando 3 s, liga ou
+  desliga a sirene de temperatura deste aparelho).
 - **LEDs:** alerta geral (luz ou temperatura); controle de temperatura com
   histerese (liga <= alvo-2, desliga >= alvo+2 — indica aquecedor, sem rele);
   umidade acende so enquanto o visor mostra a umidade.
@@ -387,7 +390,7 @@ Pendentes:
   mas so vale depois de abrir a pagina num celular de verdade). Vale para o
   portal cativo e para os campos de IP fixo, nunca exercitados fora do codigo.
 - Testar DHCP reservado em campo.
-- **Gravar a v1.13.0 no aparelho** — a ultima versao provada em hardware e a
+- **Gravar a v1.14.0 no aparelho** — a ultima versao provada em hardware e a
   1.9.0; da 1.10.0 em diante (IP fixo, confirmacao sonora do modo config, sirene
   desligavel, hold de 3 s no botao do buzzer) so ha compilacao.
 - Avaliar *flash encryption* se a senha em claro na NVS virar preocupacao real.

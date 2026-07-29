@@ -95,7 +95,8 @@ de largar água, o que sinaliza virada de fase.
 ### Consequência: o limiar de incêndio está apertado **[inferência]**
 
 O firmware trata **> 175 °F como risco de incêndio**
-(`riscoIncendioAgora()`), e esse alerta é **não silenciável** e dispara push
+(`riscoIncendioAgora()`). Esse alerta **não pode ser desligado** — só silenciado
+por 10 min, que voltam sozinhos (v1.14.0) — e dispara push
 com som de alarme.
 
 Com a máxima de trabalho em 165 °F, sobram **apenas 10 °F** de folga — e o

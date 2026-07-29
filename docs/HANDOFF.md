@@ -49,7 +49,7 @@ em `GET /versao` (mostra o commit no ar).
   Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.13.0, **compilado**
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.14.0, **compilado**
 (86% flash / 15% RAM no core esp32 3.2.0). A v1.9.0 foi validada em hardware;
 **da 1.10.0 em diante ainda não foi gravado no aparelho.**
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
@@ -72,8 +72,11 @@ em `GET /versao` (mostra o commit no ar).
   passar despercebido entre dois ciclos de 1 min).
 - Controle local edge-first (DHT22, botões, display, LEDs, buzzer) sem depender
   de Wi-Fi. Id único por chip (MAC). Leituras inteiras.
-- Silêncio do alarme **com prazo de 10 min** (botão e app pelo mesmo caminho);
-  incêndio não silenciável.
+- Silêncio do alarme **com prazo de 10 min** (botão e app pelo mesmo caminho),
+  válido também para **incêndio** desde a v1.14.0: quem aperta já está ciente e
+  foi agir, e a sirene ao lado atrapalha. O prazo vence sozinho, então
+  silenciar-e-esquecer continua impossível. **Desligar** o buzzer (hold de 3 s)
+  segue recusado para fogo — esse não tem prazo.
 - Push de leitura para a nuvem + busca de comandos (`GET /comandos`), pulada
   durante alarme de incêndio (o handshake HTTPS não pode roubar tempo do loop).
 - **mDNS**: anuncia `sentinela-XXXXXX.local` (nome estável por chip), IP como
@@ -86,7 +89,7 @@ em `GET /versao` (mostra o commit no ar).
 **Notificações push (FCM)** — Objetivo Específico #4 da proposta, **completo e
 confirmado em campo** (chegou no celular com o app fechado)
 - **Dois escopos, deliberadamente separados:** as preferências por evento
-  (notificar × tocar/vibrar), o "Não perturbe" e a sirene dos aparelhos são
+  (notificar × tocar) e a sirene dos aparelhos são
   **globais** e vivem na tela aberta pelo sino da lista de estufas; o menu de
   cada estufa tem só **"Silenciar avisos"**, que cala aquela estufa. A regra é
   que o escopo menor **pode silenciar, nunca dessilenciar**: numa estufa
@@ -109,9 +112,11 @@ confirmado em campo** (chegou no celular com o app fechado)
   **LOCAL** e tem internet própria (4G), ele repassa a leitura (`POST /leitura`,
   no máximo 1×/min por causa da cota do banco): o `ultimoContatoMs` fica fresco
   e o alarme falso não chega a nascer.
-- **Som de alarme** para incêndio: canal `sentinela_critico_v2`, sirene de 30s
-  em volume de **alarme** (não de notificação), com opção de furar o "Não
-  perturbe". Ver `NOTIFICACOES_PUSH.md`.
+- **Som de alarme** nos quatro avisos de risco: sirene de 30s em volume de
+  **alarme** (não de notificação), um canal do Android por assunto. O card que
+  pedia permissão para furar o "Não perturbe" **foi removido** — depois de
+  concedida uma vez ele não controlava mais nada, e era complexidade sem
+  retorno. Ver `NOTIFICACOES_PUSH.md`.
 - **Dois interruptores com sentido próprio:** "Notificar" manda ou não a
   mensagem (o bipe comum é do celular, como em qualquer app); "Tocar" decide se
   ela chega como **alarme**. Quatro eventos acordam quando "Tocar" está ligado —
@@ -147,7 +152,7 @@ Nada de **produção**: o escopo da proposta está implementado. O que resta é
 validação em campo e a escrita.
 
 1. **Validar em hardware o que mudou por último** (código pronto, não provado):
-   - regravar o ESP com a **1.13.0** e instalar o APK novo;
+   - regravar o ESP com a **1.14.0** e instalar o APK novo;
    - **teste da queda de energia** — vale por três de uma vez: mede o tempo real
      até o push de "sem comunicação", confirma que o alvo volta do NVS (e não
      nos 76 °F padrão) e fecha o ciclo com o aviso de retorno;
@@ -187,7 +192,8 @@ validação em campo e a escrita.
   Aguardando a metragem dos cabos para fechar a escolha da umidade.
 - **Limiar de incêndio (175 °F) apertado:** a máxima de trabalho é 165 °F e o
   sensor fica no ar mais quente da estufa — 10 °F de folga. Risco de alarme
-  falso não silenciável. Ver `AMBIENTE_ESTUFA.md` §3.
+  falso, que desde a v1.14.0 pode ao menos ser silenciado por 10 min (antes não
+  podia de jeito nenhum). Ver `AMBIENTE_ESTUFA.md` §3.
 
 ## Trabalho futuro de software
 
@@ -221,7 +227,7 @@ flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.on
 - Servidor: `cd estufa_server && npm test` · App: `cd estufa_app && flutter analyze lib test && flutter test` · Firmware: compilar no Arduino IDE / arduino-cli (core esp32 3.2.0).
 - Deploy no ar: `GET https://estufa-server.onrender.com/versao` → commit atual.
 - Em 25/07/2026: **160 testes no servidor**, **57 no app**, analyze limpo,
-  firmware 1.13.0 compilando em 86% do flash.
+  firmware 1.14.0 compilando em 86% do flash.
 - Testar alarme sem esperar acontecer: `POST /push/verificar-silencio` (roda o
   watchdog na hora) e `POST /agendamentos/verificar` (aplica o que venceu).
   Ambos autenticados.

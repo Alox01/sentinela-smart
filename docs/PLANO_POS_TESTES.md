@@ -1,6 +1,6 @@
 # Plano depois dos testes de campo
 
-> Escrito em 25/07/2026, com o app e o servidor no ar e o firmware 1.13.0
+> Escrito em 25/07/2026, com o app e o servidor no ar e o firmware 1.14.0
 > compilado mas **ainda não gravado**. A ordem abaixo pressupõe que os testes de
 > campo aconteçam primeiro — vários itens só fazem sentido depois deles.
 
