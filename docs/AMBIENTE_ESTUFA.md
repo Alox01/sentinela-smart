@@ -116,11 +116,23 @@ Cogitou-se então exigir que a condição se **sustentasse por N minutos** (o pi
 de quem atiçou volta; fogo não). Também descartado, e pelo produtor: N depende
 da lenha e do clima, e não existe constante que sirva.
 
-**Pendente decidir:** nada, por enquanto — e de propósito. O alarme falso ainda
-é **inferência**, não observação. Uma estufada acompanhada diz se ele acontece
-de verdade; se não acontecer, o limiar relativo ao ajuste já resolve, e nenhum
-mecanismo novo precisa existir. O que anotar durante a estufada: **quanto a
-temperatura passa do ajuste depois de atiçar, e quanto tempo leva para assentar**.
+**Decidido: fica em 175 °F** (29/07/2026, dado do produtor **[campo]**). A
+pergunta era quanto a temperatura passa do ajuste ao atiçar a fornalha. Resposta:
+**normalmente não mais de 2 °F**. Só passa disso na combinação de clima muito
+quente por fora, ajuste já em 160 °F e fumo quase seco (faltando algumas horas).
+
+Com ajuste em 160 °F e 2 °F de excesso, sobram **13 °F** até o limite — não os
+10 °F apertados que a inferência supunha, porque a máxima de trabalho de 165 °F
+é teto de tabela, não o ajuste que se usa. O alarme falso **não acontece**, e a
+folga real é confortável.
+
+Isso também encerra o assunto por outro lado: o DHT22 tem teto de 176 °F, então
+**não havia para onde subir** o limiar sem trocar o sensor. Sorte que não é
+preciso.
+
+O que continua valendo: o limite acompanha o ajuste quando ele passa de 170 °F
+(`limiteFogoF()`), para quem pede um ajuste alto de propósito não levar alarme de
+incêndio por ter conseguido o que pediu.
 
 ---
 

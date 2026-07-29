@@ -107,12 +107,14 @@ Dois pontos já conhecidos, que os testes podem confirmar ou derrubar:
   áudios do produtor. Requisitos dos arquivos e a pegadinha do canal congelado
   em `NOTIFICACOES_PUSH.md`.
 
-## 3. Decisão do limiar de incêndio
+## 3. Decisão do limiar de incêndio — **fechada** (29/07/2026)
 
-Pendente há tempo, e é **conhecimento do produtor**, não do software: os 175 °F
-com máxima de trabalho em 165 °F deixam 10 °F de folga, com o sensor no ar mais
-quente da estufa. Subir o limiar, ou trocá-lo por **velocidade de subida**?
-Ver `AMBIENTE_ESTUFA.md` §3. Uma estufada completa observada responde isso.
+**Fica em 175 °F.** O produtor mediu o que faltava: atiçar a fornalha passa do
+ajuste em **não mais de 2 °F**, e só passa disso com clima muito quente, ajuste
+em 160 °F e fumo quase seco. Com 160 + 2, sobram 13 °F até o limite — o alarme
+falso que a inferência previa não acontece. Velocidade de subida e "sustentado
+por N minutos" foram descartados antes, também por evidência dele. Detalhes e o
+raciocínio em `AMBIENTE_ESTUFA.md` §3.
 
 ## 4. Provisionamento, Parte 1 — **feito** (25/07/2026)
 

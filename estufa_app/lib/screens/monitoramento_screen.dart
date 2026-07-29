@@ -80,6 +80,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // Versao do firmware relatada pelo aparelho. Ate a v1.x nao havia como saber
   // qual versao estava gravada sem ir ate la com um terminal.
   String? _versaoFirmware;
+  // Estado REAL da sirene de temperatura deste aparelho, como ele reporta. O
+  // interruptor global e uma intencao guardada no celular; segurar o botao do
+  // aparelho por 3 s muda a coisa em si, e sem ler de volta o app mostrava o
+  // contrario do que estava acontecendo na estufa.
+  bool? _buzzerAparelhoAtivo;
   int _pendenciasSincronizacao = 0;
   bool _sincronizandoPendencias = false;
   // Comeca em CONECTANDO: antes da 1a resposta nao da para afirmar que esta
@@ -262,6 +267,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       // Guarda a ultima versao vista em vez de zerar quando a leitura nao a
       // traz: firmware nao muda sozinho, e "-" no lugar do numero conhecido
       // seria uma piora.
+      final buzzerLido = config['buzzerAtivo'];
+      if (buzzerLido is bool) _buzzerAparelhoAtivo = buzzerLido;
       final versaoLida = status['versaoFirmware'];
       if (versaoLida is String && versaoLida.isNotEmpty) {
         _versaoFirmware = versaoLida;
@@ -674,6 +681,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AVISOS'),
             _itemSilenciarAvisos(),
+            _itemSireneDoAparelho(),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
@@ -839,6 +847,33 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Informativo, nao acao: a troca e no aparelho, segurando o botao 3 s. Existe
+  // porque o interruptor global da tela de notificacoes e uma ordem para todos
+  // os aparelhos, e nao um espelho de cada um - dois podem estar diferentes, e
+  // so aqui da para saber qual e qual.
+  Widget _itemSireneDoAparelho() {
+    final ativo = _buzzerAparelhoAtivo;
+    return ListTile(
+      leading: Icon(
+        ativo == false ? Icons.volume_off_outlined : Icons.volume_up_outlined,
+        color: Colors.white70,
+      ),
+      title: Text(
+        ativo == null
+            ? 'Sirene do aparelho'
+            : 'Sirene do aparelho: ${ativo ? 'ligada' : 'desligada'}',
+        style: const TextStyle(color: Colors.white),
+      ),
+      subtitle: Text(
+        ativo == null
+            ? 'Aguardando o aparelho informar'
+            : 'Para trocar, segure 3 s o botão do buzzer no aparelho. O fogo '
+                  'toca de qualquer forma.',
+        style: const TextStyle(color: Colors.white38, fontSize: 12),
       ),
     );
   }
