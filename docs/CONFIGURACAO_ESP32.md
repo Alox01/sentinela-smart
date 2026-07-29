@@ -338,6 +338,23 @@ O que ficou de pé, e as decisões que o desenho abaixo previa mas não fechava:
   aparelhos em campo registrarem a sua deixaria o produtor sem acesso remoto.
   Desligar é um passo separado, depois de provado em campo.
 
+**Para desligar a chave global (29/07/2026), o que foi verificado.** Todas as
+rotas que o app chama na nuvem carregam `idHardware` — `/sincronizar` (quando
+conhecido), `/agendamentos` (recusa sem ele), `/push/dispositivos` (obrigatório)
+e `/status?idHardware=`. Ou seja, o app não precisa da chave global para uma
+estufa que já tem id. Falta:
+
+- **o simulador** (`ESP32_REALISTIC_V2`) registrar uma chave. Hoje ele é lido com
+  a global. Basta editar a estufa dele no app com uma chave nova — a Fase 3 a
+  sobe. Nada dentro do servidor precisa dessa chave: o simulador não autentica
+  para fora, só é lido;
+- **aparelho novo** entrar já com a chave registrada (pelo próprio aparelho na
+  1.18.0, ou pelo app).
+
+E o que **deixa de funcionar de propósito**: as rotas de teste sem `idHardware`
+(`POST /push/verificar-silencio`) e qualquer `curl` de diagnóstico com a chave
+global. Nenhuma delas é caminho de produção.
+
 Desenho original abaixo, mantido porque o raciocínio segue valendo.
 
 #### Desenho original
