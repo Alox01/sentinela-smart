@@ -45,6 +45,14 @@ class ApiService {
   String? idHardware;
 
   String? _baseUrlAtiva;
+  // Uma sonda local que falha nao derruba a conexao local. A resolucao do nome
+  // mDNS falha sozinha de vez em quando, e cada falha isolada trocava a FONTE
+  // dos numeros na tela: o cartao piscava entre LOCAL e NUVEM em questao de
+  // segundos, mostrando alternadamente o aparelho e a nuvem - com valores
+  // diferentes, porque a nuvem tem o atraso do ultimo envio. Duas falhas
+  // seguidas ja significam que o aparelho saiu do alcance de verdade.
+  static const int _falhasLocaisParaDesistir = 2;
+  int _falhasLocaisSeguidas = 0;
   DateTime _ultimaResolucao = DateTime.fromMillisecondsSinceEpoch(0);
   ApiCommandFailure _ultimaFalhaComando = ApiCommandFailure.none;
   ResultadoAlcance? _ultimoAlcance;
@@ -500,6 +508,22 @@ class ApiService {
           escolhida = base;
           break;
         }
+      }
+    }
+
+    if (escolhida != null) {
+      _falhasLocaisSeguidas = 0;
+    } else if (locais.isNotEmpty) {
+      _falhasLocaisSeguidas++;
+      final ativa = _baseUrlAtiva;
+      if (_falhasLocaisSeguidas < _falhasLocaisParaDesistir &&
+          ativa != null &&
+          !_ehNuvem(ativa)) {
+        // Segura a local ja estabelecida. Se ela tiver caido mesmo, a chamada
+        // real falha em seguida e a re-resolucao forcada completa a segunda
+        // falha - o custo e uma requisicao perdida, nao a troca da fonte.
+        _ultimaResolucao = agora;
+        return ativa;
       }
     }
 

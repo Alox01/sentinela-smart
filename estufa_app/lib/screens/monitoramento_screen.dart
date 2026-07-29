@@ -1251,6 +1251,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
       estadoAparelho: _descreverEstadoAparelho(),
       versaoFirmware: _versaoFirmware,
+      idHardware: widget.idHardware ?? api.idHardware,
       baseUrlAtiva: api.baseUrlAtiva,
       localBaseUrl: api.localBaseUrl,
       cloudBaseUrl: api.cloudBaseUrl,

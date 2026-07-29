@@ -16,6 +16,10 @@ Future<void> mostrarDetalhesConexaoDialog({
   // quando ja se esta em campo - e ate aqui a unica resposta era ir ate la com
   // um terminal. Nulo quando ainda nao chegou leitura nenhuma.
   required String? versaoFirmware,
+  // Qual aparelho esta estufa le na nuvem. Sem isso nao havia como responder
+  // "de quem sao estes numeros?" - e ja houve uma estufa exibindo a leitura de
+  // outra, por um endereco reaproveitado.
+  required String? idHardware,
   required String? baseUrlAtiva,
   required String localBaseUrl,
   required String? cloudBaseUrl,
@@ -102,6 +106,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                         // acesso a nada (a chave nunca e mostrada), mas nao ha
                         // motivo para o nome do aparelho viajar em cada print.
                         _DetalhesTecnicos(
+                          idHardware: idHardware,
                           baseUrlAtiva: baseUrlAtiva,
                           localBaseUrl: localBaseUrl,
                           cloudBaseUrl: cloudBaseUrl,
@@ -188,11 +193,13 @@ Future<void> mostrarDetalhesConexaoDialog({
 /// Enderecos de rede, fechados por padrao. Sao a ferramenta de quem investiga
 /// "por que nao conecta", nao informacao de rotina para quem cuida da estufa.
 class _DetalhesTecnicos extends StatefulWidget {
+  final String? idHardware;
   final String? baseUrlAtiva;
   final String localBaseUrl;
   final String? cloudBaseUrl;
 
   const _DetalhesTecnicos({
+    required this.idHardware,
     required this.baseUrlAtiva,
     required this.localBaseUrl,
     required this.cloudBaseUrl,
@@ -233,6 +240,7 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
         ),
         if (_aberto) ...[
           const SizedBox(height: 4),
+          _LinhaDetalhe('Aparelho (id)', widget.idHardware ?? 'Não identificado'),
           _LinhaDetalhe('Ativo', widget.baseUrlAtiva ?? '-'),
           _LinhaDetalhe('Local', widget.localBaseUrl),
           _LinhaDetalhe('Nuvem', widget.cloudBaseUrl ?? 'Não configurada'),
