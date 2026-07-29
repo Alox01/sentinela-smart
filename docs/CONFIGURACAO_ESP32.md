@@ -34,13 +34,17 @@ Comportamento do firmware atual (montagem de referencia):
 
 - **Fahrenheit:** ja resolvido — o firmware le com `dht.readTemperature(true)`,
   que retorna Fahrenheit direto da biblioteca. Nao precisa converter.
-- **Sensor de luz = alarme de maior prioridade (papel de chama):** quando o
-  sensor de luz dispara, o buzzer toca **continuo** (o de temperatura e
-  intermitente). Desde a v1.14.0 ele aceita o **silencio de 10 min**, como os
-  demais - quem aperta ja esta ciente e foi agir -, mas **nao pode ser
-  desligado**: o hold de 3 s no botao do buzzer segue recusado para fogo, porque
-  desligar nao tem prazo para voltar. Ressalva: um LDR comum e um detector de
-  fogo fraco; para incendio de verdade, avaliar um sensor de chama dedicado (IR).
+- **Fogo = alarme de maior prioridade:** as duas causas - sensor de luz (papel
+  de chama) e temperatura de incendio (>175 F) - tocam o buzzer **continuo**
+  desde a v1.15.0. O alarme comum de temperatura toca **intermitente**, e e por
+  esse contraste que quem esta na estufa distingue "va ver a lenha" de "corra"
+  sem olhar o celular.
+  Desde a v1.14.0 o fogo aceita o **silencio de 10 min**, como os demais - quem
+  aperta ja esta ciente e foi agir -, mas **nao pode ser desligado**: o hold de
+  3 s no botao do buzzer segue recusado para fogo, porque desligar nao tem prazo
+  para voltar.
+  Ressalva: um LDR comum e um detector de fogo fraco; para incendio de verdade,
+  avaliar um sensor de chama dedicado (IR).
 - **Alarme de temperatura (silenciavel):** buzzer intermitente quando a
   temperatura sai de `alvo +/- margem`; o botao do buzzer silencia so este.
 - **Botoes:** vermelho = entra em modo ajuste e incrementa o ajuste (+1);
@@ -390,7 +394,7 @@ Pendentes:
   mas so vale depois de abrir a pagina num celular de verdade). Vale para o
   portal cativo e para os campos de IP fixo, nunca exercitados fora do codigo.
 - Testar DHCP reservado em campo.
-- **Gravar a v1.14.0 no aparelho** — a ultima versao provada em hardware e a
+- **Gravar a v1.15.0 no aparelho** — a ultima versao provada em hardware e a
   1.9.0; da 1.10.0 em diante (IP fixo, confirmacao sonora do modo config, sirene
   desligavel, hold de 3 s no botao do buzzer) so ha compilacao.
 - Avaliar *flash encryption* se a senha em claro na NVS virar preocupacao real.

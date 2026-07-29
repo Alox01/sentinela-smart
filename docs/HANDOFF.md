@@ -49,9 +49,10 @@ em `GET /versao` (mostra o commit no ar).
   Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.14.0, **compilado**
-(86% flash / 15% RAM no core esp32 3.2.0). A v1.9.0 foi validada em hardware;
-**da 1.10.0 em diante ainda não foi gravado no aparelho.**
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.15.0, **compilado**
+(86% flash / 15% RAM no core esp32 3.2.0). A **1.13.0 está gravada** no aparelho;
+a 1.14.0 e a 1.15.0 ainda não — e são elas que trazem o silêncio do fogo e o
+toque contínuo.
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
   acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
   conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
@@ -72,6 +73,10 @@ em `GET /versao` (mostra o commit no ar).
   passar despercebido entre dois ciclos de 1 min).
 - Controle local edge-first (DHT22, botões, display, LEDs, buzzer) sem depender
   de Wi-Fi. Id único por chip (MAC). Leituras inteiras.
+- **Fogo toca contínuo, alarme comum toca intermitente** (v1.15.0): é como quem
+  está na estufa, sem o celular na mão, distingue "vá ver a lenha" de "corra".
+  Antes só a chama era contínua; a temperatura de incêndio caía no mesmo bipe do
+  alarme comum, apesar de ser tão grave.
 - Silêncio do alarme **com prazo de 10 min** (botão e app pelo mesmo caminho),
   válido também para **incêndio** desde a v1.14.0: quem aperta já está ciente e
   foi agir, e a sirene ao lado atrapalha. O prazo vence sozinho, então
@@ -152,7 +157,7 @@ Nada de **produção**: o escopo da proposta está implementado. O que resta é
 validação em campo e a escrita.
 
 1. **Validar em hardware o que mudou por último** (código pronto, não provado):
-   - regravar o ESP com a **1.14.0** e instalar o APK novo;
+   - regravar o ESP com a **1.15.0** e instalar o APK novo;
    - **teste da queda de energia** — vale por três de uma vez: mede o tempo real
      até o push de "sem comunicação", confirma que o alvo volta do NVS (e não
      nos 76 °F padrão) e fecha o ciclo com o aviso de retorno;
@@ -227,7 +232,7 @@ flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.on
 - Servidor: `cd estufa_server && npm test` · App: `cd estufa_app && flutter analyze lib test && flutter test` · Firmware: compilar no Arduino IDE / arduino-cli (core esp32 3.2.0).
 - Deploy no ar: `GET https://estufa-server.onrender.com/versao` → commit atual.
 - Em 25/07/2026: **160 testes no servidor**, **57 no app**, analyze limpo,
-  firmware 1.14.0 compilando em 86% do flash.
+  firmware 1.15.0 compilando em 86% do flash.
 - Testar alarme sem esperar acontecer: `POST /push/verificar-silencio` (roda o
   watchdog na hora) e `POST /agendamentos/verificar` (aplica o que venceu).
   Ambos autenticados.

@@ -1,6 +1,6 @@
 # Plano depois dos testes de campo
 
-> Escrito em 25/07/2026, com o app e o servidor no ar e o firmware 1.14.0
+> Escrito em 25/07/2026, com o app e o servidor no ar e o firmware 1.15.0
 > compilado mas **ainda não gravado**. A ordem abaixo pressupõe que os testes de
 > campo aconteçam primeiro — vários itens só fazem sentido depois deles.
 
@@ -13,16 +13,17 @@ caixa que o simulador nunca consulta) e um intermitente (a resolução do nome
 mDNS estourando o prazo da sonda).
 
 Sobram os que **dependem do aparelho em campo**. O ESP está com a **1.13.0**; a
-**1.14.0** (silêncio de 10 min valendo também para fogo) ainda precisa ser
-gravada.
+**1.15.0** (silêncio de 10 min valendo para fogo, e fogo tocando contínuo)
+ainda precisa ser gravada.
 
 ## 1. Testes de campo (só o produtor pode fazer)
 
 | Teste | O que prova | Depende de |
 |---|---|---|
-| Gravar a **1.14.0** | destrava o silêncio do fogo | — |
+| Gravar a **1.15.0** | destrava o silêncio do fogo e o toque contínuo | — |
 | Segurar o botão do buzzer 3 s | liga/desliga a sirene sem celular (2 apitos × 1 longo) | 1.13.0 ✅ |
-| Silenciar durante fogo | cala por 10 min e **volta sozinho** | 1.14.0 |
+| Silenciar durante fogo | cala por 10 min e **volta sozinho** | 1.15.0 |
+| Som contínuo no fogo | chama e >175 °F contínuos; alarme comum intermitente | 1.15.0 |
 | Modo de configuração num celular real | portal cativo e IP fixo, **nunca abertos fora do código** | 1.13.0 ✅ |
 | Queda de energia | o ajuste volta da NVS, e o watchdog avisa | 1.13.0 ✅ |
 | Agendar com o ESP real | lembrete chega **e** o ajuste muda sozinho (o simulador já provou a lógica) | APK + servidor |

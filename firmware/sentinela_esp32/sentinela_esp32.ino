@@ -49,6 +49,9 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.15.0: a temperatura de incendio (>175 F) passa a tocar CONTINUO, como a
+//        chama. Ate aqui ela caia no bipe intermitente do alarme comum, apesar
+//        de ser tao grave - quem esta na estufa distingue os dois pelo som.
 // 1.14.0: o silencio de 10 min passa a valer tambem para FOGO. Quem aperta o
 //        botao (ou o do app) ja esta ciente - viu o aviso ou ouviu a sirene - e
 //        foi buscar agua ou chamar socorro; a sirene ao lado so atrapalha. Nao
@@ -86,7 +89,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.14.0";
+const char* VERSAO_FIRMWARE = "1.15.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -1548,8 +1551,12 @@ void atualizarSaidas() {
     return;
   }
 
-  // Fogo toca continuo; temperatura fora da faixa, intermitente.
-  if (alertaLuz) {
+  // Fogo toca CONTINUO - as duas causas: chama no sensor e temperatura de
+  // incendio. O alarme comum de temperatura toca intermitente, e essa diferenca
+  // e o que distingue "va ver a lenha" de "corra" para quem esta na estufa e nao
+  // tem o celular na mao. Ate a 1.14.0 so a chama era continua: a temperatura
+  // de incendio caia no mesmo bipe do alarme comum, apesar de ser tao grave.
+  if (alertaLuz || riscoIncendioAgora()) {
     digitalWrite(BUZZER, HIGH);
     buzzerLigadoAgora = true;
     return;
