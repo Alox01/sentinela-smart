@@ -61,6 +61,17 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     super.dispose();
   }
 
+  /// Nome da outra estufa que ja usa [ip], ou nulo se o endereco esta livre.
+  /// A propria estufa em edicao nao conta.
+  Future<String?> _estufaComMesmoEndereco(String ip) async {
+    final estufas = await IsarService.instance.listarEstufas();
+    for (final outra in estufas) {
+      if (_editando && outra.id == widget.estufa!.id) continue;
+      if (outra.ip.trim().toLowerCase() == ip.toLowerCase()) return outra.nome;
+    }
+    return null;
+  }
+
   Future<void> _salvar() async {
     final nome = _nomeController.text.trim();
     final ip = _ipController.text.trim();
@@ -82,6 +93,26 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
           content: Text(
             'Endereço inválido. Use algo como 192.168.1.9 ou 192.168.1.9:80.',
           ),
+        ),
+      );
+      return;
+    }
+
+    // Duas estufas no mesmo endereco e a raiz de uma familia de confusoes: o
+    // app aprende o id do aparelho a partir de quem atende no endereco, entao
+    // enderecos repetidos fazem duas estufas virarem a mesma - e uma passa a
+    // exibir a leitura da outra sem nada na tela sugerir isso. Barrar aqui e a
+    // unica forma de impedir na origem.
+    final conflito = await _estufaComMesmoEndereco(ip);
+    if (conflito != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'A estufa "$conflito" já usa este endereço. Duas estufas no mesmo '
+            'endereço passam a mostrar os dados do mesmo aparelho.',
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
       return;
