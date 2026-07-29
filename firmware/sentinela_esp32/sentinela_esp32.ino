@@ -49,6 +49,12 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.16.0: o silencio cobre so o fogo que JA existia quando o botao foi
+//        apertado. Fogo que comeca durante os 10 min cancela o silencio e toca:
+//        apertar diz "ja sei DESTE fogo", nao "nao me avise de fogo por 10 min".
+//        As duas causas contam separado, e uma que cessa e volta conta como
+//        nova. Achado em teste de campo - silenciar e poucos minutos depois
+//        acender a chama no sensor nao produzia som nenhum.
 // 1.15.0: a temperatura de incendio (>175 F) passa a tocar CONTINUO, como a
 //        chama. Ate aqui ela caia no bipe intermitente do alarme comum, apesar
 //        de ser tao grave - quem esta na estufa distingue os dois pelo som.
@@ -89,7 +95,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.15.0";
+const char* VERSAO_FIRMWARE = "1.16.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -167,6 +173,14 @@ bool ledControleLigado = false;
 // hora sincronizada. 0 = nao silenciado.
 const unsigned long TEMPO_SILENCIO_MS = 10UL * 60UL * 1000UL;
 unsigned long silencioAteMillis = 0;
+
+// Que fogo ja estava acontecendo quando o silencio comecou. E so esse que o
+// silencio cobre: quem aperta o botao esta dizendo "ja sei DESTE fogo", e nao
+// "nao me avise de fogo por 10 minutos". As duas causas andam separadas porque
+// sao noticias diferentes - a chama pegou no papel, ou a estufa inteira passou
+// dos 175 F.
+bool luzCobertaPeloSilencio = false;
+bool tempIncendioCobertaPeloSilencio = false;
 
 // Leituras em numeros inteiros: o display tem 4 digitos e as casas decimais do
 // DHT22 nao acrescentam nada util para o produtor.
@@ -1030,8 +1044,24 @@ bool estaSilenciado() {
 void silenciarPorPrazo() {
   silencioAteMillis = millis() + TEMPO_SILENCIO_MS;
   if (silencioAteMillis == 0) silencioAteMillis = 1;  // 0 e "nao silenciado"
+  // Fotografa o fogo deste instante: e dele que o produtor esta ciente.
+  luzCobertaPeloSilencio = alertaLuz;
+  tempIncendioCobertaPeloSilencio = riscoIncendioAgora();
   digitalWrite(BUZZER, LOW);
   buzzerLigadoAgora = false;
+}
+
+// Rodada a cada ciclo enquanto o silencio vale. Responde se apareceu fogo que o
+// silencio NAO cobre, e ao mesmo tempo descobre as causas que cessaram - uma
+// chama que apaga e volta e fogo novo, e ninguem esta ciente dela ainda.
+bool fogoNovoDuranteSilencio() {
+  bool luzAgora = alertaLuz;
+  bool tempAgora = riscoIncendioAgora();
+  bool novo = (luzAgora && !luzCobertaPeloSilencio)
+              || (tempAgora && !tempIncendioCobertaPeloSilencio);
+  if (!luzAgora) luzCobertaPeloSilencio = false;
+  if (!tempAgora) tempIncendioCobertaPeloSilencio = false;
+  return novo;
 }
 
 void reativarAlarme() {
@@ -1043,7 +1073,9 @@ void reativarAlarme() {
 // (silenciavel). Espelha a logica de atualizarSaidas().
 bool alarmeAtivoAgora() {
   if (!alertaLuz && !alertaTemperatura) return false;
-  // O silencio de 10 min cobre todos os alarmes, fogo inclusive.
+  // O silencio de 10 min cobre todos os alarmes, inclusive o fogo que ja estava
+  // acontecendo quando o botao foi apertado. Fogo novo cancela o silencio em
+  // atualizarSaidas(), entao aqui basta consultar.
   if (estaSilenciado()) return false;
   // Buzzer de temperatura desligado cala so o alarme comum.
   if (!alertaLuz && !buzzerTemperaturaAtivo && !riscoIncendioAgora()) {
@@ -1546,9 +1578,17 @@ void atualizarSaidas() {
   // liga/desliga: o prazo vence sozinho e o alarme volta, entao nao da para
   // silenciar e esquecer.
   if (estaSilenciado()) {
-    buzzerLigadoAgora = false;
-    digitalWrite(BUZZER, LOW);
-    return;
+    // ...mas so o fogo que ja estava aqui quando o botao foi apertado. Fogo
+    // novo derruba o silencio inteiro: e informacao que o produtor ainda nao
+    // tem, e e justamente para isso que a sirene existe. Se ele quiser silencio
+    // de novo, aperta de novo - e ai passa a estar ciente deste tambem.
+    if (fogoNovoDuranteSilencio()) {
+      reativarAlarme();
+    } else {
+      buzzerLigadoAgora = false;
+      digitalWrite(BUZZER, LOW);
+      return;
+    }
   }
 
   // Fogo toca CONTINUO - as duas causas: chama no sensor e temperatura de

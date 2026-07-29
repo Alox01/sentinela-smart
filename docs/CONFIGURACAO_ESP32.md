@@ -42,7 +42,9 @@ Comportamento do firmware atual (montagem de referencia):
   Desde a v1.14.0 o fogo aceita o **silencio de 10 min**, como os demais - quem
   aperta ja esta ciente e foi agir -, mas **nao pode ser desligado**: o hold de
   3 s no botao do buzzer segue recusado para fogo, porque desligar nao tem prazo
-  para voltar.
+  para voltar. E, desde a v1.16.0, o silencio cobre **so o fogo que ja existia**
+  quando o botao foi apertado: fogo novo dentro dos 10 min cancela o silencio e
+  toca. Apertar diz "ja sei DESTE fogo", nao "nao me avise de fogo por 10 min".
   Ressalva: um LDR comum e um detector de fogo fraco; para incendio de verdade,
   avaliar um sensor de chama dedicado (IR).
 - **Alarme de temperatura (silenciavel):** buzzer intermitente quando a

@@ -20,9 +20,9 @@ ainda precisa ser gravada.
 
 | Teste | O que prova | Depende de |
 |---|---|---|
-| Gravar a **1.15.0** | destrava o silêncio do fogo e o toque contínuo | — |
+| Gravar a **1.16.0** | destrava o fogo novo furando o silêncio | — |
 | Segurar o botão do buzzer 3 s | liga/desliga a sirene sem celular (2 apitos × 1 longo) | 1.13.0 ✅ |
-| Silenciar durante fogo | cala por 10 min e **volta sozinho** | 1.15.0 |
+| Fogo **novo** durante o silêncio | cancela o silêncio e toca na hora | 1.16.0 |
 | Som contínuo no fogo | chama e >175 °F contínuos; alarme comum intermitente | 1.15.0 |
 | Modo de configuração num celular real | portal cativo e IP fixo, **nunca abertos fora do código** | 1.13.0 ✅ |
 | Queda de energia | o ajuste volta da NVS, e o watchdog avisa | 1.13.0 ✅ |
@@ -41,6 +41,9 @@ preferência.
 |---|---|
 | Lembrete de agendamento (simulador) | ✅ chegou na hora marcada |
 | Agendamento aplicar o ajuste (simulador) | ❌ **falhava** — o agendador jogava na caixa que só aparelho real consulta. Corrigido e coberto por teste. |
+| Silêncio de 10 min durante fogo (1.15.0, campo) | ✅ cala — mas achou o furo abaixo |
+| Fogo **começando** dentro dos 10 min silenciados | ❌ **não tocava nada**. O silêncio cobria fogo de que o produtor nunca ficou ciente. Corrigido na 1.16.0. |
+| Nome da estufa no push | ✅ chegou "Esp32-2 · …", teste e alarme real |
 | Alarme com "Não perturbe" ligado | ✅ **toca** — a permissão de furar o DND funciona |
 | Alarme no modo silencioso | ❌ não toca (limitação do Android, ver `NOTIFICACOES_PUSH.md`) |
 | Alarme no modo vibrar | vibra, não toca |
