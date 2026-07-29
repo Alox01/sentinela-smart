@@ -258,6 +258,7 @@ class PushNotificationService {
   Future<void> registrarEstufa(EstufaEntity estufa) => _registrarDispositivo(
     idHardware: estufa.idHardware?.trim(),
     tokenAcesso: estufa.tokenAcesso,
+    nome: estufa.nome.trim(),
   );
 
   /// Reenvia as preferencias de um aparelho (ex.: depois de silenciar ou religar
@@ -271,9 +272,14 @@ class PushNotificationService {
     tokenAcesso: tokenAcesso,
   );
 
+  /// [nome] vai junto para o servidor poder dizer *qual* estufa esta alertando:
+  /// o titulo do push e montado la, e o nome so existe aqui no celular. Vai
+  /// nulo quando quem chama nao o tem em maos (reenvio de preferencias) - e o
+  /// servidor entao preserva o que ja guardou.
   Future<void> _registrarDispositivo({
     String? idHardware,
     String? tokenAcesso,
+    String? nome,
   }) async {
     final token = _tokenPush;
     final uri = _uriPush('/push/dispositivos');
@@ -297,6 +303,7 @@ class PushNotificationService {
               'idHardware': idHardware,
               'plataforma': 'android',
               'preferencias': _prefsParaDispositivo(idHardware),
+              if (nome != null && nome.isNotEmpty) 'nome': nome,
             }),
           )
           .timeout(const Duration(seconds: 8));

@@ -558,12 +558,25 @@ function dbPushFalso() {
   return {
     registrados,
     estaHabilitado: () => false,
-    async registrarDispositivoPush(d) { registrados.push(d); },
+    // Upsert por (token, idHardware) com o mesmo coalesce do banco de verdade:
+    // reenviar so as preferencias nao pode apagar o nome ja guardado.
+    async registrarDispositivoPush(d) {
+      const antigo = registrados.find(
+        (r) => r.tokenPush === d.tokenPush && r.idHardware === d.idHardware,
+      );
+      if (antigo) {
+        antigo.preferencias = d.preferencias;
+        antigo.nome = d.nome ?? antigo.nome;
+      } else {
+        registrados.push({ ...d });
+      }
+    },
     async removerDispositivoPush() {},
     async listarDispositivosPush() {
       return registrados.map((r) => ({
         tokenPush: r.tokenPush,
         preferencias: r.preferencias,
+        nome: r.nome ?? null,
       }));
     },
     async removerTokensPushInvalidos() { return 0; },
@@ -770,4 +783,126 @@ test('agendamento vencido do simulador e aplicado nele, nao na caixa', async () 
 
   assert.equal(aplicados.length, 1);
   assert.equal(aplicados[0].temperaturaMeta, 130);
+});
+
+test('o nome da estufa vai no titulo do aviso', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      tokenPush: 'tok-1',
+      idHardware: 'ESP32_CAMPO_01',
+      nome: 'Estufa do Fundo',
+    }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 200,
+    umidadeAtual: 40,
+    riscoIncendio: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados.length, 1);
+  assert.match(push.enviados[0].titulo, /^Estufa do Fundo · /);
+});
+
+test('sem nome guardado, o titulo continua o de antes', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tokenPush: 'tok-1', idHardware: 'ESP32_CAMPO_01' }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 200,
+    umidadeAtual: 40,
+    riscoIncendio: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados[0].titulo, 'Temperatura muito elevada');
+});
+
+// O nome vem do celular de quem cadastrou, entao a mesma estufa pode ter dois
+// nomes. Cada dono precisa receber o que reconhece.
+test('dois celulares com nomes diferentes recebem titulos diferentes', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  for (const [tokenPush, nome] of [
+    ['tok-1', 'Estufa do Fundo'],
+    ['tok-2', 'Estufa 2'],
+  ]) {
+    await requisitar(app, '/push/dispositivos', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tokenPush, idHardware: 'ESP32_CAMPO_01', nome }),
+    });
+  }
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 200,
+    umidadeAtual: 40,
+    riscoIncendio: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados.length, 2);
+  const titulos = push.enviados.map((e) => e.titulo).sort();
+  assert.deepEqual(titulos, [
+    'Estufa 2 · Temperatura muito elevada',
+    'Estufa do Fundo · Temperatura muito elevada',
+  ]);
+});
+
+// Silenciar uma estufa reenvia so as preferencias, sem o nome em maos. Se esse
+// reenvio apagasse o nome, os avisos voltariam a ser anonimos justo em quem
+// mexe nas configuracoes.
+test('reenviar preferencias sem nome nao apaga o nome guardado', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      tokenPush: 'tok-1',
+      idHardware: 'ESP32_CAMPO_01',
+      nome: 'Estufa do Fundo',
+    }),
+  });
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      tokenPush: 'tok-1',
+      idHardware: 'ESP32_CAMPO_01',
+      preferencias: { incendio: { notificar: true, tocarVibrar: false } },
+    }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 200,
+    umidadeAtual: 40,
+    riscoIncendio: true,
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados.length, 1);
+  assert.match(push.enviados[0].titulo, /^Estufa do Fundo · /);
 });

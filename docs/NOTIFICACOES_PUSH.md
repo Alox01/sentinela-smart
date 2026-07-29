@@ -256,6 +256,38 @@ sincronizar com a nuvem para o servidor respeitar os eventos mutados.
 usuário), mas exibir um aviso de que desativar o alerta de incêndio é arriscado —
 a sirene física do aparelho continua sendo a rede de segurança independente.
 
+## Qual estufa está alertando (29/07/2026)
+
+Até aqui os avisos chegavam anônimos — "Risco de incêndio", sem dizer de onde.
+Com uma estufa isso passa; com três, chegam **três avisos idênticos** e
+empilhados, e o produtor sai correndo para adivinhar.
+
+O nome ("Estufa do Fundo") só existia **no celular**, no Isar. O servidor, que é
+quem monta o texto do push, conhecia o aparelho apenas como `ESP32_215788`.
+Agora o app manda o nome junto no cadastro do token (`POST /push/dispositivos`),
+o servidor guarda em `push_dispositivos.nome` e o usa no título:
+
+> **Estufa do Fundo · Risco de incêndio**
+> O sensor de incêndio detectou chama. Verifique agora.
+
+**No título e no começo dele**, não no corpo: quando os avisos empilham, o
+Android corta o título **pelo fim** — e o nome é exatamente o que não pode
+sumir. O lembrete de agendamento, que já nomeava a estufa, foi virado na mesma
+ordem pelo mesmo motivo.
+
+Três detalhes que o código resolve e não aparecem na tela:
+
+- **O nome não é único.** Ele vem do celular de quem cadastrou, então dois donos
+  podem chamar a mesma estufa de coisas diferentes. O envio agrupa por
+  *(toque, nome)* e cada um recebe o título que reconhece.
+- **Reenvio de preferências não apaga o nome.** Silenciar uma estufa reenvia o
+  cadastro sem o nome em mãos; o `coalesce` no upsert preserva o que já estava
+  guardado. Sem isso, mexer nas configurações deixaria os avisos anônimos de novo.
+- **Renomear se propaga sozinho.** O app recadastra todas as estufas ao abrir
+  (`sincronizarEstufas`) e ao salvar uma, então o servidor se atualiza sem rota
+  nova. Os tokens já cadastrados ficam sem nome só até a primeira abertura do
+  app novo.
+
 ## Silenciar uma estufa (escopo por aparelho)
 
 Caso real: a estufada terminou naquela estufa e o produtor não quer mais ser

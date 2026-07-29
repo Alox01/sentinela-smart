@@ -65,30 +65,33 @@ function createEstufaRouter({
       );
       if (inscritos.length === 0) return;
 
-      // Dois envios porque o canal (e portanto o som) viaja na mensagem:
-      // celulares que querem alarme e celulares que querem aviso comum nao
-      // cabem no mesmo disparo.
-      const comToque = inscritos
-        .filter((i) => preferenciaToca(i.preferencias, evento))
-        .map((i) => i.tokenPush);
-      const semToque = inscritos
-        .filter((i) => !preferenciaToca(i.preferencias, evento))
-        .map((i) => i.tokenPush);
+      // Um disparo por (toque, nome). O toque separa porque o canal - e
+      // portanto o som - viaja na mensagem. O nome separa porque ele vem do
+      // celular de quem cadastrou, e dois donos podem chamar a mesma estufa de
+      // coisas diferentes; cada um recebe o titulo que reconhece.
+      const grupos = new Map();
+      for (const inscrito of inscritos) {
+        const toca = preferenciaToca(inscrito.preferencias, evento);
+        const nome = inscrito.nome || '';
+        const chave = `${toca ? 'toca' : 'mudo'}|${nome}`;
+        const grupo = grupos.get(chave) || { toca, nome, tokens: [] };
+        grupo.tokens.push(inscrito.tokenPush);
+        grupos.set(chave, grupo);
+      }
 
       const invalidos = [];
-      for (const [tokens, toca] of [
-        [comToque, true],
-        [semToque, false],
-      ]) {
-        if (tokens.length === 0) continue;
+      for (const grupo of grupos.values()) {
         const resultado = await push.enviar({
-          tokens,
-          titulo,
+          tokens: grupo.tokens,
+          // Nome no titulo, nao no corpo: quando varias estufas alertam
+          // juntas o Android empilha os avisos e so o titulo sobrevive - sem
+          // ele seriam tres "Risco de incendio" identicos.
+          titulo: grupo.nome ? `${grupo.nome} · ${titulo}` : titulo,
           corpo,
           evento,
           critico,
           validadeMs,
-          comToque: toca,
+          comToque: grupo.toca,
         });
         invalidos.push(...resultado.invalidos);
       }
@@ -588,7 +591,7 @@ function createEstufaRouter({
   // Autenticado: sem isso qualquer um inscreveria um celular nos alertas de uma
   // estufa alheia.
   router.post('/push/dispositivos', authMiddleware, async (req, res) => {
-    const { tokenPush, idHardware, plataforma, preferencias } = req.body || {};
+    const { tokenPush, idHardware, plataforma, preferencias, nome } = req.body || {};
     if (typeof tokenPush !== 'string' || tokenPush.trim() === '') {
       res.status(400).json({ erro: 'tokenPush obrigatorio' });
       return;
@@ -608,6 +611,7 @@ function createEstufaRouter({
         idHardware: idHardware.trim(),
         plataforma,
         preferencias: preferencias ?? null,
+        nome: typeof nome === 'string' && nome.trim() !== '' ? nome.trim() : null,
       });
       res.json({ sucesso: true, registrado: true, push: Boolean(push?.habilitado) });
     } catch (error) {
@@ -685,13 +689,29 @@ function createEstufaRouter({
     }
 
     try {
+      // Tambem por nome, como os avisos de verdade: o teste so serve se
+      // mostrar o que o produtor vai realmente ler na barra.
       const inscritos = await db.listarDispositivosPush(idHardware);
-      const { enviados, invalidos } = await push.enviar({
-        tokens: inscritos.map((i) => i.tokenPush),
-        titulo: 'Sentinela Smart',
-        corpo: 'Notificação de teste. O aviso remoto está funcionando.',
-        evento: 'alarmeProcesso',
-      });
+      const porNome = new Map();
+      for (const inscrito of inscritos) {
+        const nome = inscrito.nome || '';
+        const tokens = porNome.get(nome) || [];
+        tokens.push(inscrito.tokenPush);
+        porNome.set(nome, tokens);
+      }
+
+      let enviados = 0;
+      const invalidos = [];
+      for (const [nome, tokens] of porNome) {
+        const resultado = await push.enviar({
+          tokens,
+          titulo: nome ? `${nome} · Sentinela Smart` : 'Sentinela Smart',
+          corpo: 'Notificação de teste. O aviso remoto está funcionando.',
+          evento: 'alarmeProcesso',
+        });
+        enviados += resultado.enviados;
+        invalidos.push(...resultado.invalidos);
+      }
       if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
         await db.removerTokensPushInvalidos(invalidos);
       }

@@ -484,10 +484,13 @@ async function garantirTabelaPush() {
       identificador_hardware text not null,
       plataforma text,
       preferencias jsonb,
+      nome text,
       updated_at timestamptz not null default now(),
       primary key (token_push, identificador_hardware)
     )
   `);
+  // A tabela ja existia em producao sem o nome, e o create acima nao a altera.
+  await pool.query('alter table push_dispositivos add column if not exists nome text');
   tabelaPushPronta = true;
 }
 
@@ -496,22 +499,28 @@ async function registrarDispositivoPush({
   idHardware,
   plataforma,
   preferencias,
+  nome,
 }) {
   if (!pool) return false;
   await garantirTabelaPush();
+  // O nome so e sobrescrito quando vem preenchido: quem reenvia so as
+  // preferencias (silenciar uma estufa, por exemplo) nao o carrega, e sem o
+  // coalesce esse reenvio apagaria o nome e as notificacoes voltariam a ser
+  // anonimas.
   await pool.query(
     `
       insert into push_dispositivos (
-        token_push, identificador_hardware, plataforma, preferencias, updated_at
+        token_push, identificador_hardware, plataforma, preferencias, nome, updated_at
       )
-      values ($1, $2, $3, $4, now())
+      values ($1, $2, $3, $4, $5, now())
       on conflict (token_push, identificador_hardware)
       do update set
         plataforma = excluded.plataforma,
         preferencias = excluded.preferencias,
+        nome = coalesce(excluded.nome, push_dispositivos.nome),
         updated_at = now()
     `,
-    [tokenPush, idHardware, plataforma ?? null, preferencias ?? null],
+    [tokenPush, idHardware, plataforma ?? null, preferencias ?? null, nome ?? null],
   );
   return true;
 }
@@ -538,12 +547,13 @@ async function listarDispositivosPush(idHardware) {
   if (!pool) return [];
   await garantirTabelaPush();
   const result = await pool.query(
-    'select token_push, preferencias from push_dispositivos where identificador_hardware = $1',
+    'select token_push, preferencias, nome from push_dispositivos where identificador_hardware = $1',
     [idHardware],
   );
   return result.rows.map((row) => ({
     tokenPush: row.token_push,
     preferencias: row.preferencias || null,
+    nome: row.nome || null,
   }));
 }
 

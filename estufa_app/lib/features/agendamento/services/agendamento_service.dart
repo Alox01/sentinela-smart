@@ -263,7 +263,7 @@ class AgendamentoService extends ChangeNotifier {
     try {
       await _notificacoes.zonedSchedule(
         id: agendamento.idLocal,
-        title: 'Hora de ajustar — ${agendamento.nomeEstufa}',
+        title: '${agendamento.nomeEstufa} · Hora de ajustar',
         body: 'Ajustar ${agendamento.descricao}.',
         // O instante e o que importa: convertido em UTC ele dispara na hora
         // certa qualquer que seja o fuso do aparelho. Evita depender de um plugin
@@ -292,7 +292,7 @@ class AgendamentoService extends ChangeNotifier {
       try {
         await _notificacoes.zonedSchedule(
           id: agendamento.idLocal,
-          title: 'Hora de ajustar — ${agendamento.nomeEstufa}',
+          title: '${agendamento.nomeEstufa} · Hora de ajustar',
           body: 'Ajustar ${agendamento.descricao}.',
           scheduledDate: tz.TZDateTime.from(agendamento.quando, tz.UTC),
           notificationDetails: NotificationDetails(
