@@ -89,7 +89,88 @@ async function garantirColunaVersaoFirmware() {
   await pool.query(
     'alter table dispositivos add column if not exists versao_firmware text',
   );
+  await pool.query(
+    'alter table dispositivos add column if not exists chave_acesso text',
+  );
   colunaVersaoFirmwarePronta = true;
+}
+
+// ---- Chave por aparelho (TOFU) ----
+// A chave que autoriza comandar UM aparelho, em vez da chave global que
+// autoriza comandar todos. Guardada por aparelho porque e isso que limita o
+// estrago de uma chave vazada: hoje quem tem a global comanda a propriedade
+// inteira.
+
+/// Grava a chave de um aparelho apenas se ele ainda nao tiver uma - o "primeiro
+/// a registrar vence" do TOFU. Devolve o que aconteceu, para o chamador poder
+/// distinguir "registrei" de "ja havia outra" (que e tentativa de tomar o
+/// aparelho, ou aparelho reapresentando a mesma chave).
+async function registrarChaveAparelho(idHardware, chave) {
+  if (!pool) return { estado: 'sem_persistencia' };
+  if (!idHardware || !chave) return { estado: 'invalido' };
+  await garantirColunaVersaoFirmware();
+
+  const atual = await pool.query(
+    'select chave_acesso from dispositivos where identificador_hardware = $1 limit 1',
+    [idHardware],
+  );
+  const guardada = atual.rows[0]?.chave_acesso ?? null;
+  if (guardada) {
+    return guardada === chave
+      ? { estado: 'ja_registrada' }
+      : { estado: 'conflito' };
+  }
+
+  // `where chave_acesso is null` fecha a corrida entre dois registros
+  // simultaneos: o segundo nao encontra linha para atualizar.
+  const gravou = await pool.query(
+    `update dispositivos set chave_acesso = $2, updated_at = now()
+     where identificador_hardware = $1 and chave_acesso is null`,
+    [idHardware, chave],
+  );
+  if (gravou.rowCount > 0) return { estado: 'registrada' };
+
+  // Aparelho ainda sem linha (nunca mandou leitura): cria ja com a chave.
+  await pool.query(
+    `insert into dispositivos (nome, identificador_hardware, chave_acesso, updated_at)
+     values ($1, $2, $3, now())
+     on conflict (identificador_hardware) do nothing`,
+    [`Dispositivo ${idHardware}`, idHardware, chave],
+  );
+  return { estado: 'registrada' };
+}
+
+/// Troca a chave de um aparelho, exigindo a antiga. E o caminho da rotacao: quem
+/// gera uma chave nova no aparelho conhece as duas por um instante, e e o proprio
+/// aparelho que avisa a nuvem. Sem exigir a antiga, qualquer um roubaria o
+/// aparelho so sabendo o idHardware.
+async function rotacionarChaveAparelho(idHardware, chaveAntiga, chaveNova) {
+  if (!pool) return { estado: 'sem_persistencia' };
+  if (!idHardware || !chaveAntiga || !chaveNova) return { estado: 'invalido' };
+  await garantirColunaVersaoFirmware();
+
+  const trocou = await pool.query(
+    `update dispositivos set chave_acesso = $3, updated_at = now()
+     where identificador_hardware = $1 and chave_acesso = $2`,
+    [idHardware, chaveAntiga, chaveNova],
+  );
+  return trocou.rowCount > 0
+    ? { estado: 'rotacionada' }
+    : { estado: 'chave_antiga_nao_bate' };
+}
+
+/// Todas as chaves conhecidas, para o middleware nao pagar uma consulta por
+/// requisicao.
+async function carregarChavesAparelhos() {
+  if (!pool) return new Map();
+  await garantirColunaVersaoFirmware();
+  const result = await pool.query(
+    `select identificador_hardware, chave_acesso from dispositivos
+     where chave_acesso is not null`,
+  );
+  return new Map(
+    result.rows.map((row) => [row.identificador_hardware, row.chave_acesso]),
+  );
 }
 
 async function buscarOuCriarDispositivo(status) {
@@ -752,6 +833,9 @@ module.exports = {
   carregarConfiguracao,
   listarAparelhosComPush,
   listarDispositivosPush,
+  registrarChaveAparelho,
+  rotacionarChaveAparelho,
+  carregarChavesAparelhos,
   registrarDispositivoPush,
   removerDispositivoPush,
   removerTokensPushInvalidos,

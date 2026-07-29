@@ -297,7 +297,40 @@ Metade ja existe: a tela de configuracao **le e mostra** o nome. Falta emendar:
 - Cuidado da troca de rede: o aparelho reinicia na rede da casa, entao o celular
   precisa **voltar ao Wi-Fi de sempre** antes do nome resolver. A tela avisa.
 
-### Parte 2 — chave gerada pelo aparelho (grande, cruza 3 camadas)
+### Parte 2 — **implementada** em 29/07/2026 (v1.18.0 + servidor)
+
+O que ficou de pé, e as decisões que o desenho abaixo previa mas não fechava:
+
+- **O aparelho gera a própria chave** (32 hex, `esp_random()`) **só quando não
+  existe nenhuma** — aparelho novo, ou com a constante do topo ainda no valor de
+  fábrica. Aparelho que já tem chave **nunca** é trocado sozinho: se o registro
+  na nuvem falhasse (nuvem hibernada, internet fora), a chave nova valeria só no
+  aparelho e o produtor perderia o acesso ao que funcionava.
+- **Trocar é sempre ato deliberado:** "gerar uma chave nova" no modo de
+  configuração (presença física). A chave nova aparece na tela seguinte — é a
+  última vez que ela é mostrada.
+- **Registro na nuvem por TOFU**, mas **atrás da autenticação**, e essa foi a
+  decisão de segurança do dia. TOFU puro (rota aberta, primeiro a registrar
+  vence) deixaria qualquer um reivindicar um `idHardware` antes do aparelho — e o
+  id **não é segredo**, aparece em toda resposta de `/status`. Exigir a
+  credencial atual mantém a âncora onde já estava (quem tem a chave global é o
+  produtor) e não abre exposição nova. O aparelho consegue registrar porque a
+  chave dele ainda **é** a global.
+- **Rotação com prova de posse da anterior.** O aparelho guarda a chave
+  substituída em NVS até a nuvem aceitar a troca, e só então a apaga. Sem isso,
+  gerar chave nova trancaria o próprio aparelho fora da nuvem, porque a rotação
+  exige a chave que ela tem.
+- **A chave de um aparelho não comanda outro.** O middleware resolve a chave com
+  o `idHardware` que a própria requisição menciona. Sem essa amarração, "chave
+  por aparelho" não separaria nada: qualquer chave registrada abriria qualquer
+  estufa. É o teste mais importante de `test/chave_aparelho.test.js`.
+- **A chave global continua valendo, de propósito.** Tirar antes de todos os
+  aparelhos em campo registrarem a sua deixaria o produtor sem acesso remoto.
+  Desligar é um passo separado, depois de provado em campo.
+
+Desenho original abaixo, mantido porque o raciocínio segue valendo.
+
+#### Desenho original
 
 **Geracao e exibicao.** O aparelho gera uma chave aleatoria quando a NVS nao tem
 uma (ver acima). O "ovo e galinha" — como o app le a chave se e ela que protege

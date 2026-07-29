@@ -11,6 +11,7 @@ const { rateLimit } = require('express-rate-limit');
 const simulador = require('./simulador');
 const db = require('./db');
 const { createAuthMiddleware } = require('./auth');
+const { criarRegistroDeChaves } = require('./chaves_aparelho');
 const { avaliarTokenApi } = require('./token_policy');
 const { createEstufaRouter } = require('./routes/estufa_routes');
 const { createCorsOptions } = require('./security');
@@ -77,7 +78,13 @@ const RETENCAO_DIAS = lerDiasRetencao(process.env.CLOUD_RETENTION_DAYS);
 const PERSISTIR_LOCAL = process.env.PERSISTIR_LOCAL != null
   ? process.env.PERSISTIR_LOCAL.trim().toLowerCase() !== 'false'
   : !PUSH_TARGET_URL;
-const authMiddleware = createAuthMiddleware(API_TOKEN);
+// Chaves por aparelho. A global (API_TOKEN) continua valendo: os aparelhos em
+// campo ainda usam ela, e tirar antes de todos registrarem a sua deixaria o
+// produtor sem acesso remoto.
+const chavesAparelhos = criarRegistroDeChaves({ db });
+const authMiddleware = createAuthMiddleware(API_TOKEN, {
+  chaveDoAparelho: (idHardware) => chavesAparelhos.chaveDe(idHardware),
+});
 // Se a credencial do Firebase nao estiver configurada, o push fica desabilitado
 // e o servidor sobe igual: aviso remoto e camada extra, nao caminho critico.
 const enviadorPush = criarEnviadorPush();
@@ -112,6 +119,7 @@ app.use(
     db,
     authMiddleware,
     tokenConfigurado: Boolean(API_TOKEN.trim()),
+    chavesAparelhos,
     buffer: bufferLeituras,
     push: enviadorPush,
   }),

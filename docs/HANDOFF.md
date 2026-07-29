@@ -184,10 +184,11 @@ desembaraçar o cadastro, validar em campo e escrever.
    a pegadinha do canal congelado em `NOTIFICACOES_PUSH.md`.
 4. **Escrita do TCC** e seção de resultados (números dos testes acima).
    Ordem sugerida do trabalho daqui em diante: `PLANO_POS_TESTES.md`.
-5. **Provisionamento Parte 2** (`CONFIGURACAO_ESP32.md`) — a maior pendência de
-   software: chave gerada pelo aparelho, revelada só no modo de configuração
-   (presença física) e propagada por TOFU. Muda o servidor de chave global para
-   chave por aparelho. Não bloqueia o TCC. A Parte 1 está feita.
+5. **Provisionamento Parte 2 — implementada** (29/07/2026, firmware 1.18.0 +
+   servidor). Falta **provar em campo** e, só depois, decidir desligar a chave
+   global (`ESTUFA_API_TOKEN`) — que continua valendo de propósito, senão os
+   aparelhos que ainda não registraram a sua perderiam o acesso remoto. Detalhes
+   e as decisões de segurança em `CONFIGURACAO_ESP32.md`.
 6. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
    fio em pino errado de regulador queimado. Não bloqueia o TCC — um aparelho
    basta.

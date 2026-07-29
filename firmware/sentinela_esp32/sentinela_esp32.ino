@@ -49,6 +49,12 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.18.0: chave de acesso POR APARELHO. Gera uma aleatoria quando nao existe
+//        nenhuma (aparelho novo), registra na nuvem por TOFU e oferece "gerar
+//        nova chave" no modo de configuracao - presenca fisica -, rotacionando
+//        na nuvem com prova de posse da anterior. Aparelho que ja tem chave
+//        nunca e trocado sozinho: se o registro falhasse, o produtor perderia
+//        o acesso ao que funcionava.
 // 1.17.0: o limite de incendio por temperatura passa a acompanhar o ajuste
 //        (ajuste > 170 F -> ajuste + 5), como logica.js ja fazia no servidor.
 //        Os dois discordavam: com ajuste em 172, o aparelho alarmava aos 175 e
@@ -100,7 +106,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.17.0";
+const char* VERSAO_FIRMWARE = "1.18.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -256,6 +262,11 @@ const unsigned long intervaloTentativaMdns = 15000;
 String wifiSsid;
 String wifiPass;
 String tokenAparelho;
+// Chave anterior, guardada SO enquanto a nuvem nao souber da nova. A rotacao
+// precisa provar posse da antiga; sem guardar, gerar chave nova trancaria o
+// proprio aparelho fora da nuvem. Apagada assim que a troca e aceita.
+String chaveAnterior;
+bool chaveRegistradaNaNuvem = false;
 
 // IP fixo (opcional). Vazio = DHCP, que e o normal. Existe porque em muita
 // propriedade o roteador e do provedor e o produtor nao tem acesso para fazer
@@ -295,6 +306,7 @@ bool buzzerAlternadoNesteAperto = false;
 void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
                     JsonArray ignoradas);
 void buscarComandosNuvem();
+void sincronizarChaveNuvem();
 bool estadoDeAlertaMudou();
 void carregarConfigPersistida();
 void salvarConfigSeNecessario();
@@ -422,6 +434,9 @@ void loop() {
     if (millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
       ultimaBuscaComandos = millis();
       buscarComandosNuvem();
+      // Pega carona no mesmo intervalo: nao ha pressa, e a funcao sai na hora
+      // quando nao ha nada a registrar.
+      sincronizarChaveNuvem();
     }
   }
 
@@ -692,6 +707,10 @@ void handleConfigPagina() {
   html += escaparHtml(tokenAparelho);
   html += F(
       "\">"
+      "<label style=\"font-weight:normal\"><input type=\"checkbox\" "
+      "name=\"novachave\" value=\"1\"> Gerar uma chave nova</label>"
+      "<p class=\"aviso\">Marque so ao trocar de dono ou se a chave vazou. A "
+      "chave nova aparece na tela seguinte e precisa ser atualizada no app.</p>"
       "<details><summary>Endere&ccedil;o fixo (opcional)</summary>"
       "<p class=\"aviso\">Use quando n&atilde;o der para reservar o IP no "
       "roteador. Deixe vazio para o roteador escolher.</p>"
@@ -749,12 +768,28 @@ void handleConfigSalvar() {
     return;
   }
 
+  // Chave nova pedida no formulario: guarda a anterior para poder PROVAR posse
+  // na rotacao com a nuvem. Sem isso a nuvem ficaria com a antiga para sempre e
+  // o aparelho sem como corrigir, porque a rotacao exige a chave que ela tem.
+  const bool gerarNova = server.arg("novachave") == "1";
+  String chaveSubstituida;
+  if (gerarNova) {
+    chaveSubstituida = tokenAparelho;
+    token = gerarChaveAleatoria();
+  }
+
   prefs.begin("sentinela", false);
   prefs.putString("wifiSsid", ssid);
   // Senha vazia mantem a atual: assim da para so trocar a chave de acesso sem
   // precisar digitar a senha do Wi-Fi de novo.
   if (senha.length() > 0) prefs.putString("wifiPass", senha);
   prefs.putString("token", token);
+  if (gerarNova) {
+    prefs.putString("chaveAnt", chaveSubstituida);
+    prefs.putBool("chaveReg", false);
+    chaveAnterior = chaveSubstituida;
+    chaveRegistradaNaNuvem = false;
+  }
   prefs.putString("ipFixo", ip);
   prefs.putString("gateway", gateway);
   prefs.putString("mascara", mascara);
@@ -773,6 +808,14 @@ void handleConfigSalvar() {
       "<p>Cadastre este endereco no app:<br><b style=\"font-size:18px;"
       "color:#7bd88f\">");
   confirmacao += escaparHtml(nomeLocal + ".local");
+  if (gerarNova) {
+    // Ultima tela em que a chave nova aparece. Depois do reinicio ela volta a
+    // ser segredo: em operacao normal /status so diz se existe chave, nunca qual.
+    confirmacao += F(
+        "</b></p><p>Chave nova (anote e atualize no app):<br>"
+        "<b style=\"font-size:18px;color:#7bd88f\">");
+    confirmacao += escaparHtml(token);
+  }
   confirmacao += F("</b></p>");
   if (ip.length() > 0) {
     confirmacao += F("<p>Ou o endereco fixo: <b>");
@@ -841,6 +884,21 @@ void carregarConfigPersistida() {
   wifiSsid = prefs.getString("wifiSsid", WIFI_SSID);
   wifiPass = prefs.getString("wifiPass", WIFI_PASS);
   tokenAparelho = prefs.getString("token", DEVICE_TOKEN);
+  chaveAnterior = prefs.getString("chaveAnt", "");
+  chaveRegistradaNaNuvem = prefs.getBool("chaveReg", false);
+  // Gera chave propria SO quando nao existe nenhuma - aparelho novo, ou com a
+  // constante do topo ainda no valor de fabrica. Aparelho que ja tem chave NUNCA
+  // e trocado sozinho: a troca automatica deixaria app e nuvem sem a chave nova
+  // se o registro falhasse, e o produtor perderia o acesso ao que funcionava.
+  // Trocar e sempre ato deliberado, no modo de configuracao.
+  if (tokenAparelho.length() == 0
+      || tokenAparelho == "COLE_AQUI_O_MESMO_TOKEN_DO_APP") {
+    tokenAparelho = gerarChaveAleatoria();
+    prefs.putString("token", tokenAparelho);
+    prefs.putBool("chaveReg", false);
+    chaveRegistradaNaNuvem = false;
+    Serial.println("Chave de acesso gerada (primeira vez).");
+  }
   ipFixo = prefs.getString("ipFixo", "");
   gatewayFixo = prefs.getString("gateway", "");
   mascaraFixa = prefs.getString("mascara", "");
@@ -951,6 +1009,75 @@ void empurrarLeituraNuvem() {
   http.end();
 }
 
+// Conta a propria chave para a nuvem, para ela deixar de depender da chave
+// global. Registro simples enquanto o aparelho nunca teve chave la (TOFU);
+// rotacao quando ha uma anterior guardada, porque ai a nuvem tem outra e so
+// aceita a troca de quem provar posse da antiga.
+//
+// Roda de vez em quando, nao uma vez so: a primeira tentativa pode cair com a
+// nuvem hibernada ou a internet fora, e nesse caso a chave nova nao pode ficar
+// valendo apenas aqui.
+void sincronizarChaveNuvem() {
+  if (strlen(CLOUD_URL) == 0) return;
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (chaveRegistradaNaNuvem && chaveAnterior.length() == 0) return;
+  if (tokenAparelho.length() == 0) return;
+  // Mesma regra do resto: emergencia manda, e o handshake HTTPS trava o loop.
+  if (alertaLuz || riscoIncendioAgora()) return;
+
+  const bool rotacionando = chaveAnterior.length() > 0;
+
+  JsonDocument doc;
+  doc["idHardware"] = idHardware;
+  if (rotacionando) {
+    doc["chaveAtual"] = chaveAnterior;
+    doc["chaveNova"] = tokenAparelho;
+  } else {
+    doc["chave"] = tokenAparelho;
+  }
+  String corpo;
+  serializeJson(doc, corpo);
+
+  WiFiClientSecure cliente;
+  cliente.setInsecure();
+  HTTPClient http;
+  String url = String(CLOUD_URL)
+               + (rotacionando ? "/aparelhos/chave/rotacionar" : "/aparelhos/chave");
+  if (!http.begin(cliente, url)) return;
+  http.addHeader("Content-Type", "application/json");
+  // Autentica com a credencial que a nuvem AINDA conhece: a anterior durante uma
+  // rotacao, a atual quando e o primeiro registro.
+  http.addHeader("X-Device-Token", rotacionando ? chaveAnterior : tokenAparelho);
+  int codigo = http.POST(corpo);
+  http.end();
+
+  Serial.print("Chave -> nuvem HTTP ");
+  Serial.println(codigo);
+
+  if (codigo == 200) {
+    chaveRegistradaNaNuvem = true;
+    chaveAnterior = "";
+    prefs.begin("sentinela", false);
+    prefs.putBool("chaveReg", true);
+    prefs.remove("chaveAnt");
+    prefs.end();
+    Serial.println("Chave registrada na nuvem.");
+    return;
+  }
+
+  // 409: a nuvem ja tem chave para este aparelho e nao e esta. Sem a anterior
+  // guardada nao ha como provar posse, entao insistir nao resolve - so o modo de
+  // configuracao (presenca fisica) desfaz isso. Para de tentar para nao ficar
+  // batendo na nuvem a cada ciclo.
+  if (codigo == 409) {
+    chaveRegistradaNaNuvem = true;
+    prefs.begin("sentinela", false);
+    prefs.putBool("chaveReg", true);
+    prefs.end();
+    Serial.println("A nuvem ja tem outra chave para este aparelho.");
+  }
+}
+
 // Busca na nuvem um ajuste feito pelo app quando o celular estava longe da
 // propriedade. O aparelho nao e alcancavel de fora (fica atras do roteador do
 // produtor), entao quem procura e ele. O servidor entrega o comando uma vez; o
@@ -1039,6 +1166,17 @@ const char* fasePorAlvo(int alvo) {
 // por ter conseguido o que pediu.
 int limiteFogoF() {
   return temperaturaAlvoF > 170 ? temperaturaAlvoF + 5 : 175;
+}
+
+// Chave aleatoria de 32 hex (128 bits). Aleatoria e por aparelho e melhor que
+// escolhida pelo produtor por dois motivos: nao repete entre aparelhos e nao e
+// adivinhavel. `esp_random()` usa o gerador de hardware.
+String gerarChaveAleatoria() {
+  const char* hex = "0123456789abcdef";
+  String chave;
+  chave.reserve(32);
+  for (int i = 0; i < 32; i++) chave += hex[esp_random() & 0x0F];
+  return chave;
 }
 
 bool riscoIncendioAgora() {
