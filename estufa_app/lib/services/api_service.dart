@@ -547,13 +547,27 @@ class ApiService {
     return escolhida;
   }
 
+  // Status 200 nao basta para dizer que o aparelho respondeu. O endereco pode ter
+  // passado para outro dispositivo qualquer da rede - impressora, camera,
+  // roteador -, e qualquer um deles devolve 200 com HTML na porta 80. O app
+  // entao concluia "a estufa esta na rede local" e ficava preso ali: sem dado,
+  // porque o HTML nao decodifica, e sem cair para a nuvem, porque a sonda
+  // insistia que estava tudo bem. A resposta tem que se PARECER com a de um
+  // Sentinela.
+  bool _pareceSentinela(String corpo) {
+    final mapa = _decodificarMapa(corpo);
+    return mapa != null && mapa['status'] is Map;
+  }
+
   Future<bool> _estaOnline(String base) async {
     final timeout = _timeoutSonda(base);
     try {
       final response = await http
           .get(Uri.parse('$base/status'), headers: _headers())
           .timeout(timeout);
-      if (response.statusCode == 200) return true;
+      if (response.statusCode == 200 && _pareceSentinela(response.body)) {
+        return true;
+      }
     } catch (_) {
       // Alguns prototipos ESP32 respondem o JSON diretamente na rota raiz.
     }
