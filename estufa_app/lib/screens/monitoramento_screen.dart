@@ -844,6 +844,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   }
 
   String _descreverEstadoAparelho() {
+    // Estufa sem id de aparelho nao esta offline: o app simplesmente nao sabe
+    // de qual aparelho perguntar na nuvem, e nao pergunta. Dizer "offline"
+    // manda o produtor procurar problema na rede quando falta um campo.
+    final idConhecido = (widget.idHardware ?? api.idHardware ?? '').trim();
+    if (idConhecido.isEmpty && _modoConexao != 'LOCAL') {
+      return 'Aparelho não identificado';
+    }
     if (_semComunicacaoAparelho) {
       final ms = _ultimaLeituraMs;
       return ms == null

@@ -369,6 +369,13 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
     );
   }
 
+  // Estufa sem id de aparelho nunca vai receber leitura da nuvem: o app nao sabe
+  // de quem perguntar. Chamar isso de OFFLINE manda procurar problema na rede
+  // quando o que falta e um campo - foi o que aconteceu com a estufa do
+  // simulador, que so pode ter o id digitado (nao ha aparelho para descobrir).
+  bool get _semIdentificacao =>
+      (widget.estufa.idHardware ?? '').trim().isEmpty;
+
   Widget _buildLayoutSemDados(bool offline) {
     final cor = offline ? Colors.redAccent : Colors.white38;
     return Padding(
@@ -420,8 +427,10 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
           Expanded(
             child: Center(
               child: offline
-                  ? const Icon(
-                      Icons.wifi_off_rounded,
+                  ? Icon(
+                      _semIdentificacao
+                          ? Icons.help_outline_rounded
+                          : Icons.wifi_off_rounded,
                       color: Colors.white24,
                       size: 34,
                     )
@@ -442,7 +451,9 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              offline ? 'OFFLINE' : 'CONECTANDO',
+              offline
+                  ? (_semIdentificacao ? 'SEM ID' : 'OFFLINE')
+                  : 'CONECTANDO',
               style: TextStyle(
                 color: cor,
                 fontSize: 9,
