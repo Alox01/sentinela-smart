@@ -130,7 +130,12 @@ class ApiService {
     if (response?.statusCode == 200) {
       final dados = _decodificarMapa(response!.body);
       if (dados == null) return null;
-      _capturarIdHardwareLocal(dados);
+      if (!_capturarIdHardwareLocal(dados)) {
+        // Aparelho errado no endereco desta estufa: melhor ficar sem leitura do
+        // que mostrar a de outra estufa como se fosse desta.
+        _abandonarConexaoLocal();
+        return null;
+      }
       final pendenciasSincronizadas = await sincronizarComandosPendentes();
 
       if (pendenciasSincronizadas > 0) {
@@ -155,18 +160,43 @@ class ApiService {
   // Na conexao local (lendo o ESP direto), guarda o idHardware do aparelho para
   // as leituras remotas puxarem o estado dele na nuvem. So captura em LOCAL: no
   // modo nuvem o id vem do proprio parametro enviado.
-  void _capturarIdHardwareLocal(Map<String, dynamic> dados) {
-    if (modoConexao != 'LOCAL') return;
+  //
+  // Devolve false quando quem atendeu NAO e o aparelho desta estufa. Um endereco
+  // nao identifica um aparelho: o IP muda por DHCP e redes diferentes reusam a
+  // mesma faixa, entao o endereco guardado de uma estufa pode, mais tarde,
+  // pertencer a outro ESP - inclusive ao de outra estufa do proprio app. Foi o
+  // que aconteceu em campo: um aparelho desligado na casa do primo, o endereco
+  // dele reaproveitado na rede daqui, e a estufa dele passou a exibir os dados
+  // da estufa daqui. Aprender o id so vale enquanto ela ainda nao tem um.
+  bool _capturarIdHardwareLocal(Map<String, dynamic> dados) {
+    if (modoConexao != 'LOCAL') return true;
     final status = dados['status'];
     final idLido = status is Map ? status['idHardware'] : null;
-    if (idLido is String && idLido.isNotEmpty && idLido != idHardware) {
-      idHardware = idLido;
-      unawaited(
-        IsarService.instance
-            .definirIdHardwarePorIp(ipOriginal, idLido)
-            .then((_) => PushNotificationService.instance.sincronizarEstufas()),
-      );
+    if (idLido is! String || idLido.isEmpty) return true;
+
+    final atual = idHardware;
+    if (atual != null && atual.isNotEmpty) {
+      // Trocar o ESP de uma estufa e possivel, mas pela reconfiguracao, que e um
+      // ato deliberado. Silenciosamente, nunca: dar os numeros de um aparelho
+      // como se fossem de outro e pior do que nao mostrar numero nenhum.
+      return idLido == atual;
     }
+
+    idHardware = idLido;
+    unawaited(
+      IsarService.instance
+          .definirIdHardwarePorIp(ipOriginal, idLido)
+          .then((_) => PushNotificationService.instance.sincronizarEstufas()),
+    );
+    return true;
+  }
+
+  // Descarta a conexao local em curso e a lembranca compartilhada dela. Usado
+  // quando o aparelho que atendeu no endereco nao e o desta estufa.
+  void _abandonarConexaoLocal() {
+    _ultimaConexaoBoa.remove(localBaseUrl);
+    _baseUrlAtiva = null;
+    _ultimaResolucao = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   // Busca o historico persistido na nuvem/servidor para o periodo. Serve para

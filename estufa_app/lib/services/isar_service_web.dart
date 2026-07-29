@@ -256,9 +256,16 @@ class IsarService {
     return itens;
   }
 
+  /// So preenche estufas que ainda NAO tem id. Um endereco pode servir a mais de
+  /// uma estufa ao longo do tempo (DHCP, redes diferentes na mesma faixa), entao
+  /// sobrescrever pelo endereco repontava uma estufa ja identificada para o
+  /// aparelho errado - e ela passava a puxar da nuvem os dados de outra.
   Future<void> definirIdHardwarePorIp(String ip, String idHardware) async {
     for (final estufa in _estufas) {
-      if (estufa.ip == ip) estufa.idHardware = idHardware;
+      if (estufa.ip == ip &&
+          (estufa.idHardware == null || estufa.idHardware!.isEmpty)) {
+        estufa.idHardware = idHardware;
+      }
     }
   }
 

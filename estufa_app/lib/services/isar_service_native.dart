@@ -137,6 +137,14 @@ class IsarService {
     return estufa;
   }
 
+  // O id capturado automaticamente sobrevive a uma edicao que nao informa outro
+  // - o formulario so o envia quando o usuario digita algo. Mas ele foi
+  // aprendido DAQUELE endereco, entao trocar o endereco o invalida: o proximo
+  // que atender no endereco novo e quem passa a valer. E tambem o conserto de
+  // uma estufa que ficou apontada para o aparelho errado.
+  static String? _idHerdado(EstufaEntity existente, String ipNovo) =>
+      existente.ip == ipNovo ? existente.idHardware : null;
+
   Future<EstufaEntity> atualizarEstufa({
     required int id,
     required String nome,
@@ -160,9 +168,7 @@ class IsarService {
       final index = _webEstufas.indexWhere((e) => e.id == id);
       if (index >= 0) {
         estufa.criadaEm = _webEstufas[index].criadaEm;
-        // Nao perde o id capturado automaticamente quando a edicao nao informa
-        // um: o formulario so o envia quando o usuario digita algo.
-        estufa.idHardware ??= _webEstufas[index].idHardware;
+        estufa.idHardware ??= _idHerdado(_webEstufas[index], ipLimpo);
         _webEstufas[index] = estufa;
       } else {
         _webEstufas.add(estufa);
@@ -174,7 +180,7 @@ class IsarService {
     final existente = await isar.collection<EstufaEntity>().get(id);
     if (existente != null) {
       estufa.criadaEm = existente.criadaEm;
-      estufa.idHardware ??= existente.idHardware;
+      estufa.idHardware ??= _idHerdado(existente, ipLimpo);
     }
 
     await isar.writeTxn(() async {
@@ -474,10 +480,16 @@ class IsarService {
 
   // Guarda o idHardware capturado na conexao local, para as leituras remotas
   // puxarem o estado do aparelho certo (status por aparelho na nuvem).
+  /// So preenche estufas que ainda NAO tem id. Um endereco pode servir a mais de
+  /// uma estufa ao longo do tempo (DHCP, redes diferentes na mesma faixa), entao
+  /// sobrescrever pelo endereco repontava uma estufa ja identificada para o
+  /// aparelho errado - e ela passava a puxar da nuvem os dados de outra.
   Future<void> definirIdHardwarePorIp(String ip, String idHardware) async {
     if (kIsWeb) {
       for (final e in _webEstufas) {
-        if (e.ip == ip) e.idHardware = idHardware;
+        if (e.ip == ip && (e.idHardware == null || e.idHardware!.isEmpty)) {
+          e.idHardware = idHardware;
+        }
       }
       return;
     }
@@ -489,7 +501,7 @@ class IsarService {
           .ipEqualTo(ip)
           .findAll();
       for (final e in estufas) {
-        if (e.idHardware != idHardware) {
+        if (e.idHardware == null || e.idHardware!.isEmpty) {
           e.idHardware = idHardware;
           await isar.collection<EstufaEntity>().put(e);
         }

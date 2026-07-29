@@ -72,6 +72,14 @@ fogo novo furando o silêncio foi confirmado em campo.
   passar despercebido entre dois ciclos de 1 min).
 - Controle local edge-first (DHT22, botões, display, LEDs, buzzer) sem depender
   de Wi-Fi. Id único por chip (MAC). Leituras inteiras.
+- **Endereço não é identidade** (29/07/2026, achado em campo): dois ESP
+  cadastrados, um deles desligado em outra casa. O endereço guardado do
+  desligado passou a valer, na rede daqui, para o ESP **daqui** — e a estufa
+  dele começou a exibir os dados desta. O app aprendia o `idHardware` de quem
+  atendesse no endereço e **sobrescrevia** o que já sabia. Agora só aprende
+  quando ainda não tem id; se quem atende é outro aparelho, recusa a leitura em
+  vez de mostrar a errada. Trocar o endereço na edição limpa o id aprendido —
+  é o conserto de uma estufa já apontada para o aparelho errado.
 - **Fogo novo fura o silêncio** (v1.16.0): os 10 min cobrem só o fogo que já
   estava acontecendo quando o botão foi apertado — de que o produtor está
   ciente. Fogo que começa depois cancela o silêncio e toca. As duas causas
