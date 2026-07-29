@@ -41,6 +41,24 @@ preferência.
 | Alarme no modo silencioso | ❌ não toca (limitação do Android, ver `NOTIFICACOES_PUSH.md`) |
 | Alarme no modo vibrar | vibra, não toca |
 | Conexão local pelo nome mDNS | ⚠️ caía na nuvem por alguns segundos, de forma **intermitente**. Causa: a resolução do nome estourava o timeout de 2 s da sonda. Corrigido (4 s só para nomes). |
+| "Temperatura muito elevada" (leitura falsa via `POST /leitura`) | ✅ chegou como alarme, com título próprio, separado do incêndio |
+| O mesmo aviso com "Tocar" **desligado** | ✅ chegou como notificação comum — o interruptor faz o que promete |
+| Sirene parando ao abrir o app | ✅ depois de trocar a seleção de canais por `cancelAll()` |
+
+**Como testar sem o aparelho:** `POST /leitura` com um `idHardware` real e
+`riscoIncendio: true` (ou `perigoChama: true`) dispara o alerta com o ESP
+desligado — o servidor lê o estado direto do corpo. Como o aviso sai na **borda
+de subida**, mande uma leitura normal entre um teste e outro. Isso vira leitura
+de verdade: o app mostra o valor e ele pode entrar no histórico da estufada.
+
+> **Não dá para testar push pelo simulador:** `avaliarAlertas` o ignora de
+> propósito, para o aparelho de demonstração não disparar alarme.
+
+### Os testes de notificação estão concluídos (25/07/2026)
+
+Sobraram apenas os que dependem do aparelho em campo: modo de configuração num
+celular real, queda de energia, hold de 3 s, silêncio do fogo (v1.14.0) e a
+ponte de leitura.
 
 ## 2. Correções do que os testes acharem
 
@@ -52,10 +70,10 @@ Dois pontos já conhecidos, que os testes podem confirmar ou derrubar:
 - **Acomodação de 5 min pode ser curta** para fornalha lenta: se o alarme de
   temperatura baixa disparar sempre depois de um ajuste para cima, o valor
   precisa subir (`TEMPO_ACOMODACAO_MS`).
-- **Os alarmes usam a mesma sirene.** Incêndio, temperatura muito elevada,
-  temperatura fora da faixa e sem comunicação soam parecidos. Se na prática
-  confundir, o caminho é um segundo arquivo de áudio — separando "vá ver" de
-  "corra".
+- **Os alarmes usam a mesma sirene.** Confirmado em teste e **decidido**: cada
+  aviso ganha o seu som, o atual fica com o desvio de temperatura. Aguardando os
+  áudios do produtor. Requisitos dos arquivos e a pegadinha do canal congelado
+  em `NOTIFICACOES_PUSH.md`.
 
 ## 3. Decisão do limiar de incêndio
 

@@ -202,9 +202,36 @@ Daí a recomendação que ficou escrita na própria tela: **à noite, usar "Não
 perturbe" em vez de deixar o celular no silencioso**. É a diferença entre
 acordar e não acordar, e nenhum ajuste no app contorna isso.
 
-**Ressalva honesta:** os quatro usam a **mesma sirene**, o único som longo do app.
-As vibrações diferem, mas pelo som eles são parecidos — vale um segundo arquivo
-de áudio para separar "vá ver" de "corra".
+**Ressalva honesta:** os quatro usam a **mesma sirene** (`alarme_estufa.wav`), o
+único som longo do app. As vibrações diferem, mas pelo som eles são parecidos —
+e "vá ver a lenha" soa igual a "corra".
+
+### Som próprio por aviso (a implementar)
+
+Decidido em 25/07/2026, aguardando os áudios. O som atual fica com o **desvio de
+temperatura**; os outros três ganham o seu:
+
+| Aviso | Som |
+|---|---|
+| Temperatura fora da faixa | `alarme_estufa` (o atual) |
+| Incêndio | a definir |
+| Temperatura muito elevada | a definir |
+| Sem comunicação | a definir |
+| Ajuste agendado | a definir (toca só se o produtor ligar o "Tocar") |
+
+**O que os arquivos precisam ter**, para não descobrir isso depois de gravar:
+
+- **Formato:** `.wav`, `.ogg` ou `.mp3`, em `estufa_app/android/app/src/main/res/raw/`.
+- **Nome:** só minúsculas, números e `_` — é nome de recurso do Android. `sirene_fogo.wav` serve; `Sirene-Fogo.wav` não compila.
+- **Duração:** longa o bastante para acordar. A atual tem 30 s; um bipe curto perde o propósito de madrugada.
+- **Distinguíveis entre si de olhos fechados** — é o ponto do exercício.
+
+**A pegadinha que vale por todo o resto:** o Android **congela a configuração de
+um canal quando ele é criado**, e trocar o som de um canal existente **não faz
+efeito** para quem já tem o app. Cada som novo exige **incrementar o sufixo do
+id** (`sentinela_temperatura_v1` → `_v2`) — e o id do servidor
+(`estufa_server/push.js`) tem de mudar junto, senão o aviso sai no canal errado
+e perde o som **sem nenhum erro aparecer**.
 
 **Detalhe de implementação:** com o app fechado quem escolhe som e volume é o
 canal, que viaja na mensagem. Por isso o servidor lê a preferência de cada
