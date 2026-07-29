@@ -80,13 +80,36 @@ function motivoDesabilitado() {
   return null;
 }
 
+// A tabela `dispositivos` nasceu antes desta coluna e nao e criada aqui (vem do
+// schema do Supabase), entao a coluna e garantida na primeira gravacao.
+let colunaVersaoFirmwarePronta = false;
+
+async function garantirColunaVersaoFirmware() {
+  if (colunaVersaoFirmwarePronta) return;
+  await pool.query(
+    'alter table dispositivos add column if not exists versao_firmware text',
+  );
+  colunaVersaoFirmwarePronta = true;
+}
+
 async function buscarOuCriarDispositivo(status) {
+  await garantirColunaVersaoFirmware();
   const identificador = status.idHardware || ID_SIMULADOR_PADRAO;
   const tipoDispositivo = normalizarTipoDispositivo(status);
   const ipLocal = normalizarIpLocal(status);
   const nome = identificador === ID_SIMULADOR_PADRAO
     ? 'Estufa Simulada'
     : `Dispositivo ${identificador}`;
+
+  // A versao do firmware e atributo do APARELHO, nao da leitura: guardar aqui
+  // faz a resposta sobreviver a um restart do servidor e ao aparelho desligado -
+  // que e justamente quando "qual versao esta naquele ESP?" nao tem outra
+  // resposta. O coalesce mantem a ultima conhecida quando a leitura nao a traz
+  // (ponte do celular, firmware antigo).
+  const versaoFirmware = typeof status.versaoFirmware === 'string'
+    && status.versaoFirmware.trim() !== ''
+      ? status.versaoFirmware.trim()
+      : null;
 
   const result = await pool.query(
     `
@@ -95,17 +118,19 @@ async function buscarOuCriarDispositivo(status) {
         identificador_hardware,
         tipo_dispositivo,
         ip_local,
+        versao_firmware,
         updated_at
       )
-      values ($1, $2, $3, $4, now())
+      values ($1, $2, $3, $4, $5, now())
       on conflict (identificador_hardware)
       do update set
         tipo_dispositivo = excluded.tipo_dispositivo,
         ip_local = coalesce(excluded.ip_local, dispositivos.ip_local),
+        versao_firmware = coalesce(excluded.versao_firmware, dispositivos.versao_firmware),
         updated_at = now()
       returning id
     `,
-    [nome, identificador, tipoDispositivo, ipLocal],
+    [nome, identificador, tipoDispositivo, ipLocal, versaoFirmware],
   );
 
   return {
@@ -332,11 +357,13 @@ async function carregarConfiguracao(identificadorHardware = 'ESP32_REALISTIC_V2'
 
 async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2') {
   if (!pool) return null;
+  await garantirColunaVersaoFirmware();
 
   const result = await pool.query(
     `
       select
         d.identificador_hardware,
+        d.versao_firmware,
         l.timestamp_origem_ms,
         l.temperatura,
         l.umidade,
@@ -380,6 +407,9 @@ async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2
     aquecedorLigado: row.aquecedor_ligado,
     ventiladorLigado: row.ventilador_ligado,
     umidificadorLigado: row.umidificador_ligado,
+    // Sobrevive ao restart do servidor e ao aparelho desligado: e nesses dois
+    // casos que nao existe outra forma de saber que firmware esta la.
+    versaoFirmware: row.versao_firmware || null,
   };
 }
 

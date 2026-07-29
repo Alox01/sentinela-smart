@@ -77,6 +77,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // segundo parecer: a borda e a fonte da verdade). 'orange' alta, 'purple'
   // baixa, 'green' ok, 'red' fogo.
   String _corStatusAparelho = 'green';
+  // Versao do firmware relatada pelo aparelho. Ate a v1.x nao havia como saber
+  // qual versao estava gravada sem ir ate la com um terminal.
+  String? _versaoFirmware;
   int _pendenciasSincronizacao = 0;
   bool _sincronizandoPendencias = false;
   // Comeca em CONECTANDO: antes da 1a resposta nao da para afirmar que esta
@@ -256,6 +259,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       avisoEmergencia = novoAviso;
       sireneLigada = _silencioPendente ? false : novaSireneLigada;
       _corStatusAparelho = (status['corStatus'] ?? 'green').toString();
+      // Guarda a ultima versao vista em vez de zerar quando a leitura nao a
+      // traz: firmware nao muda sozinho, e "-" no lugar do numero conhecido
+      // seria uma piora.
+      final versaoLida = status['versaoFirmware'];
+      if (versaoLida is String && versaoLida.isNotEmpty) {
+        _versaoFirmware = versaoLida;
+      }
       isFire = fogoDetectado;
       // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
       // recebida ja significa que o aparelho esta vivo agora.
@@ -1240,6 +1250,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       // enquanto a tela avisa que o aparelho esta mudo.
       modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
       estadoAparelho: _descreverEstadoAparelho(),
+      versaoFirmware: _versaoFirmware,
       baseUrlAtiva: api.baseUrlAtiva,
       localBaseUrl: api.localBaseUrl,
       cloudBaseUrl: api.cloudBaseUrl,

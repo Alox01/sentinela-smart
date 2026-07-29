@@ -11,6 +11,11 @@ Future<void> mostrarDetalhesConexaoDialog({
   // Estado do aparelho (esta reportando ou nao), separado do alcance dos
   // servidores: a nuvem pode estar de pe e o aparelho, mudo.
   required String estadoAparelho,
+  // Versao do firmware relatada pelo aparelho. Fica visivel, e nao nos detalhes
+  // tecnicos, porque a pergunta "qual versao esta naquele ESP?" so aparece
+  // quando ja se esta em campo - e ate aqui a unica resposta era ir ate la com
+  // um terminal. Nulo quando ainda nao chegou leitura nenhuma.
+  required String? versaoFirmware,
   required String? baseUrlAtiva,
   required String localBaseUrl,
   required String? cloudBaseUrl,
@@ -65,6 +70,10 @@ Future<void> mostrarDetalhesConexaoDialog({
                       children: [
                         _LinhaDetalhe('Modo atual', modoConexao),
                         _LinhaDetalhe('Aparelho', estadoAparelho),
+                        _LinhaDetalhe(
+                          'Firmware',
+                          versaoFirmware ?? 'Desconhecida',
+                        ),
                         _LinhaDetalhe(
                           'Chave',
                           temTokenConfigurado
