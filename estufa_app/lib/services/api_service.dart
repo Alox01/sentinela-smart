@@ -692,27 +692,58 @@ class ApiService {
   /// Vai SEMPRE na nuvem, nunca no endereco local: a rota e do servidor, e o ESP
   /// nao a serve. Melhor esforco - falhar aqui nao pode atrapalhar o cadastro,
   /// que e o que o produtor esta fazendo.
-  Future<ResultadoChaveNuvem> registrarChaveNaNuvem() async {
+  /// [chaveNova] registra uma chave DIFERENTE da que autentica esta chamada.
+  ///
+  /// A distincao e o que faz trocar de chave funcionar. Uma chave recem-inventada
+  /// nao autentica em nada - foi assim que trocar a chave do simulador o deixou
+  /// offline: o app mandava a chave nova como credencial E como conteudo, e a
+  /// nuvem recusava as duas pontas. Quem autentica e sempre a credencial que a
+  /// nuvem JA aceita (a atual do app); a nova viaja no corpo.
+  Future<ResultadoChaveNuvem> registrarChaveNaNuvem({String? chaveNova}) async {
     final base = cloudBaseUrl;
     final id = idHardware;
-    final chave = authToken;
+    final credencial = authToken;
     if (base == null || base.isEmpty) return ResultadoChaveNuvem.semNuvem;
     if (id == null || id.isEmpty) return ResultadoChaveNuvem.semIdHardware;
-    if (chave == null || chave.isEmpty) return ResultadoChaveNuvem.semChave;
+    if (credencial == null || credencial.isEmpty) {
+      return ResultadoChaveNuvem.semChave;
+    }
+    final alvo = (chaveNova != null && chaveNova.isNotEmpty)
+        ? chaveNova
+        : credencial;
 
+    final resultado = await _postChave('$base/aparelhos/chave', {
+      'idHardware': id,
+      'chave': alvo,
+    });
+    // 409 = a nuvem guarda outra chave para este aparelho. Se estamos propondo
+    // uma troca, o caminho certo e a rotacao, que prova posse da anterior.
+    if (resultado == ResultadoChaveNuvem.chaveDivergente && alvo != credencial) {
+      return _postChave('$base/aparelhos/chave/rotacionar', {
+        'idHardware': id,
+        'chaveAtual': credencial,
+        'chaveNova': alvo,
+      });
+    }
+    return resultado;
+  }
+
+  Future<ResultadoChaveNuvem> _postChave(
+    String url,
+    Map<String, String> corpo,
+  ) async {
     try {
       final resposta = await http
           .post(
-            Uri.parse('$base/aparelhos/chave'),
+            Uri.parse(url),
             headers: _headers({'Content-Type': 'application/json'}),
-            body: jsonEncode({'idHardware': id, 'chave': chave}),
+            body: jsonEncode(corpo),
           )
           .timeout(const Duration(seconds: 15));
       if (resposta.statusCode == 200) return ResultadoChaveNuvem.registrada;
-      // 409: a nuvem guarda OUTRA chave para este aparelho. Quer dizer que a
-      // chave do app esta velha - os comandos remotos vao ser recusados ate ela
-      // ser atualizada pelo modo de configuracao.
       if (resposta.statusCode == 409) return ResultadoChaveNuvem.chaveDivergente;
+      // 403 na rotacao: a nuvem tem uma terceira chave, que nem o app conhece.
+      if (resposta.statusCode == 403) return ResultadoChaveNuvem.chaveDivergente;
       if (resposta.statusCode == 401) return ResultadoChaveNuvem.naoAutorizado;
       return ResultadoChaveNuvem.falhou;
     } catch (_) {
