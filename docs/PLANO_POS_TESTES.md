@@ -1,7 +1,7 @@
 # Plano depois dos testes de campo
 
-> Escrito em 25/07/2026, com o app e o servidor no ar e o firmware 1.15.0
-> compilado mas **ainda não gravado**. A ordem abaixo pressupõe que os testes de
+> Escrito em 25/07/2026, atualizado em 29/07/2026. App e servidor no ar, e o
+> firmware **1.17.0 gravado** no aparelho. A ordem abaixo pressupõe que os testes de
 > campo aconteçam primeiro — vários itens só fazem sentido depois deles.
 
 ## Por que testar antes de continuar
@@ -12,16 +12,15 @@ bugs que nenhum teste automatizado pegaria — um silencioso (comando parado num
 caixa que o simulador nunca consulta) e um intermitente (a resolução do nome
 mDNS estourando o prazo da sonda).
 
-Sobram os que **dependem do aparelho em campo**. O ESP está com a **1.13.0**; a
-**1.15.0** (silêncio de 10 min valendo para fogo, e fogo tocando contínuo)
-ainda precisa ser gravada.
+Sobram os que **dependem do aparelho em campo**. O ESP já está com a **1.17.0**,
+então nenhum deles espera gravação.
 
 ## 1. Testes de campo (só o produtor pode fazer)
 
 | Teste | O que prova | Depende de |
 |---|---|---|
 | Segurar o botão do buzzer 3 s | liga/desliga a sirene sem celular (2 apitos × 1 longo) | 1.13.0 ✅ |
-| Som contínuo no fogo | chama e >175 °F contínuos; alarme comum intermitente | 1.16.0 |
+| Som contínuo no fogo | chama e temperatura de incêndio contínuos; alarme comum intermitente | 1.17.0 ✅ |
 | Modo de configuração num celular real | portal cativo e IP fixo, **nunca abertos fora do código** | 1.13.0 ✅ |
 | Queda de energia | o ajuste volta da NVS, e o watchdog avisa | 1.13.0 ✅ |
 | Agendar com o ESP real | lembrete chega **e** o ajuste muda sozinho (o simulador já provou a lógica) | APK + servidor |
@@ -42,6 +41,7 @@ preferência.
 | Silêncio de 10 min durante fogo (1.15.0, campo) | ✅ cala — mas achou o furo abaixo |
 | Fogo **começando** dentro dos 10 min silenciados | ❌ **não tocava nada**. O silêncio cobria fogo de que o produtor nunca ficou ciente. Corrigido na 1.16.0 e ✅ **confirmado em campo**. |
 | Nome da estufa no push | ✅ chegou "Esp32-2 · …", teste e alarme real |
+| Versão do firmware pela nuvem | ✅ 1.17.0 confirmada de fora, sem terminal na rede local |
 | Alarme com "Não perturbe" ligado | ✅ **toca** — a permissão de furar o DND funciona |
 | Alarme no modo silencioso | ❌ não toca (limitação do Android, ver `NOTIFICACOES_PUSH.md`) |
 | Alarme no modo vibrar | vibra, não toca |
@@ -62,8 +62,7 @@ de verdade: o app mostra o valor e ele pode entrar no histórico da estufada.
 ### Os testes de notificação estão concluídos (25/07/2026)
 
 Sobraram apenas os que dependem do aparelho em campo: modo de configuração num
-celular real, queda de energia, hold de 3 s, silêncio do fogo (v1.14.0) e a
-ponte de leitura.
+celular real, queda de energia, hold de 3 s e a ponte de leitura.
 
 ## 2. Correções do que os testes acharem
 
