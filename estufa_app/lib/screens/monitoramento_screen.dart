@@ -863,10 +863,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   Widget _itemSireneDoAparelho() {
     final ativo = _buzzerAparelhoAtivo;
     return ListTile(
-      leading: Icon(
-        ativo == false ? Icons.volume_off_outlined : Icons.volume_up_outlined,
-        color: Colors.white70,
-      ),
+      // Mesmo icone do cartao "Alarme dos aparelhos" na tela de notificacoes:
+      // e o mesmo assunto - a sirene do aparelho -, entao icones diferentes
+      // sugeririam coisas diferentes. Nao muda com o estado, que ja esta escrito
+      // no titulo (e nao existe variante "campaign off" no Material).
+      leading: const Icon(Icons.campaign_outlined, color: Colors.white70),
       title: Text(
         ativo == null
             ? 'Sirene do aparelho'
@@ -876,8 +877,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       subtitle: Text(
         ativo == null
             ? 'Aguardando o aparelho informar'
-            : 'Para trocar, segure 3 s o botão do buzzer no aparelho. O fogo '
-                  'toca de qualquer forma.',
+            : 'Para ligar e desligar, segure o botão do alarme no aparelho '
+                  'por 3 s.',
         style: const TextStyle(color: Colors.white38, fontSize: 12),
       ),
     );
