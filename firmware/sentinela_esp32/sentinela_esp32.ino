@@ -49,6 +49,10 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.17.0: o limite de incendio por temperatura passa a acompanhar o ajuste
+//        (ajuste > 170 F -> ajuste + 5), como logica.js ja fazia no servidor.
+//        Os dois discordavam: com ajuste em 172, o aparelho alarmava aos 175 e
+//        a nuvem so aos 177.
 // 1.16.0: o silencio cobre so o fogo que JA existia quando o botao foi
 //        apertado. Fogo que comeca durante os 10 min cancela o silencio e toca:
 //        apertar diz "ja sei DESTE fogo", nao "nao me avise de fogo por 10 min".
@@ -69,7 +73,8 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 //        decisao tomada na frente dela. Confirma com apitos e LED.
 // 1.12.0: o alarme de TEMPERATURA pode ser desligado pelo app (buzzerAtivo,
 //        LWW, NVS). Fogo nunca e afetado: sensor de chama e temperatura de
-//        incendio (>175 F) tocam sempre. So a sirene fisica cala - o push segue.
+//        incendio (limiteFogoF()) tocam sempre. So a sirene fisica cala - o
+//        push segue.
 // 1.11.0: ao entrar no modo de configuracao, apita e pisca os 3 LEDs (sinal
 //        fisico inconfundivel); visor mostra "----" em vez de tentar "ConF",
 //        que um display de 7 segmentos nao escreve legivel.
@@ -95,7 +100,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.16.0";
+const char* VERSAO_FIRMWARE = "1.17.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -178,7 +183,7 @@ unsigned long silencioAteMillis = 0;
 // silencio cobre: quem aperta o botao esta dizendo "ja sei DESTE fogo", e nao
 // "nao me avise de fogo por 10 minutos". As duas causas andam separadas porque
 // sao noticias diferentes - a chama pegou no papel, ou a estufa inteira passou
-// dos 175 F.
+// do limite de fogo.
 bool luzCobertaPeloSilencio = false;
 bool tempIncendioCobertaPeloSilencio = false;
 
@@ -225,7 +230,7 @@ long long modoSilenciosoTimestamp = 0;
 
 // Buzzer do alarme de TEMPERATURA: o produtor pode desliga-lo (ha quem nao
 // aguente o bipe durante a estufada). Fogo NUNCA e afetado - o sensor de chama
-// e a temperatura de incendio (>175 F) sempre tocam. So o alarme de temperatura
+// e a temperatura de incendio (limiteFogoF()) sempre tocam. So o alarme de temperatura
 // comum cala. Persistido em NVS; LWW pelo buzzerTimestamp.
 bool buzzerTemperaturaAtivo = true;
 long long buzzerTimestamp = 0;
@@ -1023,8 +1028,21 @@ const char* fasePorAlvo(int alvo) {
   return "CRITICO: ajuste muito elevado";
 }
 
+// Limite de incendio por temperatura. Espelha limiteFogo de logica.js: o
+// aparelho e a nuvem precisam concordar sobre o que e fogo, e ate a v1.16.0 nao
+// concordavam - o firmware usava 175 fixo enquanto o servidor ja acompanhava o
+// ajuste. Com ajuste em 172, um alarmava aos 175 e o outro so aos 177.
+//
+// Acompanhar o ajuste importa porque a folga entre a maxima de trabalho
+// (165 F) e o limite e de so 10 F, e o sensor fica no ar mais quente da estufa.
+// Quem pede um ajuste alto de proposito nao deveria receber alarme de incendio
+// por ter conseguido o que pediu.
+int limiteFogoF() {
+  return temperaturaAlvoF > 170 ? temperaturaAlvoF + 5 : 175;
+}
+
 bool riscoIncendioAgora() {
-  return leituraOk && temperaturaF > 175;
+  return leituraOk && temperaturaF > limiteFogoF();
 }
 
 // O silencio expirou? Comparacao com sinal para sobreviver ao rollover do
@@ -1564,7 +1582,7 @@ void atualizarSaidas() {
   }
 
   // Buzzer de temperatura desligado pelo produtor: cala o alarme COMUM, mas
-  // fogo (chama ou >175 F) ainda toca - desligar o buzzer nunca esconde
+  // fogo (chama ou temperatura de incendio) ainda toca - desligar o buzzer nunca esconde
   // incendio.
   if (!alertaLuz && !buzzerTemperaturaAtivo && !riscoIncendioAgora()) {
     buzzerLigadoAgora = false;

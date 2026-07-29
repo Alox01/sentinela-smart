@@ -94,8 +94,11 @@ de largar água, o que sinaliza virada de fase.
 
 ### Consequência: o limiar de incêndio está apertado **[inferência]**
 
-O firmware trata **> 175 °F como risco de incêndio**
-(`riscoIncendioAgora()`). Esse alerta **não pode ser desligado** — só silenciado
+O firmware trata como risco de incêndio a temperatura acima de **175 °F** — ou
+de **ajuste + 5 °F**, quando o ajuste passa de 170 °F (`limiteFogoF()`). Até a
+v1.16.0 o firmware usava 175 fixo enquanto o servidor já acompanhava o ajuste,
+e os dois **discordavam**: com ajuste em 172 °F, o aparelho alarmava aos 175 e a
+nuvem só aos 177. Alinhados na v1.17.0. Esse alerta **não pode ser desligado** — só silenciado
 por 10 min, que voltam sozinhos (v1.14.0) — e dispara push
 com som de alarme.
 
@@ -104,8 +107,20 @@ sensor de temperatura fica **no ar mais quente da estufa**, logo na saída, ante
 de perder calor para o fumo. Risco real de **alarme falso na secagem do talo**,
 de madrugada, sem o produtor poder silenciar.
 
-**Pendente decidir:** subir o limiar, ou trocá-lo por **velocidade de subida**
-(fogo esquenta rápido, fornalha não), que separa melhor as duas situações.
+**Velocidade de subida foi considerada e descartada** (29/07/2026): fogo esquenta
+rápido, mas a fornalha atiçada também — jogar lenha e abrir o registro sobe a
+temperatura depressa e de forma legítima. O critério não separa as duas
+situações, só troca um tipo de alarme falso por outro.
+
+Cogitou-se então exigir que a condição se **sustentasse por N minutos** (o pico
+de quem atiçou volta; fogo não). Também descartado, e pelo produtor: N depende
+da lenha e do clima, e não existe constante que sirva.
+
+**Pendente decidir:** nada, por enquanto — e de propósito. O alarme falso ainda
+é **inferência**, não observação. Uma estufada acompanhada diz se ele acontece
+de verdade; se não acontecer, o limiar relativo ao ajuste já resolve, e nenhum
+mecanismo novo precisa existir. O que anotar durante a estufada: **quanto a
+temperatura passa do ajuste depois de atiçar, e quanto tempo leva para assentar**.
 
 ---
 
