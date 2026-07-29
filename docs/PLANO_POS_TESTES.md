@@ -6,25 +6,28 @@
 
 ## Por que testar antes de continuar
 
-Muita coisa foi escrita nos últimos dias e **nada disso rodou em hardware**:
-o ESP está com a 1.9.0 enquanto o repositório tem a 1.13.0 (quatro versões de
-diferença), as notificações ganharam canais e semântica novos, e o agendamento
-inteiro nasceu agora. É o maior risco atual do projeto: código correto no papel
-e não provado.
+Muita coisa foi escrita em poucos dias, e o risco era ter código correto no
+papel e não provado. Os testes de **notificação** já foram feitos e acharam dois
+bugs que nenhum teste automatizado pegaria — um silencioso (comando parado numa
+caixa que o simulador nunca consulta) e um intermitente (a resolução do nome
+mDNS estourando o prazo da sonda).
 
-Nenhum item deste plano é grande. O que muda tudo é o resultado dos testes.
+Sobram os que **dependem do aparelho em campo**. O ESP está com a **1.13.0**; a
+**1.14.0** (silêncio de 10 min valendo também para fogo) ainda precisa ser
+gravada.
 
 ## 1. Testes de campo (só o produtor pode fazer)
 
 | Teste | O que prova | Depende de |
 |---|---|---|
-| Gravar a **1.13.0** | destrava os quatro seguintes | — |
-| Segurar o botão do buzzer 3 s | liga/desliga a sirene sem celular (2 apitos × 1 longo) | 1.13.0 |
-| Modo de configuração num celular real | portal cativo e IP fixo, **nunca abertos fora do código** | 1.13.0 |
-| Queda de energia | o ajuste volta da NVS, e o watchdog avisa | 1.13.0 |
-| Alarme de madrugada | volume de alarme e "Não perturbe" — celular no silencioso, app fechado | APK novo |
-| Agendar e fechar o app | lembrete chega **e** o ajuste muda sozinho | APK + servidor |
+| Gravar a **1.14.0** | destrava o silêncio do fogo | — |
+| Segurar o botão do buzzer 3 s | liga/desliga a sirene sem celular (2 apitos × 1 longo) | 1.13.0 ✅ |
+| Silenciar durante fogo | cala por 10 min e **volta sozinho** | 1.14.0 |
+| Modo de configuração num celular real | portal cativo e IP fixo, **nunca abertos fora do código** | 1.13.0 ✅ |
+| Queda de energia | o ajuste volta da NVS, e o watchdog avisa | 1.13.0 ✅ |
+| Agendar com o ESP real | lembrete chega **e** o ajuste muda sozinho (o simulador já provou a lógica) | APK + servidor |
 | Ponte de leitura | energia sim, internet da propriedade não, celular no 4G → **sem** falso "sem comunicação" | APK |
+| Cadastrar / atualizar estufa | os fluxos novos de provisionamento | APK |
 
 **O que anotar em cada um:** o que aconteceu, quanto tempo levou e se o app
 estava aberto ou fechado. Esses números viram a seção de resultados do TCC — e,
@@ -82,12 +85,15 @@ com máxima de trabalho em 165 °F deixam 10 °F de folga, com o sensor no ar ma
 quente da estufa. Subir o limiar, ou trocá-lo por **velocidade de subida**?
 Ver `AMBIENTE_ESTUFA.md` §3. Uma estufada completa observada responde isso.
 
-## 4. Provisionamento, Parte 1 (pequeno)
+## 4. Provisionamento, Parte 1 — **feito** (25/07/2026)
 
-Botão **"Cadastrar esta estufa"** na tela de sucesso da configuração, abrindo o
-formulário já preenchido com o nome mDNS. Metade já existe — a tela lê e mostra
-o nome. Melhora a primeira experiência, que hoje exige digitar um endereço que o
-produtor acabou de ver na tela ao lado. Ver `CONFIGURACAO_ESP32.md`.
+A tela de sucesso da configuração leva endereço e chave de volta ao formulário
+de cadastro, em vez de o produtor decorar um nome como
+`sentinela-215788.local`. E, quando aberta pelo menu de uma estufa já cadastrada,
+oferece **atualizar** — sem isso, trocar a chave no aparelho deixava a do app
+velha e os comandos passavam a ser recusados sem explicação.
+
+Falta só testar em campo.
 
 ## 5. Escrita do TCC
 
