@@ -27,6 +27,34 @@ então nenhum deles espera gravação.
 | Ponte de leitura | energia sim, internet da propriedade não, celular no 4G → **sem** falso "sem comunicação" | APK |
 | Cadastrar / atualizar estufa | os fluxos novos de provisionamento | APK |
 
+### Desembaraçar as três estufas (29/07/2026) — **primeiro de todos**
+
+As três estufas cadastradas ficaram apontadas para o **mesmo aparelho** (o ESP
+real), então os três cartões espelhavam o mesmo display. Causa em
+`HANDOFF.md`: o app aprendia o `idHardware` de quem atendesse no endereço e
+sobrescrevia o que já sabia, e endereços repetidos fizeram três estufas virarem
+uma. Enquanto isso não for desfeito **à mão**, nada mais medido na lista de
+estufas significa coisa alguma.
+
+| Estufa | Endereço | ID do aparelho |
+|---|---|---|
+| Esp32-1 (real) | nome mDNS dele | `ESP32_215788` |
+| Esp32-2 (do primo) | o do aparelho **dele** | vazio — aprende ao conectar lá |
+| Estufa L (simulador) | qualquer um, diferente dos outros | `ESP32_REALISTIC_V2` |
+
+O simulador **precisa** do id digitado: não existe aparelho na rede para ser
+descoberto. Foi o que fez o cartão dele dizer OFFLINE depois de trocar o
+endereço — e o motivo de a mensagem virar "SEM ID".
+
+Depois de arrumar, o que provar: **cada cartão com números próprios**, e o
+Esp32-1 parando de piscar entre LOCAL e NUVEM (a histerese de duas falhas).
+
+| Teste | O que prova |
+|---|---|
+| Salvar duas estufas no mesmo endereço | é **recusado**, com explicação |
+| Cartão sem id | diz **SEM ID**, não OFFLINE |
+| Detalhes da conexão | mostram `1.17.0` e o id do aparelho |
+
 **O que anotar em cada um:** o que aconteceu, quanto tempo levou e se o app
 estava aberto ou fechado. Esses números viram a seção de resultados do TCC — e,
 se algo falhar, são eles que dizem se o problema é canal, permissão ou
