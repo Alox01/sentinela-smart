@@ -165,32 +165,40 @@ vai estar por perto
 ## O que falta
 
 Nada de **produção**: o escopo da proposta está implementado. O que resta é
-validação em campo e a escrita.
+desembaraçar o cadastro, validar em campo e escrever.
 
-1. **Validar em hardware o que mudou por último** (código pronto, não provado):
-   - **teste da queda de energia** — vale por três de uma vez: mede o tempo real
-     até o push de "sem comunicação", confirma que o alvo volta do NVS (e não
-     nos 76 °F padrão) e fecha o ciclo com o aviso de retorno;
-   - **teste do som de incêndio de madrugada**: volume de notificação baixo,
-     volume de alarme alto, tela trancada. É essa combinação que a mudança do
-     canal ataca;
+1. **Desembaraçar as três estufas** (29/07/2026) — as três ficaram apontadas
+   para o mesmo aparelho. Precisa ser desfeito à mão, estufa por estufa, com os
+   campos de endereço e id do form. Enquanto não for, nada medido na lista de
+   estufas vale. Tabela do que cada uma deve ter em `PLANO_POS_TESTES.md`.
+2. **Validar em hardware o que mudou por último** (código pronto, não provado):
+   - **queda de energia** — vale por três: mede o tempo real até o push de "sem
+     comunicação" (limite padrão do watchdog: **5 min**), confirma que o ajuste
+     volta do NVS (e não no padrão) e fecha o ciclo com o aviso de retorno;
    - **modo de configuração num celular de verdade** (portal cativo e IP fixo
      nunca foram abertos fora do código);
-   - **hold de 3 s no botão do buzzer** (v1.13.0) e o efeito no app pelo LWW;
    - **cenário da ponte**: aparelho com energia e a internet da propriedade
-     caída, celular no 4G — não deve nascer o falso "sem comunicação".
-2. **Escrita do TCC** e seção de resultados (números dos testes acima).
+     caída, celular no 4G — não deve nascer o falso "sem comunicação";
+   - **agendar ajuste com o ESP real** — o simulador já provou a lógica.
+3. **Sons próprios por aviso** — aguardando os áudios do produtor. Requisitos e
+   a pegadinha do canal congelado em `NOTIFICACOES_PUSH.md`.
+4. **Escrita do TCC** e seção de resultados (números dos testes acima).
    Ordem sugerida do trabalho daqui em diante: `PLANO_POS_TESTES.md`.
-3. **Provisionamento** (`CONFIGURACAO_ESP32.md`) — a maior pendência de
-   software. Parte 1: botão "Cadastrar esta estufa" levando o nome mDNS ao
-   formulário (metade pronta, a tela já lê e mostra o nome). Parte 2: chave
-   gerada pelo aparelho, revelada só no modo de configuração (presença física) e
-   propagada por TOFU — muda o servidor de chave global para chave por aparelho.
-4. **Decisão em aberto:** limiar de incêndio (175 °F) — subir o valor ou trocar
-   por **velocidade de subida**. Ver `AMBIENTE_ESTUFA.md` §3.
-5. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
+5. **Provisionamento Parte 2** (`CONFIGURACAO_ESP32.md`) — a maior pendência de
+   software: chave gerada pelo aparelho, revelada só no modo de configuração
+   (presença física) e propagada por TOFU. Muda o servidor de chave global para
+   chave por aparelho. Não bloqueia o TCC. A Parte 1 está feita.
+6. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
    fio em pino errado de regulador queimado. Não bloqueia o TCC — um aparelho
    basta.
+
+Fechado desde a última revisão: o **limiar de incêndio** fica em 175 °F, com
+dado de campo do produtor (`AMBIENTE_ESTUFA.md` §3), e o **hold de 3 s** no
+botão do buzzer foi validado no aparelho.
+
+Adiado por escolha: **guardar o IP resolvido do nome mDNS** para acelerar as
+transições de conexão. Só ganha velocidade, não corrige nada quebrado, e essa
+parte do app já produziu vários problemas de campo.
 
 ## Bloqueado por hardware (trabalho futuro honesto — ver §6.2 do outline)
 
