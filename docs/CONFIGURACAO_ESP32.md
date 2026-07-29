@@ -324,6 +324,16 @@ O que ficou de pé, e as decisões que o desenho abaixo previa mas não fechava:
   o `idHardware` que a própria requisição menciona. Sem essa amarração, "chave
   por aparelho" não separaria nada: qualquer chave registrada abriria qualquer
   estufa. É o teste mais importante de `test/chave_aparelho.test.js`.
+- **O app tambem leva a chave** (caminho B, feito na sequência): ao cadastrar ou
+  editar uma estufa que já tem `idHardware` e chave, o app sobe
+  `(idHardware, chave)` para a nuvem. A chave chega até ele pelo modo de
+  configuração — presença física —, que a Parte 1 já devolvia ao formulário.
+  Melhor esforço de propósito: falhar aí não pode derrubar o cadastro, que é o
+  que o produtor está fazendo. E os dois caminhos (aparelho e app) caem no mesmo
+  TOFU, então o primeiro que chegar resolve. Um **409** na subida é sinal útil: a
+  nuvem guarda outra chave para aquele aparelho, ou seja, a do app está velha e
+  os comandos remotos vão ser recusados até ela ser relida no modo de
+  configuração.
 - **A chave global continua valendo, de propósito.** Tirar antes de todos os
   aparelhos em campo registrarem a sua deixaria o produtor sem acesso remoto.
   Desligar é um passo separado, depois de provado em campo.

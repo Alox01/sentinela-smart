@@ -15,6 +15,19 @@ enum ApiCommandFailure {
   serverError,
 }
 
+/// Como terminou a tentativa de subir a chave da estufa para a nuvem.
+enum ResultadoChaveNuvem {
+  registrada,
+  /// A nuvem tem outra chave para este aparelho: a do app esta velha.
+  chaveDivergente,
+  /// Nem a chave do app nem a global foram aceitas.
+  naoAutorizado,
+  semNuvem,
+  semIdHardware,
+  semChave,
+  falhou,
+}
+
 class ApiService {
   static const String _cloudPadrao = String.fromEnvironment(
     'CLOUD_API_URL',
@@ -667,6 +680,45 @@ class ApiService {
       statusCode == 401 ||
       statusCode == 403 ||
       (statusCode >= 400 && statusCode < 500);
+
+  /// Sobe a chave desta estufa para a nuvem, para ela poder autorizar comandos
+  /// deste aparelho sem depender da chave global.
+  ///
+  /// O produtor le a chave no modo de configuracao - presenca fisica na frente do
+  /// aparelho - e e esse ato que ancora a confianca. O app so faz o transporte.
+  /// O aparelho tambem registra a propria chave por conta dele; os dois caminhos
+  /// convergem no mesmo TOFU e o primeiro que chegar resolve.
+  ///
+  /// Vai SEMPRE na nuvem, nunca no endereco local: a rota e do servidor, e o ESP
+  /// nao a serve. Melhor esforco - falhar aqui nao pode atrapalhar o cadastro,
+  /// que e o que o produtor esta fazendo.
+  Future<ResultadoChaveNuvem> registrarChaveNaNuvem() async {
+    final base = cloudBaseUrl;
+    final id = idHardware;
+    final chave = authToken;
+    if (base == null || base.isEmpty) return ResultadoChaveNuvem.semNuvem;
+    if (id == null || id.isEmpty) return ResultadoChaveNuvem.semIdHardware;
+    if (chave == null || chave.isEmpty) return ResultadoChaveNuvem.semChave;
+
+    try {
+      final resposta = await http
+          .post(
+            Uri.parse('$base/aparelhos/chave'),
+            headers: _headers({'Content-Type': 'application/json'}),
+            body: jsonEncode({'idHardware': id, 'chave': chave}),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (resposta.statusCode == 200) return ResultadoChaveNuvem.registrada;
+      // 409: a nuvem guarda OUTRA chave para este aparelho. Quer dizer que a
+      // chave do app esta velha - os comandos remotos vao ser recusados ate ela
+      // ser atualizada pelo modo de configuracao.
+      if (resposta.statusCode == 409) return ResultadoChaveNuvem.chaveDivergente;
+      if (resposta.statusCode == 401) return ResultadoChaveNuvem.naoAutorizado;
+      return ResultadoChaveNuvem.falhou;
+    } catch (_) {
+      return ResultadoChaveNuvem.falhou;
+    }
+  }
 
   Map<String, String> _headers([Map<String, String>? base]) {
     final headers = <String, String>{...?base};
