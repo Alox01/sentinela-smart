@@ -269,7 +269,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       // seria uma piora.
       final buzzerLido = config['buzzerAtivo'];
       if (buzzerLido is bool) _buzzerAparelhoAtivo = buzzerLido;
-      final versaoLida = status['versaoFirmware'];
+      // Nos dois lugares de proposito: o /status do aparelho poe a versao na RAIZ
+      // do JSON, enquanto as leituras ficam dentro de `status`. Pela nuvem ela
+      // acaba dentro de `status`, porque o POST /leitura espalha a raiz do corpo
+      // ali. Ler so um dos dois fazia a versao aparecer pela nuvem e sumir na
+      // conexao local, que e onde o produtor esta quando pergunta.
+      final versaoLida = status['versaoFirmware'] ?? dados['versaoFirmware'];
       if (versaoLida is String && versaoLida.isNotEmpty) {
         _versaoFirmware = versaoLida;
       }

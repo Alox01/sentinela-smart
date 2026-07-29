@@ -906,3 +906,58 @@ test('reenviar preferencias sem nome nao apaga o nome guardado', async () => {
   assert.equal(push.enviados.length, 1);
   assert.match(push.enviados[0].titulo, /^Estufa do Fundo · /);
 });
+
+// Desligar a sirene do aparelho zerava `alarmeAtivo`, e o servidor concluia que
+// nao havia alarme: a sirene da estufa passava a decidir se o celular avisava,
+// apagando em silencio as preferencias de notificacao. Sao canais diferentes.
+test('temperatura fora da faixa avisa mesmo com a sirene do aparelho desligada', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tokenPush: 'tok-1', idHardware: 'ESP32_CAMPO_01' }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 130,
+    umidadeAtual: 40,
+    // Sirene calada no aparelho, mas a temperatura ESTA fora da faixa.
+    alarmeAtivo: false,
+    alertaTemperatura: true,
+    aviso: 'Temperatura alta',
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados.length, 1);
+  assert.equal(push.enviados[0].evento, 'alarmeProcesso');
+});
+
+// Firmware anterior a 1.19.0 nao manda `alertaTemperatura`. Ele tem de continuar
+// avisando como antes, em vez de parar de avisar.
+test('firmware velho, sem alertaTemperatura, ainda avisa por alarmeAtivo', async () => {
+  const db = dbPushFalso();
+  const push = pushEspiao();
+  const app = criarAppComPush({ db, push });
+
+  await requisitar(app, '/push/dispositivos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tokenPush: 'tok-1', idHardware: 'ESP32_CAMPO_01' }),
+  });
+
+  await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaAtual: 130,
+    umidadeAtual: 40,
+    alarmeAtivo: true,
+    aviso: 'Temperatura alta',
+  });
+  await new Promise((r) => setTimeout(r, 30));
+
+  assert.equal(push.enviados.length, 1);
+  assert.equal(push.enviados[0].evento, 'alarmeProcesso');
+});

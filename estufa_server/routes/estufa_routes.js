@@ -145,7 +145,19 @@ function createEstufaRouter({
     const fogoSensor = status.perigoChama === true;
     const tempMuitoAlta = status.riscoIncendio === true;
     const fogo = fogoSensor || tempMuitoAlta || status.alertaIncendio === true;
-    const alarme = status.alarmeAtivo === true;
+    // A CONDICAO de temperatura fora da faixa, nao "a sirene esta tocando".
+    // `alarmeAtivo` fica false quando o produtor desliga a sirene daquele
+    // aparelho (ou pede os 10 min de silencio), e usar isso aqui fazia a sirene
+    // da estufa decidir se o celular avisava - apagando, sem dizer nada, as
+    // preferencias de notificacao que o produtor tinha configurado. Sao canais
+    // diferentes: desligar o barulho na estufa e um pedido sobre o barulho ali.
+    //
+    // `alertaTemperatura` chega da v1.19.0 em diante; antes dela so havia
+    // `alarmeAtivo`, e um aparelho com firmware velho continua avisando como
+    // antes em vez de parar de avisar.
+    const alarme = status.alertaTemperatura != null
+      ? status.alertaTemperatura === true
+      : status.alarmeAtivo === true;
 
     const anterior = ultimoEstadoNotificado.get(idHardware) || {};
     ultimoEstadoNotificado.set(idHardware, {

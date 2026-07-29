@@ -49,6 +49,12 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.19.0: reporta `alertaTemperatura` - a CONDICAO de temperatura fora da
+//        faixa - separada de `alarmeAtivo`, que diz se a sirene esta tocando.
+//        Desligar a sirene do aparelho zerava `alarmeAtivo`, e a nuvem deixava
+//        de mandar a notificacao de temperatura para o celular: a sirene da
+//        estufa estava mandando no aviso do celular, que tem preferencias
+//        proprias.
 // 1.18.0: chave de acesso POR APARELHO. Gera uma aleatoria quando nao existe
 //        nenhuma (aparelho novo), registra na nuvem por TOFU e oferece "gerar
 //        nova chave" no modo de configuracao - presenca fisica -, rotacionando
@@ -106,7 +112,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.18.0";
+const char* VERSAO_FIRMWARE = "1.19.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -966,6 +972,12 @@ void empurrarLeituraNuvem() {
   doc["temInternet"] = true;
   doc["sinalWifi"] = wifiSinalPercent();
   doc["alarmeAtivo"] = alarmeAtivoAgora();
+  // A CONDICAO de temperatura fora da faixa, separada de `alarmeAtivo` (que diz
+  // se a sirene esta tocando agora). Os dois divergem quando o produtor desliga
+  // a sirene deste aparelho ou pede os 10 min de silencio - e o aviso no celular
+  // nao pode depender disso: ele tem tela de preferencias propria, e desligar a
+  // sirene da estufa e um pedido sobre o barulho ali, nao sobre ser avisado.
+  doc["alertaTemperatura"] = alertaTemperatura;
   doc["alertaIncendio"] = (alertaLuz || riscoIncendioAgora());
   doc["perigoChama"] = alertaLuz;
   doc["riscoIncendio"] = riscoIncendioAgora();
@@ -1293,6 +1305,7 @@ void handleStatus() {
   status["temInternet"] = (WiFi.status() == WL_CONNECTED);
   status["sinalWifi"] = wifiSinalPercent();
   status["alarmeAtivo"] = alarmeAtivoAgora();
+  status["alertaTemperatura"] = alertaTemperatura;  // ver comentario em empurrarLeituraNuvem()
   status["alertaIncendio"] = (alertaLuz || riscoIncendioAgora());
   status["perigoChama"] = alertaLuz;
   status["riscoIncendio"] = riscoIncendioAgora();
