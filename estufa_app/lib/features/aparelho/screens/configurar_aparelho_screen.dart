@@ -50,6 +50,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   final _rede = TextEditingController();
   final _senha = TextEditingController();
   final _chave = TextEditingController();
+  /// Chave lida do proprio aparelho. Nunca exibida: existe so para seguir ao
+  /// cadastro. Nula quando o firmware e anterior a 1.20.0.
+  String? _chaveDoAparelho;
+  bool _conferindo = false;
+  bool? _alcancou;
   final _ip = TextEditingController();
   final _gateway = TextEditingController();
   final _mascara = TextEditingController();
@@ -96,6 +101,65 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     } catch (_) {
       // Sem rede do aparelho ainda: nada a mostrar, e nada a avisar.
     }
+    await _lerIdentidadeDoAparelho();
+  }
+
+  /// Le a chave do proprio aparelho, para o produtor nunca precisar ve-la nem
+  /// digita-la. Ela fica so aqui em memoria e segue direto para o cadastro.
+  ///
+  /// A rota so responde no modo de configuracao — estar na frente do aparelho é
+  /// o que autoriza. Firmware anterior a 1.20.0 não a serve: nesse caso o campo
+  /// da chave continua aparecendo, para o aparelho antigo não ficar sem caminho.
+  Future<void> _lerIdentidadeDoAparelho() async {
+    try {
+      final resposta = await http
+          .get(Uri.parse('$_enderecoAparelho/config/identidade'))
+          .timeout(const Duration(seconds: 5));
+      if (!mounted || resposta.statusCode != 200) return;
+      final dados = jsonDecode(resposta.body);
+      if (dados is! Map) return;
+      final chave = dados['chave']?.toString();
+      final nome = dados['nomeLocal']?.toString();
+      if (chave == null || chave.isEmpty) return;
+      setState(() {
+        _chaveDoAparelho = chave;
+        if (nome != null && nome.isNotEmpty) _nomeLocal = nome;
+      });
+    } catch (_) {
+      // Firmware antigo ou fora do modo de configuracao: segue pelo campo.
+    }
+  }
+
+  /// Confere se o aparelho voltou a ser alcancavel pelo nome, agora que os dois
+  /// deviam estar na rede de casa. Sem isto o produtor podia terminar com uma
+  /// estufa cadastrada num endereco que nunca responde — o mDNS falha em parte
+  /// dos celulares e roteadores, e o erro so apareceria muito depois.
+  Future<void> _conferirAlcance() async {
+    final nome = _nomeLocal;
+    if (nome == null || nome.isEmpty) return;
+    setState(() {
+      _conferindo = true;
+      _alcancou = null;
+    });
+    var ok = false;
+    for (final porta in const ['3000', '80']) {
+      try {
+        final resposta = await http
+            .get(Uri.parse('http://$nome:$porta/status'))
+            .timeout(const Duration(seconds: 5));
+        if (resposta.statusCode == 200) {
+          ok = true;
+          break;
+        }
+      } catch (_) {
+        // Tenta a proxima porta.
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _conferindo = false;
+      _alcancou = ok;
+    });
   }
 
   Future<void> _salvar() async {
@@ -119,7 +183,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             body: {
               'ssid': rede,
               'senha': _senha.text,
-              'token': _chave.text.trim(),
+              // Vazio mantem a atual no aparelho. So manda algo quando o
+              // produtor digitou — caso do firmware antigo, sem chave propria.
+              'token': _chaveDoAparelho != null ? '' : _chave.text.trim(),
               'ip': _ip.text.trim(),
               'gateway': _gateway.text.trim(),
               'mascara': _mascara.text.trim(),
@@ -204,11 +270,49 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // para o cadastro, em vez de ele ter de decorar ou copiar a mao. A
         // chave tambem, porque ele a definiu nesta mesma tela.
         if (widget.uso != null && _nomeLocal != null) ...[
+          // Conferir vem ANTES de cadastrar: o nome so resolve depois de os dois
+          // voltarem para a rede de casa, e o mDNS falha em parte dos celulares
+          // e roteadores. Sem esta conferencia da para terminar com uma estufa
+          // apontada para um endereco que nunca responde, e o erro so apareceria
+          // muito depois, parecendo outra coisa.
+          OutlinedButton.icon(
+            onPressed: _conferindo ? null : _conferirAlcance,
+            icon: _conferindo
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.wifi_find_rounded, size: 18),
+            label: Text(
+              _conferindo ? 'Procurando...' : 'Conferir se o aparelho responde',
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+          if (_alcancou != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _alcancou!
+                  ? 'Respondeu. Pode cadastrar.'
+                  : 'Não respondeu ainda. Espere alguns segundos e tente de '
+                        'novo — o aparelho pode estar reiniciando. Se insistir, '
+                        'volte e use o endereço fixo.',
+              style: TextStyle(
+                color: _alcancou! ? Colors.greenAccent : Colors.orangeAccent,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(
               DadosAparelhoConfigurado(
                 endereco: _nomeLocal,
-                chave: _chave.text.trim().isEmpty ? null : _chave.text.trim(),
+                chave: _chaveDoAparelho
+                    ?? (_chave.text.trim().isEmpty ? null : _chave.text.trim()),
               ),
             ),
             icon: Icon(
@@ -337,11 +441,32 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           dica: 'Deixe vazio para manter a senha atual',
           senha: true,
         ),
-        _campo(
-          controlador: _chave,
-          rotulo: 'Chave de acesso',
-          dica: 'A mesma cadastrada na estufa, aqui no app',
-        ),
+        // O campo so aparece para aparelho sem chave propria (firmware anterior
+        // a 1.20.0). Com chave propria o produtor nunca precisa ve-la nem
+        // digita-la: o app le do aparelho e leva ao cadastro.
+        if (_chaveDoAparelho == null)
+          _campo(
+            controlador: _chave,
+            rotulo: 'Chave de acesso',
+            dica: 'A mesma cadastrada na estufa, aqui no app',
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.only(bottom: 14),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline, color: Colors.white38, size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'A chave deste aparelho vai junto para o cadastro. '
+                    'Você não precisa vê-la nem digitá-la.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(

@@ -49,6 +49,12 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.20.0: o app le a identidade (id, nome local e CHAVE) de
+//        `GET /config/identidade`, que so responde no modo de configuracao -
+//        presenca fisica. O formulario HTML deixa de vir com a chave
+//        preenchida. Assim o produtor nunca precisa ver nem digitar a chave;
+//        sem exibir, a recuperacao passa a ser entrar no modo de configuracao
+//        de novo, que e o modelo do adesivo do roteador.
 // 1.19.0: reporta `alertaTemperatura` - a CONDICAO de temperatura fora da
 //        faixa - separada de `alarmeAtivo`, que diz se a sirene esta tocando.
 //        Desligar a sirene do aparelho zerava `alarmeAtivo`, e a nuvem deixava
@@ -112,7 +118,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.19.0";
+const char* VERSAO_FIRMWARE = "1.20.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -331,6 +337,7 @@ void verificarModoConfig();
 void entrarModoConfig();
 void handleConfigPagina();
 void handleConfigSalvar();
+void handleConfigIdentidade();
 
 // ============================================================
 //  SETUP
@@ -384,6 +391,7 @@ void setup() {
   server.on("/dados", HTTP_GET, handleSimple);
   server.on("/sincronizar", HTTP_POST, handleSincronizar);
   server.on("/salvar", HTTP_POST, handleConfigSalvar);
+  server.on("/config/identidade", HTTP_GET, handleConfigIdentidade);
   server.onNotFound([]() {
     // No ponto de acesso, qualquer endereco cai no formulario: o produtor nao
     // precisa acertar a URL, basta abrir o navegador.
@@ -709,10 +717,8 @@ void handleConfigPagina() {
       "\" required><label>Senha do Wi-Fi</label>"
       "<input name=\"senha\" type=\"password\" placeholder=\"(deixe vazio para "
       "manter a atual)\">"
-      "<label>Chave de acesso</label><input name=\"token\" value=\"");
-  html += escaparHtml(tokenAparelho);
-  html += F(
-      "\">"
+      "<label>Chave de acesso</label>"
+      "<input name=\"token\" placeholder=\"(deixe vazio para manter a atual)\">"
       "<label style=\"font-weight:normal\"><input type=\"checkbox\" "
       "name=\"novachave\" value=\"1\"> Gerar uma chave nova</label>"
       "<p class=\"aviso\">Marque so ao trocar de dono ou se a chave vazou. A "
@@ -739,6 +745,34 @@ void handleConfigPagina() {
       "</body></html>");
 
   server.send(200, "text/html; charset=utf-8", html);
+}
+
+// Entrega ao app a identidade do aparelho, incluindo a CHAVE. So responde no
+// modo de configuracao, e essa restricao e a seguranca inteira: entrar nele
+// exige segurar os tres botoes, ou seja, estar na frente do aparelho, e ele sai
+// sozinho por inatividade. Em operacao normal a rota nao existe - `/status` diz
+// apenas se ha chave, nunca qual.
+//
+// Serve para o produtor nunca precisar ver nem digitar a chave: o app le daqui e
+// guarda. Uso unico foi considerado e descartado - se o app fechasse ou o
+// celular caisse da rede do aparelho no meio, a chave se perderia e o produtor
+// ficaria preso. Presenca fisica mais o prazo do modo de configuracao dao a
+// mesma protecao sem a fragilidade.
+void handleConfigIdentidade() {
+  if (!modoConfig) {
+    server.send(404, "application/json", "{\"erro\":\"fora do modo de configuracao\"}");
+    return;
+  }
+  ultimaAtividadeConfig = millis();
+
+  JsonDocument doc;
+  doc["idHardware"] = idHardware;
+  doc["nomeLocal"] = nomeLocal;
+  doc["chave"] = tokenAparelho;
+  doc["versaoFirmware"] = VERSAO_FIRMWARE;
+  String corpo;
+  serializeJson(doc, corpo);
+  server.send(200, "application/json", corpo);
 }
 
 void handleConfigSalvar() {

@@ -338,6 +338,44 @@ O que ficou de pé, e as decisões que o desenho abaixo previa mas não fechava:
   aparelhos em campo registrarem a sua deixaria o produtor sem acesso remoto.
   Desligar é um passo separado, depois de provado em campo.
 
+### Parte 3 — o produtor nunca vê a chave (v1.20.0)
+
+Fluxo desenhado pelo produtor, com as correções que a revisão trouxe:
+
+1. `+` no app **ou** segurar os 3 botões — em qualquer ordem;
+2. no app, "primeira configuração": nome e senha do Wi-Fi da casa;
+3. o app lê do aparelho `GET /config/identidade` — id, nome mDNS e **chave**;
+4. o app mostra só o nome de conexão. A chave fica em memória e **nunca é
+   exibida**;
+5. salva → o aparelho reinicia na rede de casa;
+6. o celular volta ao Wi-Fi de sempre;
+7. **"Conferir se o aparelho responde"** antes de finalizar;
+8. cadastra a estufa com o que já está em memória.
+
+O que a revisão corrigiu na proposta:
+
+- **O id não é criado, já existe** (vem do MAC). O id é o nome e não é segredo —
+  aparece em toda resposta de `/status`. A chave é o segredo.
+- **Nada de área de transferência.** Outros apps leem o clipboard e o Android
+  ainda anuncia a colagem. O app já carregava a chave em memória, o que é
+  estritamente melhor.
+- **Uso único foi descartado.** Se o app fechasse ou o celular caísse da rede do
+  aparelho no meio, a chave se perderia. A âncora certa não é "uma vez" e sim
+  **enquanto no modo de configuração**, que já exige os 3 botões e expira
+  sozinho: mesma proteção, sem a fragilidade.
+- **O passo 7 não existia na proposta** e é o que impede terminar com uma estufa
+  apontada para um endereço que nunca responde — o mDNS falha em parte dos
+  celulares e roteadores, e o erro apareceria muito depois, parecendo outra coisa.
+
+Consequência aceita: **não existe "esqueci minha chave"**. Sem exibir, a
+recuperação é entrar no modo de configuração de novo — o modelo do adesivo do
+roteador. O formulário HTML do aparelho deixou de vir com a chave preenchida;
+quem usa o navegador direto ainda a vê ao gerar uma nova, que é o caminho de
+recuperação sem o app.
+
+Compatibilidade: firmware anterior a 1.20.0 não serve a rota, e aí o campo da
+chave continua aparecendo no app — aparelho antigo não fica sem caminho.
+
 **Para desligar a chave global (29/07/2026), o que foi verificado.** Todas as
 rotas que o app chama na nuvem carregam `idHardware` — `/sincronizar` (quando
 conhecido), `/agendamentos` (recusa sem ele), `/push/dispositivos` (obrigatório)
