@@ -39,8 +39,16 @@ class ConfigurarAparelhoScreen extends StatefulWidget {
 class DadosAparelhoConfigurado {
   final String? endereco;
   final String? chave;
+  /// Identificador do aparelho, lido dele mesmo. Vai junto para a estufa nascer
+  /// ja sabendo de qual aparelho e - sem isto ela ficava "SEM ID" ate conseguir
+  /// uma primeira conexao local, e ate la nao lia nada pela nuvem.
+  final String? idHardware;
 
-  const DadosAparelhoConfigurado({this.endereco, this.chave});
+  const DadosAparelhoConfigurado({
+    this.endereco,
+    this.chave,
+    this.idHardware,
+  });
 }
 
 class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
@@ -53,6 +61,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// Chave lida do proprio aparelho. Nunca exibida: existe so para seguir ao
   /// cadastro. Nula quando o firmware e anterior a 1.20.0.
   String? _chaveDoAparelho;
+  String? _idDoAparelho;
+  bool _senhaVisivel = false;
   bool _conferindo = false;
   bool? _alcancou;
   final _ip = TextEditingController();
@@ -120,9 +130,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       if (dados is! Map) return;
       final chave = dados['chave']?.toString();
       final nome = dados['nomeLocal']?.toString();
+      final id = dados['idHardware']?.toString();
       if (chave == null || chave.isEmpty) return;
       setState(() {
         _chaveDoAparelho = chave;
+        if (id != null && id.isNotEmpty) _idDoAparelho = id;
         if (nome != null && nome.isNotEmpty) _nomeLocal = nome;
       });
     } catch (_) {
@@ -313,6 +325,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 endereco: _nomeLocal,
                 chave: _chaveDoAparelho
                     ?? (_chave.text.trim().isEmpty ? null : _chave.text.trim()),
+                idHardware: _idDoAparelho,
               ),
             ),
             icon: Icon(
@@ -439,7 +452,20 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           controlador: _senha,
           rotulo: 'Senha do Wi-Fi',
           dica: 'Deixe vazio para manter a senha atual',
-          senha: true,
+          senha: !_senhaVisivel,
+          // Senha de Wi-Fi rural costuma ser longa e cheia de numero: digitar as
+          // cegas e errar, e o erro so aparece la na frente, quando o aparelho
+          // nao conecta e nao ha como saber por que.
+          acao: IconButton(
+            icon: Icon(
+              _senhaVisivel
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              color: Colors.white38,
+              size: 20,
+            ),
+            onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
+          ),
         ),
         // O campo so aparece para aparelho sem chave propria (firmware anterior
         // a 1.20.0). Com chave propria o produtor nunca precisa ve-la nem
@@ -546,6 +572,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     required String rotulo,
     required String dica,
     bool senha = false,
+    Widget? acao,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -558,6 +585,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           labelStyle: const TextStyle(color: Colors.white54),
           helperText: dica,
           helperStyle: const TextStyle(color: Colors.white24, fontSize: 11),
+          suffixIcon: acao,
           filled: true,
           fillColor: const Color(0xFF1C1C1E),
           border: OutlineInputBorder(

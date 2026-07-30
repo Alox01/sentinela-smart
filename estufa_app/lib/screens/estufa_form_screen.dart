@@ -291,6 +291,9 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     setState(() {
       if (dados.endereco != null) _ipController.text = dados.endereco!;
       if (dados.chave != null) _chaveController.text = dados.chave!;
+      if (dados.idHardware != null) {
+        _idHardwareController.text = dados.idHardware!;
+      }
     });
   }
 
