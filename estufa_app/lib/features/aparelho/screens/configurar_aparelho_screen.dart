@@ -414,6 +414,49 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// Endereço que o produtor precisa levar para o cadastro da estufa. Fica
   /// visível aqui porque não há outro lugar: o visor tem 4 dígitos e o Monitor
   /// Serial exige um computador com a IDE do Arduino.
+  /// Diz se a tela ESTA falando com o aparelho agora. Sem isso, "ainda nao
+  /// conectei na rede dele" e indistinguivel de "esta tela nao funciona": os
+  /// campos aparecem vazios e o da chave reaparece, e nada explica por que. Como
+  /// a leitura se repete sozinha, este aviso vira o retorno de que faltava so a
+  /// rede.
+  Widget _cartaoEstadoDaConversa() {
+    final achou = _chaveDoAparelho != null;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: (achou ? Colors.greenAccent : Colors.orangeAccent).withValues(
+          alpha: 0.08,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            achou ? Icons.link_rounded : Icons.link_off_rounded,
+            color: achou ? Colors.greenAccent : Colors.orangeAccent,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              achou
+                  ? 'Falando com o aparelho. A chave dele vem junto — você não '
+                        'precisa digitar nada.'
+                  : 'Ainda não achei o aparelho. Siga os 3 passos abaixo; '
+                        'assim que o celular entrar na rede dele, esta tela se '
+                        'completa sozinha.',
+              style: TextStyle(
+                color: achou ? Colors.greenAccent : Colors.orangeAccent,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _cartaoNome() {
     final nome = _nomeLocal;
     if (nome == null) return const SizedBox.shrink();
@@ -481,6 +524,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
+        _cartaoEstadoDaConversa(),
         _cartaoNome(),
         Container(
           padding: const EdgeInsets.all(12),
