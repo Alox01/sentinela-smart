@@ -67,6 +67,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
   String? _prefixoDaRede;
   final _pin = TextEditingController();
+  /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
+  String? _pinTentado;
   String? _erroPin;
   Timer? _tentativas;
   bool _senhaVisivel = false;
@@ -141,6 +143,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
     // gastaria as tentativas dele.
     if (pin.length != 4) return;
+    // E nunca reenviar um PIN que ja falhou. A leitura se repete a cada 3 s, e
+    // sem isto um PIN errado consumiria as 5 tentativas do aparelho em 15
+    // segundos - o proprio app bloquearia o emparelhamento.
+    if (pin == _pinTentado) return;
+    _pinTentado = pin;
     try {
       final resposta = await http
           .get(Uri.parse('$_enderecoAparelho/config/identidade?pin=$pin'))
@@ -159,6 +166,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         return;
       }
       if (resposta.statusCode != 200) return;
+      // Deu certo: o teclado sai de cena. Ficar aberto sobre uma tela que ja
+      // seguiu adiante faz parecer que ainda falta digitar algo.
+      FocusManager.instance.primaryFocus?.unfocus();
       if (_erroPin != null) setState(() => _erroPin = null);
       final dados = jsonDecode(resposta.body);
       if (dados is! Map) return;
@@ -574,10 +584,12 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             dica: _erroPin ?? 'Aparecem no visor do aparelho no modo de '
                 'configuração',
             numerico: true,
-            aoMudar: (valor) {
-              if (valor.trim().length == 4) {
-                unawaited(_lerIdentidadeDoAparelho());
-              }
+            // Confirma em vez de disparar sozinho no 4o digito: a busca comecava
+            // com o teclado ainda aberto por cima, sem nada dizendo que ja tinha
+            // comecado. Aqui quem decide a hora e o produtor.
+            aoConfirmar: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              unawaited(_lerIdentidadeDoAparelho());
             },
           ),
         ],
@@ -711,7 +723,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     bool senha = false,
     bool numerico = false,
     Widget? acao,
-    ValueChanged<String>? aoMudar,
+    VoidCallback? aoConfirmar,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -720,7 +732,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         obscureText: senha,
         keyboardType: numerico ? TextInputType.number : null,
         maxLength: numerico ? 4 : null,
-        onChanged: aoMudar,
+        textInputAction: aoConfirmar != null ? TextInputAction.done : null,
+        onSubmitted: aoConfirmar == null ? null : (_) => aoConfirmar(),
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: rotulo,
