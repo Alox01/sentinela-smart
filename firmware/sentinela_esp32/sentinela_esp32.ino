@@ -661,6 +661,12 @@ void entrarModoConfig() {
   // Confirmacao fisica de que entrou no modo: um apito curto e um pisca dos
   // tres LEDs juntos. O visor de 7 segmentos nao mostra texto legivel, entao o
   // sinal do produtor e este - inconfundivel e sem depender de olhar o display.
+  //
+  // Toca DE PROPOSITO mesmo com a sirene de temperatura desligada, e isso nao e
+  // descuido: o interruptor e sobre o ALARME, nao sobre todo som do aparelho.
+  // Isto e resposta a uma acao que o produtor acabou de fazer, com ele na frente
+  // segurando os botoes. Calar aqui deixaria segurar os 3 botoes sem retorno
+  // nenhum, e a instrucao da tela ("segure ate apitar") viraria mentira.
   digitalWrite(LED_ALERTA, HIGH);
   digitalWrite(LED_UMIDADE, HIGH);
   digitalWrite(LED_CONTROLE_TEMP, HIGH);
@@ -1645,8 +1651,10 @@ void verificarSegurarBuzzer() {
 }
 
 // Confirmacao fisica, sem depender do visor: dois apitos curtos quando liga, um
-// longo quando desliga. O apito sai direto no pino - a sirene recem-desligada
-// ainda precisa dizer que entendeu o comando.
+// longo quando desliga. Como a confirmacao do modo de configuracao, ignora o
+// interruptor de proposito - inclusive ao DESLIGAR, porque o apito e o aviso de
+// que o pedido foi entendido. Sem ele, desligar seria indistinguivel de o
+// aparelho nao ter percebido o toque.
 void confirmarAlternanciaBuzzer(bool ligou) {
   if (ligou) {
     for (int i = 0; i < 2; i++) {
