@@ -243,6 +243,11 @@ class PushNotificationService {
     unawaited(sincronizarEstufas());
   }
 
+  /// Resultado do ultimo registro por aparelho. Em memoria de proposito: o app
+  /// reinscreve todas as estufas ao abrir, entao o valor se refaz sozinho e
+  /// guardar em disco arriscaria mostrar "vigiada" com base em ontem.
+  final Map<String, bool> _vigiadas = {};
+
   Future<void> sincronizarEstufas() async {
     if (!_inicializado || _tokenPush == null) return;
     try {
@@ -283,11 +288,14 @@ class PushNotificationService {
   }) async {
     final token = _tokenPush;
     final uri = _uriPush('/push/dispositivos');
-    if (!_inicializado ||
-        token == null ||
-        idHardware == null ||
-        idHardware.isEmpty ||
-        uri == null) {
+    if (idHardware == null || idHardware.isEmpty) {
+      // Sem id nao ha a quem amarrar o aviso, entao esta estufa nunca sera
+      // vigiada. E o caso que passou despercebido: um aparelho ficou 24 h fora
+      // do ar e nenhum aviso saiu, porque ninguem estava inscrito nele.
+      return;
+    }
+    if (!_inicializado || token == null || uri == null) {
+      _vigiadas[idHardware] = false;
       return;
     }
 
@@ -307,12 +315,27 @@ class PushNotificationService {
             }),
           )
           .timeout(const Duration(seconds: 8));
-      if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      final ok = resposta.statusCode >= 200 && resposta.statusCode < 300;
+      _vigiadas[idHardware] = ok;
+      if (!ok) {
         debugPrint('Registro do push recusado (${resposta.statusCode}).');
       }
     } catch (erro) {
+      _vigiadas[idHardware] = false;
       debugPrint('Registro do push adiado: $erro');
     }
+  }
+
+  /// Esta estufa esta mesmo inscrita para receber avisos neste celular?
+  ///
+  /// `null` = ainda nao se tentou nesta sessao. `false` = tentou e nao entrou,
+  /// ou a estufa nao tem id. Existe porque uma estufa NAO vigiada era
+  /// indistinguivel de uma vigiada na tela: o registro e melhor esforco, e uma
+  /// falha silenciosa so aparecia olhando o banco da nuvem.
+  bool? vigiada(String? idHardware) {
+    final id = idHardware?.trim();
+    if (id == null || id.isEmpty) return false;
+    return _vigiadas[id];
   }
 
   /// Preferencias a enviar para UM aparelho: as globais, mas se aquela estufa
@@ -341,11 +364,14 @@ class PushNotificationService {
     final token = _tokenPush;
     final idHardware = estufa.idHardware?.trim();
     final uri = _uriPush('/push/dispositivos');
-    if (!_inicializado ||
-        token == null ||
-        idHardware == null ||
-        idHardware.isEmpty ||
-        uri == null) {
+    if (idHardware == null || idHardware.isEmpty) {
+      // Sem id nao ha a quem amarrar o aviso, entao esta estufa nunca sera
+      // vigiada. E o caso que passou despercebido: um aparelho ficou 24 h fora
+      // do ar e nenhum aviso saiu, porque ninguem estava inscrito nele.
+      return;
+    }
+    if (!_inicializado || token == null || uri == null) {
+      _vigiadas[idHardware] = false;
       return;
     }
 

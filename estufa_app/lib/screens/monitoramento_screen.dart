@@ -132,6 +132,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     unawaited(_atualizarPendencias());
     // O estado de silenciamento por estufa alimenta o interruptor do menu.
     unawaited(SilenciamentoEstufas.instance.carregar());
+    unawaited(_garantirVigilancia());
     // Assinar ja entrega a ultima leitura do card, entao a tela abre preenchida
     // em vez de esperar a propria busca.
     _monitor.assinar(_aoMudarLeitura);
@@ -686,6 +687,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AVISOS'),
             _itemSilenciarAvisos(),
+            _itemVigilancia(),
             _itemSireneDoAparelho(),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
@@ -852,6 +854,69 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Reinscreve esta estufa para avisos ao abri-la. Nao e so para saber o estado:
+  /// abrir a estufa passa a CONSERTAR uma inscricao que nao aconteceu, em vez de
+  /// so relatar. Ate aqui o conserto dependia de reabrir o app inteiro.
+  Future<void> _garantirVigilancia() async {
+    final id = (widget.idHardware ?? api.idHardware)?.trim();
+    if (id == null || id.isEmpty) return;
+    await PushNotificationService.instance.atualizarPreferenciasDispositivo(
+      idHardware: id,
+      tokenAcesso: widget.tokenAcesso,
+    );
+    if (mounted) setState(() {});
+  }
+
+  // Uma estufa que nao esta inscrita para avisos e IDENTICA a uma inscrita, na
+  // tela. Foi assim que um aparelho ficou 24 h fora do ar sem nenhum aviso sair,
+  // e so apareceu ao olhar o banco da nuvem. Este item existe para esse estado
+  // deixar de ser invisivel.
+  Widget _itemVigilancia() {
+    final id = (widget.idHardware ?? api.idHardware)?.trim();
+    final vigiada = PushNotificationService.instance.vigiada(id);
+    final semId = id == null || id.isEmpty;
+
+    final (titulo, legenda, cor) = switch (vigiada) {
+      true => (
+        'Avisos no celular: ativos',
+        'Este celular é avisado se algo acontecer com esta estufa.',
+        Colors.white70,
+      ),
+      false when semId => (
+        'Avisos no celular: NÃO ativos',
+        'Esta estufa ainda não sabe de qual aparelho é, então não há como '
+            'avisar. Conecte-se a ela na rede local uma vez, ou informe o ID '
+            'no cadastro.',
+        Colors.orangeAccent,
+      ),
+      false => (
+        'Avisos no celular: NÃO ativos',
+        'Não consegui inscrever este celular. Abra o app com internet para '
+            'tentar de novo.',
+        Colors.orangeAccent,
+      ),
+      null => (
+        'Avisos no celular',
+        'Conferindo...',
+        Colors.white38,
+      ),
+    };
+
+    return ListTile(
+      leading: Icon(
+        vigiada == false
+            ? Icons.notifications_off_outlined
+            : Icons.notifications_active_outlined,
+        color: cor,
+      ),
+      title: Text(titulo, style: TextStyle(color: cor)),
+      subtitle: Text(
+        legenda,
+        style: const TextStyle(color: Colors.white38, fontSize: 12),
       ),
     );
   }
