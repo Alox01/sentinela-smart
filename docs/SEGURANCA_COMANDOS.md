@@ -101,9 +101,25 @@ emparelhamento, protegido como no pareamento de Bluetooth/TV:
 - **limite de tentativas** (bloqueia após poucos erros);
 - só funciona na **rede local**.
 
-Isso é firmware do ESP32, portanto fica para quando o aparelho chegar. O Modelo B
-é o recomendado; o Modelo A serve de alternativa se não houver botão/rotina de
-emparelhamento no protótipo inicial.
+### Modelo B — **implementado** (firmware 1.24.0, 31/07/2026)
+
+O PIN é sorteado a cada entrada no modo de configuração e ocupa o visor de 4
+dígitos enquanto vale. `GET /config/identidade` passa a exigi-lo; o app pede os
+4 números e, com eles, recebe a chave longa sem ninguém digitá-la.
+
+O que o PIN fecha: o ponto de acesso do modo de configuração é **aberto**. Sem
+ele, qualquer um ao alcance do Wi-Fi naquele momento pediria a identidade e
+levaria a chave **sem nunca chegar perto do aparelho**. Com ele, é preciso estar
+olhando o visor.
+
+As três proteções que fazem 4 dígitos bastarem, todas no firmware:
+
+- **sorteado por entrada** — um PIN fixo viraria segredo permanente de 4 dígitos;
+- **morre em 5 erros** — sem limite, varrer 10 mil combinações leva minutos. O
+  visor volta a mostrar `----`, que é o sinal de "saia e entre de novo";
+- **vale só no modo de configuração**, que já expira sozinho, e só na rede local.
+
+O Modelo A (etiqueta) fica descartado: era justamente digitar chave longa.
 
 ## Limite desta camada
 

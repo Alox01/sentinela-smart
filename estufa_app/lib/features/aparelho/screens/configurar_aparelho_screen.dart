@@ -66,6 +66,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   String? _idDoAparelho;
   /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
   String? _prefixoDaRede;
+  final _pin = TextEditingController();
+  String? _erroPin;
   Timer? _tentativas;
   bool _senhaVisivel = false;
   bool _conferindo = false;
@@ -97,6 +99,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   @override
   void dispose() {
     _tentativas?.cancel();
+    _pin.dispose();
     _rede.dispose();
     _senha.dispose();
     _chave.dispose();
@@ -134,11 +137,29 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// o que autoriza. Firmware anterior a 1.20.0 não a serve: nesse caso o campo
   /// da chave continua aparecendo, para o aparelho antigo não ficar sem caminho.
   Future<void> _lerIdentidadeDoAparelho() async {
+    final pin = _pin.text.trim();
+    // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
+    // gastaria as tentativas dele.
+    if (pin.length != 4) return;
     try {
       final resposta = await http
-          .get(Uri.parse('$_enderecoAparelho/config/identidade'))
+          .get(Uri.parse('$_enderecoAparelho/config/identidade?pin=$pin'))
           .timeout(const Duration(seconds: 5));
-      if (!mounted || resposta.statusCode != 200) return;
+      if (!mounted) return;
+      if (resposta.statusCode == 403) {
+        final corpo = jsonDecode(resposta.body);
+        final restantes = corpo is Map ? corpo['restantes'] : null;
+        setState(() {
+          _erroPin = restantes == 0
+              ? 'PIN bloqueado. Saia e entre de novo no modo de configuração '
+                    'no aparelho.'
+              : 'PIN não confere. Confira o número no visor do aparelho'
+                    '${restantes is int ? ' ($restantes tentativas)' : ''}.';
+        });
+        return;
+      }
+      if (resposta.statusCode != 200) return;
+      if (_erroPin != null) setState(() => _erroPin = null);
       final dados = jsonDecode(resposta.body);
       if (dados is! Map) return;
       final chave = dados['chave']?.toString();
@@ -443,9 +464,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               achou
                   ? 'Falando com o aparelho. A chave dele vem junto — você não '
                         'precisa digitar nada.'
-                  : 'Ainda não achei o aparelho. Siga os 3 passos abaixo; '
-                        'assim que o celular entrar na rede dele, esta tela se '
-                        'completa sozinha.',
+                  : 'Ainda não achei o aparelho. Siga os 3 passos abaixo e '
+                        'digite os 4 números que aparecem no visor dele.',
               style: TextStyle(
                 color: achou ? Colors.greenAccent : Colors.orangeAccent,
                 fontSize: 12,
@@ -539,11 +559,28 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             'os LEDs piscarem.\n'
             '2. No Wi-Fi do celular, conecte na rede "Sentinela-Config".\n'
             '3. O Android avisa que a rede não tem internet — aceite continuar '
-            'conectado.',
+            'conectado.\n'
+            '4. Digite abaixo os 4 números que aparecem no visor do aparelho.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
         ),
         const SizedBox(height: 20),
+        // Os 4 digitos do visor. E o unico numero que o produtor digita em todo
+        // o processo, e e ele que troca a chave longa por presenca fisica.
+        if (_chaveDoAparelho == null) ...[
+          _campo(
+            controlador: _pin,
+            rotulo: 'PIN do visor (4 números)',
+            dica: _erroPin ?? 'Aparecem no visor do aparelho no modo de '
+                'configuração',
+            numerico: true,
+            aoMudar: (valor) {
+              if (valor.trim().length == 4) {
+                unawaited(_lerIdentidadeDoAparelho());
+              }
+            },
+          ),
+        ],
         _campo(
           controlador: _rede,
           rotulo: 'Rede Wi-Fi da propriedade',
@@ -672,13 +709,18 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     required String rotulo,
     required String dica,
     bool senha = false,
+    bool numerico = false,
     Widget? acao,
+    ValueChanged<String>? aoMudar,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: TextField(
         controller: controlador,
         obscureText: senha,
+        keyboardType: numerico ? TextInputType.number : null,
+        maxLength: numerico ? 4 : null,
+        onChanged: aoMudar,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: rotulo,

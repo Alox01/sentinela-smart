@@ -49,6 +49,11 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.24.0: PIN de 4 digitos no visor para entregar a chave. O ponto de acesso do
+//        modo de configuracao e ABERTO: sem o PIN, quem estivesse ao alcance do
+//        wifi naquele momento pediria /config/identidade e levaria a chave sem
+//        nunca chegar perto do aparelho. Sorteado a cada entrada, morre depois
+//        de 5 erros, e o visor de 4 digitos o mostra inteiro.
 // 1.23.0: reporta o proprio `ipLocal` em cada leitura. O nome mDNS era a unica
 //        porta local do app; quando ele nao resolve, o endereco guardado vira a
 //        segunda. Tambem permite dizer de fora onde o aparelho esta, em vez de
@@ -133,7 +138,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.23.0";
+const char* VERSAO_FIRMWARE = "1.24.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -320,6 +325,18 @@ const char* NOME_AP_CONFIG = "Sentinela-Config";
 const unsigned long TEMPO_SEGURAR_CONFIG_MS = 3000;
 const unsigned long TEMPO_CONFIG_OCIOSO_MS = 5UL * 60UL * 1000UL;
 bool modoConfig = false;
+// PIN de emparelhamento: 4 digitos sorteados a cada entrada no modo de
+// configuracao e mostrados no visor. E o que prova que quem pede a chave esta
+// OLHANDO o aparelho - sem ele, o ponto de acesso e aberto e qualquer um ao
+// alcance do wifi naquele momento levaria a chave. O visor tem 4 digitos, entao
+// o PIN cabe nele inteiro; a chave longa, nao.
+//
+// 4 digitos bastam porque o PIN e temporario: vale so enquanto o modo de
+// configuracao durar (que ja expira sozinho), so na rede local, e morre depois
+// de poucos erros. Mesmo racional do pareamento de Bluetooth.
+int pinConfig = -1;
+int tentativasPin = 0;
+const int MAX_TENTATIVAS_PIN = 5;
 unsigned long tresBotoesDesdeMs = 0;
 unsigned long ultimaAtividadeConfig = 0;
 
@@ -671,6 +688,11 @@ void entrarModoConfig() {
   // Isto e resposta a uma acao que o produtor acabou de fazer, com ele na frente
   // segurando os botoes. Calar aqui deixaria segurar os 3 botoes sem retorno
   // nenhum, e a instrucao da tela ("segure ate apitar") viraria mentira.
+  // PIN novo a cada entrada: um PIN fixo viraria segredo permanente de 4
+  // digitos, que e fraco. Sorteado por entrada, ele so vale para esta sessao.
+  pinConfig = (int)(esp_random() % 10000);
+  tentativasPin = 0;
+
   digitalWrite(LED_ALERTA, HIGH);
   digitalWrite(LED_UMIDADE, HIGH);
   digitalWrite(LED_CONTROLE_TEMP, HIGH);
@@ -823,6 +845,28 @@ void handleConfigIdentidade() {
     return;
   }
   ultimaAtividadeConfig = millis();
+
+  // Estar na rede do aparelho nao basta: o ponto de acesso e aberto. Sem o PIN
+  // do visor, quem estiver ao alcance do wifi levaria a chave sem nunca chegar
+  // perto do aparelho.
+  if (pinConfig < 0) {
+    server.send(403, "application/json",
+                "{\"erro\":\"pin bloqueado\",\"detalhe\":\"Saia e entre de novo no modo de configuracao.\"}");
+    return;
+  }
+  const int pinRecebido = server.hasArg("pin") ? server.arg("pin").toInt() : -1;
+  if (pinRecebido != pinConfig) {
+    tentativasPin++;
+    // Poucos erros e o PIN morre: 4 digitos so sao seguros com limite de
+    // tentativas, senao da para varrer os 10 mil em minutos.
+    if (tentativasPin >= MAX_TENTATIVAS_PIN) pinConfig = -1;
+    server.send(403, "application/json",
+                String("{\"erro\":\"pin invalido\",\"restantes\":")
+                    + (pinConfig < 0 ? 0 : (MAX_TENTATIVAS_PIN - tentativasPin))
+                    + "}");
+    return;
+  }
+  tentativasPin = 0;
 
   JsonDocument doc;
   doc["idHardware"] = idHardware;
@@ -1910,8 +1954,15 @@ void atualizarDisplay() {
   // segmentos nao mostra texto legivel). A confirmacao de entrada e o
   // apito + LEDs em entrarModoConfig(); isto so evita achar que travou.
   if (modoConfig) {
-    const uint8_t tracos[] = {0x40, 0x40, 0x40, 0x40};  // - - - -
-    display.setSegments(tracos);
+    // O PIN ocupa o visor enquanto vale. Os tracos voltam quando ele morre por
+    // excesso de erros: um estado visivelmente diferente, que diz "saia e entre
+    // de novo no modo de configuracao".
+    if (pinConfig >= 0) {
+      display.showNumberDec(pinConfig, true);  // true = zeros a esquerda
+    } else {
+      const uint8_t tracos[] = {0x40, 0x40, 0x40, 0x40};  // - - - -
+      display.setSegments(tracos);
+    }
     return;
   }
 
