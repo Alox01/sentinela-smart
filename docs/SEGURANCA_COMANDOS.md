@@ -126,3 +126,35 @@ O Modelo A (etiqueta) fica descartado: era justamente digitar chave longa.
 Esta medida evita que uma pessoa envie comandos simples para a estufa sem
 conhecer a chave. Ela não substitui HTTPS, controle de usuários, revogação de
 tokens nem proteções de rede, que podem ser adicionadas em uma etapa futura.
+
+## Compartilhar acesso entre celulares (31/07/2026)
+
+Vários celulares sempre puderam comandar a mesma estufa — a chave é do
+**aparelho**, não do celular — e o push já é por celular, com preferências
+próprias. O que faltava era o segundo celular **receber** a chave.
+
+A outra via seria entrar no modo de configuração, que derruba o aparelho do ar
+enquanto dura. No meio de uma estufada, pedir que alguém vá até lá e interrompa o
+monitoramento para instalar o app é caro e desnecessário: quem já pode comandar
+pode delegar. É a família, não um estranho.
+
+O menu da estufa gera um **convite** e o manda pelo compartilhamento do sistema
+(o produtor escolhe por onde). No outro celular, "Nova Estufa" → "Colar
+convite" preenche tudo.
+
+Decisões:
+
+- **Base64, e não texto cru.** Não esconde de ninguém — o objetivo é o convite
+  chegar **inteiro**. Chave solta no meio de uma mensagem convida o aplicativo
+  do caminho a "arrumar" espaços e quebras de linha, e ela chega diferente.
+- **Marca de versão.** Convite de formato desconhecido é **recusado**, não
+  interpretado pela metade: meio cadastro é pior que nenhum.
+- **Acha o convite no meio da conversa**, porque é assim que ele chega — colado
+  junto com o "oi pai, entra aí".
+- **O aviso viaja no texto**, não só na tela de quem compartilha: quem recebe
+  pode não ter lido a tela, e o convite carrega a chave da estufa.
+
+**Limitação declarada:** com chave por aparelho não há como revogar **um**
+celular. Gerar chave nova tranca todos, e todos reemparelham. Revogar
+individualmente exigiria uma chave por celular, com o aparelho guardando várias
+— grande, e para uma família não paga.

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../features/monitoramento/dialogs/detalhes_conexao_dialog.dart';
 import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
@@ -11,6 +12,7 @@ import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../features/agendamento/screens/agendamentos_screen.dart';
+import '../features/home/models/convite_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/notificacoes/models/preferencias_notificacao.dart';
@@ -689,6 +691,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             _itemSilenciarAvisos(),
             _itemVigilancia(),
             _itemSireneDoAparelho(),
+            _itemCompartilharAcesso(),
             const Divider(color: Colors.white12, height: 1),
             _tituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
@@ -855,6 +858,50 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Manda para outro celular da familia o que ele precisa para acompanhar e
+  /// comandar esta estufa.
+  ///
+  /// A chave e do APARELHO, nao do celular, entao vario celulares ja podiam
+  /// comandar - faltava o segundo receber a chave. A outra via seria o modo de
+  /// configuracao, que derruba o aparelho do ar enquanto dura; no meio de uma
+  /// estufada isso e caro.
+  Widget _itemCompartilharAcesso() {
+    return ListTile(
+      leading: const Icon(Icons.group_add_outlined, color: Colors.white70),
+      title: const Text(
+        'Compartilhar acesso',
+        style: TextStyle(color: Colors.white),
+      ),
+      subtitle: const Text(
+        'Manda para outro celular acompanhar e comandar esta estufa',
+        style: TextStyle(color: Colors.white38, fontSize: 12),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        unawaited(_compartilharAcesso());
+      },
+    );
+  }
+
+  Future<void> _compartilharAcesso() async {
+    final convite = ConviteEstufa(
+      nome: widget.nomeEstufa,
+      endereco: widget.ipEstufa,
+      chave: widget.tokenAcesso,
+      idHardware: widget.idHardware ?? api.idHardware,
+    ).codificar();
+
+    // O aviso vai junto no texto, nao so na tela: quem recebe pode nao ser quem
+    // leu a tela, e o convite carrega a chave da estufa.
+    await Share.share(
+      'Convite para acompanhar a estufa "${widget.nomeEstufa}" no Sentinela.\n'
+      'No app, toque em Nova Estufa e depois em "Colar convite".\n'
+      'Mande só para quem pode comandar a estufa.\n\n'
+      '$convite',
+      subject: 'Acesso à estufa ${widget.nomeEstufa}',
     );
   }
 
