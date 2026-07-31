@@ -187,9 +187,12 @@ class MonitorEstufas with WidgetsBindingObserver {
       _monitores.remove(idEstufa);
     }
 
-    final monitor = EstufaMonitor(
-      api: ApiService(ip, token: token, idHardware: idHardware),
-    );
+    final api = ApiService(ip, token: token, idHardware: idHardware);
+    // Recupera o endereco aprendido em sessoes anteriores antes da primeira
+    // sonda: e sem nuvem e sem o nome resolvendo que ele importa, e ai nao houve
+    // leitura nenhuma nesta sessao para ensina-lo.
+    unawaited(api.carregarIpReportado());
+    final monitor = EstufaMonitor(api: api);
     _monitores[idEstufa] = _EntradaMonitor(
       monitor: monitor,
       ip: ip,

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/notificacoes/services/push_notification_service.dart';
 import 'isar_service.dart';
@@ -58,6 +59,8 @@ class ApiService {
   String? idHardware;
 
   String? _baseUrlAtiva;
+  /// Base montada a partir do IP que o aparelho reportou, quando conhecido.
+  String? _enderecoReportado;
   // Uma sonda local que falha nao derruba a conexao local. A resolucao do nome
   // mDNS falha sozinha de vez em quando, e cada falha isolada trocava a FONTE
   // dos numeros na tela: o cartao piscava entre LOCAL e NUVEM em questao de
@@ -151,6 +154,7 @@ class ApiService {
     if (response?.statusCode == 200) {
       final dados = _decodificarMapa(response!.body);
       if (dados == null) return null;
+      _capturarIpReportado(dados);
       if (!_capturarIdHardwareLocal(dados)) {
         // Aparelho errado no endereco desta estufa: melhor ficar sem leitura do
         // que mostrar a de outra estufa como se fosse desta.
@@ -210,6 +214,49 @@ class ApiService {
           .then((_) => PushNotificationService.instance.sincronizarEstufas()),
     );
     return true;
+  }
+
+  /// Guarda o endereco que o aparelho reporta, de qualquer caminho: lido pela
+  /// nuvem, ele serve para alcancar o aparelho na rede local depois. Um IP de
+  /// outra faixa (o do ponto de acesso, por exemplo) nao ajuda e e ignorado.
+  void _capturarIpReportado(Map<String, dynamic> dados) {
+    final status = dados['status'];
+    final ip = status is Map ? status['ipLocal'] : null;
+    if (ip is! String || ip.isEmpty || ip == '0.0.0.0') return;
+    final base = _normalizarBaseUrl(ip);
+    if (base.isEmpty || base == localBaseUrl) return;
+    if (_enderecoReportado == base) return;
+    _enderecoReportado = base;
+    final id = idHardware;
+    if (id != null && id.isNotEmpty) unawaited(_guardarIpReportado(id, ip));
+  }
+
+  static const String _prefixoIpReportado = 'ip_reportado_';
+
+  Future<void> _guardarIpReportado(String idHardware, String ip) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_prefixoIpReportado$idHardware', ip);
+    } catch (_) {
+      // Melhor esforco: sem isso o endereco vale so nesta sessao.
+    }
+  }
+
+  /// Recupera o endereco aprendido em sessoes anteriores. Chamado no inicio do
+  /// app: e justamente quando nao ha nuvem nem nome resolvendo que ele importa,
+  /// e ai nao houve leitura nenhuma nesta sessao para ensina-lo.
+  Future<void> carregarIpReportado() async {
+    final id = idHardware;
+    if (id == null || id.isEmpty || _enderecoReportado != null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ip = prefs.getString('$_prefixoIpReportado$id');
+      if (ip == null || ip.isEmpty) return;
+      final base = _normalizarBaseUrl(ip);
+      if (base.isNotEmpty && base != localBaseUrl) _enderecoReportado = base;
+    } catch (_) {
+      // Segue sem a segunda porta.
+    }
   }
 
   // Descarta a conexao local em curso e a lembranca compartilhada dela. Usado
@@ -610,6 +657,14 @@ class ApiService {
     if (localPort80FallbackUrl != null &&
         localPort80FallbackUrl != localBaseUrl) {
       lista.add(localPort80FallbackUrl!);
+    }
+    // Endereco que o proprio aparelho reportou. Segunda porta local: o nome mDNS
+    // nao resolve em parte dos celulares e roteadores, e ate aqui, quando ele
+    // falhava, nao sobrava caminho nenhum - a nuvem funcionando escondia isso.
+    // Vem depois do nome de proposito: o nome sobrevive a troca de IP, o IP nao.
+    final reportado = _enderecoReportado;
+    if (reportado != null && !lista.contains(reportado)) {
+      lista.add(reportado);
     }
     if (cloudBaseUrl != null &&
         cloudBaseUrl != localBaseUrl &&

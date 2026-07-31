@@ -49,6 +49,10 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.23.0: reporta o proprio `ipLocal` em cada leitura. O nome mDNS era a unica
+//        porta local do app; quando ele nao resolve, o endereco guardado vira a
+//        segunda. Tambem permite dizer de fora onde o aparelho esta, em vez de
+//        mandar procurar no roteador.
 // 1.22.0: chave vazia no formulario MANTEM a atual, em vez de apagar. Apagar
 //        fazia o boot seguinte gerar uma chave aleatoria desconhecida do app e
 //        da nuvem, e o aparelho ficava mudo sem nada explicando. O formulario
@@ -129,7 +133,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.22.0";
+const char* VERSAO_FIRMWARE = "1.23.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -1073,6 +1077,12 @@ void empurrarLeituraNuvem() {
   doc["temEnergia"] = true;
   doc["temInternet"] = true;
   doc["sinalWifi"] = wifiSinalPercent();
+  // Endereco do aparelho na rede local. Vai junto porque, ate aqui, o nome mDNS
+  // era a UNICA porta local do app - e quando ele falha (sufixo, roteador ou
+  // celular que nao resolve .local) nao sobrava nada, com a nuvem funcionando
+  // escondendo o problema. Com o endereco guardado, o app ganha uma segunda
+  // porta e da para dizer de fora onde o aparelho esta.
+  doc["ipLocal"] = WiFi.localIP().toString();
   doc["alarmeAtivo"] = alarmeAtivoAgora();
   // A CONDICAO de temperatura fora da faixa, separada de `alarmeAtivo` (que diz
   // se a sirene esta tocando agora). Os dois divergem quando o produtor desliga
@@ -1406,6 +1416,7 @@ void handleStatus() {
   status["temEnergia"] = true;  // sem sensor de tensao ainda
   status["temInternet"] = (WiFi.status() == WL_CONNECTED);
   status["sinalWifi"] = wifiSinalPercent();
+  status["ipLocal"] = WiFi.localIP().toString();  // ver empurrarLeituraNuvem()
   status["alarmeAtivo"] = alarmeAtivoAgora();
   status["alertaTemperatura"] = alertaTemperatura;  // ver comentario em empurrarLeituraNuvem()
   status["alertaIncendio"] = (alertaLuz || riscoIncendioAgora());

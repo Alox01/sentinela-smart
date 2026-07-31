@@ -445,6 +445,7 @@ async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2
       select
         d.identificador_hardware,
         d.versao_firmware,
+        d.ip_local,
         l.timestamp_origem_ms,
         l.temperatura,
         l.umidade,
@@ -491,6 +492,9 @@ async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2
     // Sobrevive ao restart do servidor e ao aparelho desligado: e nesses dois
     // casos que nao existe outra forma de saber que firmware esta la.
     versaoFirmware: row.versao_firmware || null,
+    // Sobrevive ao restart do servidor e ao aparelho desligado, como a versao:
+    // e a segunda porta local do app quando o nome mDNS nao resolve.
+    ipLocal: row.ip_local || null,
   };
 }
 
