@@ -174,11 +174,38 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     });
   }
 
+  /// Os tres primeiros numeros de um IPv4 - a "faixa" da rede com a mascara
+  /// padrao. Nulo quando o texto nao parece um endereco.
+  static String? _faixaDe(String ip) {
+    final partes = ip.split('.');
+    if (partes.length != 4) return null;
+    return partes.take(3).join('.');
+  }
+
   Future<void> _salvar() async {
     final rede = _rede.text.trim();
     if (rede.isEmpty) {
       setState(() => _erro = 'Informe o nome da rede Wi-Fi.');
       return;
+    }
+
+    // Um IP fixo de outra faixa faz o aparelho sumir: ele passa a achar que o
+    // roteador esta em outra rede. O exemplo na tela e de uma faixa comum, e
+    // copiar sem trocar os tres primeiros numeros e o erro facil de cometer -
+    // que so aparece depois, como um aparelho que nunca mais responde.
+    final ipFixo = _ip.text.trim();
+    final gateway = _gateway.text.trim();
+    if (ipFixo.isNotEmpty && gateway.isNotEmpty) {
+      final faixaIp = _faixaDe(ipFixo);
+      final faixaGateway = _faixaDe(gateway);
+      if (faixaIp != null && faixaGateway != null && faixaIp != faixaGateway) {
+        setState(() {
+          _erro = 'O IP fixo e o gateway estão em faixas diferentes '
+              '($faixaIp.x e $faixaGateway.x). O aparelho não acharia o '
+              'roteador. Use a mesma faixa nos dois.';
+        });
+        return;
+      }
     }
 
     setState(() {
@@ -521,26 +548,29 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               const Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Muito roteador de provedor não deixa reservar endereço. '
-                  'Aqui o próprio aparelho fixa o dele. Deixe vazio para o '
-                  'roteador escolher.',
+                  'Reserva, para quando o nome acima não funcionar no seu '
+                  'celular ou roteador. Deixe vazio para o roteador escolher. '
+                  'Os TRÊS primeiros números têm de ser os da sua rede — veja '
+                  'no Wi-Fi do celular, nos detalhes da rede conectada. Se lá '
+                  'aparecer 192.168.0.15, use 192.168.0.220. Só o último '
+                  'número é escolha sua.',
                   style: TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ),
               _campo(
                 controlador: _ip,
                 rotulo: 'IP fixo',
-                dica: 'Ex.: 192.168.1.220 — use um número alto, de 200 a 250',
+                dica: 'Últimos números altos, de 200 a 250, evitam conflito',
               ),
               _campo(
                 controlador: _gateway,
                 rotulo: 'Gateway',
-                dica: 'Vazio assume o .1 da mesma faixa',
+                dica: 'Endereço do roteador. Vazio assume o .1 da mesma faixa',
               ),
               _campo(
                 controlador: _mascara,
                 rotulo: 'Máscara',
-                dica: 'Vazio assume 255.255.255.0',
+                dica: 'Quase sempre 255.255.255.0. Pode deixar vazio',
               ),
             ],
           ),
