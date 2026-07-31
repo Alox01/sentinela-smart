@@ -173,18 +173,40 @@ desembaraçar o cadastro, validar em campo e escrever.
    - **cenário da ponte**: aparelho com energia e a internet da propriedade
      caída, celular no 4G — não deve nascer o falso "sem comunicação";
    - **agendar ajuste com o ESP real** — o simulador já provou a lógica.
-3. **Sons próprios por aviso** — aguardando os áudios do produtor. Requisitos e
+3. **O que 31/07 deixou na fila** (achados de campo, em ordem de valor):
+   - **mostrar no app se a estufa está sendo vigiada** — uma estufa sem celular
+     inscrito no push é idêntica a uma vigiada na tela. Foi assim que um aparelho
+     ficou 24 h fora do ar sem ninguém ser avisado; só apareceu ao olhar o banco;
+   - **o aparelho reportar o próprio IP** na leitura (a coluna `ip_local` existe
+     e chega vazia). Hoje o nome mDNS é o **único** caminho local: quando ele
+     falha — sufixo, roteador ou celular — não sobra nada. Com o IP guardado, o
+     app ganha uma segunda porta e o diagnóstico remoto deixa de ser adivinhação;
+   - **o aparelho guardar a chave universal como reserva**, para registrar a
+     própria quando a dele for recusada. É a metade que falta da separação de
+     credenciais: sem ela, um aparelho que perde a chave ainda precisa de socorro
+     manual (aconteceu em 31/07);
+   - **PIN de 4 dígitos no visor** (`SEGURANCA_COMANDOS.md`, Modelo B) — hoje o
+     ponto de acesso do modo de configuração é aberto, e quem estiver ao alcance
+     naquele momento pode pedir `/config/identidade` e levar a chave;
+   - **compartilhar acesso entre celulares** — vários celulares já comandam a
+     mesma estufa (a chave é do aparelho, e o push é por celular); o que falta é
+     o segundo celular receber a chave sem entrar no modo de configuração, que
+     tira o aparelho do ar. Ressalva: com chave por aparelho não há como revogar
+     um celular só;
+   - **limpar inscrições órfãs de push** (ex.: `ESP32_182EC8`, de uma estufa já
+     removida do app).
+4. **Sons próprios por aviso** — aguardando os áudios do produtor. Requisitos e
    a pegadinha do canal congelado em `NOTIFICACOES_PUSH.md`.
-4. **Escrita do TCC** e seção de resultados (números dos testes acima).
+5. **Escrita do TCC** e seção de resultados (números dos testes acima).
    Ordem sugerida do trabalho daqui em diante: `PLANO_POS_TESTES.md`.
-5. **Provisionamento Parte 2 — implementada e registrando em campo**
+6. **Provisionamento Parte 2 — implementada e registrando em campo**
    (29/07/2026, firmware 1.18.0 + servidor): o aparelho registrou a chave
    própria sozinho, no ciclo de comandos. O app também leva a chave (caminho B).
    Falta provar a **rotação** ("gerar nova chave" no modo de configuração) e, só
    depois, decidir desligar a chave global (`ESTUFA_API_TOKEN`) — que continua valendo de propósito, senão os
    aparelhos que ainda não registraram a sua perderiam o acesso remoto. Detalhes
    e as decisões de segurança em `CONFIGURACAO_ESP32.md`.
-6. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
+7. **Segundo ESP**: parou no teste com a placa sem nenhum jumper, para separar
    fio em pino errado de regulador queimado. Não bloqueia o TCC — um aparelho
    basta.
 
