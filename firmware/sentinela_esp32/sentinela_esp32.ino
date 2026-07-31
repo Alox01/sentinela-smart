@@ -49,6 +49,11 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.21.0: guarda o gateway e a mascara que o ROTEADOR entrega no DHCP e usa
+//        esses valores quando um IP fixo e configurado sem eles. O produtor
+//        nao tem por que saber esses numeros, e adivinhar .1 quebrava redes com
+//        o gateway em .254 - local funcionando e nuvem muda, sem nada explicando.
+//        Os campos sairam do app; o formulario do aparelho ainda os aceita.
 // 1.20.0: o app le a identidade (id, nome local e CHAVE) de
 //        `GET /config/identidade`, que so responde no modo de configuracao -
 //        presenca fisica. O formulario HTML deixa de vir com a chave
@@ -118,7 +123,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.20.0";
+const char* VERSAO_FIRMWARE = "1.21.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -286,6 +291,11 @@ bool chaveRegistradaNaNuvem = false;
 String ipFixo;
 String gatewayFixo;
 String mascaraFixa;
+// Gateway e mascara que o roteador entregou na ultima conexao por DHCP. Servem
+// de base quando o produtor fixa um IP sem informar os dois - ele nao tem por
+// que saber esses numeros, e o roteador ja os disse ao aparelho.
+String gatewayAprendido;
+String mascaraAprendida;
 
 // --- Modo de configuracao (ponto de acesso) ---
 // Entra segurando os TRES botoes por 3 s: quem nao esta na frente do aparelho
@@ -337,6 +347,7 @@ void verificarModoConfig();
 void entrarModoConfig();
 void handleConfigPagina();
 void handleConfigSalvar();
+void guardarRedeAprendida();
 void handleConfigIdentidade();
 
 // ============================================================
@@ -490,11 +501,34 @@ void conectarWifi() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("Conectado. IP: ");
     Serial.println(WiFi.localIP());
+    guardarRedeAprendida();
     // NTP para timestamp real (fuso nao importa, usamos epoch em ms).
     configTime(0, 0, "pool.ntp.org", "time.google.com");
   } else {
     Serial.println("Sem Wi-Fi - operando em modo local standalone.");
   }
+}
+
+// Anota o que o roteador entregou, para um IP fixo configurado depois nao
+// precisar que o produtor saiba o gateway e a mascara da rede dele. So grava
+// quando muda: a NVS tem ciclos de escrita contados, e isto roda a cada conexao.
+void guardarRedeAprendida() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  const String gateway = WiFi.gatewayIP().toString();
+  const String mascara = WiFi.subnetMask().toString();
+  if (gateway == "0.0.0.0" || mascara == "0.0.0.0") return;
+  if (gateway == gatewayAprendido && mascara == mascaraAprendida) return;
+
+  gatewayAprendido = gateway;
+  mascaraAprendida = mascara;
+  prefs.begin("sentinela", false);
+  prefs.putString("gwDhcp", gateway);
+  prefs.putString("mascDhcp", mascara);
+  prefs.end();
+  Serial.print("Rede aprendida - gateway ");
+  Serial.print(gateway);
+  Serial.print(", mascara ");
+  Serial.println(mascara);
 }
 
 // Fixa o endereco antes de conectar, quando o produtor configurou um. Se algo
@@ -508,12 +542,21 @@ void aplicarIpFixoSeConfigurado() {
     Serial.println("IP fixo invalido: usando DHCP.");
     return;
   }
+  // Ordem de preferencia: o que o produtor informou, depois o que o ROTEADOR
+  // ensinou numa conexao DHCP anterior, e so entao o palpite. O que o roteador
+  // entregou vale mais que qualquer chute: ha redes com o gateway em .254, e
+  // adivinhar .1 nelas deixaria o aparelho sem internet - local funcionando,
+  // nuvem muda, sem nada na tela explicando. Como o IP fixo e uma reserva usada
+  // depois de o aparelho ja ter entrado na rede, o aprendido quase sempre existe.
   if (!gateway.fromString(gatewayFixo)) {
-    // Sem gateway informado, o palpite seguro e o .1 da mesma faixa.
-    gateway = IPAddress(ip[0], ip[1], ip[2], 1);
+    if (!gateway.fromString(gatewayAprendido)) {
+      gateway = IPAddress(ip[0], ip[1], ip[2], 1);
+    }
   }
   if (!mascara.fromString(mascaraFixa)) {
-    mascara = IPAddress(255, 255, 255, 0);
+    if (!mascara.fromString(mascaraAprendida)) {
+      mascara = IPAddress(255, 255, 255, 0);
+    }
   }
 
   // O gateway tambem responde como DNS na esmagadora maioria das redes
@@ -942,6 +985,8 @@ void carregarConfigPersistida() {
   ipFixo = prefs.getString("ipFixo", "");
   gatewayFixo = prefs.getString("gateway", "");
   mascaraFixa = prefs.getString("mascara", "");
+  gatewayAprendido = prefs.getString("gwDhcp", "");
+  mascaraAprendida = prefs.getString("mascDhcp", "");
   prefs.end();
 
   Serial.print("Wi-Fi configurado: ");

@@ -116,9 +116,22 @@ o roteador e do provedor e so ele tem a senha de administrador. Sem isso,
 restaria reconferir o IP a cada queda de energia.
 
 Configuravel na pagina do aparelho e na tela do app, em "Endereco fixo
-(opcional)". Vazio = DHCP. Gateway vazio assume o `.1` da mesma faixa e mascara
-vazia assume `255.255.255.0`; o gateway tambem e usado como DNS, porque o
-aparelho precisa resolver nomes para falar com a nuvem.
+(opcional)". Vazio = DHCP.
+
+**Gateway e mascara sairam do app na v1.21.0.** Sao numeros que o produtor nao
+tem por que saber, e o aparelho ja sabe: ele guarda o que o roteador entrega em
+cada conexao por DHCP e usa isso quando um IP fixo e configurado sem eles. A
+ordem e: o que foi informado > o que o roteador ensinou > o palpite (`.1` da
+faixa e `255.255.255.0`).
+
+Isso importa porque adivinhar `.1` quebra rede com o gateway em `.254`: o
+aparelho fica com a rede local funcionando e a nuvem muda, sem nada na tela
+explicando. Como o IP fixo e uma reserva usada **depois** de o aparelho ja ter
+entrado na rede, o valor aprendido quase sempre existe. O formulario HTML do
+aparelho ainda aceita os dois, para o caso raro de precisar forcar.
+
+O gateway tambem e usado como DNS, porque o aparelho precisa resolver nomes para
+falar com a nuvem.
 
 **Um IP invalido e recusado antes de gravar**, e um que falhe ao ser aplicado
 cai no DHCP: um endereco errado deixaria o aparelho invisivel na rede, que e

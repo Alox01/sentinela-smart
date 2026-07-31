@@ -66,8 +66,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   bool _conferindo = false;
   bool? _alcancou;
   final _ip = TextEditingController();
-  final _gateway = TextEditingController();
-  final _mascara = TextEditingController();
 
   bool _enviando = false;
   String? _erro;
@@ -89,8 +87,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     _senha.dispose();
     _chave.dispose();
     _ip.dispose();
-    _gateway.dispose();
-    _mascara.dispose();
     super.dispose();
   }
 
@@ -174,14 +170,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     });
   }
 
-  /// Os tres primeiros numeros de um IPv4 - a "faixa" da rede com a mascara
-  /// padrao. Nulo quando o texto nao parece um endereco.
-  static String? _faixaDe(String ip) {
-    final partes = ip.split('.');
-    if (partes.length != 4) return null;
-    return partes.take(3).join('.');
-  }
-
   Future<void> _salvar() async {
     final rede = _rede.text.trim();
     if (rede.isEmpty) {
@@ -189,24 +177,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       return;
     }
 
-    // Um IP fixo de outra faixa faz o aparelho sumir: ele passa a achar que o
-    // roteador esta em outra rede. O exemplo na tela e de uma faixa comum, e
-    // copiar sem trocar os tres primeiros numeros e o erro facil de cometer -
-    // que so aparece depois, como um aparelho que nunca mais responde.
-    final ipFixo = _ip.text.trim();
-    final gateway = _gateway.text.trim();
-    if (ipFixo.isNotEmpty && gateway.isNotEmpty) {
-      final faixaIp = _faixaDe(ipFixo);
-      final faixaGateway = _faixaDe(gateway);
-      if (faixaIp != null && faixaGateway != null && faixaIp != faixaGateway) {
-        setState(() {
-          _erro = 'O IP fixo e o gateway estão em faixas diferentes '
-              '($faixaIp.x e $faixaGateway.x). O aparelho não acharia o '
-              'roteador. Use a mesma faixa nos dois.';
-        });
-        return;
-      }
-    }
+
 
     setState(() {
       _enviando = true;
@@ -226,8 +197,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               // produtor digitou — caso do firmware antigo, sem chave propria.
               'token': _chaveDoAparelho != null ? '' : _chave.text.trim(),
               'ip': _ip.text.trim(),
-              'gateway': _gateway.text.trim(),
-              'mascara': _mascara.text.trim(),
+              // Vazios de proposito: desde a 1.21.0 o aparelho usa o gateway e
+              // a mascara que o roteador entregou a ele. Sao numeros que o
+              // produtor nao tem por que saber, e o aparelho ja sabe.
+              'gateway': '',
+              'mascara': '',
             },
           )
           .timeout(const Duration(seconds: 10));
@@ -553,7 +527,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                   'Os TRÊS primeiros números têm de ser os da sua rede — veja '
                   'no Wi-Fi do celular, nos detalhes da rede conectada. Se lá '
                   'aparecer 192.168.0.15, use 192.168.0.220. Só o último '
-                  'número é escolha sua.',
+                  'número é escolha sua. O resto o aparelho já aprendeu do '
+                  'roteador.',
                   style: TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ),
@@ -562,16 +537,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 rotulo: 'IP fixo',
                 dica: 'Últimos números altos, de 200 a 250, evitam conflito',
               ),
-              _campo(
-                controlador: _gateway,
-                rotulo: 'Gateway',
-                dica: 'Endereço do roteador. Vazio assume o .1 da mesma faixa',
-              ),
-              _campo(
-                controlador: _mascara,
-                rotulo: 'Máscara',
-                dica: 'Quase sempre 255.255.255.0. Pode deixar vazio',
-              ),
+
             ],
           ),
         ),
