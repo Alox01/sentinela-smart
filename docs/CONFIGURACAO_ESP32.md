@@ -389,6 +389,29 @@ recuperação sem o app.
 Compatibilidade: firmware anterior a 1.20.0 não serve a rota, e aí o campo da
 chave continua aparecendo no app — aparelho antigo não fica sem caminho.
 
+**O que deu errado em campo (31/07/2026) e o que ensina.** Salvar pelo app
+apagava a chave do aparelho, e o boot seguinte gerava uma aleatória que nem o
+app nem a nuvem conheciam. O aparelho ficava na rede, funcionando, e trancado
+para fora de tudo — 24 h de silêncio sem nada na tela explicando.
+
+A causa foi a soma de duas coisas separadas, cada uma razoável sozinha:
+
+- o firmware gravava a chave **sem checar se veio vazia**, ao contrário da senha
+  do Wi-Fi logo acima, que sempre respeitou "vazio mantém a atual" — o
+  formulário prometia isso, a gravação não cumpria;
+- a v1.20.0 fez o app mandar a chave **vazia de propósito**, porque ele já a lê
+  do aparelho e não precisa reenviá-la.
+
+Corrigido na v1.22.0: vazio mantém.
+
+**Fica um beco sem saída conhecido.** Um aparelho que perde a chave não consegue
+voltar sozinho: a nuvem guarda a chave antiga, e ele não tem como provar posse
+dela para rotacionar nem credencial aceita para registrar a nova. A recuperação
+exige presença física e uma chave que a nuvem aceite. É o preço de o registro
+ficar atrás da autenticação (ver acima) — e a alternativa, TOFU aberto,
+deixaria qualquer um reivindicar um `idHardware`. Decidir isso com calma, não
+depois de uma noite de depuração.
+
 **Para desligar a chave global (29/07/2026), o que foi verificado.** Todas as
 rotas que o app chama na nuvem carregam `idHardware` — `/sincronizar` (quando
 conhecido), `/agendamentos` (recusa sem ele), `/push/dispositivos` (obrigatório)

@@ -49,6 +49,10 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.22.0: chave vazia no formulario MANTEM a atual, em vez de apagar. Apagar
+//        fazia o boot seguinte gerar uma chave aleatoria desconhecida do app e
+//        da nuvem, e o aparelho ficava mudo sem nada explicando. O formulario
+//        ja prometia isso; era a gravacao que nao cumpria.
 // 1.21.0: guarda o gateway e a mascara que o ROTEADOR entrega no DHCP e usa
 //        esses valores quando um IP fixo e configurado sem eles. O produtor
 //        nao tem por que saber esses numeros, e adivinhar .1 quebrava redes com
@@ -125,7 +129,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.21.0";
+const char* VERSAO_FIRMWARE = "1.22.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -873,7 +877,13 @@ void handleConfigSalvar() {
   // Senha vazia mantem a atual: assim da para so trocar a chave de acesso sem
   // precisar digitar a senha do Wi-Fi de novo.
   if (senha.length() > 0) prefs.putString("wifiPass", senha);
-  prefs.putString("token", token);
+  // Chave vazia MANTEM a atual, como a senha do Wi-Fi logo acima - e como o
+  // proprio formulario sempre prometeu. Gravar vazio apagava a chave, e o boot
+  // seguinte gerava uma aleatoria que nem o app nem a nuvem conheciam: o
+  // aparelho ficava na rede, funcionando, e trancado para fora de tudo. Desde a
+  // v1.20.0 o app manda vazio de proposito (ele ja leu a chave do aparelho),
+  // entao salvar pelo app derrubava o aparelho.
+  if (token.length() > 0) prefs.putString("token", token);
   if (gerarNova) {
     prefs.putString("chaveAnt", chaveSubstituida);
     prefs.putBool("chaveReg", false);
