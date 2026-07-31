@@ -399,7 +399,12 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
         _buildCampoNativoCard(
           titulo: 'Chave de acesso',
           valor: chaveConfigurada ? 'Configurada' : 'Opcional',
-          subtitulo: 'Use a mesma chave configurada no aparelho.',
+          // A chave nao e para o produtor decorar nem inventar: ela vem do
+          // aparelho, por "Configurar aparelho". Dizer isso aqui evita ele
+          // procurar um valor que nao precisa conhecer - e evita inventar um,
+          // que faria o aparelho recusar todo comando depois.
+          subtitulo: 'Vem sozinha ao usar "Configurar aparelho". '
+              'Você não precisa saber esta chave.',
           icone: Icons.vpn_key_outlined,
           onTap: () => _editarTextoNativo(
             titulo: 'Chave de acesso',

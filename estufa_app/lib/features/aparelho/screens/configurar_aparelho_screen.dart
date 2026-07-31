@@ -66,6 +66,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   String? _idDoAparelho;
   /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
   String? _prefixoDaRede;
+  Timer? _tentativas;
   bool _senhaVisivel = false;
   bool _conferindo = false;
   bool? _alcancou;
@@ -82,11 +83,20 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   @override
   void initState() {
     super.initState();
+    // Insiste enquanto nao conhecer o aparelho. A tela manda conectar na rede
+    // dele DEPOIS de abrir, entao uma leitura unica no init falha justamente na
+    // ordem que a propria instrucao ensina - e nada tentava de novo: ficava sem
+    // nome, sem id e sem a chave, e o formulario voltava a pedir a chave a mao.
     unawaited(_lerNomeDoAparelho());
+    _tentativas = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (_concluido || _chaveDoAparelho != null) return;
+      unawaited(_lerNomeDoAparelho());
+    });
   }
 
   @override
   void dispose() {
+    _tentativas?.cancel();
     _rede.dispose();
     _senha.dispose();
     _chave.dispose();
@@ -102,15 +112,18 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       final resposta = await http
           .get(Uri.parse('$_enderecoAparelho/dados'))
           .timeout(const Duration(seconds: 5));
-      if (!mounted || resposta.statusCode != 200) return;
-      final dados = jsonDecode(resposta.body);
-      final nome = dados is Map ? dados['nomeLocal']?.toString() : null;
-      if (nome != null && nome.isNotEmpty) {
-        setState(() => _nomeLocal = ApiService.completarNomeMdns(nome));
+      if (mounted && resposta.statusCode == 200) {
+        final dados = jsonDecode(resposta.body);
+        final nome = dados is Map ? dados['nomeLocal']?.toString() : null;
+        if (nome != null && nome.isNotEmpty) {
+          setState(() => _nomeLocal = ApiService.completarNomeMdns(nome));
+        }
       }
     } catch (_) {
       // Sem rede do aparelho ainda: nada a mostrar, e nada a avisar.
     }
+    // Fora do try de proposito: as duas leituras sao independentes, e a do nome
+    // falhando nao pode impedir a da identidade - que e a que traz a chave.
     await _lerIdentidadeDoAparelho();
   }
 
