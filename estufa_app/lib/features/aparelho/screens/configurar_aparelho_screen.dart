@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../services/api_service.dart';
+
 /// Configura a rede e a chave do aparelho pelo app, sem digitar endereco.
 ///
 /// O aparelho tambem serve a mesma pagina em `192.168.4.1`, e o portal cativo
@@ -104,7 +106,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       final dados = jsonDecode(resposta.body);
       final nome = dados is Map ? dados['nomeLocal']?.toString() : null;
       if (nome != null && nome.isNotEmpty) {
-        setState(() => _nomeLocal = nome);
+        setState(() => _nomeLocal = ApiService.completarNomeMdns(nome));
       }
     } catch (_) {
       // Sem rede do aparelho ainda: nada a mostrar, e nada a avisar.
@@ -134,7 +136,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       setState(() {
         _chaveDoAparelho = chave;
         if (id != null && id.isNotEmpty) _idDoAparelho = id;
-        if (nome != null && nome.isNotEmpty) _nomeLocal = nome;
+        if (nome != null && nome.isNotEmpty) {
+          _nomeLocal = ApiService.completarNomeMdns(nome);
+        }
         _prefixoDaRede = _prefixoDe(gateway);
         // Deixa o campo quase pronto: falta so o ultimo numero. O celular esta
         // na rede do aparelho agora e nao teria como descobrir a faixa da casa;

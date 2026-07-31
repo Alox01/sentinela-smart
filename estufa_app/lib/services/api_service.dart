@@ -619,8 +619,24 @@ class ApiService {
     return lista;
   }
 
+  /// O aparelho se anuncia como `sentinela-xxxxxx.local`, mas se apresenta em
+  /// `/dados` sem o sufixo. Um nome sem `.local` nao e nome mDNS: o sistema
+  /// tenta DNS comum, que nao responde por ele em rede domestica nenhuma - a
+  /// conexao local simplesmente nunca acontecia, e a nuvem funcionando escondia
+  /// isso. Completar aqui conserta tambem as estufas ja cadastradas sem ele,
+  /// sem o produtor ter de editar nada.
+  static String completarNomeMdns(String enderecoOuNome) {
+    final valor = enderecoOuNome.trim();
+    if (!valor.toLowerCase().startsWith('sentinela-')) return valor;
+    if (valor.contains('.')) return valor;
+    final separador = RegExp(r'[:/]').firstMatch(valor);
+    if (separador == null) return '$valor.local';
+    final inicio = separador.start;
+    return '${valor.substring(0, inicio)}.local${valor.substring(inicio)}';
+  }
+
   static String _normalizarBaseUrl(String ipOuUrl) {
-    final valor = ipOuUrl.trim();
+    final valor = completarNomeMdns(ipOuUrl);
     if (valor.isEmpty) return '';
 
     final temProtocolo =
@@ -649,7 +665,7 @@ class ApiService {
   }
 
   static String? _normalizarFallbackPorta80(String ipOuUrl) {
-    final valor = ipOuUrl.trim();
+    final valor = completarNomeMdns(ipOuUrl);
     if (valor.isEmpty) return null;
 
     final temProtocolo =
