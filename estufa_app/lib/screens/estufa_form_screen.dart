@@ -579,7 +579,12 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       decoration: InputDecoration(
         labelText: 'Chave de acesso',
         hintText: 'Opcional',
-        helperText: 'Use a mesma chave configurada no aparelho.',
+        // Nao mandar decorar nem inventar: quem e instruido a digitar uma
+        // chave acaba inventando uma, e chave inventada faz o aparelho
+        // recusar todo comando depois - longe daqui, sem ligacao aparente
+        // com o que foi feito.
+        helperText: 'Vem sozinha por "Configurar aparelho". '
+            'Você não precisa saber esta chave.',
         helperMaxLines: 2,
         prefixIcon: const Icon(Icons.vpn_key_outlined, color: Colors.white38),
         suffixIcon: IconButton(
