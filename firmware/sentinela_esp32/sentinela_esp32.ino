@@ -54,6 +54,8 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 //        nao tem por que saber esses numeros, e adivinhar .1 quebrava redes com
 //        o gateway em .254 - local funcionando e nuvem muda, sem nada explicando.
 //        Os campos sairam do app; o formulario do aparelho ainda os aceita.
+//        O gateway aprendido tambem vai em /config/identidade, para o app
+//        deixar o campo de IP fixo quase pronto com a faixa certa.
 // 1.20.0: o app le a identidade (id, nome local e CHAVE) de
 //        `GET /config/identidade`, que so responde no modo de configuracao -
 //        presenca fisica. O formulario HTML deixa de vir com a chave
@@ -813,6 +815,11 @@ void handleConfigIdentidade() {
   doc["nomeLocal"] = nomeLocal;
   doc["chave"] = tokenAparelho;
   doc["versaoFirmware"] = VERSAO_FIRMWARE;
+  // Gateway aprendido do roteador. O app usa a faixa dele para ja deixar o
+  // campo de IP fixo quase pronto: no modo de configuracao o celular esta na
+  // rede do APARELHO (192.168.4.x) e nao tem como descobrir a faixa da casa
+  // sozinho - mas o aparelho ja esteve la e anotou.
+  doc["gatewayAprendido"] = gatewayAprendido;
   String corpo;
   serializeJson(doc, corpo);
   server.send(200, "application/json", corpo);

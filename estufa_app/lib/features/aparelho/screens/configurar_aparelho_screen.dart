@@ -62,6 +62,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// cadastro. Nula quando o firmware e anterior a 1.20.0.
   String? _chaveDoAparelho;
   String? _idDoAparelho;
+  /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
+  String? _prefixoDaRede;
   bool _senhaVisivel = false;
   bool _conferindo = false;
   bool? _alcancou;
@@ -127,11 +129,20 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       final chave = dados['chave']?.toString();
       final nome = dados['nomeLocal']?.toString();
       final id = dados['idHardware']?.toString();
+      final gateway = dados['gatewayAprendido']?.toString();
       if (chave == null || chave.isEmpty) return;
       setState(() {
         _chaveDoAparelho = chave;
         if (id != null && id.isNotEmpty) _idDoAparelho = id;
         if (nome != null && nome.isNotEmpty) _nomeLocal = nome;
+        _prefixoDaRede = _prefixoDe(gateway);
+        // Deixa o campo quase pronto: falta so o ultimo numero. O celular esta
+        // na rede do aparelho agora e nao teria como descobrir a faixa da casa;
+        // quem sabe e o aparelho, que ja esteve nela.
+        if (_prefixoDaRede != null && _ip.text.trim().isEmpty) {
+          _ip.text = _prefixoDaRede!;
+          _ip.selection = TextSelection.collapsed(offset: _ip.text.length);
+        }
       });
     } catch (_) {
       // Firmware antigo ou fora do modo de configuracao: segue pelo campo.
@@ -170,6 +181,24 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     });
   }
 
+  /// "192.168.0.1" -> "192.168.0.". Nulo quando nao parece um IPv4.
+  static String? _prefixoDe(String? ip) {
+    if (ip == null) return null;
+    final partes = ip.split('.');
+    if (partes.length != 4) return null;
+    if (partes.any((p) => int.tryParse(p) == null)) return null;
+    return '${partes.take(3).join('.')}.';
+  }
+
+  /// O campo pre-preenchido vale como vazio ate ganhar o ultimo numero: mandar
+  /// so a faixa seria um endereco invalido, e o aparelho cairia no DHCP sem o
+  /// produtor entender por que.
+  String get _ipFixoInformado {
+    final texto = _ip.text.trim();
+    if (texto.isEmpty || texto.endsWith('.')) return '';
+    return texto;
+  }
+
   Future<void> _salvar() async {
     final rede = _rede.text.trim();
     if (rede.isEmpty) {
@@ -196,7 +225,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               // Vazio mantem a atual no aparelho. So manda algo quando o
               // produtor digitou — caso do firmware antigo, sem chave propria.
               'token': _chaveDoAparelho != null ? '' : _chave.text.trim(),
-              'ip': _ip.text.trim(),
+              'ip': _ipFixoInformado,
               // Vazios de proposito: desde a 1.21.0 o aparelho usa o gateway e
               // a mascara que o roteador entregou a ele. Sao numeros que o
               // produtor nao tem por que saber, e o aparelho ja sabe.
@@ -519,17 +548,21 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             collapsedIconColor: Colors.white54,
             childrenPadding: const EdgeInsets.only(top: 8),
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Reserva, para quando o nome acima não funcionar no seu '
-                  'celular ou roteador. Deixe vazio para o roteador escolher. '
-                  'Os TRÊS primeiros números têm de ser os da sua rede — veja '
-                  'no Wi-Fi do celular, nos detalhes da rede conectada. Se lá '
-                  'aparecer 192.168.0.15, use 192.168.0.220. Só o último '
-                  'número é escolha sua. O resto o aparelho já aprendeu do '
-                  'roteador.',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  _prefixoDaRede != null
+                      ? 'Reserva, para quando o nome acima não funcionar no '
+                            'seu celular ou roteador. A faixa da sua rede já '
+                            'veio preenchida — complete só o último número, '
+                            'entre 200 e 250. Vazio deixa o roteador escolher.'
+                      : 'Reserva, para quando o nome acima não funcionar no '
+                            'seu celular ou roteador. Deixe vazio para o '
+                            'roteador escolher. Os TRÊS primeiros números têm '
+                            'de ser os da sua rede — veja no Wi-Fi do celular, '
+                            'nos detalhes da rede conectada. Se lá aparecer '
+                            '192.168.0.15, use 192.168.0.220.',
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ),
               _campo(
