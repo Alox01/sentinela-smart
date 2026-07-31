@@ -403,13 +403,22 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
           // aparelho, por "Configurar aparelho". Dizer isso aqui evita ele
           // procurar um valor que nao precisa conhecer - e evita inventar um,
           // que faria o aparelho recusar todo comando depois.
-          subtitulo: 'Vem sozinha ao usar "Configurar aparelho". '
-              'Você não precisa saber esta chave.',
-          icone: Icons.vpn_key_outlined,
-          onTap: () => _editarTextoNativo(
-            titulo: 'Chave de acesso',
-            controller: _chaveController,
-          ),
+          subtitulo: chaveConfigurada
+              ? 'Veio do aparelho. Você não precisa vê-la nem guardá-la.'
+              : 'Vem sozinha ao usar "Configurar aparelho". '
+                    'Você não precisa saber esta chave.',
+          icone: chaveConfigurada
+              ? Icons.lock_outline
+              : Icons.vpn_key_outlined,
+          // Configurada deixa de ser tocavel: abrir so serviria para ver a
+          // chave, e ver a chave nao e tarefa do produtor. Trocar continua
+          // possivel por "Configurar aparelho", que a le do aparelho de novo.
+          onTap: chaveConfigurada
+              ? null
+              : () => _editarTextoNativo(
+                  titulo: 'Chave de acesso',
+                  controller: _chaveController,
+                ),
         ),
         const SizedBox(height: 12),
         _buildCampoNativoCard(
@@ -433,7 +442,9 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     required String valor,
     required String subtitulo,
     required IconData icone,
-    required VoidCallback onTap,
+    // Nulo deixa o cartao apenas informativo: e o caso da chave ja configurada,
+    // que nao ha por que abrir.
+    required VoidCallback? onTap,
   }) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -567,6 +578,38 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   }
 
   Widget _buildChaveField() {
+    // Chave ja preenchida vira uma linha, sem campo e sem olho. Mostra-la
+    // convidava o produtor a cuidar de uma coisa que nao e dele: ela vem do
+    // aparelho e volta de la sempre que preciso, pela reconfiguracao. O campo so
+    // aparece quando NAO ha chave - aparelho antigo, ou cadastro a mao.
+    if (_chaveController.text.trim().isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.lock_outline, color: Colors.white38, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Chave de acesso: configurada',
+                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Veio do aparelho. Você não precisa vê-la nem guardá-la.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return TextField(
       controller: _chaveController,
       obscureText: _ocultarChave,
