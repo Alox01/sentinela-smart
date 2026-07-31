@@ -153,6 +153,26 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// deviam estar na rede de casa. Sem isto o produtor podia terminar com uma
   /// estufa cadastrada num endereco que nunca responde — o mDNS falha em parte
   /// dos celulares e roteadores, e o erro so apareceria muito depois.
+  /// Confere o alcance e so entao devolve os dados. Na primeira tentativa que
+  /// falha, avisa e deixa o produtor decidir: apertar de novo segue assim
+  /// mesmo. Nao barra o cadastro - o aparelho pode so estar demorando a
+  /// reiniciar, e travar o fluxo seria pior do que uma estufa a conferir depois.
+  Future<void> _confirmarEUsar() async {
+    if (_alcancou == null) {
+      await _conferirAlcance();
+      if (!mounted || _alcancou == false) return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop(
+      DadosAparelhoConfigurado(
+        endereco: _nomeLocal,
+        chave: _chaveDoAparelho
+            ?? (_chave.text.trim().isEmpty ? null : _chave.text.trim()),
+        idHardware: _idDoAparelho,
+      ),
+    );
+  }
+
   Future<void> _conferirAlcance() async {
     final nome = _nomeLocal;
     if (nome == null || nome.isEmpty) return;
@@ -304,81 +324,62 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             const SizedBox(height: 20),
           ],
         ),
-        // Repetido aqui porque o ponto de acesso some no reinicio: esta e a
-        // ultima tela em que o produtor pode copiar o endereco.
-        _cartaoNome(),
-        const SizedBox(height: 8),
+        // O cartao do endereco so aparece quando NAO ha para onde levar os
+        // dados: aberta solta, ele e o unico resultado da tela. Vindo do
+        // cadastro ou da atualizacao, o endereco segue sozinho e mostra-lo aqui
+        // e uma terceira coisa competindo com a acao obvia.
+        if (widget.uso == null) ...[_cartaoNome(), const SizedBox(height: 8)],
         // Fecha o circulo: o endereco que o produtor acabou de ver vai sozinho
         // para o cadastro, em vez de ele ter de decorar ou copiar a mao. A
         // chave tambem, porque ele a definiu nesta mesma tela.
         if (widget.uso != null && _nomeLocal != null) ...[
-          // Conferir vem ANTES de cadastrar: o nome so resolve depois de os dois
-          // voltarem para a rede de casa, e o mDNS falha em parte dos celulares
-          // e roteadores. Sem esta conferencia da para terminar com uma estufa
-          // apontada para um endereco que nunca responde, e o erro so apareceria
-          // muito depois, parecendo outra coisa.
-          OutlinedButton.icon(
-            onPressed: _conferindo ? null : _conferirAlcance,
+          // A conferencia deixou de ser um botao proprio. Como um botao, ela so
+          // funcionava DEPOIS de o produtor sair do app e trocar de Wi-Fi -
+          // apertado no momento natural, falhava sempre, e um botao que falha
+          // na hora obvia ensina a desconfiar do app. Agora ela acontece dentro
+          // da acao principal, que e quando importa: se o aparelho nao
+          // responder, o produtor decide seguir ou esperar.
+          if (_alcancou == false) ...[
+            const Text(
+              'Ainda não respondeu. Se o celular já voltou para o Wi-Fi de '
+              'sempre, espere alguns segundos — o aparelho pode estar '
+              'reiniciando.',
+              style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+          ],
+          FilledButton.icon(
+            onPressed: _conferindo ? null : _confirmarEUsar,
             icon: _conferindo
                 ? const SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.wifi_find_rounded, size: 18),
+                : Icon(
+                    widget.uso == UsoDaConfiguracao.cadastro
+                        ? Icons.playlist_add_rounded
+                        : Icons.sync_rounded,
+                    size: 18,
+                  ),
             label: Text(
-              _conferindo ? 'Procurando...' : 'Conferir se o aparelho responde',
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-          if (_alcancou != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _alcancou!
-                  ? 'Respondeu. Pode cadastrar.'
-                  : 'Não respondeu ainda. Espere alguns segundos e tente de '
-                        'novo — o aparelho pode estar reiniciando. Se insistir, '
-                        'volte e use o endereço fixo.',
-              style: TextStyle(
-                color: _alcancou! ? Colors.greenAccent : Colors.orangeAccent,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(context).pop(
-              DadosAparelhoConfigurado(
-                endereco: _nomeLocal,
-                chave: _chaveDoAparelho
-                    ?? (_chave.text.trim().isEmpty ? null : _chave.text.trim()),
-                idHardware: _idDoAparelho,
-              ),
-            ),
-            icon: Icon(
-              widget.uso == UsoDaConfiguracao.cadastro
-                  ? Icons.playlist_add_rounded
-                  : Icons.sync_rounded,
-              size: 18,
-            ),
-            label: Text(
-              widget.uso == UsoDaConfiguracao.cadastro
-                  ? 'Usar estes dados no cadastro'
-                  : 'Atualizar esta estufa',
+              _conferindo
+                  ? 'Procurando o aparelho...'
+                  : widget.uso == UsoDaConfiguracao.cadastro
+                        ? 'Usar estes dados no cadastro'
+                        : 'Atualizar esta estufa',
             ),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
           const SizedBox(height: 8),
-          // O nome so resolve depois de o aparelho voltar para a rede de casa,
-          // e o celular precisa estar nela tambem. Dizer isso aqui evita o
-          // cadastro "que nao conecta" logo no primeiro uso.
+          // O nome so resolve com os dois na mesma rede. Como o botao acima
+          // confere antes de seguir, o aviso passa a ser sobre a ORDEM: trocar
+          // de Wi-Fi primeiro, apertar depois.
           const Text(
-            'Reconecte o celular no Wi-Fi de sempre antes de testar a conexão: '
+            'Reconecte o celular no Wi-Fi de sempre antes de continuar — '
             'o endereço só responde quando os dois estão na mesma rede.',
             style: TextStyle(color: Colors.white38, fontSize: 12),
             textAlign: TextAlign.center,
