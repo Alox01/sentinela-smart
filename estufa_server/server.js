@@ -82,8 +82,13 @@ const PERSISTIR_LOCAL = process.env.PERSISTIR_LOCAL != null
 // campo ainda usam ela, e tirar antes de todos registrarem a sua deixaria o
 // produtor sem acesso remoto.
 const chavesAparelhos = criarRegistroDeChaves({ db });
-const authMiddleware = createAuthMiddleware(API_TOKEN, {
-  chaveDoAparelho: (idHardware) => chavesAparelhos.chaveDe(idHardware),
+const chaveDoAparelho = (idHardware) => chavesAparelhos.chaveDe(idHardware);
+// Duas porteiras: a comum aceita a chave universal (reportar leitura, registrar
+// chave), e a de comando exige a chave DAQUELE aparelho. Ver o porque em auth.js.
+const authMiddleware = createAuthMiddleware(API_TOKEN, { chaveDoAparelho });
+const authComando = createAuthMiddleware(API_TOKEN, {
+  chaveDoAparelho,
+  exigirChaveDoAparelho: true,
 });
 // Se a credencial do Firebase nao estiver configurada, o push fica desabilitado
 // e o servidor sobe igual: aviso remoto e camada extra, nao caminho critico.
@@ -118,6 +123,7 @@ app.use(
     simulador,
     db,
     authMiddleware,
+    authComando,
     tokenConfigurado: Boolean(API_TOKEN.trim()),
     chavesAparelhos,
     buffer: bufferLeituras,

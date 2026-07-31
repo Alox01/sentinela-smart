@@ -9,7 +9,25 @@ const crypto = require('crypto');
 // A chave global continua valendo. Enquanto os aparelhos em campo nao tiverem
 // registrado a sua, tirar a global deixaria o produtor sem acesso remoto a um
 // sistema que funciona.
-function createAuthMiddleware(apiToken, { chaveDoAparelho } = {}) {
+// [exigirChaveDoAparelho] separa as credenciais por ESTRAGO, nao por etapa.
+//
+// A chave universal fica compilada no firmware, entao ela nao e segredo: quem
+// tiver o binario ou acesso a flash a extrai. Tratar como credencial seria
+// mentira. Ela e um portao - barra varredura aleatoria da internet - e por isso
+// so abre o que faz pouco estrago: o aparelho reportar leitura e registrar a
+// propria chave.
+//
+// Registrar com ela e o que tira o beco sem saida: um aparelho que perde a chave
+// propria ainda consegue voltar, em vez de ficar na rede funcionando e mudo para
+// a nuvem, sem nada explicando.
+//
+// Mudar ajuste, silenciar sirene, agendar e ler a estufa exigem a chave DAQUELE
+// aparelho. Quem extrair a universal consegue empurrar leitura falsa; nao
+// consegue mexer na estufa de ninguem.
+function createAuthMiddleware(
+  apiToken,
+  { chaveDoAparelho, exigirChaveDoAparelho = false } = {},
+) {
   const token = (apiToken ?? '').trim();
   if (!token && !chaveDoAparelho) {
     return (_req, _res, next) => next();
@@ -17,31 +35,39 @@ function createAuthMiddleware(apiToken, { chaveDoAparelho } = {}) {
 
   return async (req, res, next) => {
     const tokenRecebido = extrairToken(req);
+    const idHardware = idHardwareDaRequisicao(req);
+    let chaveRegistrada = null;
 
-    if (token && tokensIguais(tokenRecebido, token)) {
+    if (tokenRecebido && chaveDoAparelho && idHardware) {
+      try {
+        chaveRegistrada = await chaveDoAparelho(idHardware);
+        if (chaveRegistrada && tokensIguais(tokenRecebido, chaveRegistrada)) {
+          next();
+          return;
+        }
+      } catch (error) {
+        // Falha ao resolver a chave nao autoriza: nega, e o aparelho repete.
+        console.error('Falha ao verificar chave do aparelho:', error.message);
+        res.status(503).json({ erro: 'Indisponivel' });
+        return;
+      }
+    }
+
+    // A universal serve aqui quando a rota nao e de comando; e tambem quando o
+    // aparelho AINDA nao registrou a sua, senao adotar esta separacao derrubaria
+    // na hora todo aparelho que ainda nao passou pelo registro. Transitorio: cai
+    // fora quando os aparelhos em campo tiverem a sua.
+    const universalBasta = !exigirChaveDoAparelho || chaveRegistrada == null;
+    if (universalBasta && token && tokensIguais(tokenRecebido, token)) {
       next();
       return;
     }
 
-    if (tokenRecebido && chaveDoAparelho) {
-      const idHardware = idHardwareDaRequisicao(req);
-      if (idHardware) {
-        try {
-          const chave = await chaveDoAparelho(idHardware);
-          if (chave && tokensIguais(tokenRecebido, chave)) {
-            next();
-            return;
-          }
-        } catch (error) {
-          // Falha ao resolver a chave nao autoriza: nega, e o aparelho repete.
-          console.error('Falha ao verificar chave do aparelho:', error.message);
-        }
-      }
-    }
-
     res.status(401).json({
       erro: 'Nao autorizado',
-      detalhe: 'Token ausente ou invalido.',
+      detalhe: exigirChaveDoAparelho
+        ? 'Esta acao exige a chave do aparelho.'
+        : 'Token ausente ou invalido.',
     });
   };
 }

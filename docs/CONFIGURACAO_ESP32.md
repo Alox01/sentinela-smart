@@ -404,13 +404,47 @@ A causa foi a soma de duas coisas separadas, cada uma razoável sozinha:
 
 Corrigido na v1.22.0: vazio mantém.
 
+### Duas credenciais, separadas por estrago (31/07/2026)
+
+Ideia do produtor, e ela desfaz o beco descrito abaixo. Em vez de uma chave que
+abre tudo, duas com escopos diferentes:
+
+| Rota | Chave |
+|---|---|
+| `POST /leitura` — aparelho reportando | universal |
+| `POST /aparelhos/chave` — registrar a própria | universal |
+| `GET /status`, `/historico` | **do aparelho** |
+| `/sincronizar`, `/comandos`, `/agendamentos` | **do aparelho** |
+
+A correção que a revisão trouxe: a universal fica **compilada no firmware**, logo
+**não é segredo** — quem tiver o binário ou acesso à flash a extrai. Tratá-la
+como credencial seria mentira. Ela é um **portão**: barra varredura aleatória da
+internet, e por isso só abre o que faz pouco estrago. Por isso a separação é
+imposta **rota a rota**, pela régua do estrago, e não pela etapa do fluxo.
+
+Registrar com ela é o que **tira o beco sem saída**: um aparelho que perde a
+chave própria ainda consegue voltar.
+
+O que se aceita junto: quem extrair a universal consegue **empurrar leitura
+falsa** para qualquer `idHardware` — alarme falso, ou segurar o vigia de "sem
+comunicação". Não muda ajuste nem cala sirene. O aparelho real continua mandando
+os valores verdadeiros por cima.
+
+**Transitório:** enquanto um aparelho ainda não registrou a chave dele, a
+universal também comanda — senão adotar isso derrubaria na hora todo aparelho
+que ainda não passou pelo registro. Some quando todos tiverem a sua.
+
+Isso muda o sentido da Fase 4: a chave global não é **removida**, é
+**restringida**. Melhor, porque remover deixaria aparelho preso do mesmo jeito.
+
 **Fica um beco sem saída conhecido.** Um aparelho que perde a chave não consegue
 voltar sozinho: a nuvem guarda a chave antiga, e ele não tem como provar posse
 dela para rotacionar nem credencial aceita para registrar a nova. A recuperação
-exige presença física e uma chave que a nuvem aceite. É o preço de o registro
-ficar atrás da autenticação (ver acima) — e a alternativa, TOFU aberto,
-deixaria qualquer um reivindicar um `idHardware`. Decidir isso com calma, não
-depois de uma noite de depuração.
+exigia presença física e uma chave que a nuvem aceite.
+
+**Resolvido pela separação acima:** com a universal autorizando o registro, o
+aparelho volta sozinho. O aparelho que quebrou em 31/07 ainda precisa de
+recuperação manual, porque ele foi gravado antes disso.
 
 **Para desligar a chave global (29/07/2026), o que foi verificado.** Todas as
 rotas que o app chama na nuvem carregam `idHardware` — `/sincronizar` (quando

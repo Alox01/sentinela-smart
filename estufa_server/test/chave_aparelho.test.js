@@ -260,3 +260,100 @@ test('rotacionar para a mesma chave e recusado', async () => {
   );
   assert.equal(status, 400);
 });
+
+// ---- Separacao por estrago: universal x chave do aparelho ----
+// A universal fica compilada no firmware e por isso NAO e segredo. Ela abre o
+// que faz pouco estrago; mexer na estufa exige a chave daquele aparelho.
+
+function criarAppSeparado({ db }) {
+  const chavesAparelhos = criarRegistroDeChaves({ db });
+  const chaveDoAparelho = (id) => chavesAparelhos.chaveDe(id);
+  const app = express();
+  app.use(express.json());
+  app.use(
+    createEstufaRouter({
+      simulador: { lerCompleto: () => ({ status: {}, config: {} }) },
+      db,
+      authMiddleware: createAuthMiddleware(CHAVE_GLOBAL, { chaveDoAparelho }),
+      authComando: createAuthMiddleware(CHAVE_GLOBAL, {
+        chaveDoAparelho,
+        exigirChaveDoAparelho: true,
+      }),
+      chavesAparelhos,
+    }),
+  );
+  return app;
+}
+
+function comando(chave, corpo) {
+  return {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${chave}`,
+    },
+    body: JSON.stringify(corpo),
+  };
+}
+
+test('a universal reporta leitura, porque isso faz pouco estrago', async () => {
+  const app = criarAppSeparado({ db: dbFalso({ [ID_A]: 'chave-do-a' }) });
+  const { status } = await requisitar(
+    app,
+    '/leitura',
+    comando(CHAVE_GLOBAL, {
+      idHardware: ID_A,
+      temperaturaAtual: 100,
+      umidadeAtual: 50,
+    }),
+  );
+  assert.notEqual(status, 401);
+});
+
+// O ponto da separacao: quem extrair a universal do firmware nao pode mexer na
+// estufa de ninguem.
+test('a universal NAO muda o ajuste de um aparelho registrado', async () => {
+  const app = criarAppSeparado({ db: dbFalso({ [ID_A]: 'chave-do-a' }) });
+  const { status } = await requisitar(
+    app,
+    '/sincronizar',
+    comando(CHAVE_GLOBAL, { idHardware: ID_A, temperaturaMeta: 200 }),
+  );
+  assert.equal(status, 401);
+});
+
+test('a chave do aparelho muda o ajuste dele', async () => {
+  const app = criarAppSeparado({ db: dbFalso({ [ID_A]: 'chave-do-a' }) });
+  const { status } = await requisitar(
+    app,
+    '/sincronizar',
+    comando('chave-do-a', { idHardware: ID_A, temperaturaMeta: 120 }),
+  );
+  assert.notEqual(status, 401);
+});
+
+// Sem isto, adotar a separacao derrubaria na hora todo aparelho que ainda nao
+// registrou a sua chave. Transitorio, e some quando todos tiverem a delas.
+test('aparelho ainda sem chave registrada aceita a universal', async () => {
+  const app = criarAppSeparado({ db: dbFalso() });
+  const { status } = await requisitar(
+    app,
+    '/sincronizar',
+    comando(CHAVE_GLOBAL, { idHardware: ID_B, temperaturaMeta: 120 }),
+  );
+  assert.notEqual(status, 401);
+});
+
+// O beco sem saida que motivou tudo: um aparelho que perdeu a chave propria
+// precisa conseguir registrar a nova, ou fica na rede funcionando e mudo.
+test('a universal registra a chave de um aparelho', async () => {
+  const db = dbFalso();
+  const app = criarAppSeparado({ db });
+  const { status } = await requisitar(
+    app,
+    '/aparelhos/chave',
+    comando(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'nova-do-a' }),
+  );
+  assert.equal(status, 200);
+  assert.equal(db.chaves.get(ID_A), 'nova-do-a');
+});

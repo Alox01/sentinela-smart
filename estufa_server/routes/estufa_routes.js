@@ -22,12 +22,16 @@ function createEstufaRouter({
   simulador,
   db,
   authMiddleware,
+  // Porteira das acoes que MEXEM na estufa. Sem ela injetada, cai na comum - os
+  // testes antigos e qualquer chamador que nao a passe seguem funcionando.
+  authComando = null,
   tokenConfigurado = false,
   buffer = null,
   push = null,
   chavesAparelhos = null,
 }) {
   const router = express.Router();
+  const autorizarComando = authComando ?? authMiddleware;
 
   // Ultimo estado notificado por aparelho, para avisar na BORDA (quando o
   // problema comeca) e nao a cada leitura enquanto ele durar.
@@ -388,7 +392,7 @@ function createEstufaRouter({
   // Leituras tambem exigem token: telemetria da estufa e dado do produtor, nao
   // publico. O app ja envia a chave em toda chamada; o custo real e que uma
   // estufa cadastrada sem chave deixa de ler pela nuvem.
-  router.get('/status', authMiddleware, async (req, res) => {
+  router.get('/status', autorizarComando, async (req, res) => {
     const idHardware = req.query.idHardware;
     const dados = await lerDispositivo(idHardware);
     if (!dados) {
@@ -425,7 +429,7 @@ function createEstufaRouter({
   // Historico persistido na nuvem, para o relatorio remoto preencher os
   // periodos em que o app esteve fechado. Autenticado como o /status.
   // Parametros opcionais: inicio, fim (ms Unix), idHardware.
-  router.get('/historico', authMiddleware, async (req, res) => {
+  router.get('/historico', autorizarComando, async (req, res) => {
     if (!db.estaHabilitado?.()) {
       res.json({ leituras: [], persistencia: false });
       return;
@@ -449,7 +453,7 @@ function createEstufaRouter({
     }
   });
 
-  router.post('/sincronizar', authMiddleware, async (req, res) => {
+  router.post('/sincronizar', autorizarComando, async (req, res) => {
     const configDoApp = req.body;
     const validacao = validarPayloadSincronizacao(configDoApp);
 
@@ -500,7 +504,7 @@ function createEstufaRouter({
   // O aparelho pergunta se tem ajuste esperando por ele. Responder e entregar:
   // o proprio POST /leitura seguinte, ja com a config nova, serve de confirmacao
   // â€” e se o comando se perder no caminho, o app reenvia pela fila que ja tem.
-  router.get('/comandos', authMiddleware, (req, res) => {
+  router.get('/comandos', autorizarComando, (req, res) => {
     const idHardware = req.query.idHardware;
     if (!idHardware) {
       res.status(400).json({ erro: 'idHardware obrigatorio' });
@@ -517,7 +521,7 @@ function createEstufaRouter({
   // ALVO na hora marcada, o que o celular nao consegue fazer com o app fechado.
   // Vencido, o agendamento cai na mesma caixa de comandos de um ajuste manual.
 
-  router.post('/agendamentos', authMiddleware, async (req, res) => {
+  router.post('/agendamentos', autorizarComando, async (req, res) => {
     const agoraMs = Date.now();
     const validacao = validarAgendamento(req.body, agoraMs);
     if (!validacao.valido) {
@@ -559,7 +563,7 @@ function createEstufaRouter({
     }
   });
 
-  router.get('/agendamentos', authMiddleware, async (req, res) => {
+  router.get('/agendamentos', autorizarComando, async (req, res) => {
     const idHardware = req.query.idHardware;
     if (!idHardware) {
       res.status(400).json({ erro: 'idHardware obrigatorio' });
@@ -578,7 +582,7 @@ function createEstufaRouter({
     }
   });
 
-  router.delete('/agendamentos/:id', authMiddleware, async (req, res) => {
+  router.delete('/agendamentos/:id', autorizarComando, async (req, res) => {
     const idHardware = req.query.idHardware;
     if (!idHardware) {
       res.status(400).json({ erro: 'idHardware obrigatorio' });
