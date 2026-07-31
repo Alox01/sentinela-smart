@@ -357,3 +357,71 @@ test('a universal registra a chave de um aparelho', async () => {
   assert.equal(status, 200);
   assert.equal(db.chaves.get(ID_A), 'nova-do-a');
 });
+
+// ---- Reconciliacao das inscricoes de push ----
+// Apagar uma a uma nao basta: um DELETE perdido (sem internet, chave velha)
+// deixava o vigia olhando aparelho que nao pertence a estufa nenhuma.
+
+function dbPushReconciliavel(linhas) {
+  let atuais = [...linhas];
+  return {
+    get linhas() {
+      return atuais;
+    },
+    estaHabilitado: () => false,
+    async reconciliarDispositivosPush(tokenPush, idHardwares) {
+      const antes = atuais.length;
+      atuais = atuais.filter(
+        (l) => l.tokenPush !== tokenPush || idHardwares.includes(l.idHardware),
+      );
+      return { removidas: antes - atuais.length };
+    },
+  };
+}
+
+test('a reconciliacao apaga a inscricao de uma estufa que nao existe mais', async () => {
+  const db = dbPushReconciliavel([
+    { tokenPush: 'tok-1', idHardware: ID_A },
+    { tokenPush: 'tok-1', idHardware: ID_B },
+  ]);
+  const app = criarApp({ db });
+
+  const { status, body } = await requisitar(
+    app,
+    '/push/dispositivos/sincronizar',
+    comChave(CHAVE_GLOBAL, { tokenPush: 'tok-1', idHardwares: [ID_A] }),
+  );
+
+  assert.equal(status, 200);
+  assert.equal(body.removidas, 1);
+  assert.deepEqual(db.linhas.map((l) => l.idHardware), [ID_A]);
+});
+
+// Um celular nao pode desinscrever outro por engano.
+test('a reconciliacao nao toca nas inscricoes de outro celular', async () => {
+  const db = dbPushReconciliavel([
+    { tokenPush: 'tok-1', idHardware: ID_A },
+    { tokenPush: 'tok-2', idHardware: ID_A },
+  ]);
+  const app = criarApp({ db });
+
+  await requisitar(
+    app,
+    '/push/dispositivos/sincronizar',
+    comChave(CHAVE_GLOBAL, { tokenPush: 'tok-1', idHardwares: [] }),
+  );
+
+  assert.deepEqual(db.linhas.map((l) => l.tokenPush), ['tok-2']);
+});
+
+test('lista ausente e recusada, para nao apagar tudo por engano', async () => {
+  const db = dbPushReconciliavel([{ tokenPush: 'tok-1', idHardware: ID_A }]);
+  const app = criarApp({ db });
+  const { status } = await requisitar(
+    app,
+    '/push/dispositivos/sincronizar',
+    comChave(CHAVE_GLOBAL, { tokenPush: 'tok-1' }),
+  );
+  assert.equal(status, 400);
+  assert.equal(db.linhas.length, 1);
+});

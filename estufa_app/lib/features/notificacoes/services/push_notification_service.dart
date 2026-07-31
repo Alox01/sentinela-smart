@@ -255,8 +255,42 @@ class PushNotificationService {
       for (final estufa in estufas) {
         await registrarEstufa(estufa);
       }
+      await _descartarInscricoesOrfas(estufas);
     } catch (erro) {
       debugPrint('Não foi possível sincronizar o push: $erro');
+    }
+  }
+
+  /// Conta a nuvem quais estufas este celular acompanha, para ela descartar o
+  /// resto. Apagar uma a uma nao bastava: o DELETE de uma estufa removida pode
+  /// se perder, e nada tentava de novo — o vigia seguia olhando um aparelho que
+  /// nao pertence a estufa nenhuma, sem nada indicar isso em lugar algum.
+  Future<void> _descartarInscricoesOrfas(List<EstufaEntity> estufas) async {
+    final token = _tokenPush;
+    final uri = _uriPush('/push/dispositivos/sincronizar');
+    if (token == null || uri == null) return;
+
+    final ids = estufas
+        .map((e) => e.idHardware?.trim())
+        .where((id) => id != null && id.isNotEmpty)
+        .cast<String>()
+        .toList();
+    // A chave de qualquer estufa serve: a rota fala do CELULAR, nao de um
+    // aparelho. Sem nenhuma estufa, so a lista vazia importa.
+    final chave = estufas
+        .map((e) => e.tokenAcesso)
+        .firstWhere((t) => t != null && t.isNotEmpty, orElse: () => null);
+
+    try {
+      await http
+          .post(
+            uri,
+            headers: _headersJson(chave),
+            body: jsonEncode({'tokenPush': token, 'idHardwares': ids}),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (erro) {
+      debugPrint('Não foi possível limpar inscrições antigas: $erro');
     }
   }
 
@@ -364,12 +398,8 @@ class PushNotificationService {
     final token = _tokenPush;
     final idHardware = estufa.idHardware?.trim();
     final uri = _uriPush('/push/dispositivos');
-    if (idHardware == null || idHardware.isEmpty) {
-      // Sem id nao ha a quem amarrar o aviso, entao esta estufa nunca sera
-      // vigiada. E o caso que passou despercebido: um aparelho ficou 24 h fora
-      // do ar e nenhum aviso saiu, porque ninguem estava inscrito nele.
-      return;
-    }
+    // Sem id nunca houve inscricao a desfazer.
+    if (idHardware == null || idHardware.isEmpty) return;
     if (!_inicializado || token == null || uri == null) {
       _vigiadas[idHardware] = false;
       return;

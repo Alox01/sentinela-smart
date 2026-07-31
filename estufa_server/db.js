@@ -656,6 +656,28 @@ async function removerDispositivoPush({ tokenPush, idHardware }) {
   return true;
 }
 
+/// Apaga as inscricoes deste celular em aparelhos que ele nao acompanha mais.
+///
+/// Existe porque apagar uma a uma nao basta: o DELETE de uma estufa removida
+/// pode falhar (sem internet, chave velha) e nada tenta de novo, deixando o
+/// vigia olhando um aparelho que nao pertence a estufa nenhuma. Reconciliar o
+/// conjunto inteiro conserta o orfao qualquer que tenha sido a causa.
+async function reconciliarDispositivosPush(tokenPush, idHardwares) {
+  if (!pool) return { removidas: 0 };
+  if (!tokenPush) return { removidas: 0 };
+  await garantirTabelaPush();
+
+  const lista = Array.isArray(idHardwares)
+    ? idHardwares.filter((id) => typeof id === 'string' && id.trim() !== '')
+    : [];
+  const resultado = await pool.query(
+    `delete from push_dispositivos
+     where token_push = $1 and not (identificador_hardware = any($2::text[]))`,
+    [tokenPush, lista],
+  );
+  return { removidas: resultado.rowCount };
+}
+
 /// Tokens inscritos numa estufa, com as preferencias de quem os registrou -
 /// e por elas que o envio decide suprimir um evento silenciado.
 async function listarDispositivosPush(idHardware) {
@@ -841,6 +863,7 @@ module.exports = {
   rotacionarChaveAparelho,
   carregarChavesAparelhos,
   registrarDispositivoPush,
+  reconciliarDispositivosPush,
   removerDispositivoPush,
   removerTokensPushInvalidos,
   carregarHistorico,

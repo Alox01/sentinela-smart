@@ -637,6 +637,39 @@ function createEstufaRouter({
     }
   });
 
+  // O celular diz quais estufas ele acompanha, e a nuvem descarta o resto das
+  // inscricoes daquele token. E o conserto de orfaos: um DELETE perdido deixava
+  // o vigia olhando aparelho que nao pertence a estufa nenhuma, sem nada indicar
+  // isso. Fica na porteira comum de proposito - fala do celular, nao de um
+  // aparelho, entao nao ha chave de aparelho a que amarrar.
+  router.post('/push/dispositivos/sincronizar', authMiddleware, async (req, res) => {
+    const tokenPush = (req.body?.tokenPush || '').trim();
+    const idHardwares = req.body?.idHardwares;
+    if (!tokenPush) {
+      res.status(400).json({ erro: 'tokenPush obrigatorio' });
+      return;
+    }
+    if (!Array.isArray(idHardwares)) {
+      res.status(400).json({ erro: 'idHardwares deve ser uma lista' });
+      return;
+    }
+    if (!db.reconciliarDispositivosPush) {
+      res.json({ sucesso: true, removidas: 0, motivo: 'sem_persistencia' });
+      return;
+    }
+
+    try {
+      const { removidas } = await db.reconciliarDispositivosPush(
+        tokenPush,
+        idHardwares,
+      );
+      res.json({ sucesso: true, removidas });
+    } catch (error) {
+      console.error('Falha ao reconciliar inscricoes push:', error.message);
+      res.status(500).json({ erro: 'Falha ao reconciliar' });
+    }
+  });
+
   router.delete('/push/dispositivos', authMiddleware, async (req, res) => {
     const { tokenPush, idHardware } = req.body || {};
     if (typeof tokenPush !== 'string' || tokenPush.trim() === '') {
