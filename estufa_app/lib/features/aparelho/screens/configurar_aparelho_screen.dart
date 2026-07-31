@@ -410,10 +410,19 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               ),
             ],
           ),
-          const Text(
-            'Cadastre no campo de endereço da estufa. Ele continua valendo '
-            'mesmo que o roteador troque o IP.',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+          // A instrucao de cadastrar a mao so vale quando a tela foi aberta
+          // solta: vinda do cadastro ou da atualizacao, o endereco segue sozinho
+          // e mandar digitar seria pedir um trabalho que o app ja fez. O cartao
+          // fica nos dois casos porque, alem do endereco, ele e a confirmacao de
+          // que o celular esta MESMO na rede do aparelho - se o nome aparece, a
+          // conversa funciona.
+          Text(
+            widget.uso == null
+                ? 'Cadastre no campo de endereço da estufa. Ele continua '
+                      'valendo mesmo que o roteador troque o IP.'
+                : 'Vai junto para o cadastro. Ele continua valendo mesmo que '
+                      'o roteador troque o IP.',
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
         ],
       ),
@@ -584,8 +593,12 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           labelText: rotulo,
           labelStyle: const TextStyle(color: Colors.white54),
           helperText: dica,
-          helperStyle: const TextStyle(color: Colors.white24, fontSize: 11),
+          helperStyle: const TextStyle(color: Colors.white38, fontSize: 11),
           suffixIcon: acao,
+          // Sem esta folga o rotulo flutuante encosta no texto digitado: o
+          // Material desenha os dois dentro da mesma caixa preenchida, e sem
+          // borda visivel para separar eles parecem uma coisa so.
+          contentPadding: const EdgeInsets.fromLTRB(14, 20, 14, 14),
           filled: true,
           fillColor: const Color(0xFF1C1C1E),
           border: OutlineInputBorder(
