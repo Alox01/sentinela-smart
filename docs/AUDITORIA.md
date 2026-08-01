@@ -45,54 +45,53 @@ funciona:
 
 ### 2.1 Alta — corrigir antes de qualquer refatoração
 
-- [x] **A1. Dependências com vulnerabilidade conhecida.** `npm audit` acusa **8**
-  (1 alta, 6 moderadas, 1 baixa), todas vindas de `firebase-admin` →
-  `retry-request` → `teeny-request`. Precisa avaliar se `npm audit fix` resolve
-  sem quebrar o push, e se não, declarar a exposição. *Resolvido: `firebase-admin`
-  11 → 13.5.0, zero vulnerabilidades, 185 testes passando.*
-- [x] **A2. Erros do servidor podem vazar detalhe interno.** Conferir se algum
-  `catch` devolve `error.message` no corpo da resposta — mensagem de driver de
-  banco conta a estrutura da tabela a quem perguntar. *Auditado: nenhuma rota
-  devolve `error.message`; todas usam texto fixo. Sem ação.*
-- [x] **A3. `console.log` em produção (36 ocorrências).** Precisa varrer se algum
-  imprime chave, token ou payload inteiro — log de plataforma não é lugar de
-  segredo. *Auditado: nenhum imprime chave; `push.js:184` imprimia o texto do
-  aviso e virou contagem.*
+- [x] **A1. Dependências com vulnerabilidade conhecida.** Eram **8** (1 alta, 6
+  moderadas, 1 baixa). `npm audit fix` resolveu 2 sem quebrar nada (185 testes
+  passando), incluindo a **alta** (`brace-expansion`, negação de serviço).
+  **Sobram 6**, todas do mesmo pacote `uuid <11.1.1`, alcançado por dentro do
+  `firebase-admin`. O único conserto oferecido é **rebaixar o firebase-admin da
+  14 para a 10** — quatro versões maiores para trás, num pacote que é o caminho
+  de todo aviso de incêndio. **Decidido não rebaixar**, e declarar: o defeito é
+  falta de checagem de limite em `uuid` v3/v5/v6 quando quem chama passa o
+  buffer; nada aqui chama `uuid` direto, e o `firebase-admin` não expõe esse
+  caminho ao nosso código. Reavaliar quando o `firebase-admin` atualizar.
+- [x] **A2. Erros do servidor podem vazar detalhe interno.** *Verificado:
+  nenhuma rota devolve `error.message` no corpo — todas respondem texto fixo, e
+  o detalhe fica só no log do servidor. Nada a corrigir.*
+- [x] **A3. `console.log` em produção (36 ocorrências).** *Verificado: nenhum
+  imprime chave, token ou senha. As ocorrências que casam com "chave" citam a
+  palavra na mensagem, não o valor. O único `JSON.stringify` num log é o comando
+  agendado (temperatura/umidade), que não é segredo. Nada a corrigir.*
 
 ### 2.2 Média — dívida que já cobrou juros esta semana
 
-- [x] **B1. `monitoramento_screen.dart`: 1.543 linhas, 45 métodos.** É a tela
+- [ ] **B1. `monitoramento_screen.dart`: 1.543 linhas, 45 métodos.** É a tela
   onde mais bugs de campo apareceram, e não por acaso: mistura estado de
   conexão, silenciamento, agendamento, menu, diálogos e ciclo de vida. Extrair o
   menu (que virou uma tela dentro da tela) é o corte de maior retorno.
-  *Feito: menu extraído para `features/monitoramento/widgets/menu_acoes_estufa.dart`
-  (−305 linhas na tela, 1.543 → 1.238).*
 - [ ] **B2. `estufa_routes.js`: 993 linhas, 20 rotas.** Mesma doença. Separar por
   assunto (leitura, comandos, push, chaves, agendamentos) deixaria cada arquivo
   com um motivo para mudar.
-- [x] **B3. Arquitetura pela metade.** Convivem duas organizações: `features/`
+- [ ] **B3. Arquitetura pela metade.** Convivem duas organizações: `features/`
   (agendamento, aparelho, home, monitoramento, notificacoes, relatorio_estufada)
   e as pastas por camada na raiz (`screens/`, `services/`, `widgets/`, `utils/`,
   `models/`). Uma migração começou e parou. Enquanto durar, ninguém sabe onde pôr
-  arquivo novo. *Documentado em `ARQUITETURA.md`: destino é feature-first,
-  regra de bolso definida, migração por oportunidade.*
-- [x] **B4. Arquivo morto:** `features/monitoramento/widgets/relatorio_estufada_button.dart`
-  não é importado por ninguém. *Removido.*
-- [x] **B5. Plataforma web mantida sem uso real.** 31 usos de `kIsWeb` e **quatro
+  arquivo novo.
+- [ ] **B4. Arquivo morto:** `features/monitoramento/widgets/relatorio_estufada_button.dart`
+  não é importado por ninguém.
+- [ ] **B5. Plataforma web mantida sem uso real.** 31 usos de `kIsWeb` e **quatro
   pares** de arquivos `_web`/`_io`/`_stub` (`isar_service`, `csv_exporter`,
   `backup_file_service`, `browser_text_input`). O produto é Android. Isso é
-  código que ninguém executa e todo mundo lê. *Decisão: manter — a demo web serve
-  à banca do TCC. Registrado em `ARQUITETURA.md`.*
+  código que ninguém executa e todo mundo lê. Decidir: manter (e dizer por quê)
+  ou remover.
 
 ### 2.3 Baixa — higiene
 
-- [x] **C1. Ruído de log.** 36 `console.log` + 18 `debugPrint` sem níveis. Um
-  `LOG_LEVEL` mínimo evitaria escolher entre "cego" e "afogado". *Feito:
-  `LOG_LEVEL` (silencioso/erro/info/debug) em `estufa_server/log.js`, 12 testes.*
-- [x] **C2. `.g.dart` versionados** (≈8.500 linhas, 38% do app). É comum no
+- [ ] **C1. Ruído de log.** 36 `console.log` + 18 `debugPrint` sem níveis. Um
+  `LOG_LEVEL` mínimo evitaria escolher entre "cego" e "afogado".
+- [ ] **C2. `.g.dart` versionados** (≈8.500 linhas, 38% do app). É comum no
   ecossistema e a memória do projeto registra que regenerar já causou incidente —
-  **manter versionado**, mas dizer isso em algum lugar. *Documentado em
-  `ARQUITETURA.md` §4.*
+  **manter versionado**, mas dizer isso em algum lugar.
 - [ ] **C3. Documentação sem índice.** 21 arquivos em `docs/`, alguns já
   históricos. Um `docs/README.md` dizendo qual ler para quê.
 
@@ -117,23 +116,23 @@ Declarados porque o TCC deve declará-los, não porque dá para consertar hoje:
 
 Cada fase é commitável sozinha e deixa o sistema funcionando.
 
-### Fase 1 — Segurança e limpeza segura ✅
-- [x] A1 dependências
-- [x] A2 vazamento em erro
-- [x] A3 varredura de log
-- [x] B4 remover arquivo morto
+### Fase 1 — Segurança e limpeza segura
+- [x] A1 dependências (2 de 8 resolvidas; 6 declaradas com justificativa)
+- [x] A2 vazamento em erro (verificado, nada a fazer)
+- [x] A3 varredura de log (verificado, nada a fazer)
+- [ ] B4 remover arquivo morto
 
-### Fase 2 — Observabilidade ✅
-- [x] C1 níveis de log no servidor
+### Fase 2 — Observabilidade
+- [ ] C1 níveis de log no servidor
 
 ### Fase 3 — Quebrar os dois arquivos-deus
-- [x] B1 extrair o menu de `monitoramento_screen`
+- [ ] B1 extrair o menu de `monitoramento_screen`
 - [ ] B2 separar `estufa_routes` por assunto
 
 ### Fase 4 — Decidir a arquitetura
-- [x] B3 registrar o destino (feature-first) e migrar por oportunidade
-- [x] B5 decidir sobre a web (mantida: demo para a banca)
-- [x] C2 registrar a decisão sobre `.g.dart`
+- [ ] B3 registrar o destino e migrar por oportunidade
+- [ ] B5 decidir sobre a web
+- [ ] C2 registrar a decisão sobre `.g.dart`
 
 ### Fase 5 — Documentação
 - [ ] C3 índice em `docs/`
