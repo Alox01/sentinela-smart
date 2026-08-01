@@ -20,3 +20,7 @@ coverage/
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+# Aponta para docs/CONVENCOES.md. Fica fora do versionamento porque o
+# repositorio e trabalho academico e nao precisa anunciar ferramenta.
+CLAUDE.md
