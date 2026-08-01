@@ -9,6 +9,7 @@ import '../features/monitoramento/services/monitoramento_repository.dart';
 import '../features/monitoramento/services/rastreador_conexao.dart';
 import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
+import '../features/monitoramento/widgets/itens_menu_estufa.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
 import '../features/agendamento/screens/agendamentos_screen.dart';
@@ -651,7 +652,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               ),
             ),
             const Divider(color: Colors.white12, height: 1),
-            _tituloMenu('CONEXÃO'),
+            const TituloMenu('CONEXÃO'),
             ListTile(
               leading: const Icon(
                 Icons.info_outline_rounded,
@@ -687,13 +688,19 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
             // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
             // solto no fim daquela lista.
             const Divider(color: Colors.white12, height: 1),
-            _tituloMenu('AVISOS'),
+            const TituloMenu('AVISOS'),
             _itemSilenciarAvisos(),
-            _itemVigilancia(),
-            _itemSireneDoAparelho(),
+            ItemVigilancia(
+              vigiada: PushNotificationService.instance.vigiada(
+                (widget.idHardware ?? api.idHardware)?.trim(),
+              ),
+              semIdHardware:
+                  ((widget.idHardware ?? api.idHardware)?.trim() ?? '').isEmpty,
+            ),
+            ItemSireneDoAparelho(ativa: _buzzerAparelhoAtivo),
             _itemCompartilharAcesso(),
             const Divider(color: Colors.white12, height: 1),
-            _tituloMenu('AÇÕES RÁPIDAS'),
+            const TituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
               leading: const Icon(
                 Icons.alarm_add_outlined,
@@ -918,83 +925,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     if (mounted) setState(() {});
   }
 
-  // Uma estufa que nao esta inscrita para avisos e IDENTICA a uma inscrita, na
-  // tela. Foi assim que um aparelho ficou 24 h fora do ar sem nenhum aviso sair,
-  // e so apareceu ao olhar o banco da nuvem. Este item existe para esse estado
-  // deixar de ser invisivel.
-  Widget _itemVigilancia() {
-    final id = (widget.idHardware ?? api.idHardware)?.trim();
-    final vigiada = PushNotificationService.instance.vigiada(id);
-    final semId = id == null || id.isEmpty;
 
-    final (titulo, legenda, cor) = switch (vigiada) {
-      true => (
-        'Avisos no celular: ativos',
-        'Este celular é avisado se algo acontecer com esta estufa.',
-        Colors.white70,
-      ),
-      false when semId => (
-        'Avisos no celular: NÃO ativos',
-        'Esta estufa ainda não sabe de qual aparelho é, então não há como '
-            'avisar. Conecte-se a ela na rede local uma vez, ou informe o ID '
-            'no cadastro.',
-        Colors.orangeAccent,
-      ),
-      false => (
-        'Avisos no celular: NÃO ativos',
-        'Não consegui inscrever este celular. Abra o app com internet para '
-            'tentar de novo.',
-        Colors.orangeAccent,
-      ),
-      null => (
-        'Avisos no celular',
-        'Conferindo...',
-        Colors.white38,
-      ),
-    };
-
-    return ListTile(
-      leading: Icon(
-        vigiada == false
-            ? Icons.notifications_off_outlined
-            : Icons.notifications_active_outlined,
-        color: cor,
-      ),
-      title: Text(titulo, style: TextStyle(color: cor)),
-      subtitle: Text(
-        legenda,
-        style: const TextStyle(color: Colors.white38, fontSize: 12),
-      ),
-    );
-  }
-
-  // Informativo, nao acao: a troca e no aparelho, segurando o botao 3 s. Existe
-  // porque o interruptor global da tela de notificacoes e uma ordem para todos
-  // os aparelhos, e nao um espelho de cada um - dois podem estar diferentes, e
-  // so aqui da para saber qual e qual.
-  Widget _itemSireneDoAparelho() {
-    final ativo = _buzzerAparelhoAtivo;
-    return ListTile(
-      // Mesmo icone do cartao "Alarme dos aparelhos" na tela de notificacoes:
-      // e o mesmo assunto - a sirene do aparelho -, entao icones diferentes
-      // sugeririam coisas diferentes. Nao muda com o estado, que ja esta escrito
-      // no titulo (e nao existe variante "campaign off" no Material).
-      leading: const Icon(Icons.campaign_outlined, color: Colors.white70),
-      title: Text(
-        ativo == null
-            ? 'Sirene do aparelho'
-            : 'Sirene do aparelho: ${ativo ? 'ligada' : 'desligada'}',
-        style: const TextStyle(color: Colors.white),
-      ),
-      subtitle: Text(
-        ativo == null
-            ? 'Aguardando o aparelho informar'
-            : 'Para ligar e desligar, segure o botão do alarme no aparelho '
-                  'por 3 s.',
-        style: const TextStyle(color: Colors.white38, fontSize: 12),
-      ),
-    );
-  }
 
   String _descreverEstadoAparelho() {
     // Estufa sem id de aparelho nao esta offline: o app simplesmente nao sabe
@@ -1027,20 +958,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     return resto == 0 ? '${horas}h' : '${horas}h ${resto}min';
   }
 
-  Widget _tituloMenu(String texto) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: Text(
-        texto,
-        style: const TextStyle(
-          color: Colors.white38,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.0,
-        ),
-      ),
-    );
-  }
 
   // Puxar a tela para baixo, no topo, atualiza a leitura na hora e sincroniza
   // os ajustes que ficaram pendentes - o mesmo que o item do menu fazia, mas

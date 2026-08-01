@@ -65,10 +65,16 @@ funciona:
 
 ### 2.2 Média — dívida que já cobrou juros esta semana
 
-- [ ] **B1. `monitoramento_screen.dart`: 1.543 linhas, 45 métodos.** É a tela
-  onde mais bugs de campo apareceram, e não por acaso: mistura estado de
-  conexão, silenciamento, agendamento, menu, diálogos e ciclo de vida. Extrair o
-  menu (que virou uma tela dentro da tela) é o corte de maior retorno.
+- [ ] **B1. `monitoramento_screen.dart`: era 1.543 linhas, 45 métodos.** É a
+  tela onde mais bugs de campo apareceram, e não por acaso: mistura estado de
+  conexão, silenciamento, agendamento, menu, diálogos e ciclo de vida.
+  *Primeiro corte feito (1.543 → 1.460): os três itens **informativos** do menu
+  viraram widgets em `features/monitoramento/widgets/itens_menu_estufa.dart`.
+  Foram escolhidos por não dependerem de nada que a tela faz — recebem um valor
+  e desenham, então a extração não pôde mudar comportamento.*
+  **Falta o corte grande:** a casca do menu depende de 5 valores e 3 ações da
+  tela, e extraí-la cria um widget com ~13 parâmetros. Vale fazer, mas em sessão
+  com orçamento inteiro para verificar — não no fim de uma longa.
 - [ ] **B2. `estufa_routes.js`: 993 linhas, 20 rotas.** Mesma doença. Separar por
   assunto (leitura, comandos, push, chaves, agendamentos) deixaria cada arquivo
   com um motivo para mudar.
