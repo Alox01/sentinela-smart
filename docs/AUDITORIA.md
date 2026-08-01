@@ -75,9 +75,22 @@ funciona:
   **Falta o corte grande:** a casca do menu depende de 5 valores e 3 ações da
   tela, e extraí-la cria um widget com ~13 parâmetros. Vale fazer, mas em sessão
   com orçamento inteiro para verificar — não no fim de uma longa.
-- [ ] **B2. `estufa_routes.js`: 993 linhas, 20 rotas.** Mesma doença. Separar por
-  assunto (leitura, comandos, push, chaves, agendamentos) deixaria cada arquivo
-  com um motivo para mudar.
+- [x] **B2. `estufa_routes.js`: era 993 linhas, 20 rotas.** Mesma doença.
+  *Separado por assunto. `estufa_routes.js` ficou com 84 linhas e nenhuma regra
+  de negócio: cria o estado, liga os avisos e pendura os grupos (só a rota
+  `/versao`, que fala do servidor e não da estufa, ficou nele). Os grupos:
+  `rotas_leitura` (status, histórico, ingestão), `rotas_comandos`
+  (sincronizar, caixa de comandos, botão físico), `rotas_agendamentos`,
+  `rotas_push` (cadastro de token e testes) e `rotas_chaves`.*
+  *Dois módulos a mais, e são eles que tornavam o corte difícil:
+  `estado_estufa.js` guarda o que as rotas dividem — estado ao vivo, caixa de
+  comandos pendentes, LWW — atrás de nomes em vez de `Map`s soltos; e
+  `alertas_push.js` decide **quando** avisar (bordas, watchdog), separado das
+  rotas de push, que só dizem **quem** recebe.*
+  *Contrato preservado: `createEstufaRouter` recebe os mesmos parâmetros.
+  Verificado com o inventário de rotas (método+caminho+porteira) idêntico ao de
+  antes, os 191 testes passando e um servidor de fumaça confirmando que as 20
+  rotas respondem e que caminho desconhecido ainda dá 404.*
 - [ ] **B3. Arquitetura pela metade.** Convivem duas organizações: `features/`
   (agendamento, aparelho, home, monitoramento, notificacoes, relatorio_estufada)
   e as pastas por camada na raiz (`screens/`, `services/`, `widgets/`, `utils/`,
@@ -136,7 +149,7 @@ Cada fase é commitável sozinha e deixa o sistema funcionando.
 
 ### Fase 3 — Quebrar os dois arquivos-deus
 - [ ] B1 extrair o menu de `monitoramento_screen`
-- [ ] B2 separar `estufa_routes` por assunto
+- [x] B2 separar `estufa_routes` por assunto
 
 ### Fase 4 — Decidir a arquitetura
 - [ ] B3 registrar o destino e migrar por oportunidade
