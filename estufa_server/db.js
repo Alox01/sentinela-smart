@@ -1,3 +1,5 @@
+const { log } = require('./log');
+
 let Pool;
 
 try {
@@ -23,7 +25,7 @@ function criarConfigSsl(env = process.env) {
   // "self-signed certificate in certificate chain"). A conexao segue cifrada;
   // para validar de verdade, baixe o CA do painel do Supabase (Settings >
   // Database > SSL) e cole o PEM em DB_SSL_CA.
-  console.warn(
+  log.erro(
     'DB_SSL_CA nao configurado: conexao com o banco cifrada, mas sem validar ' +
       'o certificado. Configure DB_SSL_CA para validacao completa.',
   );

@@ -24,6 +24,7 @@ const {
 } = require('./persistence_scheduler');
 const { iniciarRetencao, lerDiasRetencao } = require('./retention_scheduler');
 const { criarEnviadorPush } = require('./push');
+const { log } = require('./log');
 
 const app = express();
 const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
@@ -36,16 +37,16 @@ const PERMITIR_SEM_TOKEN =
 const politicaToken = avaliarTokenApi(API_TOKEN);
 if (!politicaToken.ok) {
   if (PERMITIR_SEM_TOKEN) {
-    console.warn(
+    log.erro(
       `ATENCAO: ${politicaToken.motivo}. Servidor subindo SEM protecao de ` +
         'token (PERMITIR_SEM_TOKEN=true). Use apenas em desenvolvimento local.',
     );
   } else {
-    console.error(
+    log.erro(
       `ERRO: ${politicaToken.motivo}. Configure ESTUFA_API_TOKEN com um token ` +
         'forte (>= 8 caracteres, nao trivial) antes de iniciar o servidor.',
     );
-    console.error(
+    log.erro(
       'Para desenvolvimento local sem token, defina PERMITIR_SEM_TOKEN=true.',
     );
     process.exit(1);
@@ -131,39 +132,39 @@ app.use(
   }),
 );
 
-console.log('>>> SERVIDOR DE ESTUFA INICIADO (MODO SIMULACAO) <<<');
+log.info('>>> SERVIDOR DE ESTUFA INICIADO (MODO SIMULACAO) <<<');
 if (API_TOKEN.trim()) {
-  console.log('Autenticacao habilitada por token.');
+  log.info('Autenticacao habilitada por token.');
 } else {
-  console.log('Autenticacao desabilitada (token nao configurado).');
+  log.info('Autenticacao desabilitada (token nao configurado).');
 }
 if (ALLOWED_ORIGINS.trim()) {
-  console.log(`CORS restrito para: ${ALLOWED_ORIGINS}`);
+  log.info(`CORS restrito para: ${ALLOWED_ORIGINS}`);
 } else {
-  console.log('CORS liberado para desenvolvimento local.');
+  log.info('CORS liberado para desenvolvimento local.');
 }
 if (db.estaHabilitado()) {
-  console.log('Banco PostgreSQL conectado.');
+  log.info('Banco PostgreSQL conectado.');
   if (PERSISTIR_LOCAL) {
-    console.log(
+    log.info(
       `Persistencia local ligada: leituras periodicas a cada ${Math.round(
         PERSIST_READINGS_INTERVAL_MS / 1000,
       )}s.`,
     );
   } else {
-    console.log('Persistencia local desligada (modo aparelho): a nuvem grava via /leitura.');
+    log.info('Persistencia local desligada (modo aparelho): a nuvem grava via /leitura.');
   }
 } else {
-  console.log(`Persistencia PostgreSQL desabilitada: ${db.motivoDesabilitado()}`);
+  log.info(`Persistencia PostgreSQL desabilitada: ${db.motivoDesabilitado()}`);
 }
 if (PUSH_TARGET_URL) {
-  console.log(
+  log.info(
     `ESP32 virtual: empurrando leituras para ${PUSH_TARGET_URL} a cada ${Math.round(
       PUSH_INTERVAL_MS / 1000,
     )}s.`,
   );
 } else {
-  console.log('ESP32 virtual (push HTTP) desabilitado: PUSH_TARGET_URL nao configurada.');
+  log.info('ESP32 virtual (push HTTP) desabilitado: PUSH_TARGET_URL nao configurada.');
 }
 
 async function iniciarServidor() {
@@ -175,13 +176,13 @@ async function iniciarServidor() {
       const statusPersistido = await db.carregarUltimaLeitura();
       simulador.aplicarStatusPersistido(statusPersistido);
     } catch (error) {
-      console.error('Falha ao carregar estado persistido:', error.message);
+      log.erro('Falha ao carregar estado persistido:', error.message);
     }
   }
 
   app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}!`);
-    console.log(`Teste de leitura: GET http://localhost:${PORT}/status`);
+    log.info(`Servidor rodando na porta ${PORT}!`);
+    log.info(`Teste de leitura: GET http://localhost:${PORT}/status`);
   });
 
   if (PERSISTIR_LOCAL) {
@@ -195,7 +196,7 @@ async function iniciarServidor() {
 
   iniciarRetencao({ db, diasRetencao: RETENCAO_DIAS });
   if (db.estaHabilitado()) {
-    console.log(`Retencao de leituras: janela de ${RETENCAO_DIAS} dias.`);
+    log.info(`Retencao de leituras: janela de ${RETENCAO_DIAS} dias.`);
   }
 
   if (PUSH_TARGET_URL) {
@@ -219,7 +220,7 @@ async function iniciarServidor() {
 
   if (KEEP_ALIVE_URL) {
     iniciarKeepAlive({ url: KEEP_ALIVE_URL });
-    console.log(`Keep-alive ativo para ${KEEP_ALIVE_URL}.`);
+    log.info(`Keep-alive ativo para ${KEEP_ALIVE_URL}.`);
   }
 }
 

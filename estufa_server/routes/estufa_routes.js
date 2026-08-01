@@ -7,6 +7,7 @@ const {
 } = require('../sync');
 const { criarPayloadEsp32 } = require('../esp32_payload');
 const { iniciarWatchdog } = require('../watchdog');
+const { log } = require('../log');
 const {
   iniciarAgendador,
   validarAgendamento,
@@ -104,7 +105,7 @@ function createEstufaRouter({
         await db.removerTokensPushInvalidos(invalidos);
       }
     } catch (error) {
-      console.error('Falha ao notificar push:', error.message);
+      log.erro('Falha ao notificar push:', error.message);
     }
   }
 
@@ -250,11 +251,11 @@ function createEstufaRouter({
           }
         }
         if (pendentes.length > 0) {
-          console.log(`Comandos pendentes restaurados: ${pendentes.length}`);
+          log.debug(`Comandos pendentes restaurados: ${pendentes.length}`);
         }
       })
       .catch((error) => {
-        console.error('Falha ao restaurar comandos pendentes:', error.message);
+        log.erro('Falha ao restaurar comandos pendentes:', error.message);
       });
   }
 
@@ -266,7 +267,7 @@ function createEstufaRouter({
     comandosPendentes.set(idHardware, fundido);
     if (db?.salvarComandoPendente) {
       db.salvarComandoPendente(idHardware, fundido).catch((error) => {
-        console.error('Falha ao persistir comando pendente:', error.message);
+        log.erro('Falha ao persistir comando pendente:', error.message);
       });
     }
   }
@@ -291,7 +292,7 @@ function createEstufaRouter({
       } else {
         guardarComandoPendente(idHardware, comando);
       }
-      console.log(
+      log.debug(
         `Agendamento aplicado (${idHardware}): ${JSON.stringify(comando)}`,
       );
     },
@@ -330,14 +331,14 @@ function createEstufaRouter({
       comandosPendentes.delete(idHardware);
       if (db?.removerComandoPendente) {
         db.removerComandoPendente(idHardware).catch((error) => {
-          console.error('Falha ao limpar comando pendente:', error.message);
+          log.erro('Falha ao limpar comando pendente:', error.message);
         });
       }
     } else {
       comandosPendentes.set(idHardware, restante);
       if (db?.salvarComandoPendente) {
         db.salvarComandoPendente(idHardware, restante).catch((error) => {
-          console.error('Falha ao persistir comando pendente:', error.message);
+          log.erro('Falha ao persistir comando pendente:', error.message);
         });
       }
     }
@@ -448,7 +449,7 @@ function createEstufaRouter({
     } catch (error) {
       // O detalhe fica no log: mensagens de erro do banco podem expor caminhos
       // e configuracao internos a qualquer cliente.
-      console.error('Falha ao carregar historico:', error.message);
+      log.erro('Falha ao carregar historico:', error.message);
       res.status(500).json({ erro: 'Falha ao carregar historico' });
     }
   });
@@ -486,7 +487,7 @@ function createEstufaRouter({
       try {
         await db.salvarComandoSync(configDoApp, resultado);
       } catch (error) {
-        console.error('Falha ao salvar comando no banco:', error.message);
+        log.erro('Falha ao salvar comando no banco:', error.message);
       }
       res.json(resultado);
       return;
@@ -496,7 +497,7 @@ function createEstufaRouter({
     try {
       await db.salvarComandoSync(configDoApp, resultado);
     } catch (error) {
-      console.error('Falha ao salvar comando no banco:', error.message);
+      log.erro('Falha ao salvar comando no banco:', error.message);
     }
     res.json(resultado);
   });
@@ -558,7 +559,7 @@ function createEstufaRouter({
       );
       res.json({ sucesso: true, id: id === null ? null : String(id) });
     } catch (error) {
-      console.error('Falha ao salvar agendamento:', error.message);
+      log.erro('Falha ao salvar agendamento:', error.message);
       res.status(500).json({ sucesso: false, erro: 'Falha ao salvar' });
     }
   });
@@ -577,7 +578,7 @@ function createEstufaRouter({
       const agendamentos = await db.listarAgendamentos(String(idHardware));
       res.json({ idHardware, agendamentos });
     } catch (error) {
-      console.error('Falha ao listar agendamentos:', error.message);
+      log.erro('Falha ao listar agendamentos:', error.message);
       res.status(500).json({ erro: 'Falha ao listar' });
     }
   });
@@ -599,7 +600,7 @@ function createEstufaRouter({
       );
       res.json({ sucesso: removido });
     } catch (error) {
-      console.error('Falha ao remover agendamento:', error.message);
+      log.erro('Falha ao remover agendamento:', error.message);
       res.status(500).json({ sucesso: false, erro: 'Falha ao remover' });
     }
   });
@@ -632,7 +633,7 @@ function createEstufaRouter({
       });
       res.json({ sucesso: true, registrado: true, push: Boolean(push?.habilitado) });
     } catch (error) {
-      console.error('Falha ao registrar dispositivo push:', error.message);
+      log.erro('Falha ao registrar dispositivo push:', error.message);
       res.status(500).json({ erro: 'Falha ao registrar dispositivo' });
     }
   });
@@ -665,7 +666,7 @@ function createEstufaRouter({
       );
       res.json({ sucesso: true, removidas });
     } catch (error) {
-      console.error('Falha ao reconciliar inscricoes push:', error.message);
+      log.erro('Falha ao reconciliar inscricoes push:', error.message);
       res.status(500).json({ erro: 'Falha ao reconciliar' });
     }
   });
@@ -688,7 +689,7 @@ function createEstufaRouter({
       });
       res.json({ sucesso: true });
     } catch (error) {
-      console.error('Falha ao remover dispositivo push:', error.message);
+      log.erro('Falha ao remover dispositivo push:', error.message);
       res.status(500).json({ erro: 'Falha ao remover dispositivo' });
     }
   });
@@ -704,7 +705,7 @@ function createEstufaRouter({
       await vigia.verificar();
       res.json({ sucesso: true });
     } catch (error) {
-      console.error('Falha ao verificar silencio:', error.message);
+      log.erro('Falha ao verificar silencio:', error.message);
       res.status(500).json({ erro: 'Falha ao verificar silencio' });
     }
   });
@@ -720,7 +721,7 @@ function createEstufaRouter({
       await agendador.verificar();
       res.json({ sucesso: true });
     } catch (error) {
-      console.error('Falha ao verificar agendamentos:', error.message);
+      log.erro('Falha ao verificar agendamentos:', error.message);
       res.status(500).json({ erro: 'Falha ao verificar agendamentos' });
     }
   });
@@ -763,7 +764,7 @@ function createEstufaRouter({
       }
       res.status(503).json({ sucesso: false, erro: estado });
     } catch (error) {
-      console.error('Falha ao registrar chave do aparelho:', error.message);
+      log.erro('Falha ao registrar chave do aparelho:', error.message);
       res.status(500).json({ erro: 'Falha ao registrar chave' });
     }
   });
@@ -808,7 +809,7 @@ function createEstufaRouter({
       }
       res.status(503).json({ sucesso: false, erro: estado });
     } catch (error) {
-      console.error('Falha ao rotacionar chave do aparelho:', error.message);
+      log.erro('Falha ao rotacionar chave do aparelho:', error.message);
       res.status(500).json({ erro: 'Falha ao rotacionar chave' });
     }
   });
@@ -855,7 +856,7 @@ function createEstufaRouter({
       }
       res.json({ sucesso: true, enviados, inscritos: inscritos.length });
     } catch (error) {
-      console.error('Falha no push de teste:', error.message);
+      log.erro('Falha no push de teste:', error.message);
       res.status(500).json({ erro: 'Falha ao enviar push de teste' });
     }
   });
@@ -898,7 +899,7 @@ function createEstufaRouter({
       // Avisa o produtor no celular quando um problema COMECA. Nao aguarda: a
       // resposta ao aparelho nao pode depender do FCM.
       avaliarAlertas(idHw, status).catch((error) =>
-        console.error('Falha ao avaliar alertas:', error.message),
+        log.erro('Falha ao avaliar alertas:', error.message),
       );
     }
 
@@ -936,7 +937,7 @@ function createEstufaRouter({
       });
     } catch (error) {
       if (!buffer) {
-        console.error('Persistencia indisponivel:', error.message);
+        log.erro('Persistencia indisponivel:', error.message);
         res.status(503).json({
           sucesso: false,
           erro: 'Persistencia indisponivel',
@@ -954,7 +955,7 @@ function createEstufaRouter({
           motivoAmostragem: decisao.motivo,
         });
       } catch (erroBuffer) {
-        console.error('Falha ao guardar leitura no buffer:', erroBuffer.message);
+        log.erro('Falha ao guardar leitura no buffer:', erroBuffer.message);
         res.status(500).json({
           sucesso: false,
           erro: 'Falha ao guardar leitura no buffer',
@@ -980,7 +981,7 @@ function createEstufaRouter({
     try {
       await db.salvarConfiguracaoSnapshot(simulador.lerCompleto());
     } catch (error) {
-      console.error('Falha ao salvar ajuste fisico no banco:', error.message);
+      log.erro('Falha ao salvar ajuste fisico no banco:', error.message);
     }
     res.json({ msg: `Simulado botao fisico: ${tipo} -> ${valor}` });
   });

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { log } = require('./log');
 
 // [chaveDoAparelho] permite autorizar uma requisicao pela chave DAQUELE aparelho,
 // alem da chave global. Ela e consultada com o idHardware que a propria
@@ -47,7 +48,7 @@ function createAuthMiddleware(
         }
       } catch (error) {
         // Falha ao resolver a chave nao autoriza: nega, e o aparelho repete.
-        console.error('Falha ao verificar chave do aparelho:', error.message);
+        log.erro('Falha ao verificar chave do aparelho:', error.message);
         res.status(503).json({ erro: 'Indisponivel' });
         return;
       }

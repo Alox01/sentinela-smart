@@ -6,6 +6,8 @@
 // o estrago para no aparelho cuja chave vazou - e, de brinde, cada chave e
 // aleatoria e unica em vez de escolhida (e repetida) pelo produtor.
 
+const { log } = require('./log');
+
 const TEMPO_CACHE_MS = 60 * 1000;
 
 function criarRegistroDeChaves({ db, agora = () => Date.now() } = {}) {
@@ -24,7 +26,7 @@ function criarRegistroDeChaves({ db, agora = () => Date.now() } = {}) {
       } catch (error) {
         // Falha ao ler nao pode virar "aparelho sem chave", que liberaria o
         // registro TOFU de um aparelho que ja tem dono. Mantem o cache anterior.
-        console.error('Falha ao carregar chaves de aparelhos:', error.message);
+        log.erro('Falha ao carregar chaves de aparelhos:', error.message);
       } finally {
         carregando = null;
       }

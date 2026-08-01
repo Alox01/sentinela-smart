@@ -1,6 +1,7 @@
 const logica = require('./logica');
 const { StatusEstufa, ConfiguracaoAlvo } = require('./classes');
 const { aplicarSincronizacao } = require('./sync');
+const { log } = require('./log');
 
 const ID_HARDWARE = 'ESP32_REALISTIC_V2';
 
@@ -65,8 +66,8 @@ setInterval(() => {
         break;
     }
 
-    console.log(`\n>>> [EVENTO] ${nomeCenario}! <<<`);
-    console.log(`    Temp mudou ${deltaT.toFixed(0)} F | Umid mudou ${deltaU.toFixed(0)}%`);
+    log.info(`\n>>> [EVENTO] ${nomeCenario}! <<<`);
+    log.info(`    Temp mudou ${deltaT.toFixed(0)} F | Umid mudou ${deltaU.toFixed(0)}%`);
 
     statusFisico.temperaturaAtual += deltaT;
     statusFisico.umidadeAtual += deltaU;
@@ -158,7 +159,7 @@ module.exports = {
         configPersistida.modoSilenciosoTimestamp;
     }
 
-    console.log(
+    log.info(
       `Config persistida carregada: ${configLocal.temperaturaMeta} F / ${configLocal.umidadeMeta}%`,
     );
     return true;
@@ -219,7 +220,7 @@ module.exports = {
       statusFisico.umidificadorLigado = statusPersistido.umidificadorLigado;
     }
 
-    console.log(
+    log.info(
       `Status persistido carregado: ${statusFisico.temperaturaAtual} F / ${statusFisico.umidadeAtual}%`,
     );
     return true;
@@ -240,13 +241,13 @@ module.exports = {
             - Math.abs(statusFisico.temperaturaAtual - alvoAnterior),
         ),
       };
-      console.log(`Novo ajuste de temperatura aceito: ${configLocal.temperaturaMeta} F`);
+      log.debug(`Novo ajuste de temperatura aceito: ${configLocal.temperaturaMeta} F`);
     }
     if (resultado.alteracoesAplicadas.includes('umidadeMeta')) {
-      console.log(`Novo ajuste de umidade aceito: ${configLocal.umidadeMeta}%`);
+      log.debug(`Novo ajuste de umidade aceito: ${configLocal.umidadeMeta}%`);
     }
     if (resultado.alteracoesAplicadas.includes('modoSilencioso')) {
-      console.log(`Modo silencioso atualizado: ${configLocal.modoSilencioso}`);
+      log.info(`Modo silencioso atualizado: ${configLocal.modoSilencioso}`);
     }
 
     return resultado;
@@ -267,7 +268,7 @@ module.exports = {
       };
       configLocal.temperaturaMeta = valor;
       configLocal.tempTimestamp = agora;
-      console.log(`Botao fisico alterou ajuste de temperatura para ${valor} F`);
+      log.info(`Botao fisico alterou ajuste de temperatura para ${valor} F`);
     }
   },
 };

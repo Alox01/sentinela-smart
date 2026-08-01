@@ -77,8 +77,8 @@ funciona:
   e as pastas por camada na raiz (`screens/`, `services/`, `widgets/`, `utils/`,
   `models/`). Uma migração começou e parou. Enquanto durar, ninguém sabe onde pôr
   arquivo novo.
-- [ ] **B4. Arquivo morto:** `features/monitoramento/widgets/relatorio_estufada_button.dart`
-  não é importado por ninguém.
+- [x] **B4. Arquivo morto:** `features/monitoramento/widgets/relatorio_estufada_button.dart`
+  não era importado por ninguém. *Removido.*
 - [ ] **B5. Plataforma web mantida sem uso real.** 31 usos de `kIsWeb` e **quatro
   pares** de arquivos `_web`/`_io`/`_stub` (`isar_service`, `csv_exporter`,
   `backup_file_service`, `browser_text_input`). O produto é Android. Isso é
@@ -87,8 +87,11 @@ funciona:
 
 ### 2.3 Baixa — higiene
 
-- [ ] **C1. Ruído de log.** 36 `console.log` + 18 `debugPrint` sem níveis. Um
-  `LOG_LEVEL` mínimo evitaria escolher entre "cego" e "afogado".
+- [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
+  `LOG_LEVEL` (silencioso/erro/info/debug), 6 testes. Todos os 54 `console.*`
+  do servidor migrados — não sobrou nenhum fora dos testes. A narração de ciclo
+  do simulador virou `debug` e some em produção. Os 18 `debugPrint` do app
+  ficaram: lá o Flutter já os descarta em release.*
 - [ ] **C2. `.g.dart` versionados** (≈8.500 linhas, 38% do app). É comum no
   ecossistema e a memória do projeto registra que regenerar já causou incidente —
   **manter versionado**, mas dizer isso em algum lugar.
@@ -120,10 +123,10 @@ Cada fase é commitável sozinha e deixa o sistema funcionando.
 - [x] A1 dependências (2 de 8 resolvidas; 6 declaradas com justificativa)
 - [x] A2 vazamento em erro (verificado, nada a fazer)
 - [x] A3 varredura de log (verificado, nada a fazer)
-- [ ] B4 remover arquivo morto
+- [x] B4 remover arquivo morto
 
-### Fase 2 — Observabilidade
-- [ ] C1 níveis de log no servidor
+### Fase 2 — Observabilidade ✅
+- [x] C1 níveis de log no servidor
 
 ### Fase 3 — Quebrar os dois arquivos-deus
 - [ ] B1 extrair o menu de `monitoramento_screen`
