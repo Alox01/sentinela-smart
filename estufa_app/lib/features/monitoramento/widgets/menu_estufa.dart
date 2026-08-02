@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../agendamento/screens/agendamentos_screen.dart';
 import '../../home/models/convite_estufa.dart';
+import '../../home/screens/compartilhar_acesso_screen.dart';
 import '../../notificacoes/models/preferencias_notificacao.dart';
 import '../../notificacoes/services/preferencias_notificacao_service.dart';
 import '../../notificacoes/services/push_notification_service.dart';
@@ -377,6 +377,11 @@ class _ItemSilenciarAvisos extends StatelessWidget {
 /// comandar - faltava o segundo receber a chave. A outra via seria o modo de
 /// configuracao, que derruba o aparelho do ar enquanto dura; no meio de uma
 /// estufada isso e caro.
+///
+/// O item so abre a tela. Antes ele chamava o compartilhamento do sistema
+/// direto; agora ha duas formas de entregar o convite (QR e texto), e a escolha
+/// entre elas tem consequencia — o texto fica gravado na conversa de quem
+/// recebe, com a chave dentro. Escolha com consequencia precisa de tela.
 class _ItemCompartilharAcesso extends StatelessWidget {
   final DadosMenuEstufa dados;
 
@@ -396,27 +401,19 @@ class _ItemCompartilharAcesso extends StatelessWidget {
       ),
       onTap: () {
         Navigator.of(context).pop();
-        unawaited(_compartilhar());
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CompartilharAcessoScreen(
+              convite: ConviteEstufa(
+                nome: dados.nomeEstufa,
+                endereco: dados.ipEstufa,
+                chave: dados.tokenAcesso,
+                idHardware: dados.idHardware,
+              ),
+            ),
+          ),
+        );
       },
-    );
-  }
-
-  Future<void> _compartilhar() async {
-    final convite = ConviteEstufa(
-      nome: dados.nomeEstufa,
-      endereco: dados.ipEstufa,
-      chave: dados.tokenAcesso,
-      idHardware: dados.idHardware,
-    ).codificar();
-
-    // O aviso vai junto no texto, nao so na tela: quem recebe pode nao ser quem
-    // leu a tela, e o convite carrega a chave da estufa.
-    await Share.share(
-      'Convite para acompanhar a estufa "${dados.nomeEstufa}" no Sentinela.\n'
-      'No app, toque em Nova Estufa e depois em "Colar convite".\n'
-      'Mande só para quem pode comandar a estufa.\n\n'
-      '$convite',
-      subject: 'Acesso à estufa ${dados.nomeEstufa}',
     );
   }
 }

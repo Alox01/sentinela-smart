@@ -6,10 +6,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../features/home/models/convite_estufa.dart';
 import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
+import '../features/home/widgets/ouvinte_convite_link.dart';
 import '../features/notificacoes/screens/notificacoes_screen.dart';
 import '../services/backup_file_service.dart';
 import '../services/isar_service.dart';
@@ -48,6 +50,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // O ouvinte fica aqui, e nao acima do `MaterialApp`, para reusar este
+    // caminho inteiro: o mesmo formulario, a mesma recarga da lista e o mesmo
+    // aviso de "Estufa cadastrada" do botao "Adicionar estufa". Um convite que
+    // chega pelo QR nao deveria terminar diferente de um digitado a mao.
+    return OuvinteConviteLink(
+      aoReceber: (convite) => _abrirFormularioEstufa(convite: convite),
+      child: _buildHome(context),
+    );
+  }
+
+  Widget _buildHome(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0E1012),
       appBar: AppBar(
@@ -170,9 +183,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _abrirFormularioEstufa({ModeloEstufa? estufa}) async {
+  Future<void> _abrirFormularioEstufa({
+    ModeloEstufa? estufa,
+    ConviteEstufa? convite,
+  }) async {
     final salvo = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => EstufaFormScreen(estufa: estufa)),
+      MaterialPageRoute(
+        builder: (_) => EstufaFormScreen(estufa: estufa, convite: convite),
+      ),
     );
 
     if (salvo != true || !mounted) return;

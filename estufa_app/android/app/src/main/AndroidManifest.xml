@@ -40,6 +40,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- O convite por QR. Quem recebe aponta a CAMERA NORMAL do celular
+                 para o codigo: ele carrega `sentinela://convite?c=...`, e e este
+                 filtro que faz o Android oferecer o Sentinela para abri-lo.
+                 Sem leitor de QR embutido, e portanto sem permissao de camera.
+
+                 BROWSABLE e obrigatorio - e a categoria que a camera (e o
+                 navegador) usam ao entregar um endereco. Sem ela o filtro
+                 existe e nunca casa: falha calada, que so aparece com o QR na
+                 mao. O host restringe ao nosso assunto, para o app nao se
+                 oferecer para qualquer `sentinela://`.
+
+                 A activity ja e `singleTop`: com o app aberto, o convite chega
+                 por `onNewIntent` na mesma tela, sem reiniciar o app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="sentinela" android:host="convite"/>
+            </intent-filter>
         </activity>
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"

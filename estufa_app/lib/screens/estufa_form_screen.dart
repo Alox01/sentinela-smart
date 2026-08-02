@@ -14,7 +14,14 @@ import '../utils/browser_text_input.dart';
 class EstufaFormScreen extends StatefulWidget {
   final ModeloEstufa? estufa;
 
-  const EstufaFormScreen({super.key, this.estufa});
+  /// Convite ja lido, para o formulario nascer preenchido.
+  ///
+  /// E o caminho do QR: quem aponta a camera nao passa por "Colar convite" —
+  /// cai direto aqui, com os campos prontos. Mesmo destino, mesma tela e mesmo
+  /// preenchimento do caminho de texto; muda so quem entrega o convite.
+  final ConviteEstufa? convite;
+
+  const EstufaFormScreen({super.key, this.estufa, this.convite});
 
   @override
   State<EstufaFormScreen> createState() => _EstufaFormScreenState();
@@ -51,6 +58,11 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     _idHardwareController = TextEditingController(
       text: widget.estufa?.idHardware ?? '',
     );
+
+    final convite = widget.convite;
+    // Sem `setState`: ainda nao houve `build`, e os controladores acabaram de
+    // nascer. O primeiro desenho ja sai preenchido.
+    if (convite != null) _aplicarConvite(convite);
   }
 
   @override
@@ -367,21 +379,26 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       );
       return;
     }
-    setState(() {
-      // O nome e sugestao: cada um chama a estufa como quiser, e o app ja
-      // respeita isso nas notificacoes.
-      if (_nomeController.text.trim().isEmpty) {
-        _nomeController.text = convite.nome;
-      }
-      _ipController.text = convite.endereco;
-      if (convite.chave != null) _chaveController.text = convite.chave!;
-      if (convite.idHardware != null) {
-        _idHardwareController.text = convite.idHardware!;
-      }
-    });
+    setState(() => _aplicarConvite(convite));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Convite lido: ${convite.nome}. Confira e salve.')),
     );
+  }
+
+  /// Derrama o convite nos campos. Vale para os dois caminhos — o texto colado
+  /// e o QR lido pela camera —, para nao existir a chance de um deles preencher
+  /// um campo a menos que o outro.
+  void _aplicarConvite(ConviteEstufa convite) {
+    // O nome e sugestao: cada um chama a estufa como quiser, e o app ja
+    // respeita isso nas notificacoes.
+    if (_nomeController.text.trim().isEmpty) {
+      _nomeController.text = convite.nome;
+    }
+    _ipController.text = convite.endereco;
+    if (convite.chave != null) _chaveController.text = convite.chave!;
+    if (convite.idHardware != null) {
+      _idHardwareController.text = convite.idHardware!;
+    }
   }
 
   Widget _buildAtalhoConfigurar() {
