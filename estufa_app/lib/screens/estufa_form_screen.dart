@@ -74,13 +74,35 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     super.dispose();
   }
 
-  /// Nome da outra estufa que ja usa [ip], ou nulo se o endereco esta livre.
+  /// Outra estufa que ja e ESTE aparelho, ou que ja usa este endereco.
+  ///
+  /// Duas perguntas, porque uma so nao basta. O endereco e texto: o mesmo
+  /// aparelho pode estar cadastrado como `192.168.0.50` num celular e como
+  /// `sentinela-215788.local` noutro, e comparar texto nao acusa. O convite por
+  /// QR tornou isso comum, porque o segundo celular recebe o endereco tal como o
+  /// primeiro escreveu. Ja o `idHardware` e identidade de verdade — vem do MAC
+  /// do chip e nao muda.
+  ///
   /// A propria estufa em edicao nao conta.
-  Future<String?> _estufaComMesmoEndereco(String ip) async {
+  Future<({String nome, bool mesmoAparelho})?> _conflitoDeCadastro(
+    String ip,
+    String? idHardware,
+  ) async {
     final estufas = await IsarService.instance.listarEstufas();
+    final id = idHardware?.trim();
     for (final outra in estufas) {
       if (_editando && outra.id == widget.estufa!.id) continue;
-      if (outra.ip.trim().toLowerCase() == ip.toLowerCase()) return outra.nome;
+      final outroId = outra.idHardware?.trim();
+      if (id != null &&
+          id.isNotEmpty &&
+          outroId != null &&
+          outroId.isNotEmpty &&
+          outroId == id) {
+        return (nome: outra.nome, mesmoAparelho: true);
+      }
+      if (outra.ip.trim().toLowerCase() == ip.toLowerCase()) {
+        return (nome: outra.nome, mesmoAparelho: false);
+      }
     }
     return null;
   }
@@ -116,14 +138,22 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     // enderecos repetidos fazem duas estufas virarem a mesma - e uma passa a
     // exibir a leitura da outra sem nada na tela sugerir isso. Barrar aqui e a
     // unica forma de impedir na origem.
-    final conflito = await _estufaComMesmoEndereco(ip);
+    final conflito = await _conflitoDeCadastro(ip, idHardware);
     if (conflito != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          // Mensagens diferentes porque os consertos sao diferentes: endereco
+          // repetido se resolve trocando o endereco; aparelho repetido nao se
+          // resolve — a estufa ja esta ai, com outro nome.
           content: Text(
-            'A estufa "$conflito" já usa este endereço. Duas estufas no mesmo '
-            'endereço passam a mostrar os dados do mesmo aparelho.',
+            conflito.mesmoAparelho
+                ? 'Este aparelho já está cadastrado como "${conflito.nome}". '
+                      'Cadastrar de novo criaria duas estufas mostrando o '
+                      'mesmo aparelho.'
+                : 'A estufa "${conflito.nome}" já usa este endereço. Duas '
+                      'estufas no mesmo endereço passam a mostrar os dados do '
+                      'mesmo aparelho.',
           ),
           duration: const Duration(seconds: 6),
         ),
