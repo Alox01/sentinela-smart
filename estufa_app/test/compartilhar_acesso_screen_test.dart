@@ -74,12 +74,18 @@ void main() {
   ) async {
     await abrir(tester);
 
-    expect(find.textContaining('O QR não sai desta sala'), findsOneWidget);
+    // A tela NAO pode prometer que nao sobra copia: o Android guarda um
+    // instantaneo dela para a lista de Recentes, com o QR desenhado, e nada
+    // impede print. O contraste verdadeiro e sobre a conversa, nao sobre a sala.
+    expect(find.textContaining('não sai desta sala'), findsNothing);
     expect(
-      find.textContaining('fica gravado na conversa'),
+      find.textContaining('não fica gravado em conversa'),
       findsOneWidget,
       reason: 'é a única razão para preferir o QR quando os dois estão juntos',
     );
+    // A chave comanda de fora da rede, e o texto tem de dizer isso: lido como
+    // "so na minha rede", o produtor manda o convite com outro criterio.
+    expect(find.textContaining('de qualquer lugar, pela'), findsOneWidget);
     expect(
       find.text('O convite carrega a chave da estufa'),
       findsOneWidget,

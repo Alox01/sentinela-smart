@@ -22,7 +22,13 @@ import '../models/link_convite.dart';
 /// Convite mandado por mensagem **fica gravado na conversa**, com a chave da
 /// estufa dentro, para sempre — e a chave e do APARELHO: quem a tiver comanda.
 /// Apagar a mensagem do proprio celular nao apaga a do outro, nem o backup dela.
-/// O QR aparece na tela, e sai da tela; nao sobra copia em lugar nenhum.
+/// O QR nao fica gravado em conversa nenhuma.
+///
+/// **Nao confundir com "nao sobra copia em lugar nenhum"**, que seria mentira: o
+/// Android tira um instantaneo desta tela para a lista de Recentes, com o QR
+/// desenhado nele, e nada aqui impede print nem gravacao. Cumprir aquilo exigiria
+/// FLAG_SECURE por MethodChannel. O que se afirma e o contraste verdadeiro: a
+/// mensagem persiste na conversa, o QR nao.
 ///
 /// Isso esta dito na tela, e nao so aqui, porque quem compartilha e quem decide
 /// — e a decisao acontece na hora de escolher entre os dois botoes.
@@ -259,7 +265,9 @@ class _AvisoDaChave extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Quem tem a chave comanda a estufa. Mande só para quem pode.',
+                  'Quem tem a chave comanda a estufa de qualquer lugar, pela '
+                  'internet — não só dentro da sua rede. Mande só para quem '
+                  'pode.',
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
@@ -268,10 +276,10 @@ class _AvisoDaChave extends StatelessWidget {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  'O QR não sai desta sala: aparece na tela e some. O convite '
-                  'mandado por mensagem fica gravado na conversa, com a chave '
-                  'dentro, para sempre — apagar do seu celular não apaga do '
-                  'outro. Estando os dois juntos, prefira o QR.',
+                  'O QR não fica gravado em conversa nenhuma. O convite '
+                  'mandado por mensagem fica, com a chave dentro, para sempre — '
+                  'apagar do seu celular não apaga do outro. Estando os dois '
+                  'juntos, prefira o QR.',
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
