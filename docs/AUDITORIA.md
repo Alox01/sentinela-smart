@@ -94,6 +94,15 @@ funciona:
   inventário da gaveta comparado linha a linha com o do `HEAD` — os 16 itens,
   na mesma ordem e nas mesmas seções, incluindo "Compartilhar acesso", que fica
   em AVISOS e não em AÇÕES RÁPIDAS.*
+  *Essa conferência virou teste: `estufa_app/test/menu_estufa_test.dart` (5
+  testes) monta `MenuEstufa` e afirma as 16 posições na ordem, as três seções e
+  a seção de cada item. Nenhuma mudança na produção foi necessária — os três
+  singletons que o menu toca já respondem sem inicialização (`Set` vazio,
+  preferências padrão) e o `PushNotificationService` só é alcançado ao tocar no
+  interruptor, o que o teste não faz. Provado com duas regressões plantadas —
+  apagar `ItemSireneDoAparelho` e apagar o título AVISOS: `flutter analyze`
+  continuou limpo nas duas, e o teste falhou (3 e 4 testes, respectivamente).
+  Total do app: **76 testes**.*
 - [x] **B2. `estufa_routes.js`: era 993 linhas, 20 rotas.** Mesma doença.
   *Separado por assunto. `estufa_routes.js` ficou com 84 linhas e nenhuma regra
   de negócio: cria o estado, liga os avisos e pendura os grupos (só a rota
