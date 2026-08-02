@@ -65,16 +65,35 @@ funciona:
 
 ### 2.2 Média — dívida que já cobrou juros esta semana
 
-- [ ] **B1. `monitoramento_screen.dart`: era 1.543 linhas, 45 métodos.** É a
+- [x] **B1. `monitoramento_screen.dart`: era 1.543 linhas, 45 métodos.** É a
   tela onde mais bugs de campo apareceram, e não por acaso: mistura estado de
   conexão, silenciamento, agendamento, menu, diálogos e ciclo de vida.
-  *Primeiro corte feito (1.543 → 1.460): os três itens **informativos** do menu
+  *Primeiro corte (1.543 → 1.460): os três itens **informativos** do menu
   viraram widgets em `features/monitoramento/widgets/itens_menu_estufa.dart`.
   Foram escolhidos por não dependerem de nada que a tela faz — recebem um valor
   e desenham, então a extração não pôde mudar comportamento.*
-  **Falta o corte grande:** a casca do menu depende de 5 valores e 3 ações da
-  tela, e extraí-la cria um widget com ~13 parâmetros. Vale fazer, mas em sessão
-  com orçamento inteiro para verificar — não no fim de uma longa.
+  *Segundo corte, o grande (1.460 → **1.193**): a gaveta inteira saiu para
+  `features/monitoramento/widgets/menu_estufa.dart` como `MenuEstufa`, que reusa
+  os três widgets acima. Saíram junto os itens que ainda viviam na tela —
+  silenciar avisos e compartilhar acesso —, com cinco métodos a menos no `State`
+  (`_itemSilenciarAvisos`, `_legendaSilenciarAvisos`, `_silenciarAvisos`,
+  `_itemCompartilharAcesso`, `_compartilharAcesso`).*
+  *O acoplamento era real e continua sendo, só que agora está declarado:
+  **agrupado em dois objetos** — `DadosMenuEstufa` (11 valores) e
+  `AcoesMenuEstufa` (3 callbacks) — em vez de ~13 posições soltas. Descartada a
+  outra saída, deixar na tela os itens com estado e passá-los prontos como
+  `Widget`: ela dividiria os itens da gaveta entre dois arquivos, e o risco
+  desta extração é exatamente sumir um item sem ninguém notar. Além disso, o
+  caso tido como claro — silenciar avisos — não mexe em estado da tela: lê os
+  singletons `SilenciamentoEstufas` e `PreferenciasNotificacaoService`, sem
+  tocar em campo do `State` nem chamar `setState`. Ficaram na tela só as três
+  ações que dependem mesmo dela: detalhes da conexão, configurar aparelho e
+  reiniciar ajustes.*
+  *Verificado: `flutter analyze` sem nenhum problema, **71 testes** passando (os
+  mesmos de antes), APK de release construído com o `--dart-define`, e o
+  inventário da gaveta comparado linha a linha com o do `HEAD` — os 16 itens,
+  na mesma ordem e nas mesmas seções, incluindo "Compartilhar acesso", que fica
+  em AVISOS e não em AÇÕES RÁPIDAS.*
 - [x] **B2. `estufa_routes.js`: era 993 linhas, 20 rotas.** Mesma doença.
   *Separado por assunto. `estufa_routes.js` ficou com 84 linhas e nenhuma regra
   de negócio: cria o estado, liga os avisos e pendura os grupos (só a rota
@@ -147,8 +166,8 @@ Cada fase é commitável sozinha e deixa o sistema funcionando.
 ### Fase 2 — Observabilidade ✅
 - [x] C1 níveis de log no servidor
 
-### Fase 3 — Quebrar os dois arquivos-deus
-- [ ] B1 extrair o menu de `monitoramento_screen`
+### Fase 3 — Quebrar os dois arquivos-deus ✅
+- [x] B1 extrair o menu de `monitoramento_screen` (1.460 → 1.193)
 - [x] B2 separar `estufa_routes` por assunto
 
 ### Fase 4 — Decidir a arquitetura

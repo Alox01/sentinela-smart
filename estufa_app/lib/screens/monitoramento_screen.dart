@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../features/monitoramento/dialogs/detalhes_conexao_dialog.dart';
 import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
@@ -9,15 +8,11 @@ import '../features/monitoramento/services/monitoramento_repository.dart';
 import '../features/monitoramento/services/rastreador_conexao.dart';
 import '../features/monitoramento/widgets/alerta_monitoramento_banner.dart';
 import '../features/monitoramento/widgets/estufada_atual_card.dart';
-import '../features/monitoramento/widgets/itens_menu_estufa.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
+import '../features/monitoramento/widgets/menu_estufa.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
-import '../features/agendamento/screens/agendamentos_screen.dart';
-import '../features/home/models/convite_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
-import '../features/notificacoes/models/preferencias_notificacao.dart';
-import '../features/notificacoes/services/preferencias_notificacao_service.dart';
 import '../features/notificacoes/services/push_notification_service.dart';
 import '../features/notificacoes/services/silenciamento_estufas.dart';
 import '../models/ciclo_secagem_entity.dart';
@@ -26,7 +21,6 @@ import '../services/isar_service.dart';
 import '../services/monitor_estufas.dart';
 import '../widgets/painel_controle.dart';
 import 'historico_screen.dart';
-import '../features/relatorio_estufada/screens/gerenciar_estufadas_screen.dart';
 
 class MonitoramentoScreen extends StatefulWidget {
   // Identifica a estufa no registro de monitores, para esta tela e o card da
@@ -531,247 +525,30 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     Navigator.of(context).pop();
   }
 
-  // Silenciar os avisos do app SO desta estufa (fogo e sem comunicacao nunca
-  // calam). Escopo por aparelho, diferente das preferencias globais da home.
-  Widget _itemSilenciarAvisos() {
-    final idHw = widget.idHardware ?? api.idHardware;
-    return AnimatedBuilder(
-      // Escuta tambem as preferencias globais: elas mandam no que este
-      // interruptor pode prometer, entao a legenda tem que acompanhar.
-      animation: Listenable.merge([
-        SilenciamentoEstufas.instance,
-        PreferenciasNotificacaoService.instance,
-      ]),
-      builder: (context, _) {
-        final silenciada = SilenciamentoEstufas.instance.silenciada(idHw);
-        return SwitchListTile(
-          // Icone e interruptor acompanham o TITULO, nao o centro do item. A
-          // legenda muda de tamanho conforme as configuracoes gerais, e sem
-          // isto o sino afundava justamente nos casos de texto mais longo.
-          isThreeLine: true,
-          secondary: Icon(
-            silenciada
-                ? Icons.notifications_off_outlined
-                : Icons.notifications_active_outlined,
-            color: Colors.white70,
-          ),
-          // Curto como os vizinhos: o cabecalho do menu ja diz de qual estufa
-          // sao estas acoes, e a secao acima ja diz que sao avisos.
-          title: const Text(
-            'Silenciar avisos',
-            style: TextStyle(color: Colors.white),
-          ),
-          subtitle: Text(
-            idHw == null
-                ? 'Conecte o aparelho uma vez para poder silenciar.'
-                : _legendaSilenciarAvisos(),
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
-          ),
-          value: silenciada,
-          onChanged: idHw == null
-              ? null
-              : (v) => unawaited(_silenciarAvisos(idHw, v)),
-        );
-      },
-    );
-  }
-
-  /// A promessa de que incendio e sem comunicacao continuam avisando so vale se
-  /// eles estiverem ligados nas configuracoes gerais - o silenciamento por
-  /// estufa nunca LIGA um aviso que o produtor desligou no global, so desliga os
-  /// demais. Quando o global ja desligou um deles, a legenda diz isso em vez de
-  /// prometer um aviso que nao vira.
-  String _legendaSilenciarAvisos() {
-    final prefs = PreferenciasNotificacaoService.instance.preferencias;
-    // Os dois avisos de risco de fogo (chama no sensor e temperatura acima do
-    // limite) contam como um so aqui: a legenda diz o que o produtor precisa
-    // saber - se sobra algum aviso de fogo -, sem virar uma lista.
-    final fogo =
-        prefs.opcao(EventoNotificacao.incendio).notificar ||
-        prefs.opcao(EventoNotificacao.temperaturaMuitoAlta).notificar;
-    final semComunicacao = prefs
-        .opcao(EventoNotificacao.semComunicacao)
-        .notificar;
-
-    if (fogo && semComunicacao) {
-      return 'Incêndio e sem comunicação continuam avisando.';
-    }
-    if (!fogo && !semComunicacao) return 'Nada será avisado.';
-    return fogo
-        ? 'Só incêndio continua avisando.'
-        : 'Só sem comunicação continua avisando.';
-  }
-
-  Future<void> _silenciarAvisos(String idHardware, bool silenciar) async {
-    await SilenciamentoEstufas.instance.definir(idHardware, silenciar);
-    // Reenvia as preferencias deste aparelho: o servidor passa a suprimir (ou
-    // liberar) os avisos nao-criticos so desta estufa.
-    await PushNotificationService.instance.atualizarPreferenciasDispositivo(
-      idHardware: idHardware,
-      tokenAcesso: widget.tokenAcesso,
-    );
-  }
-
+  /// Monta a gaveta. Os valores vao num objeto e as tres acoes noutro: o menu
+  /// depende de doze coisas desta tela, e doze posicoes soltas no construtor
+  /// eram o convite a trocar dois `String?` de lugar sem o compilador reclamar.
+  /// O porque da divisao esta em `menu_estufa.dart`.
   Widget _buildMenuEstufa() {
-    return Drawer(
-      backgroundColor: const Color(0xFF17191D),
-      child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                // Nome primeiro, rotulo embaixo — mesma ordem da barra do
-                // monitoramento. O nome e o contexto (de qual estufa sao as
-                // acoes); com "ACOES" em cima parecia que o nome pertencia a
-                // uma secao chamada Acoes.
-                children: [
-                  Text(
-                    widget.nomeEstufa,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'AÇÕES',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(color: Colors.white12, height: 1),
-            const TituloMenu('CONEXÃO'),
-            ListTile(
-              leading: const Icon(
-                Icons.info_outline_rounded,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Detalhes da conexão',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                _mostrarDetalhesConexao();
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.settings_outlined,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Configurar aparelho',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                'Trocar o Wi-Fi ou a chave',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                unawaited(_reconfigurarAparelho());
-              },
-            ),
-            // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
-            // solto no fim daquela lista.
-            const Divider(color: Colors.white12, height: 1),
-            const TituloMenu('AVISOS'),
-            _itemSilenciarAvisos(),
-            ItemVigilancia(
-              vigiada: PushNotificationService.instance.vigiada(
-                (widget.idHardware ?? api.idHardware)?.trim(),
-              ),
-              semIdHardware:
-                  ((widget.idHardware ?? api.idHardware)?.trim() ?? '').isEmpty,
-            ),
-            ItemSireneDoAparelho(ativa: _buzzerAparelhoAtivo),
-            _itemCompartilharAcesso(),
-            const Divider(color: Colors.white12, height: 1),
-            const TituloMenu('AÇÕES RÁPIDAS'),
-            ListTile(
-              leading: const Icon(
-                Icons.alarm_add_outlined,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Agendar ajuste',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                'Agenda ajustes de temperatura/umidade para um determinado '
-                'tempo',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AgendamentosScreen(
-                      idEstufa: widget.idEstufa,
-                      nomeEstufa: widget.nomeEstufa,
-                      idHardware: widget.idHardware ?? api.idHardware,
-                      tokenAcesso: widget.tokenAcesso,
-                      temperaturaAtual: tempAjuste,
-                      umidadeAtual: umidAjuste,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.restart_alt, color: Colors.white70),
-              title: const Text(
-                'Reiniciar ajustes do aparelho',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: Text(
-                'Reinicia os valores de temperatura e umidade para '
-                '${_tempNovaEstufada.toStringAsFixed(0)}°F e '
-                '${_umidNovaEstufada.toStringAsFixed(0)}%',
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                _prepararNovaEstufada();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.white70),
-              title: const Text(
-                'Apagar estufadas',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                'Remove relatórios',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => GerenciarEstufadasScreen(
-                      nomeEstufa: widget.nomeEstufa,
-                      ipEstufa: widget.ipEstufa,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+    final idHw = widget.idHardware ?? api.idHardware;
+    return MenuEstufa(
+      dados: DadosMenuEstufa(
+        idEstufa: widget.idEstufa,
+        nomeEstufa: widget.nomeEstufa,
+        ipEstufa: widget.ipEstufa,
+        tokenAcesso: widget.tokenAcesso,
+        idHardware: idHw,
+        temperaturaAjuste: tempAjuste,
+        umidadeAjuste: umidAjuste,
+        buzzerAparelhoAtivo: _buzzerAparelhoAtivo,
+        vigiada: PushNotificationService.instance.vigiada(idHw?.trim()),
+        temperaturaNovaEstufada: _tempNovaEstufada,
+        umidadeNovaEstufada: _umidNovaEstufada,
+      ),
+      acoes: AcoesMenuEstufa(
+        aoAbrirDetalhesConexao: () => unawaited(_mostrarDetalhesConexao()),
+        aoConfigurarAparelho: () => unawaited(_reconfigurarAparelho()),
+        aoReiniciarAjustes: () => unawaited(_prepararNovaEstufada()),
       ),
     );
   }
@@ -865,50 +642,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  /// Manda para outro celular da familia o que ele precisa para acompanhar e
-  /// comandar esta estufa.
-  ///
-  /// A chave e do APARELHO, nao do celular, entao vario celulares ja podiam
-  /// comandar - faltava o segundo receber a chave. A outra via seria o modo de
-  /// configuracao, que derruba o aparelho do ar enquanto dura; no meio de uma
-  /// estufada isso e caro.
-  Widget _itemCompartilharAcesso() {
-    return ListTile(
-      leading: const Icon(Icons.group_add_outlined, color: Colors.white70),
-      title: const Text(
-        'Compartilhar acesso',
-        style: TextStyle(color: Colors.white),
-      ),
-      subtitle: const Text(
-        'Manda para outro celular acompanhar e comandar esta estufa',
-        style: TextStyle(color: Colors.white38, fontSize: 12),
-      ),
-      onTap: () {
-        Navigator.of(context).pop();
-        unawaited(_compartilharAcesso());
-      },
-    );
-  }
-
-  Future<void> _compartilharAcesso() async {
-    final convite = ConviteEstufa(
-      nome: widget.nomeEstufa,
-      endereco: widget.ipEstufa,
-      chave: widget.tokenAcesso,
-      idHardware: widget.idHardware ?? api.idHardware,
-    ).codificar();
-
-    // O aviso vai junto no texto, nao so na tela: quem recebe pode nao ser quem
-    // leu a tela, e o convite carrega a chave da estufa.
-    await Share.share(
-      'Convite para acompanhar a estufa "${widget.nomeEstufa}" no Sentinela.\n'
-      'No app, toque em Nova Estufa e depois em "Colar convite".\n'
-      'Mande só para quem pode comandar a estufa.\n\n'
-      '$convite',
-      subject: 'Acesso à estufa ${widget.nomeEstufa}',
     );
   }
 
