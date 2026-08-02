@@ -48,6 +48,61 @@ App: `flutter test` dentro de `estufa_app`.
   confirmação tocam mesmo com ela desligada, e a notificação do celular é canal
   separado, com preferências próprias.
 
+## Onde vai um arquivo novo
+
+Convivem duas organizações no app, porque uma migração começou e parou:
+`features/<assunto>/` e as pastas por camada na raiz (`screens/`, `services/`,
+`widgets/`, `utils/`, `models/`). Sem destino declarado, cada um decide sozinho —
+e já aconteceu: uma tela nova criou `features/home/screens/` porque a pasta não
+existia, sem que isso fosse decisão de ninguém.
+
+**O destino é `features/`.** Regra de bolso:
+
+- **Tem dono claro?** (agendamento, notificações, monitoramento, aparelho, home,
+  relatório) → `features/<assunto>/` — com `models/`, `screens/`, `services/`,
+  `widgets/` dentro, conforme precisar.
+- **Serve a todo mundo?** (`api_service`, `isar_service`, `monitor_estufas`, as
+  entidades do Isar) → fica onde está, na raiz. É infraestrutura, não assunto.
+- **Na dúvida entre dois assuntos**, escolha o que *usa*, não o que *parece*.
+
+**Migração por oportunidade, nunca em bloco.** Mover arquivo em massa produz um
+commit gigante que ninguém revisa e apaga o histórico de quem mexeu no quê. Ao
+tocar num arquivo da raiz que tem dono claro, mova-o **no mesmo commit** se for
+barato; se não for, deixe.
+
+O que sobrou na raiz hoje (`screens/`, três widgets, `utils/`) é legado, não
+modelo a seguir.
+
+## Plataforma web — pendência com prazo
+
+O app tem `web/`, 31 desvios `kIsWeb` e quatro pares `_web`/`_io`/`_stub`
+(`isar_service`, `csv_exporter`, `backup_file_service`, `browser_text_input`).
+O produto é Android; a web nunca foi usada em campo.
+
+**Mantida por ora, sem decisão tomada** (01/08/2026): pode servir de
+demonstração na banca. Enquanto durar, quem mexer nesses quatro assuntos precisa
+lembrar que existe o outro lado.
+
+**Decidir antes de começar a escrita do TCC.** Manter "por via das dúvidas" é
+como dívida técnica costuma nascer, e cada desvio é um caminho a mais onde um
+defeito se esconde.
+
+## Arquivos gerados (`.g.dart`)
+
+Os `.g.dart` do Isar são **versionados de propósito** — ~8.500 linhas, 38% do
+app. Não é descuido: eles precisam estar em sincronia com os modelos, e já houve
+incidente de código gerado desatualizado derrubando o app no boot
+(`IsarError: Collection id is invalid`).
+
+Portanto: **ao mexer numa entidade do Isar, regenere e commite junto.**
+
+```
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Não confundir com os `generated_*` de `linux/macos/windows`, que o Flutter
+regera a cada build e **não entram em commit**.
+
 ## Onde está o plano
 
 - `AUDITORIA.md` — dívida técnica, com caixas de progresso. **É a fila de

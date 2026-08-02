@@ -119,18 +119,25 @@ funciona:
   Verificado com o inventário de rotas (método+caminho+porteira) idêntico ao de
   antes, os 191 testes passando e um servidor de fumaça confirmando que as 20
   rotas respondem e que caminho desconhecido ainda dá 404.*
-- [ ] **B3. Arquitetura pela metade.** Convivem duas organizações: `features/`
+- [x] **B3. Arquitetura pela metade.** Convivem duas organizações: `features/`
   (agendamento, aparelho, home, monitoramento, notificacoes, relatorio_estufada)
   e as pastas por camada na raiz (`screens/`, `services/`, `widgets/`, `utils/`,
   `models/`). Uma migração começou e parou. Enquanto durar, ninguém sabe onde pôr
-  arquivo novo.
+  arquivo novo. *Destino declarado em `CONVENCOES.md`: `features/` é o alvo,
+  infraestrutura fica na raiz, e a migração é **por oportunidade** — mover em
+  bloco produz um commit que ninguém revisa e apaga o histórico de quem mexeu no
+  quê. Motivado por um caso real: uma tela nova criou `features/home/screens/`
+  porque a pasta não existia, sem que isso fosse decisão de ninguém.*
 - [x] **B4. Arquivo morto:** `features/monitoramento/widgets/relatorio_estufada_button.dart`
   não era importado por ninguém. *Removido.*
-- [ ] **B5. Plataforma web mantida sem uso real.** 31 usos de `kIsWeb` e **quatro
+- [x] **B5. Plataforma web mantida sem uso real.** 31 usos de `kIsWeb` e **quatro
   pares** de arquivos `_web`/`_io`/`_stub` (`isar_service`, `csv_exporter`,
   `backup_file_service`, `browser_text_input`). O produto é Android. Isso é
-  código que ninguém executa e todo mundo lê. Decidir: manter (e dizer por quê)
-  ou remover.
+  código que ninguém executa e todo mundo lê. *Decisão do produtor (01/08/2026):
+  **não sabe se vai usar** — pode servir de demonstração na banca. Mantida por
+  ora, registrada em `CONVENCOES.md` como pendência **com prazo**: decidir antes
+  de começar a escrita do TCC. Manter "por via das dúvidas" é como dívida
+  técnica nasce.*
 
 ### 2.3 Baixa — higiene
 
@@ -139,9 +146,11 @@ funciona:
   do servidor migrados — não sobrou nenhum fora dos testes. A narração de ciclo
   do simulador virou `debug` e some em produção. Os 18 `debugPrint` do app
   ficaram: lá o Flutter já os descarta em release.*
-- [ ] **C2. `.g.dart` versionados** (≈8.500 linhas, 38% do app). É comum no
+- [x] **C2. `.g.dart` versionados** (≈8.500 linhas, 38% do app). É comum no
   ecossistema e a memória do projeto registra que regenerar já causou incidente —
-  **manter versionado**, mas dizer isso em algum lugar.
+  **manter versionado**. *Dito em `CONVENCOES.md`, com a regra que faltava:
+  ao mexer numa entidade do Isar, regenerar e commitar junto — foi código
+  gerado desatualizado que derrubou o app no boot.*
 - [ ] **C3. Documentação sem índice.** 21 arquivos em `docs/`, alguns já
   históricos. Um `docs/README.md` dizendo qual ler para quê.
 
@@ -179,10 +188,10 @@ Cada fase é commitável sozinha e deixa o sistema funcionando.
 - [x] B1 extrair o menu de `monitoramento_screen` (1.460 → 1.193)
 - [x] B2 separar `estufa_routes` por assunto
 
-### Fase 4 — Decidir a arquitetura
-- [ ] B3 registrar o destino e migrar por oportunidade
-- [ ] B5 decidir sobre a web
-- [ ] C2 registrar a decisão sobre `.g.dart`
+### Fase 4 — Decidir a arquitetura ✅
+- [x] B3 registrar o destino e migrar por oportunidade
+- [x] B5 web mantida por ora, com prazo para decidir
+- [x] C2 registrar a decisão sobre `.g.dart`
 
 ### Fase 5 — Documentação
 - [ ] C3 índice em `docs/`
