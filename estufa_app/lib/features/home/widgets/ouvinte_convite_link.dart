@@ -26,9 +26,9 @@ import '../models/link_convite.dart';
 ///
 /// [enderecos] existe para o teste. O caminho de verdade — camera, Android,
 /// intent — nao cabe em teste automatizado, mas o que este widget faz **com** o
-/// endereco cabe: filtrar o que nao e convite nosso e nao abrir dois cadastros
-/// ao mesmo tempo. Sem a costura, essa parte so seria conferida com dois
-/// celulares na mao.
+/// endereco cabe: calar diante do que nao e nosso, avisar quando e nosso e
+/// chegou estragado, e nao abrir dois cadastros ao mesmo tempo. Sem a costura,
+/// essa parte so seria conferida com dois celulares na mao.
 class OuvinteConviteLink extends StatefulWidget {
   final Widget child;
 
@@ -81,11 +81,31 @@ class _OuvinteConviteLinkState extends State<OuvinteConviteLink> {
   }
 
   Future<void> _aoChegar(Uri endereco) async {
-    // O app pode ser acordado por endereco que nao e convite (ou por convite
-    // estragado no caminho). Nesse caso nao ha nada a fazer e nada a dizer: o
-    // produtor nao pediu isto, e um erro na tela so o assustaria.
+    if (_atendendo || !mounted) return;
+
+    // O app pode ser acordado por endereco que nao e nosso. Ai nao ha nada a
+    // fazer e nada a dizer: o produtor nao pediu isto, e um erro na tela so o
+    // assustaria.
+    if (!LinkConvite.enderecoDeConvite(endereco)) return;
+
+    // Daqui para baixo ele PEDIU: apontou a camera, o Android ofereceu o
+    // Sentinela e ele tocou. Calar agora e deixa-lo com um app que abriu e nao
+    // fez nada — sem mensagem, sem pista, e no celular de outra pessoa. Vai
+    // acontecer: `decodificar` recusa de proposito formato que nao conhece,
+    // entao um celular com app antigo lendo convite de formato novo cai
+    // exatamente aqui.
     final convite = LinkConvite.ler(endereco);
-    if (convite == null || _atendendo || !mounted) return;
+    if (convite == null) {
+      // O mesmo aviso do "Colar convite", pela mesma razao: o conserto e o
+      // mesmo, e duas frases para a mesma situacao acabam divergindo.
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(ConviteEstufa.avisoIlegivel),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
 
     _atendendo = true;
     try {

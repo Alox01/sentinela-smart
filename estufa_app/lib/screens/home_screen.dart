@@ -187,20 +187,25 @@ class _HomeScreenState extends State<HomeScreen> {
     ModeloEstufa? estufa,
     ConviteEstufa? convite,
   }) async {
-    final salvo = await Navigator.of(context).push<bool>(
+    final resultado = await Navigator.of(context).push<ResultadoFormEstufa>(
       MaterialPageRoute(
         builder: (_) => EstufaFormScreen(estufa: estufa, convite: convite),
       ),
     );
 
-    if (salvo != true || !mounted) return;
+    if (resultado == null || !mounted) return;
     await _carregarEstufas();
     if (!mounted) return;
 
+    // Quem diz o que aconteceu e o formulario, nao esta tela: um convite de
+    // aparelho ja cadastrado entra por "Adicionar estufa" e termina em
+    // atualizacao, e anunciar "cadastrada" ali seria contar outra historia.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          estufa == null ? 'Estufa cadastrada.' : 'Estufa atualizada.',
+          resultado == ResultadoFormEstufa.cadastrada
+              ? 'Estufa cadastrada.'
+              : 'Estufa atualizada.',
         ),
         duration: const Duration(seconds: 2),
       ),

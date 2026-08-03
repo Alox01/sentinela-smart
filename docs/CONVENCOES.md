@@ -122,5 +122,10 @@ perto do fim. Então:
   tela dão conflito silencioso.
 - **Quem escreve não verifica.** Conferir o próprio trabalho tende a acreditar em
   si mesmo; a conferência vale mais vinda de fora.
+- **Mutação de teste se desfaz com cópia, nunca com `git checkout`.** Provar que
+  um teste pega a regressão exige estragar o código de propósito — e desfazer
+  isso com `git checkout -- arquivo` **apaga todo o trabalho não commitado
+  daquele arquivo**, não só a estragadinha. Já aconteceu aqui, e custou a
+  reconstrução de uma tela inteira. Copie antes, restaure da cópia.
 - **Refatoração precisa de prova de que nada mudou** — inventário antes/depois,
   a suíte inteira, e um teste de fumaça que exercite o caminho real.

@@ -57,6 +57,52 @@ void main() {
     expect(endereco.queryParameters['c'], convite.codificar());
   });
 
+  // Duas perguntas diferentes, e o nulo de `ler` respondia as duas de uma vez:
+  // "isto nao era para nos" e "era para nos e nao deu para ler". Quem recebe
+  // precisa distinguir — a primeira pede silencio, a segunda pede aviso.
+  group('reconhece o endereço como nosso antes de ler o conteúdo', () {
+    test('convite bom é nosso', () {
+      expect(
+        LinkConvite.enderecoDeConvite(Uri.parse(LinkConvite.montar(convite))),
+        isTrue,
+      );
+    });
+
+    test('convite estragado continua sendo nosso', () {
+      // O caso do app antigo lendo convite de formato novo: o endereco casou o
+      // intent-filter, o Android abriu o Sentinela, e so o conteudo falhou.
+      final endereco = Uri.parse('sentinela://convite?c=bom%20dia');
+
+      expect(LinkConvite.enderecoDeConvite(endereco), isTrue);
+      expect(LinkConvite.ler(endereco), isNull);
+    });
+
+    test('endereço nosso sem o parâmetro continua sendo nosso', () {
+      expect(
+        LinkConvite.enderecoDeConvite(Uri.parse('sentinela://convite')),
+        isTrue,
+      );
+    });
+
+    test('outro esquema não é nosso', () {
+      expect(
+        LinkConvite.enderecoDeConvite(Uri.parse('https://convite?c=x')),
+        isFalse,
+      );
+    });
+
+    test('outro assunto no mesmo esquema não é nosso', () {
+      expect(
+        LinkConvite.enderecoDeConvite(Uri.parse('sentinela://ajuste?c=x')),
+        isFalse,
+      );
+    });
+
+    test('nenhum endereço não é nosso', () {
+      expect(LinkConvite.enderecoDeConvite(null), isFalse);
+    });
+  });
+
   group('endereço que não é convite nosso é recusado', () {
     test('outro esquema', () {
       expect(LinkConvite.ler(Uri.parse('https://convite?c=x')), isNull);

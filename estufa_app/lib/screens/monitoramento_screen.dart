@@ -11,6 +11,7 @@ import '../features/monitoramento/widgets/estufada_atual_card.dart';
 import '../features/monitoramento/widgets/leitura_aparelho_card.dart';
 import '../features/monitoramento/widgets/menu_estufa.dart';
 import '../features/monitoramento/widgets/monitoramento_app_bar.dart';
+import '../features/home/services/atualizacao_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/notificacoes/services/push_notification_service.dart';
@@ -492,21 +493,22 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
     if (dados == null || !mounted) return;
 
-    final chaveNova = dados.chave;
-    final enderecoNovo = dados.endereco;
-    final mudouChave = chaveNova != null && chaveNova != widget.tokenAcesso;
-    final mudouEndereco =
-        enderecoNovo != null && enderecoNovo != widget.ipEstufa;
-    if (!mudouChave && !mudouEndereco) return;
+    // A conta do "mudou?" e a gravacao sao as mesmas do convite de um aparelho
+    // ja cadastrado; ver `AtualizacaoDeEstufa`.
+    final mudanca = AtualizacaoDeEstufa.entre(
+      id: widget.idEstufa,
+      nome: widget.nomeEstufa,
+      enderecoAtual: widget.ipEstufa,
+      chaveAtual: widget.tokenAcesso,
+      idHardwareAtual: widget.idHardware ?? api.idHardware,
+      enderecoNovo: dados.endereco,
+      chaveNova: dados.chave,
+      idHardwareNovo: dados.idHardware,
+    );
+    if (mudanca == null) return;
 
     try {
-      await EstufasRepository(IsarService.instance).atualizar(
-        id: widget.idEstufa,
-        nome: widget.nomeEstufa,
-        ip: enderecoNovo ?? widget.ipEstufa,
-        tokenAcesso: chaveNova ?? widget.tokenAcesso,
-        idHardware: widget.idHardware ?? api.idHardware,
-      );
+      await mudanca.aplicar(EstufasRepository(IsarService.instance));
     } catch (erro) {
       debugPrint('Nao foi possivel atualizar a estufa: $erro');
       return;

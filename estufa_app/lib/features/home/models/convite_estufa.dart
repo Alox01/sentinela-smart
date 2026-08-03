@@ -14,6 +14,20 @@ class ConviteEstufa {
   /// vez de interpretado pela metade — meio cadastro e pior que nenhum.
   static const String _marca = 'SENTINELA1';
 
+  /// O que dizer quando o produtor PEDIU um convite e nao veio nada legivel.
+  ///
+  /// Mora aqui, e nao em cada tela, porque os dois caminhos de recebimento — o
+  /// texto colado e o QR — tem de dizer a mesma coisa. Enquanto cada um tinha a
+  /// sua, o do QR nao tinha nenhuma: calava, e a assimetria so aparecia com dois
+  /// celulares na mao.
+  ///
+  /// O conserto e sempre o mesmo, venha o convite por onde vier: pedir a
+  /// mensagem inteira a quem enviou e cola-la. Por isso o texto nao cita a area
+  /// de transferencia nem o QR — ele serve aos dois.
+  static const String avisoIlegivel =
+      'Não achei um convite. Copie a mensagem inteira que você recebeu e cole '
+      'em "Colar convite", ao adicionar a estufa.';
+
   final String nome;
   final String endereco;
   final String? chave;

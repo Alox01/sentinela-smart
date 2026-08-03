@@ -53,7 +53,9 @@ void main() {
                 (c) async {
                   recebidos.add(c);
                 },
-            child: const SizedBox.shrink(),
+            // Um `Scaffold` porque o ouvinte agora tem o que dizer em um dos
+            // casos, e o `ScaffoldMessenger` so desenha dentro de um.
+            child: const Scaffold(body: SizedBox.shrink()),
           ),
         ),
       );
@@ -76,14 +78,67 @@ void main() {
       await montar(tester);
 
       // O app pode ser acordado por qualquer coisa. Nenhum destes deve abrir
-      // cadastro, e nenhum deve virar erro na tela do produtor.
+      // cadastro, e nenhum deve virar erro na tela do produtor: ele nao pediu
+      // nada, e um aviso seria sobre um endereco que ele nem sabe que existe.
       sistema.add(Uri.parse('https://exemplo.com/qualquer'));
       sistema.add(Uri.parse('sentinela://ajuste?c=lixo'));
-      sistema.add(Uri.parse('sentinela://convite'));
-      sistema.add(Uri.parse('sentinela://convite?c=bom%20dia'));
       await tester.pump();
 
       expect(recebidos, isEmpty);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('convite nosso que chegou estragado NÃO falha em silêncio', (
+      tester,
+    ) async {
+      // O caso que este teste guarda: o produtor apontou a camera, o Android
+      // ofereceu o Sentinela, ele tocou — e o app abriu e nao fez nada. Sem
+      // mensagem, sem pista, no celular de outra pessoa. E vai acontecer:
+      // `decodificar` recusa de proposito o formato que nao conhece, entao um
+      // app antigo lendo convite de formato novo cai exatamente aqui.
+      await montar(tester);
+
+      sistema.add(Uri.parse('sentinela://convite?c=bom%20dia'));
+      await tester.pump();
+      await tester.pump(); // deixa o SnackBar entrar
+
+      expect(recebidos, isEmpty, reason: 'nao da para cadastrar meia estufa');
+      expect(find.text(ConviteEstufa.avisoIlegivel), findsOneWidget);
+    });
+
+    testWidgets('endereço nosso sem convite nenhum também avisa', (
+      tester,
+    ) async {
+      // Mesma situacao: o endereco e nosso, o produtor pediu, e nao ha o que
+      // cadastrar. Silencio aqui era indistinguivel de app quebrado.
+      await montar(tester);
+
+      sistema.add(Uri.parse('sentinela://convite'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(recebidos, isEmpty);
+      expect(find.text(ConviteEstufa.avisoIlegivel), findsOneWidget);
+    });
+
+    testWidgets('o aviso é o mesmo do caminho de "Colar convite"', (
+      tester,
+    ) async {
+      // A assimetria original: colar avisava, o QR calava. As duas frases sao
+      // agora a mesma constante — e este teste falha se alguem escrever de novo
+      // uma frase propria para um dos lados.
+      await montar(tester);
+      sistema.add(Uri.parse('sentinela://convite?c=nada%20disso'));
+      await tester.pump();
+      await tester.pump();
+
+      final aviso = tester.widget<Text>(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byType(Text),
+        ),
+      );
+      expect(aviso.data, ConviteEstufa.avisoIlegivel);
     });
 
     testWidgets('leitura dupla do mesmo QR não abre dois cadastros', (

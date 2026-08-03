@@ -44,21 +44,32 @@ class LinkConvite {
   static String montar(ConviteEstufa convite) =>
       '$esquema://$maquina?$parametro=${convite.codificar()}';
 
-  /// Le o convite de um endereco recebido pelo sistema. Devolve nulo para
-  /// qualquer coisa que nao seja um convite nosso — o app pode ser acordado por
-  /// endereco de outra origem, e meio cadastro e pior que nenhum.
-  static ConviteEstufa? ler(Uri? endereco) {
-    if (endereco == null) return null;
-    if (endereco.scheme.toLowerCase() != esquema) return null;
+  /// O endereco e ENDERECADO A NOS, mesmo que o conteudo esteja estragado.
+  ///
+  /// Separado de [ler] porque quem recebe precisa distinguir duas coisas que o
+  /// nulo de [ler] confundia: "isto nao era para o Sentinela" — a que so cabe
+  /// silencio — e "era para o Sentinela e nao deu para ler", em que alguem
+  /// apontou a camera, tocou no que o Android ofereceu, e merece saber por que
+  /// nada aconteceu.
+  static bool enderecoDeConvite(Uri? endereco) {
+    if (endereco == null) return false;
+    if (endereco.scheme.toLowerCase() != esquema) return false;
     // O Android entrega `sentinela://convite?...` com "convite" no host, mas
     // basta o esquema mudar de forma (`sentinela:convite?...`) para ele virar
     // caminho. Aceitar os dois evita uma falha que so aparece no aparelho.
     final alvo = endereco.host.isNotEmpty
         ? endereco.host
         : endereco.path.replaceAll('/', '');
-    if (alvo.toLowerCase() != maquina) return null;
+    return alvo.toLowerCase() == maquina;
+  }
 
-    final bruto = endereco.queryParameters[parametro];
+  /// Le o convite de um endereco recebido pelo sistema. Devolve nulo para
+  /// qualquer coisa que nao seja um convite nosso — o app pode ser acordado por
+  /// endereco de outra origem, e meio cadastro e pior que nenhum.
+  static ConviteEstufa? ler(Uri? endereco) {
+    if (!enderecoDeConvite(endereco)) return null;
+
+    final bruto = endereco!.queryParameters[parametro];
     if (bruto == null) return null;
     return ConviteEstufa.decodificar(bruto);
   }

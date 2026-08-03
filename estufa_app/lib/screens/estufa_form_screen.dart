@@ -7,9 +7,17 @@ import 'package:flutter/services.dart';
 import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/home/models/convite_estufa.dart';
 import '../features/home/models/modelo_estufa.dart';
+import '../features/home/services/atualizacao_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../services/isar_service.dart';
 import '../utils/browser_text_input.dart';
+
+/// O que o formulario fez, para quem o abriu poder anunciar a coisa certa.
+///
+/// Um convite de aparelho ja cadastrado entra por "Adicionar estufa" e termina
+/// em atualizacao. Sem isto a home diria "Estufa cadastrada" depois de uma
+/// atualizacao — contaria outra historia, e nenhuma estufa teria nascido.
+enum ResultadoFormEstufa { cadastrada, atualizada }
 
 class EstufaFormScreen extends StatefulWidget {
   final ModeloEstufa? estufa;
@@ -21,7 +29,17 @@ class EstufaFormScreen extends StatefulWidget {
   /// preenchimento do caminho de texto; muda so quem entrega o convite.
   final ConviteEstufa? convite;
 
-  const EstufaFormScreen({super.key, this.estufa, this.convite});
+  /// Injetavel pela mesma razao das outras costuras deste app: quem decide se
+  /// uma chave e sobrescrita mora aqui, e com o banco de verdade no meio isso
+  /// nunca seria conferido por teste nenhum.
+  final EstufasRepository? repositorio;
+
+  const EstufaFormScreen({
+    super.key,
+    this.estufa,
+    this.convite,
+    this.repositorio,
+  });
 
   @override
   State<EstufaFormScreen> createState() => _EstufaFormScreenState();
@@ -30,7 +48,15 @@ class EstufaFormScreen extends StatefulWidget {
 class _EstufaFormScreenState extends State<EstufaFormScreen> {
   static const int _limiteNomeEstufa = 24;
 
-  final EstufasRepository _repository = EstufasRepository(IsarService.instance);
+  late final EstufasRepository _repository =
+      widget.repositorio ?? EstufasRepository(IsarService.instance);
+
+  /// Chave e endereco vieram de um convite, e nao da mao de quem digita.
+  ///
+  /// E o que separa "tenho autoridade para sobrescrever a chave desta estufa" de
+  /// "isto e palpite": o convite vem de alguem que TEM a chave nova. Digitado a
+  /// mao, a recusa de sempre continua valendo.
+  bool _veioDeConvite = false;
   late final TextEditingController _nomeController;
   late final TextEditingController _ipController;
   late final TextEditingController _chaveController;
@@ -84,11 +110,11 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   /// do chip e nao muda.
   ///
   /// A propria estufa em edicao nao conta.
-  Future<({String nome, bool mesmoAparelho})?> _conflitoDeCadastro(
+  Future<({ModeloEstufa estufa, bool mesmoAparelho})?> _conflitoDeCadastro(
     String ip,
     String? idHardware,
   ) async {
-    final estufas = await IsarService.instance.listarEstufas();
+    final estufas = await _repository.listar();
     final id = idHardware?.trim();
     for (final outra in estufas) {
       if (_editando && outra.id == widget.estufa!.id) continue;
@@ -98,13 +124,99 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
           outroId != null &&
           outroId.isNotEmpty &&
           outroId == id) {
-        return (nome: outra.nome, mesmoAparelho: true);
+        return (estufa: outra, mesmoAparelho: true);
       }
       if (outra.ip.trim().toLowerCase() == ip.toLowerCase()) {
-        return (nome: outra.nome, mesmoAparelho: false);
+        return (estufa: outra, mesmoAparelho: false);
       }
     }
     return null;
+  }
+
+  /// Oferece atualizar a estufa que ja existe, em vez de recusar o convite.
+  ///
+  /// **Nunca grava sozinho.** Sobrescrever a chave com uma errada tira o acesso
+  /// do produtor ate ele ir fisicamente ate o aparelho, e nada na tela ligaria
+  /// uma coisa a outra depois. Por isso a confirmacao diz QUAL estufa muda, O
+  /// QUE muda, e o custo de aceitar por engano.
+  Future<void> _oferecerAtualizacao(
+    ModeloEstufa existente,
+    String ip,
+    String? chave,
+    String? idHardware,
+  ) async {
+    final mudanca = AtualizacaoDeEstufa.entre(
+      id: existente.id,
+      nome: existente.nome,
+      enderecoAtual: existente.ip,
+      chaveAtual: existente.tokenAcesso,
+      idHardwareAtual: existente.idHardware,
+      enderecoNovo: ip,
+      chaveNova: chave,
+      idHardwareNovo: idHardware,
+    );
+
+    // Convite igual ao que ja esta gravado. Pedir confirmacao sobre coisa
+    // nenhuma ensina a aceitar sem ler.
+    if (mudanca == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Não há o que atualizar: "${existente.nome}" já está com esta '
+            'chave e este endereço.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: Text(
+          // O nome, e nao "esta estufa": com duas cadastradas, sem ele nao ha
+          // como saber em qual se esta prestes a mexer.
+          'Atualizar "${existente.nome}"?',
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+        ),
+        content: Text(
+          'Este convite traz ${mudanca.oQueMuda} deste aparelho.\n\n'
+          'Se a chave estiver errada, a estufa para de responder até alguém ir '
+          'até ele e configurar de novo.',
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            // Diz o que vai acontecer, nao "OK": quem le precisa poder recusar
+            // sabendo o que estava prestes a ser gravado.
+            child: Text('Atualizar ${mudanca.oQueMuda}'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+
+    setState(() => _salvando = true);
+    try {
+      await mudanca.aplicar(_repository);
+      if (!mounted) return;
+      Navigator.of(context).pop(ResultadoFormEstufa.atualizada);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível atualizar a estufa. Tente de novo.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
   }
 
   Future<void> _salvar() async {
@@ -141,6 +253,17 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     final conflito = await _conflitoDeCadastro(ip, idHardware);
     if (conflito != null) {
       if (!mounted) return;
+      // Mesmo aparelho + convite = a chave girou la e alguem que a tem esta
+      // passando adiante. Ai cabe ATUALIZAR, nao recusar: recusar era um beco
+      // sem saida, porque nao havia outro caminho para a chave nova entrar.
+      //
+      // Digitado a mao, nao. Chave e endereco datilografados sao palpite, e nao
+      // ha autoridade nenhuma para sobrescrever a chave de uma estufa que
+      // funciona.
+      if (conflito.mesmoAparelho && _veioDeConvite) {
+        await _oferecerAtualizacao(conflito.estufa, ip, chave, idHardware);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           // Mensagens diferentes porque os consertos sao diferentes: endereco
@@ -148,12 +271,12 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
           // resolve — a estufa ja esta ai, com outro nome.
           content: Text(
             conflito.mesmoAparelho
-                ? 'Este aparelho já está cadastrado como "${conflito.nome}". '
-                      'Cadastrar de novo criaria duas estufas mostrando o '
-                      'mesmo aparelho.'
-                : 'A estufa "${conflito.nome}" já usa este endereço. Duas '
-                      'estufas no mesmo endereço passam a mostrar os dados do '
-                      'mesmo aparelho.',
+                ? 'Este aparelho já está cadastrado como '
+                      '"${conflito.estufa.nome}". Cadastrar de novo criaria '
+                      'duas estufas mostrando o mesmo aparelho.'
+                : 'A estufa "${conflito.estufa.nome}" já usa este endereço. '
+                      'Duas estufas no mesmo endereço passam a mostrar os dados '
+                      'do mesmo aparelho.',
           ),
           duration: const Duration(seconds: 6),
         ),
@@ -183,7 +306,11 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(
+        _editando
+            ? ResultadoFormEstufa.atualizada
+            : ResultadoFormEstufa.cadastrada,
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -419,6 +546,11 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   /// e o QR lido pela camera —, para nao existir a chance de um deles preencher
   /// um campo a menos que o outro.
   void _aplicarConvite(ConviteEstufa convite) {
+    // Os dois caminhos do convite passam por aqui — o QR e o "Colar convite" —,
+    // entao a marca de origem fica num lugar so. Se cada um marcasse por conta,
+    // um deles acabaria oferecendo atualizar e o outro recusando, na mesma
+    // situacao: a assimetria que ja aconteceu neste caminho antes.
+    _veioDeConvite = true;
     // O nome e sugestao: cada um chama a estufa como quiser, e o app ja
     // respeita isso nas notificacoes.
     if (_nomeController.text.trim().isEmpty) {
