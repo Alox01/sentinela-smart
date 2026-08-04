@@ -324,10 +324,13 @@ void main() {
       // autoridade nenhuma para sobrescrever a chave de uma estufa que funciona.
       await abrir(tester);
 
-      final campos = find.byType(TextField);
-      await tester.enterText(campos.at(0), 'Estufa Nova');
-      await tester.enterText(campos.at(1), '192.168.0.99');
-      await tester.enterText(campos.at(3), 'ESP32_215788');
+      await tester.enterText(find.byType(TextField).at(0), 'Estufa Nova');
+      await tester.enterText(find.byType(TextField).at(1), '192.168.0.99');
+      // O id nao esta na vista normal: quem digita a mao passa por "Opcoes
+      // avancadas", que e onde ele agora mora.
+      await tester.tap(find.text('Opções avançadas'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(3), 'ESP32_215788');
       await tester.pump();
 
       await salvar(tester);

@@ -451,6 +451,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                       // O segundo caminho para a mesma estufa: quem ja tem
                       // acesso delega, sem tocar no aparelho.
                       _buildAtalhoConvite(),
+                      const SizedBox(height: 12),
+                      _buildAtalhoSimulador(),
                       const SizedBox(height: 22),
                     ],
                     if (_usarEntradaNativaWeb)
@@ -606,6 +608,78 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     }
   }
 
+  /// O simulador nao tem aparelho, e por isso nao tem como ensinar o proprio id.
+  ///
+  /// Era o unico motivo de o campo de id existir na vista normal: sem ele, quem
+  /// perdesse a estufa do simulador nao teria como cadastra-la de novo. Um botao
+  /// que preenche resolve o caso real sem cobrar do produtor decorar
+  /// `ESP32_REALISTIC_V2`.
+  Widget _buildAtalhoSimulador() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: _usarSimulador,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.035),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.science_outlined, color: Colors.white54, size: 22),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Usar o simulador',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Estufa de demonstração, sem aparelho nenhum. Serve para '
+                    'conhecer o app e para mostrar a alguém.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded, color: Colors.white38, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _usarSimulador() {
+    setState(() {
+      if (_nomeController.text.trim().isEmpty) {
+        _nomeController.text = 'Simulador';
+      }
+      // Endereco que nao resolve em rede nenhuma, de proposito: esta estufa vive
+      // so na nuvem, e o app cai para NUVEM sozinho quando o local falha. O que
+      // faz ela funcionar e o id, nao o endereco.
+      _ipController.text = 'simulador';
+      _idHardwareController.text = 'ESP32_REALISTIC_V2';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Preenchido. Se o simulador não aparecer depois de salvar, informe a '
+          'chave em "Opções avançadas".',
+        ),
+        duration: Duration(seconds: 6),
+      ),
+    );
+  }
+
   Widget _buildAtalhoConfigurar() {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -666,11 +740,48 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
         _buildNomeField(),
         const SizedBox(height: 18),
         _buildIpField(),
-        const SizedBox(height: 18),
-        _buildChaveField(),
-        const SizedBox(height: 18),
-        _buildIdHardwareField(),
+        // Chave e id saem da vista normal: nenhum dos dois e assunto do
+        // produtor. A chave vem do aparelho e ele nao deve precisar ve-la; o id
+        // o aparelho preenche sozinho na primeira conexao local. Mostrar os dois
+        // convidava a cuidar de coisa que nao e dele — e a inventar valor, que
+        // faz o aparelho recusar comando depois, longe daqui.
+        //
+        // Continuam alcancaveis, porque ha um caso real que precisa deles: uma
+        // estufa que vive so na nuvem (o simulador) nao tem aparelho para
+        // ensinar o id.
+        _buildAvancado(),
       ],
+    );
+  }
+
+  Widget _buildAvancado() {
+    // Material transparente por baixo: o cartao do formulario ja tem fundo
+    // proprio, e sem um Material entre os dois o Flutter avisa que o toque do
+    // ExpansionTile ficaria invisivel — e trata isso como erro em teste.
+    return Material(
+      type: MaterialType.transparency,
+      child: Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        title: const Text(
+          'Opções avançadas',
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        subtitle: const Text(
+          'Chave e ID do aparelho. Normalmente não precisa abrir.',
+          style: TextStyle(color: Colors.white38, fontSize: 12),
+        ),
+        iconColor: Colors.white54,
+        collapsedIconColor: Colors.white54,
+        childrenPadding: const EdgeInsets.only(top: 8),
+        children: [
+            _buildChaveField(),
+            const SizedBox(height: 18),
+            _buildIdHardwareField(),
+          ],
+        ),
+      ),
     );
   }
 

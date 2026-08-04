@@ -186,15 +186,33 @@ void main() {
       );
       await tester.pump();
 
-      final campos = tester
-          .widgetList<TextField>(find.byType(TextField))
-          .map((c) => c.controller?.text)
-          .toList();
+      // Janela alta o bastante para "Opcoes avancadas" caber: na altura padrao
+      // ela fica fora da tela e o toque nao encontra alvo.
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpAndSettle();
 
-      // Nome, endereco e id do aparelho. A chave nao tem campo quando ja veio
-      // preenchida — ela vira uma linha, de proposito: ver o convite nao e
-      // tarefa do produtor.
-      expect(campos, ['Estufa do Fundo', 'sentinela-215788.local', 'ESP32_215788']);
+      // Na vista normal so aparecem nome e endereco: chave e id nao sao assunto
+      // do produtor e foram para "Opcoes avancadas".
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .map((c) => c.controller?.text)
+            .toList(),
+        ['Estufa do Fundo', 'sentinela-215788.local'],
+      );
+
+      // O convite preenche o id mesmo com a secao fechada — abrir e so para ver.
+      await tester.tap(find.text('Opções avançadas'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .map((c) => c.controller?.text)
+            .toList(),
+        ['Estufa do Fundo', 'sentinela-215788.local', 'ESP32_215788'],
+      );
       expect(find.text('Chave de acesso: configurada'), findsOneWidget);
     });
 
@@ -206,12 +224,28 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: EstufaFormScreen()));
       await tester.pump();
 
-      final campos = tester
-          .widgetList<TextField>(find.byType(TextField))
-          .map((c) => c.controller?.text)
-          .toList();
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpAndSettle();
 
-      expect(campos, ['', '', '', '']);
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .map((c) => c.controller?.text)
+            .toList(),
+        ['', ''],
+      );
+
+      await tester.tap(find.text('Opções avançadas'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .map((c) => c.controller?.text)
+            .toList(),
+        ['', '', '', ''],
+      );
       expect(find.text('Colar convite'), findsOneWidget);
     });
   });
