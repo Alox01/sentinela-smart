@@ -138,7 +138,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
 // 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
 //        inteiras, id unico por chip.
-const char* VERSAO_FIRMWARE = "1.24.0";
+const char* VERSAO_FIRMWARE = "1.25.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -798,6 +798,11 @@ void handleConfigPagina() {
       "\" required><label>Senha do Wi-Fi</label>"
       "<input name=\"senha\" type=\"password\" placeholder=\"(deixe vazio para "
       "manter a atual)\">"
+      // Vazio aqui quer dizer "mantenha a que voce tem", que nao serve para
+      // mudar para uma rede SEM senha: a antiga ficaria gravada e o aparelho
+      // nao conectaria. Esta caixa e a unica forma de pedir senha nenhuma.
+      "<label style=\"font-weight:normal\"><input type=\"checkbox\" "
+      "name=\"semsenha\" value=\"1\"> Rede sem senha</label>"
       "<label>Chave de acesso</label>"
       "<input name=\"token\" placeholder=\"(deixe vazio para manter a atual)\">"
       "<label style=\"font-weight:normal\"><input type=\"checkbox\" "
@@ -929,8 +934,16 @@ void handleConfigSalvar() {
   prefs.begin("sentinela", false);
   prefs.putString("wifiSsid", ssid);
   // Senha vazia mantem a atual: assim da para so trocar a chave de acesso sem
-  // precisar digitar a senha do Wi-Fi de novo.
-  if (senha.length() > 0) prefs.putString("wifiPass", senha);
+  // precisar digitar a senha do Wi-Fi de novo. Isso nao consegue exprimir "esta
+  // rede nao tem senha" — a antiga ficaria gravada, o aparelho tentaria entrar
+  // com ela numa rede aberta e nao conectaria, sem nada dizendo por que. Daí a
+  // marca explicita: quem quer rede aberta pede rede aberta.
+  //
+  // Ausente = comportamento de antes, entao app e formulario velhos continuam
+  // valendo.
+  const bool redeAberta = server.arg("semsenha") == "1";
+  if (redeAberta) prefs.putString("wifiPass", "");
+  else if (senha.length() > 0) prefs.putString("wifiPass", senha);
   // Chave vazia MANTEM a atual, como a senha do Wi-Fi logo acima - e como o
   // proprio formulario sempre prometeu. Gravar vazio apagava a chave, e o boot
   // seguinte gerava uma aleatoria que nem o app nem a nuvem conheciam: o

@@ -256,6 +256,24 @@ Os campos sao opcionais — em branco, o aparelho segue no DHCP. Preenchendo so 
 IP, o firmware assume o `.1` da mesma faixa como gateway e `255.255.255.0` como
 mascara, que e o arranjo da esmagadora maioria das redes domesticas.
 
+### Rede sem senha — `semsenha=1` (v1.25.0, 04/08/2026)
+
+Senha vazia sempre significou **"mantenha a que voce ja tem"**, para quem volta
+ao formulario so para trocar outra coisa. O que essa regra nao consegue dizer e
+**"esta rede nao tem senha"**: o aparelho guardaria a senha antiga, tentaria
+entrar com ela numa rede aberta e nao conectaria — sem nada, em lugar nenhum,
+dizendo por que.
+
+Entao existe um campo separado. `semsenha=1` no POST de `/salvar` grava senha
+vazia de proposito; o formulario do navegador tem a caixa **"Rede sem senha"** e
+o app manda a marca sozinho quando o campo de senha fica em branco, porque a
+legenda dele agora promete exatamente isso ("Se a rede nao tiver senha, nao
+preencha nada").
+
+**Ausente = comportamento de antes.** App ou formulario que nao mandem a marca
+continuam valendo, e firmware anterior a 1.25.0 a ignora — nesse par o caso da
+rede aberta volta a falhar do jeito descrito acima.
+
 ## Chave de acesso
 
 A chave de acesso protege comandos que alteram o aparelho, como ajuste de

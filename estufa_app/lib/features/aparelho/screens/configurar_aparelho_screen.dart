@@ -328,6 +328,12 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             body: {
               'ssid': rede,
               'senha': _senha.text,
+              // Campo vazio quer dizer rede aberta, e e o que a legenda promete
+              // — mas para o aparelho vazio sempre significou "mantenha a senha
+              // que voce ja tem". Numa rede sem senha ele guardaria a antiga e
+              // nao conectaria. Esta marca (firmware 1.25.0) diz a diferenca; em
+              // firmware anterior ela e ignorada e o caso raro volta a falhar.
+              if (_senha.text.isEmpty) 'semsenha': '1',
               // Sempre vazio: desde a 1.22.0 isso mantem a chave que o aparelho
               // ja tem. Nao ha mais de onde vir outra — quem a gera e ele.
               'token': '',
