@@ -308,6 +308,16 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       setState(() => _erro = 'Informe o nome da rede Wi-Fi.');
       return;
     }
+    // A senha e obrigatoria mesmo quando o aparelho ja tem uma guardada. O campo
+    // dizia "deixe vazio para manter a atual" — verdade para quem so troca o
+    // nome da rede, e armadilha na primeira configuracao, que e quando quase
+    // todo mundo abre esta tela: convidava a pular o campo, e o aparelho subia
+    // sem senha nenhuma. Exigir sempre custa redigitar numa troca de nome, e
+    // poupa uma segunda tela so para o caso raro.
+    if (_senha.text.isEmpty) {
+      setState(() => _erro = 'Informe a senha do Wi-Fi.');
+      return;
+    }
 
     setState(() {
       _enviando = true;
@@ -524,8 +534,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           Expanded(
             child: Text(
               achou
-                  ? 'Falando com o aparelho. A chave dele vem junto — você não '
-                        'precisa vê-la nem digitá-la.'
+                  ? 'Falando com o aparelho. Pode preencher a rede de casa '
+                        'abaixo.'
                   : aindaNaoTentou
                   ? 'Esperando o PIN. Assim que você digitar os 4 números, o '
                         'resto desta tela se completa.'
@@ -731,7 +741,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           _campo(
             controlador: _senha,
             rotulo: 'Senha do Wi-Fi',
-            dica: 'Deixe vazio para manter a senha atual',
+            dica: 'A senha da rede acima, mesmo se o aparelho já teve uma',
             senha: !_senhaVisivel,
             // Senha de Wi-Fi rural costuma ser longa e cheia de numero: digitar as
             // cegas e errar, e o erro so aparece la na frente, quando o aparelho
@@ -747,23 +757,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
             ),
           ),
-          // Nao ha campo de chave, e nao havera: ver o comentario da classe.
-          const Padding(
-            padding: EdgeInsets.only(bottom: 14),
-            child: Row(
-              children: [
-                Icon(Icons.lock_outline, color: Colors.white38, size: 16),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'A chave deste aparelho vai junto para o cadastro. '
-                    'Você não precisa vê-la nem digitá-la.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Nao ha campo de chave, nem aviso sobre ela. O texto que ficava aqui
+          // tranquilizava sobre um problema que o produtor nao tem: ele nunca
+          // soube que existe chave, e dizer "voce nao precisa digitar" so
+          // levanta a pergunta de por que precisaria. Ver o comentario da
+          // classe para por que o campo nao volta.
           Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
