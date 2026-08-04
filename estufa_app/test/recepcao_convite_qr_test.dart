@@ -230,7 +230,6 @@ void main() {
         ['', ''],
       );
 
-      expect(find.text('Colar convite'), findsOneWidget);
       expect(find.text('Usar o simulador'), findsOneWidget);
     });
   });

@@ -449,8 +449,6 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                       const SizedBox(height: 12),
                       // O segundo caminho para a mesma estufa: quem ja tem
                       // acesso delega, sem tocar no aparelho.
-                      _buildAtalhoConvite(),
-                      const SizedBox(height: 12),
                       _buildAtalhoSimulador(),
                       const SizedBox(height: 22),
                     ],
@@ -515,76 +513,6 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     });
   }
 
-  /// Preenche o cadastro com um convite que outro celular da familia mandou.
-  ///
-  /// A alternativa era o segundo celular entrar no modo de configuracao do
-  /// aparelho, que o derruba do ar enquanto dura - caro no meio de uma estufada,
-  /// e desnecessario para quem ja tem alguem de confianca com acesso.
-  Widget _buildAtalhoConvite() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => unawaited(_colarConvite()),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.035),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.group_add_outlined, color: Colors.white54, size: 22),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Colar convite',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Recebeu um convite de outro celular? Cole aqui e a estufa '
-                    'nasce pronta, sem mexer no aparelho.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: 8),
-            Icon(Icons.content_paste_rounded, color: Colors.white38, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _colarConvite() async {
-    final area = await Clipboard.getData(Clipboard.kTextPlain);
-    final convite = ConviteEstufa.decodificar(area?.text ?? '');
-    if (!mounted) return;
-    if (convite == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Não achei um convite na área de transferência. Copie a mensagem '
-            'inteira que você recebeu e toque aqui de novo.',
-          ),
-          duration: Duration(seconds: 5),
-        ),
-      );
-      return;
-    }
-    setState(() => _aplicarConvite(convite));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Convite lido: ${convite.nome}. Confira e salve.')),
-    );
-  }
 
   /// Derrama o convite nos campos. Vale para os dois caminhos — o texto colado
   /// e o QR lido pela camera —, para nao existir a chance de um deles preencher
@@ -642,8 +570,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Estufa de demonstração, sem aparelho nenhum. Serve para '
-                    'conhecer o app e para mostrar a alguém.',
+                    'Estufa de demonstração, sem aparelho nenhum. Serve '
+                    'somente para apresentar o app.',
                     style: TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ],

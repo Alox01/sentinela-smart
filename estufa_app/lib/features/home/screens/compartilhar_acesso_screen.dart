@@ -1,8 +1,6 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../models/convite_estufa.dart';
 import '../models/link_convite.dart';
@@ -10,28 +8,22 @@ import '../models/link_convite.dart';
 /// Entrega a outro celular da familia o que ele precisa para acompanhar e
 /// comandar esta estufa.
 ///
-/// ## Por que duas formas, e nao uma
+/// ## So o QR, e por que o texto saiu
 ///
-/// O QR **nao substitui** o texto: sao situacoes diferentes. O texto serve para
-/// quem esta longe — o filho na cidade, o vizinho que cuida no fim de semana. O
-/// QR serve para quem esta do lado, e faz em tres segundos o que pelo texto
-/// pediria escolher aplicativo, achar a conversa e mandar.
+/// Houve tambem um convite escrito, para quem estava longe. Foi retirado por
+/// decisao do produtor: convite mandado por mensagem **fica gravado na
+/// conversa**, com a chave da estufa dentro, para sempre — e a chave e do
+/// APARELHO, quem a tiver comanda. Apagar do proprio celular nao apaga do outro
+/// nem do backup dele. O QR nao fica gravado em conversa nenhuma.
 ///
-/// ## A vantagem que so o QR tem
-///
-/// Convite mandado por mensagem **fica gravado na conversa**, com a chave da
-/// estufa dentro, para sempre — e a chave e do APARELHO: quem a tiver comanda.
-/// Apagar a mensagem do proprio celular nao apaga a do outro, nem o backup dela.
-/// O QR nao fica gravado em conversa nenhuma.
+/// O preco disso esta declarado: **compartilhar passou a exigir estar junto**.
+/// Quem esta longe nao tem mais caminho, e nao ha rede de seguranca se a camera
+/// do outro celular nao reconhecer o codigo.
 ///
 /// **Nao confundir com "nao sobra copia em lugar nenhum"**, que seria mentira: o
 /// Android tira um instantaneo desta tela para a lista de Recentes, com o QR
 /// desenhado nele, e nada aqui impede print nem gravacao. Cumprir aquilo exigiria
-/// FLAG_SECURE por MethodChannel. O que se afirma e o contraste verdadeiro: a
-/// mensagem persiste na conversa, o QR nao.
-///
-/// Isso esta dito na tela, e nao so aqui, porque quem compartilha e quem decide
-/// — e a decisao acontece na hora de escolher entre os dois botoes.
+/// FLAG_SECURE por MethodChannel.
 class CompartilharAcessoScreen extends StatelessWidget {
   final ConviteEstufa convite;
 
@@ -69,7 +61,6 @@ class CompartilharAcessoScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   _CartaoQr(convite: convite),
                   const SizedBox(height: 20),
-                  _CartaoTexto(convite: convite),
                   const SizedBox(height: 18),
                   const _AvisoDaChave(),
                 ],
@@ -161,8 +152,7 @@ class QrDoConvite extends StatelessWidget {
           height: 220,
           child: Center(
             child: Text(
-              'Não foi possível montar o QR deste convite. '
-              'Use o envio por mensagem abaixo.',
+              'Não foi possível montar o QR deste convite.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.black87, fontSize: 13),
             ),
@@ -175,65 +165,6 @@ class QrDoConvite extends StatelessWidget {
 
 /// O caminho de quem esta longe. E o mesmo de antes do QR existir, com o mesmo
 /// texto: quem ja recebeu convite assim continua achando o "Colar convite".
-class _CartaoTexto extends StatelessWidget {
-  final ConviteEstufa convite;
-
-  const _CartaoTexto({required this.convite});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'QUEM ESTÁ LONGE',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Manda o convite escrito. No outro celular: Nova Estufa e depois '
-            '"Colar convite".',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.35),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => unawaited(_enviarTexto()),
-            icon: const Icon(Icons.send_rounded, size: 18),
-            label: const Text('Enviar por mensagem'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _enviarTexto() async {
-    // O aviso vai junto no texto, nao so na tela: quem recebe pode nao ser quem
-    // leu a tela, e o convite carrega a chave da estufa.
-    await Share.share(
-      'Convite para acompanhar a estufa "${convite.nome}" no Sentinela.\n'
-      'No app, toque em Nova Estufa e depois em "Colar convite".\n'
-      'Mande só para quem pode comandar a estufa.\n\n'
-      '${convite.codificar()}',
-      subject: 'Acesso à estufa ${convite.nome}',
-    );
-  }
-}
-
-/// O que o produtor precisa saber antes de escolher entre os dois botoes acima.
 class _AvisoDaChave extends StatelessWidget {
   const _AvisoDaChave();
 
@@ -276,10 +207,10 @@ class _AvisoDaChave extends StatelessWidget {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  'O QR não fica gravado em conversa nenhuma. O convite '
-                  'mandado por mensagem fica, com a chave dentro, para sempre — '
-                  'apagar do seu celular não apaga do outro. Estando os dois '
-                  'juntos, prefira o QR.',
+                  'O QR não fica gravado em conversa nenhuma — é por isso que '
+                  'ele é o único caminho: convite mandado por mensagem ficaria '
+                  'guardado com a chave dentro, e apagar do seu celular não '
+                  'apagaria do outro.',
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 13,

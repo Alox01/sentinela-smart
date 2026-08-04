@@ -282,40 +282,6 @@ void main() {
       expect(find.textContaining('Não há o que atualizar'), findsOneWidget);
     });
 
-    testWidgets('o caminho de "Colar convite" chega na mesma oferta', (
-      tester,
-    ) async {
-      // Se a oferta ficasse so no QR, a assimetria que motivou a lacuna 1 se
-      // repetiria — um caminho resolve, o outro recusa, na mesma situacao.
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (chamada) async {
-          if (chamada.method == 'Clipboard.getData') {
-            return <String, dynamic>{'text': convite.codificar()};
-          }
-          return null;
-        },
-      );
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
-
-      await abrir(tester);
-      await tester.tap(find.text('Colar convite'));
-      await tester.pumpAndSettle();
-      await salvar(tester);
-
-      expect(find.text('Atualizar "Estufa do Fundo"?'), findsOneWidget);
-
-      await tester.tap(find.text('Atualizar a chave e o endereço'));
-      await tester.pumpAndSettle();
-
-      expect(repositorio.atualizacoes, hasLength(1));
-      expect(repositorio.atualizacoes.single.chave, 'chave-NOVA-do-aparelho');
-    });
 
     testWidgets('digitado à mão, sem convite, a recusa continua valendo', (
       tester,

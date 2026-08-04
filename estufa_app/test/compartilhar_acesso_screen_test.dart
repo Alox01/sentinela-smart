@@ -59,14 +59,15 @@ void main() {
     expect(devolta?.chave, 'chave-longa-do-aparelho');
   });
 
-  testWidgets('as duas formas de entregar convivem na tela', (tester) async {
+  testWidgets('só o QR entrega o convite', (tester) async {
     await abrir(tester);
 
     // O QR nao substitui o texto: quem esta longe continua sendo atendido.
     expect(find.byType(QrImageView), findsOneWidget);
-    expect(find.text('Enviar por mensagem'), findsOneWidget);
+    // O convite escrito saiu: ficaria gravado na conversa com a chave dentro.
+    expect(find.text('Enviar por mensagem'), findsNothing);
     expect(find.text('QUEM ESTÁ DO SEU LADO'), findsOneWidget);
-    expect(find.text('QUEM ESTÁ LONGE'), findsOneWidget);
+    expect(find.text('QUEM ESTÁ LONGE'), findsNothing);
   });
 
   testWidgets('a tela diz que o convite escrito fica gravado para sempre', (
