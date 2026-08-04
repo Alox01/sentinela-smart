@@ -9,7 +9,6 @@ import '../../../widgets/grafico_steam.dart';
 class GraficoEstufadaCard extends StatelessWidget {
   final List<HistoricoLeituraEntity> leituras;
   final bool graficoTemperatura;
-  final bool filtroAtivo;
   final TextStyle tituloSecaoStyle;
   final ValueChanged<bool> onGraficoChanged;
 
@@ -17,7 +16,6 @@ class GraficoEstufadaCard extends StatelessWidget {
     super.key,
     required this.leituras,
     required this.graficoTemperatura,
-    required this.filtroAtivo,
     required this.tituloSecaoStyle,
     required this.onGraficoChanged,
   });
@@ -95,7 +93,6 @@ class GraficoEstufadaCard extends StatelessWidget {
               maxY: maxYGrafico,
               intervaloY: intervaloYGrafico,
               rotulosY: rotulosYGrafico,
-              filtroAtivo: filtroAtivo,
             ),
           );
 

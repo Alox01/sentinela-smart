@@ -12,7 +12,6 @@ class GraficoSteam extends StatelessWidget {
   final double maxY;
   final double intervaloY;
   final List<int> rotulosY;
-  final bool filtroAtivo;
 
   const GraficoSteam({
     super.key,
@@ -25,7 +24,6 @@ class GraficoSteam extends StatelessWidget {
     this.maxY = 205,
     this.intervaloY = 35,
     this.rotulosY = const [60, 95, 130, 165, 200],
-    this.filtroAtivo = false,
   });
 
   @override
@@ -276,10 +274,11 @@ class GraficoSteam extends StatelessWidget {
   }
 
   _EscalaGrafico _calcularEscala() {
-    const intervaloSemFiltro = Duration(minutes: 10);
-    const janelaSemFiltro = Duration(hours: 1);
-
     if (pontos.isEmpty) {
+      // Unico caso em que o relogio ainda manda: sem leitura nenhuma nao ha o
+      // que ancorar, e uma hora terminando agora e um eixo tao bom quanto outro.
+      const intervaloSemFiltro = Duration(minutes: 10);
+      const janelaSemFiltro = Duration(hours: 1);
       final agora = DateTime.now().millisecondsSinceEpoch.toDouble();
       final intervaloRotuloMs = intervaloSemFiltro.inMilliseconds.toDouble();
       final maxXBase = _arredondarParaCimaIntervalo(agora, intervaloRotuloMs);
@@ -296,18 +295,20 @@ class GraficoSteam extends StatelessWidget {
       );
     }
 
-    final primeiroX = pontos.first.x;
-    final ultimoX = pontos.last.x;
-    final agoraX = DateTime.now().millisecondsSinceEpoch.toDouble();
-    final intervaloBaseMs = intervaloSemFiltro.inMilliseconds.toDouble();
-    final maxXSemFiltro = _arredondarParaCimaIntervalo(
-      ultimoX > agoraX ? ultimoX : agoraX,
-      intervaloBaseMs,
-    );
-    final minXBase = filtroAtivo
-        ? primeiroX
-        : maxXSemFiltro - janelaSemFiltro.inMilliseconds;
-    final maxXBase = filtroAtivo ? ultimoX : maxXSemFiltro;
+    // A janela e a propria estufada, do primeiro ao ultimo ponto entregues.
+    //
+    // Era "a ultima hora, terminando em max(ultimo ponto, AGORA)". Enquanto a
+    // estufada corre, o ultimo ponto e recente e o grafico desenha; passada uma
+    // hora do fim dela, "agora" ganha, a janela vai parar num intervalo onde nao
+    // existe leitura nenhuma e o cartao abre VAZIO - com moldura, botoes e eixos,
+    // so sem linha e sem ponto. Ou seja: relatorio de estufada encerrada quase
+    // nunca desenhava, e relatorio de estufada em andamento sempre desenhava.
+    //
+    // Ancorar no relogio so faz sentido para grafico ao vivo, e este widget so
+    // e usado no relatorio. O recorte por periodo ja chega aplicado: `pontos` e
+    // o resultado do filtro, nao a estufada inteira.
+    final minXBase = pontos.first.x;
+    final maxXBase = pontos.last.x;
     final intervaloRotuloMs = _intervaloParaDuracao(
       (maxXBase - minXBase).abs(),
     );
@@ -315,14 +316,17 @@ class GraficoSteam extends StatelessWidget {
     final minX = minXBase - margemX;
     final maxX = maxXBase + margemX;
     final duracaoMs = (maxX - minX).abs();
+    // Com a janela ancorada nos proprios pontos, todos entram - o recorte
+    // continua escrito porque a borda e comparacao de ponto flutuante, e nao ha
+    // por que confiar que nunca vai sobrar um.
     final pontosVisiveis = pontos
         .where((spot) => spot.x >= minXBase && spot.x <= maxXBase)
         .toList();
     final primeiroVisivelX = pontosVisiveis.isEmpty
-        ? primeiroX
+        ? minXBase
         : pontosVisiveis.first.x;
     final ultimoVisivelX = pontosVisiveis.isEmpty
-        ? ultimoX
+        ? maxXBase
         : pontosVisiveis.last.x;
 
     return _EscalaGrafico(
@@ -359,22 +363,29 @@ class GraficoSteam extends StatelessWidget {
 
     final primeiro = indices.first;
     final ultimo = indices.last;
+    // Pontos de borda so quando ha mesmo leitura fora da janela: eles existem
+    // para a linha entrar e sair pela margem em vez de comecar no vazio. Depois
+    // que a janela passou a ser a propria estufada, o de saida virava um rabo
+    // reto DEPOIS da ultima leitura - desenhando uma temperatura que ninguem
+    // mediu, no trecho em que a estufada ja tinha acabado.
     final pontoEntrada = primeiro > 0
         ? FlSpot(escala.minX, _limitarY(valorDe(primeiro)))
         : null;
-    final pontoSaida = FlSpot(escala.maxX, _limitarY(valorDe(ultimo)));
+    final pontoSaida = ultimo < pontos.length - 1
+        ? FlSpot(escala.maxX, _limitarY(valorDe(ultimo)))
+        : null;
     return [
       if (pontoEntrada != null) pontoEntrada,
       for (final i in indices) FlSpot(pontos[i].x, _limitarY(valorDe(i))),
-      pontoSaida,
+      if (pontoSaida != null) pontoSaida,
     ];
   }
 
   double _intervaloParaDuracao(double duracaoMs) {
-    if (!filtroAtivo) {
-      return const Duration(minutes: 10).inMilliseconds.toDouble();
-    }
-
+    // Sempre pela duracao. Havia um atalho de 10 em 10 minutos para quando nao
+    // havia filtro, que so servia porque a janela era fixa em uma hora - agora
+    // ela e a estufada inteira, e 10 em 10 minutos numa noite de secagem seriam
+    // umas setenta etiquetas empilhadas.
     final duracao = Duration(milliseconds: duracaoMs.round());
     if (duracao <= const Duration(minutes: 10)) {
       return const Duration(minutes: 1).inMilliseconds.toDouble();
