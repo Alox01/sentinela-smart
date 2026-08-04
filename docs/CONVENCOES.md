@@ -84,7 +84,7 @@ App: `flutter test` dentro de `estufa_app`.
 
 Convivem duas organizações no app, porque uma migração começou e parou:
 `features/<assunto>/` e as pastas por camada na raiz (`screens/`, `services/`,
-`widgets/`, `utils/`, `models/`). Sem destino declarado, cada um decide sozinho —
+`widgets/`, `models/`). Sem destino declarado, cada um decide sozinho —
 e já aconteceu: uma tela nova criou `features/home/screens/` porque a pasta não
 existia, sem que isso fosse decisão de ninguém.
 
@@ -102,7 +102,7 @@ commit gigante que ninguém revisa e apaga o histórico de quem mexeu no quê. A
 tocar num arquivo da raiz que tem dono claro, mova-o **no mesmo commit** se for
 barato; se não for, deixe.
 
-O que sobrou na raiz hoje (`screens/`, três widgets, `utils/`) é legado, não
+O que sobrou na raiz hoje (`screens/`, três widgets) é legado, não
 modelo a seguir.
 
 ## Plataformas: Android e iOS, mais nada
