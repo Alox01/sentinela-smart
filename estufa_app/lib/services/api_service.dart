@@ -621,9 +621,20 @@ class ApiService {
 
   Future<bool> _estaOnline(String base) async {
     final timeout = _timeoutSonda(base);
+    // Mesmo caminho da leitura de verdade, inclusive o `idHardware`. A sonda
+    // pedia `/status` pelado, e na nuvem isso e outra requisicao: sem o id o
+    // servidor nao sabe de qual aparelho se fala, e a isencao do simulador -
+    // que e por id - nao vale. O resultado era o pior tipo de contradicao:
+    // o cartao dizendo "Reportando (via nuvem)", com numeros na tela, e o teste
+    // de alcance logo abaixo dizendo "Nuvem: offline". Um dos dois estava
+    // mentindo, e era este.
+    final id = idHardware;
+    final caminho = id == null || id.isEmpty
+        ? '/status'
+        : '/status?idHardware=${Uri.encodeComponent(id)}';
     try {
       final response = await http
-          .get(Uri.parse('$base/status'), headers: _headers())
+          .get(Uri.parse('$base$caminho'), headers: _headers())
           .timeout(timeout);
       if (response.statusCode == 200 && _pareceSentinela(response.body)) {
         return true;

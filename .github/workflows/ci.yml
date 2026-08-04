@@ -1,4 +1,4 @@
-# Roda a cada push/PR: testes do servidor, analise, testes e build web do app,
+# Roda a cada push/PR: testes do servidor, analise, testes e build do APK,
 # alem de uma compilacao real do firmware.
 name: CI
 
@@ -38,7 +38,13 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze lib test
       - run: flutter test
-      - run: flutter build web
+      # Era `flutter build web`, que deixou de existir junto com a plataforma
+      # web (04/08/2026). O APK e o que se instala de verdade, entao e ele que
+      # vale provar que compila. O `--dart-define` acompanha porque sem ele o
+      # app sobe com a nuvem desconfigurada - aqui nao muda o resultado da
+      # compilacao, mas manter os dois comandos iguais evita que o de CI e o de
+      # release se separem sem ninguem notar.
+      - run: flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
 
   firmware:
     name: Firmware (ESP32)
