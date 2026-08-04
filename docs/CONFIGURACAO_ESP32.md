@@ -386,8 +386,14 @@ roteador. O formulário HTML do aparelho deixou de vir com a chave preenchida;
 quem usa o navegador direto ainda a vê ao gerar uma nova, que é o caminho de
 recuperação sem o app.
 
-Compatibilidade: firmware anterior a 1.20.0 não serve a rota, e aí o campo da
-chave continua aparecendo no app — aparelho antigo não fica sem caminho.
+Compatibilidade (revisto em 04/08/2026): firmware anterior a 1.20.0 não serve a
+rota. Havia aí um campo de chave no app, para o aparelho antigo não ficar sem
+caminho. **Esse campo foi removido, e não deve voltar.** A chave é do aparelho e
+o produtor nunca a viu: pedi-la em tela só podia ser lida como app quebrado, e o
+que fosse digitado seria gravado por cima da chave boa — que é exatamente o modo
+de falha de 31/07/2026, descrito abaixo. Aparelho velho demais para se apresentar
+**não é configurado pelo app**: a tela diz o que ele é e manda usar
+`192.168.4.1` no navegador, que continua funcionando e mostra a chave.
 
 **O que deu errado em campo (31/07/2026) e o que ensina.** Salvar pelo app
 apagava a chave do aparelho, e o boot seguinte gerava uma aleatória que nem o

@@ -7,7 +7,15 @@ import 'package:http/http.dart' as http;
 
 import '../../../services/api_service.dart';
 
-/// Configura a rede e a chave do aparelho pelo app, sem digitar endereco.
+/// Configura a rede do aparelho pelo app, sem digitar endereco.
+///
+/// ## Nao ha campo de chave de acesso, e nao deve voltar a haver
+///
+/// A chave e do APARELHO: ele a gera, o app a le pela rota de identidade e a
+/// leva ao cadastro. O produtor nunca a viu e nao tem como saber o que digitar
+/// ali — um campo pedindo por ela so podia ser lido como app quebrado, e o que
+/// fosse digitado seria gravado por cima da chave boa. Aparelho velho demais
+/// para entregar a chave nao e configurado por aqui: ver [_cartaoFirmwareAntigo].
 ///
 /// O aparelho tambem serve a mesma pagina em `192.168.4.1`, e o portal cativo
 /// tenta abri-la sozinha — mas quem decide isso e o Android, e nao ha garantia.
@@ -41,16 +49,13 @@ class ConfigurarAparelhoScreen extends StatefulWidget {
 class DadosAparelhoConfigurado {
   final String? endereco;
   final String? chave;
+
   /// Identificador do aparelho, lido dele mesmo. Vai junto para a estufa nascer
   /// ja sabendo de qual aparelho e - sem isto ela ficava "SEM ID" ate conseguir
   /// uma primeira conexao local, e ate la nao lia nada pela nuvem.
   final String? idHardware;
 
-  const DadosAparelhoConfigurado({
-    this.endereco,
-    this.chave,
-    this.idHardware,
-  });
+  const DadosAparelhoConfigurado({this.endereco, this.chave, this.idHardware});
 }
 
 class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
@@ -59,28 +64,30 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
   final _rede = TextEditingController();
   final _senha = TextEditingController();
-  final _chave = TextEditingController();
+
   /// Chave lida do proprio aparelho. Nunca exibida: existe so para seguir ao
   /// cadastro. Nula quando o firmware e anterior a 1.20.0.
   String? _chaveDoAparelho;
   String? _idDoAparelho;
+
   /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
   String? _prefixoDaRede;
   final _pin = TextEditingController();
+
   /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
   String? _pinTentado;
   String? _erroPin;
+
   /// O aparelho respondeu, mas nao serve a rota da identidade — firmware
   /// anterior a 1.20.0. So entao o campo da chave volta a existir: sem isso, ele
   /// aparecia enquanto o celular nem estava na rede do aparelho, e sumia depois
   /// do PIN, o que parecia defeito.
   bool _firmwareSemIdentidade = false;
 
-  /// O aparelho ja se apresentou — pela identidade (caminho normal) ou por ter
-  /// respondido sem servir a rota dela (firmware antigo). Antes disso nao ha o
-  /// que preencher: o endereco, a chave e a faixa da rede vem dele.
-  bool get _aparelhoRespondeu =>
-      _chaveDoAparelho != null || _firmwareSemIdentidade;
+  /// O aparelho se apresentou e entregou a chave. So entao ha o que preencher:
+  /// o endereco, a chave e a faixa da rede vem dele. Firmware antigo NAO conta —
+  /// ele nao entrega chave, e esta tela nao tem mais como obtê-la.
+  bool get _aparelhoRespondeu => _chaveDoAparelho != null;
   Timer? _tentativas;
   bool _senhaVisivel = false;
   bool _conferindo = false;
@@ -115,7 +122,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     _pin.dispose();
     _rede.dispose();
     _senha.dispose();
-    _chave.dispose();
     _ip.dispose();
     super.dispose();
   }
@@ -147,8 +153,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// digita-la. Ela fica so aqui em memoria e segue direto para o cadastro.
   ///
   /// A rota so responde no modo de configuracao — estar na frente do aparelho é
-  /// o que autoriza. Firmware anterior a 1.20.0 não a serve: nesse caso o campo
-  /// da chave continua aparecendo, para o aparelho antigo não ficar sem caminho.
+  /// o que autoriza. Firmware anterior a 1.20.0 não a serve, e para esse caso
+  /// esta tela nao tem saida: ver [_marcarFirmwareAntigoSePreciso].
   Future<void> _lerIdentidadeDoAparelho() async {
     final pin = _pin.text.trim();
     // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
@@ -213,9 +219,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
   /// O aparelho atendeu em `/dados` mas nao entregou identidade: ou a rota nao
   /// existe (firmware anterior a 1.20.0), ou ela devolveu algo que nao e o JSON
-  /// esperado. Nos dois casos o caminho automatico nao serve, e o campo da chave
-  /// precisa voltar — mas so aqui, com o aparelho ja respondendo. Enquanto o
-  /// celular nem alcanca o aparelho, nao ha o que concluir.
+  /// esperado. Havia aqui um campo para o produtor digitar a chave a mao. Ele
+  /// saiu: a chave e do APARELHO, gerada por ele, e o produtor nunca a viu — o
+  /// campo so podia ser lido como app quebrado, e o que ele digitasse ia ser
+  /// gravado por cima da chave boa. Sem chave nao ha o que salvar por aqui, e a
+  /// tela passa a dizer isso e a apontar o caminho pelo navegador.
+  ///
+  /// So conclui com o aparelho ja respondendo em `/dados`. Enquanto o celular
+  /// nem o alcanca, "firmware antigo" e "nao conectei" sao a mesma tela.
   void _marcarFirmwareAntigoSePreciso() {
     if (!mounted || _nomeLocal == null || _erroPin != null) return;
     if (_firmwareSemIdentidade) return;
@@ -239,8 +250,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     Navigator.of(context).pop(
       DadosAparelhoConfigurado(
         endereco: _nomeLocal,
-        chave: _chaveDoAparelho
-            ?? (_chave.text.trim().isEmpty ? null : _chave.text.trim()),
+        chave: _chaveDoAparelho,
         idHardware: _idDoAparelho,
       ),
     );
@@ -299,8 +309,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       return;
     }
 
-
-
     setState(() {
       _enviando = true;
       _erro = null;
@@ -315,9 +323,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             body: {
               'ssid': rede,
               'senha': _senha.text,
-              // Vazio mantem a atual no aparelho. So manda algo quando o
-              // produtor digitou — caso do firmware antigo, sem chave propria.
-              'token': _chaveDoAparelho != null ? '' : _chave.text.trim(),
+              // Sempre vazio: desde a 1.22.0 isso mantem a chave que o aparelho
+              // ja tem. Nao ha mais de onde vir outra — quem a gera e ele.
+              'token': '',
               'ip': _ipFixoInformado,
               // Vazios de proposito: desde a 1.21.0 o aparelho usa o gateway e
               // a mascara que o roteador entregou a ele. Sao numeros que o
@@ -440,8 +448,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               _conferindo
                   ? 'Procurando o aparelho...'
                   : widget.uso == UsoDaConfiguracao.cadastro
-                        ? 'Usar estes dados no cadastro'
-                        : 'Atualizar esta estufa',
+                  ? 'Usar estes dados no cadastro'
+                  : 'Atualizar esta estufa',
             ),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -476,7 +484,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// a leitura se repete sozinha, este aviso vira o retorno de que faltava so a
   /// rede.
   Widget _cartaoEstadoDaConversa() {
-    final achou = _chaveDoAparelho != null || _firmwareSemIdentidade;
+    // Firmware antigo tem cartao proprio, logo abaixo: aqui ele nao e "achei"
+    // (nao da para configurar) nem "nao achei" (o aparelho respondeu).
+    if (_firmwareSemIdentidade) return const SizedBox.shrink();
+    final achou = _chaveDoAparelho != null;
     // Antes de qualquer tentativa o app NAO tentou nada, e dizer "nao achei"
     // ali e falso — chegou a convencer duas vezes de que o Wi-Fi do aparelho
     // estava quebrado quando o processo nem tinha comecado.
@@ -514,7 +525,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             child: Text(
               achou
                   ? 'Falando com o aparelho. A chave dele vem junto — você não '
-                        'precisa digitar nada.'
+                        'precisa vê-la nem digitá-la.'
                   : aindaNaoTentou
                   ? 'Esperando o PIN. Assim que você digitar os 4 números, o '
                         'resto desta tela se completa.'
@@ -529,6 +540,63 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 fontSize: 12,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A unica saida honesta para um aparelho anterior a 1.20.0: ele nao serve a
+  /// rota de identidade, nao tem chave propria para entregar, e gravar nele a
+  /// partir daqui mandaria um token vazio que as versoes anteriores a 1.22.0
+  /// escrevem por cima — o aparelho sortearia uma chave nova e sumiria da nuvem
+  /// sem nada na tela dizendo por que. Entao esta tela nao o configura. Diz o
+  /// que ele e e aponta o caminho que continua funcionando: a pagina do proprio
+  /// aparelho, no navegador.
+  Widget _cartaoFirmwareAntigo() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orangeAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.25)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.system_update_alt_rounded,
+                color: Colors.orangeAccent,
+                size: 20,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Este aparelho está com um programa antigo',
+                  style: TextStyle(
+                    color: Colors.orangeAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Ele respondeu, mas é de uma versão anterior ao PIN e não consegue '
+            'se apresentar ao app. Configurar por aqui deixaria o aparelho sem '
+            'chave e ele sumiria da nuvem.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Com o celular ainda na rede "Sentinela-Config", abra o navegador '
+            'em 192.168.4.1 e configure por lá. Depois disso, atualize o '
+            'programa do aparelho para usar esta tela.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
         ],
       ),
@@ -630,12 +698,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         const SizedBox(height: 8),
         // Os 4 digitos do visor. E o unico numero que o produtor digita em todo
         // o processo, e e ele que troca a chave longa por presenca fisica.
-        if (_chaveDoAparelho == null) ...[
+        if (_chaveDoAparelho == null && !_firmwareSemIdentidade) ...[
           _campo(
             controlador: _pin,
             rotulo: 'PIN do visor (4 números)',
-            dica: _erroPin ?? 'Aparecem no visor do aparelho no modo de '
-                'configuração',
+            dica:
+                _erroPin ??
+                'Aparecem no visor do aparelho no modo de '
+                    'configuração',
             numerico: true,
             // Confirma em vez de disparar sozinho no 4o digito: a busca comecava
             // com o teclado ainda aberto por cima, sem nada dizendo que ja tinha
@@ -650,41 +720,34 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // desde a abertura, o da chave sumia depois do PIN e o do IP fixo so
         // entao vinha preenchido — a tela mudava sozinha e parecia defeito. Agora
         // ela tem duas fases claras: pedir o PIN, e so entao preencher.
-        if (!_aparelhoRespondeu) const SizedBox.shrink() else ...[
-        _campo(
-          controlador: _rede,
-          rotulo: 'Rede Wi-Fi da propriedade',
-          dica: 'Nome exato, com maiúsculas e minúsculas',
-        ),
-        _campo(
-          controlador: _senha,
-          rotulo: 'Senha do Wi-Fi',
-          dica: 'Deixe vazio para manter a senha atual',
-          senha: !_senhaVisivel,
-          // Senha de Wi-Fi rural costuma ser longa e cheia de numero: digitar as
-          // cegas e errar, e o erro so aparece la na frente, quando o aparelho
-          // nao conecta e nao ha como saber por que.
-          acao: IconButton(
-            icon: Icon(
-              _senhaVisivel
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: Colors.white38,
-              size: 20,
-            ),
-            onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
-          ),
-        ),
-        // O campo so aparece para aparelho sem chave propria (firmware anterior
-        // a 1.20.0). Com chave propria o produtor nunca precisa ve-la nem
-        // digita-la: o app le do aparelho e leva ao cadastro.
-        if (_chaveDoAparelho == null)
+        if (_firmwareSemIdentidade)
+          _cartaoFirmwareAntigo()
+        else if (_aparelhoRespondeu) ...[
           _campo(
-            controlador: _chave,
-            rotulo: 'Chave de acesso',
-            dica: 'A mesma cadastrada na estufa, aqui no app',
-          )
-        else
+            controlador: _rede,
+            rotulo: 'Rede Wi-Fi da propriedade',
+            dica: 'Nome exato, com maiúsculas e minúsculas',
+          ),
+          _campo(
+            controlador: _senha,
+            rotulo: 'Senha do Wi-Fi',
+            dica: 'Deixe vazio para manter a senha atual',
+            senha: !_senhaVisivel,
+            // Senha de Wi-Fi rural costuma ser longa e cheia de numero: digitar as
+            // cegas e errar, e o erro so aparece la na frente, quando o aparelho
+            // nao conecta e nao ha como saber por que.
+            acao: IconButton(
+              icon: Icon(
+                _senhaVisivel
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: Colors.white38,
+                size: 20,
+              ),
+              onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
+            ),
+          ),
+          // Nao ha campo de chave, e nao havera: ver o comentario da classe.
           const Padding(
             padding: EdgeInsets.only(bottom: 14),
             child: Row(
@@ -701,48 +764,47 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               ],
             ),
           ),
-        Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: const Text(
-              'Endereço fixo (opcional)',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            subtitle: const Text(
-              'Quando não dá para reservar o IP no roteador',
-              style: TextStyle(color: Colors.white24, fontSize: 11),
-            ),
-            iconColor: Colors.white54,
-            collapsedIconColor: Colors.white54,
-            childrenPadding: const EdgeInsets.only(top: 8),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  _prefixoDaRede != null
-                      ? 'Reserva, para quando o nome acima não funcionar no '
-                            'seu celular ou roteador. A faixa da sua rede já '
-                            'veio preenchida — complete só o último número, '
-                            'entre 200 e 250. Vazio deixa o roteador escolher.'
-                      : 'Reserva, para quando o nome acima não funcionar no '
-                            'seu celular ou roteador. Deixe vazio para o '
-                            'roteador escolher. Os TRÊS primeiros números têm '
-                            'de ser os da sua rede — veja no Wi-Fi do celular, '
-                            'nos detalhes da rede conectada. Se lá aparecer '
-                            '192.168.0.15, use 192.168.0.220.',
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: const Text(
+                'Endereço fixo (opcional)',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              subtitle: const Text(
+                'Quando não dá para reservar o IP no roteador',
+                style: TextStyle(color: Colors.white24, fontSize: 11),
+              ),
+              iconColor: Colors.white54,
+              collapsedIconColor: Colors.white54,
+              childrenPadding: const EdgeInsets.only(top: 8),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _prefixoDaRede != null
+                        ? 'Reserva, para quando o nome acima não funcionar no '
+                              'seu celular ou roteador. A faixa da sua rede já '
+                              'veio preenchida — complete só o último número, '
+                              'entre 200 e 250. Vazio deixa o roteador escolher.'
+                        : 'Reserva, para quando o nome acima não funcionar no '
+                              'seu celular ou roteador. Deixe vazio para o '
+                              'roteador escolher. Os TRÊS primeiros números têm '
+                              'de ser os da sua rede — veja no Wi-Fi do celular, '
+                              'nos detalhes da rede conectada. Se lá aparecer '
+                              '192.168.0.15, use 192.168.0.220.',
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
                 ),
-              ),
-              _campo(
-                controlador: _ip,
-                rotulo: 'IP fixo',
-                dica: 'Últimos números altos, de 200 a 250, evitam conflito',
-              ),
-
-            ],
+                _campo(
+                  controlador: _ip,
+                  rotulo: 'IP fixo',
+                  dica: 'Últimos números altos, de 200 a 250, evitam conflito',
+                ),
+              ],
+            ),
           ),
-        ),
         ],
         if (_erro != null) ...[
           const SizedBox(height: 16),
@@ -751,28 +813,30 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             style: const TextStyle(color: Colors.redAccent, fontSize: 13),
           ),
         ],
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            // Desligado ate o aparelho responder: sem ele nao ha onde gravar, e
-            // um botao que so produz erro convida a apertar de novo.
-            onPressed: (_enviando || !_aparelhoRespondeu) ? null : _salvar,
-            // Sem cor propria: estilo padrao do tema, o mesmo do botao "Iniciar"
-            // da estufada (lilas, texto em caixa normal). So o padding maior,
-            // por ser um botao de largura total.
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+        if (!_firmwareSemIdentidade) ...[
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              // Desligado ate o aparelho responder: sem ele nao ha onde gravar, e
+              // um botao que so produz erro convida a apertar de novo.
+              onPressed: (_enviando || !_aparelhoRespondeu) ? null : _salvar,
+              // Sem cor propria: estilo padrao do tema, o mesmo do botao "Iniciar"
+              // da estufada (lilas, texto em caixa normal). So o padding maior,
+              // por ser um botao de largura total.
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: Text(_enviando ? 'Salvando...' : 'Salvar no aparelho'),
             ),
-            child: Text(_enviando ? 'Salvando...' : 'Salvar no aparelho'),
           ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'O aparelho reinicia sozinho depois de salvar. O alarme continua '
-          'funcionando durante todo o processo.',
-          style: TextStyle(color: Colors.white38, fontSize: 12),
-        ),
+          const SizedBox(height: 12),
+          const Text(
+            'O aparelho reinicia sozinho depois de salvar. O alarme continua '
+            'funcionando durante todo o processo.',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+        ],
       ],
     );
   }
