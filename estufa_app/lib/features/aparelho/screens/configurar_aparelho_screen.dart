@@ -308,16 +308,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       setState(() => _erro = 'Informe o nome da rede Wi-Fi.');
       return;
     }
-    // A senha e obrigatoria mesmo quando o aparelho ja tem uma guardada. O campo
-    // dizia "deixe vazio para manter a atual" — verdade para quem so troca o
-    // nome da rede, e armadilha na primeira configuracao, que e quando quase
-    // todo mundo abre esta tela: convidava a pular o campo, e o aparelho subia
-    // sem senha nenhuma. Exigir sempre custa redigitar numa troca de nome, e
-    // poupa uma segunda tela so para o caso raro.
-    if (_senha.text.isEmpty) {
-      setState(() => _erro = 'Informe a senha do Wi-Fi.');
-      return;
-    }
+    // A senha NAO e exigida, de proposito: rede aberta existe, e barrar o
+    // salvamento deixaria essa propriedade sem caminho pelo app. O que mudou foi
+    // a legenda — ela dizia "deixe vazio para manter a senha atual", que so
+    // valia para quem volta aqui so para trocar o nome da rede, e na primeira
+    // configuracao convidava a pular o campo.
 
     setState(() {
       _enviando = true;
@@ -741,7 +736,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           _campo(
             controlador: _senha,
             rotulo: 'Senha do Wi-Fi',
-            dica: 'A senha da rede acima, mesmo se o aparelho já teve uma',
+            dica: 'Informe a senha do Wi-Fi. Se a rede não tiver senha, não '
+                'preencha nada.',
             senha: !_senhaVisivel,
             // Senha de Wi-Fi rural costuma ser longa e cheia de numero: digitar as
             // cegas e errar, e o erro so aparece la na frente, quando o aparelho
