@@ -13,9 +13,13 @@ import 'package:qr_flutter/qr_flutter.dart';
 /// 1. **O QR desenhar o convite errado.** Um quadrado preto e branco parece
 ///    certo de qualquer jeito; ninguem confere um QR olhando. O teste afirma o
 ///    conteudo exato, e que ele bate com o que [LinkConvite] monta.
-/// 2. **O aviso sumir numa reforma de layout.** O texto sobre a chave ficar
-///    gravada na conversa e o unico lugar onde o produtor descobre a diferenca
-///    entre os dois botoes. Ele nao pode virar vitima de uma limpeza.
+/// 2. **O aviso de confianca sumir numa reforma de layout.** Ele e a unica
+///    coisa na tela que diz o que compartilhar significa, e o que ele precisa
+///    dizer e que o comando vale **de qualquer lugar** — lido como "so na minha
+///    rede", o produtor compartilha com outro criterio. O texto encolheu por
+///    decisao do produtor (04/08/2026): eram tres paragrafos sobre a chave da
+///    estufa, que ele nunca soube que existe. A regra ficou; a explicacao do
+///    mecanismo saiu.
 /// 3. **A gaveta montar o convite com o campo trocado.** `chave` e `idHardware`
 ///    sao os dois `String?` de [ConviteEstufa], e o menu os preenche a partir de
 ///    dois `String?` de `DadosMenuEstufa`. Trocar um pelo outro compila, passa
@@ -62,35 +66,35 @@ void main() {
   testWidgets('só o QR entrega o convite', (tester) async {
     await abrir(tester);
 
-    // O QR nao substitui o texto: quem esta longe continua sendo atendido.
     expect(find.byType(QrImageView), findsOneWidget);
     // O convite escrito saiu: ficaria gravado na conversa com a chave dentro.
     expect(find.text('Enviar por mensagem'), findsNothing);
-    expect(find.text('QUEM ESTÁ DO SEU LADO'), findsOneWidget);
     expect(find.text('QUEM ESTÁ LONGE'), findsNothing);
+    // O rotulo do cartao tambem saiu. Com um caminho so, dizer de quem ele e
+    // separava o que nao tem par: sobrou um titulo em caixa alta sobre nada.
+    expect(find.text('QUEM ESTÁ DO SEU LADO'), findsNothing);
   });
 
-  testWidgets('a tela diz que o convite escrito fica gravado para sempre', (
+  testWidgets('a tela diz que quem recebe comanda de qualquer lugar', (
     tester,
   ) async {
     await abrir(tester);
 
     // A tela NAO pode prometer que nao sobra copia: o Android guarda um
     // instantaneo dela para a lista de Recentes, com o QR desenhado, e nada
-    // impede print. O contraste verdadeiro e sobre a conversa, nao sobre a sala.
+    // impede print.
     expect(find.textContaining('não sai desta sala'), findsNothing);
+    // O que precisa sobreviver a qualquer limpeza: comandar vale de FORA da
+    // rede. Lido como "so na minha rede", compartilhar parece inofensivo.
     expect(
-      find.textContaining('não fica gravado em conversa'),
+      find.textContaining('de qualquer lugar'),
       findsOneWidget,
-      reason: 'é a única razão para preferir o QR quando os dois estão juntos',
+      reason: 'é o que faz o produtor pensar antes de mostrar o QR',
     );
-    // A chave comanda de fora da rede, e o texto tem de dizer isso: lido como
-    // "so na minha rede", o produtor manda o convite com outro criterio.
-    expect(find.textContaining('de qualquer lugar, pela'), findsOneWidget);
-    expect(
-      find.text('O convite carrega a chave da estufa'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('confia'), findsOneWidget);
+    // A explicacao do mecanismo saiu de proposito - ver o enunciado. Se voltar,
+    // volta por decisao, nao por alguem achar que faltava.
+    expect(find.text('O convite carrega a chave da estufa'), findsNothing);
   });
 
   testWidgets('a estufa compartilhada aparece pelo nome', (tester) async {

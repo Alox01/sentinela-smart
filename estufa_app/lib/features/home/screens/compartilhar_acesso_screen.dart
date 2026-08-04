@@ -60,9 +60,8 @@ class CompartilharAcessoScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   _CartaoQr(convite: convite),
-                  const SizedBox(height: 20),
                   const SizedBox(height: 18),
-                  const _AvisoDaChave(),
+                  const _AvisoDeConfianca(),
                 ],
               ),
             ),
@@ -90,22 +89,11 @@ class _CartaoQr extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'QUEM ESTÁ DO SEU LADO',
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 16),
           QrDoConvite(endereco: LinkConvite.montar(convite)),
           const SizedBox(height: 16),
           const Text(
             'Abra a câmera normal do outro celular e aponte para o código. '
-            'Ele oferece abrir o Sentinela com a estufa já preenchida — não '
-            'precisa instalar leitor nenhum.',
+            'Ele oferece abrir o Sentinela com a estufa já preenchida.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.35),
           ),
@@ -163,65 +151,31 @@ class QrDoConvite extends StatelessWidget {
   }
 }
 
-/// O caminho de quem esta longe. E o mesmo de antes do QR existir, com o mesmo
-/// texto: quem ja recebeu convite assim continua achando o "Colar convite".
-class _AvisoDaChave extends StatelessWidget {
-  const _AvisoDaChave();
+/// A unica coisa que sobra a dizer sobre o convite.
+///
+/// No lugar dela havia um cartao de tres paragrafos sobre a chave da estufa: que
+/// o convite a carrega, que quem a tem comanda de qualquer lugar, e por que o QR
+/// e o unico caminho. Era verdade e nao servia — o produtor nunca soube que
+/// existe chave, entao o texto explicava um mecanismo para justificar uma regra,
+/// quando a regra sozinha ja basta e e a unica parte sobre a qual ele decide.
+class _AvisoDeConfianca extends StatelessWidget {
+  const _AvisoDeConfianca();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orangeAccent.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.25)),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.key_outlined, color: Colors.orangeAccent, size: 20),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'O convite carrega a chave da estufa',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  'Quem tem a chave comanda a estufa de qualquer lugar, pela '
-                  'internet — não só dentro da sua rede. Mande só para quem '
-                  'pode.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'O QR não fica gravado em conversa nenhuma — é por isso que '
-                  'ele é o único caminho: convite mandado por mensagem ficaria '
-                  'guardado com a chave dentro, e apagar do seu celular não '
-                  'apagaria do outro.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+    return const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline, color: Colors.white38, size: 18),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Compartilhe só com quem você confia: quem tiver esta estufa no '
+            'app pode comandar o aparelho de qualquer lugar.',
+            style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.35),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
