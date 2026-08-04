@@ -62,7 +62,6 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   late final TextEditingController _chaveController;
   late final TextEditingController _idHardwareController;
 
-  bool _ocultarChave = true;
   bool _salvando = false;
 
   bool get _editando => widget.estufa != null;
@@ -671,11 +670,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Preenchido. Se o simulador não aparecer depois de salvar, informe a '
-          'chave em "Opções avançadas".',
-        ),
-        duration: Duration(seconds: 6),
+        content: Text('Pronto. Toque em Salvar.'),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -740,50 +736,20 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
         _buildNomeField(),
         const SizedBox(height: 18),
         _buildIpField(),
-        // Chave e id saem da vista normal: nenhum dos dois e assunto do
-        // produtor. A chave vem do aparelho e ele nao deve precisar ve-la; o id
-        // o aparelho preenche sozinho na primeira conexao local. Mostrar os dois
-        // convidava a cuidar de coisa que nao e dele — e a inventar valor, que
-        // faz o aparelho recusar comando depois, longe daqui.
+        // Nem chave nem id aparecem aqui, e nao ha secao avancada escondendo os
+        // dois. Nenhum e assunto de quem cadastra, e os tres caminhos de entrada
+        // preenchem os dois sozinhos: o modo de configuracao le do aparelho, o
+        // convite traz de quem ja tem, e o simulador nao precisa de chave.
         //
-        // Continuam alcancaveis, porque ha um caso real que precisa deles: uma
-        // estufa que vive so na nuvem (o simulador) nao tem aparelho para
-        // ensinar o id.
-        _buildAvancado(),
+        // Campo visivel convida a preencher, e valor inventado faz o aparelho
+        // recusar comando depois — longe desta tela, sem ligacao aparente.
+        //
+        // O id continua VISIVEL, so nao aqui: aparece nos detalhes da conexao da
+        // estufa, que e onde se pergunta "de quem sao estes numeros?".
       ],
     );
   }
 
-  Widget _buildAvancado() {
-    // Material transparente por baixo: o cartao do formulario ja tem fundo
-    // proprio, e sem um Material entre os dois o Flutter avisa que o toque do
-    // ExpansionTile ficaria invisivel — e trata isso como erro em teste.
-    return Material(
-      type: MaterialType.transparency,
-      child: Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        title: const Text(
-          'Opções avançadas',
-          style: TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-        subtitle: const Text(
-          'Chave e ID do aparelho. Normalmente não precisa abrir.',
-          style: TextStyle(color: Colors.white38, fontSize: 12),
-        ),
-        iconColor: Colors.white54,
-        collapsedIconColor: Colors.white54,
-        childrenPadding: const EdgeInsets.only(top: 8),
-        children: [
-            _buildChaveField(),
-            const SizedBox(height: 18),
-            _buildIdHardwareField(),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildEntradaNativaWeb() {
     final nome = _nomeController.text.trim();
@@ -928,35 +894,6 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     );
   }
 
-  // Normalmente o id e capturado sozinho na 1a conexao local, mas uma estufa
-  // que so sera acessada pela nuvem (ou o simulador) nunca passa por essa
-  // conexao — entao precisa poder ser informado a mao.
-  Widget _buildIdHardwareField() {
-    return TextField(
-      controller: _idHardwareController,
-      enableSuggestions: false,
-      autocorrect: false,
-      textCapitalization: TextCapitalization.characters,
-      textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _salvar(),
-      style: const TextStyle(color: Colors.white),
-      decoration: const InputDecoration(
-        labelText: 'ID do aparelho',
-        hintText: 'Opcional — ex: ESP32_A1B2C3',
-        helperText:
-            'Preenchido sozinho na primeira conexão local. '
-            'Informe à mão só para acessar a estufa apenas pela nuvem.',
-        helperMaxLines: 3,
-        prefixIcon: Icon(Icons.memory_rounded, color: Colors.white38),
-        labelStyle: TextStyle(color: Colors.white54),
-        hintStyle: TextStyle(color: Colors.white30),
-        helperStyle: TextStyle(color: Colors.white38),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.white24),
-        ),
-      ),
-    );
-  }
 
   Widget _buildNomeField() {
     return TextField(
@@ -997,76 +934,4 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     );
   }
 
-  Widget _buildChaveField() {
-    // Chave ja preenchida vira uma linha, sem campo e sem olho. Mostra-la
-    // convidava o produtor a cuidar de uma coisa que nao e dele: ela vem do
-    // aparelho e volta de la sempre que preciso, pela reconfiguracao. O campo so
-    // aparece quando NAO ha chave - aparelho antigo, ou cadastro a mao.
-    if (_chaveController.text.trim().isNotEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.lock_outline, color: Colors.white38, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Chave de acesso: configurada',
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Veio do aparelho. Você não precisa vê-la nem guardá-la.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return TextField(
-      controller: _chaveController,
-      obscureText: _ocultarChave,
-      enableSuggestions: false,
-      autocorrect: false,
-      keyboardType: TextInputType.visiblePassword,
-      textCapitalization: TextCapitalization.none,
-      textInputAction: TextInputAction.next,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: 'Chave de acesso',
-        hintText: 'Opcional',
-        // Nao mandar decorar nem inventar: quem e instruido a digitar uma
-        // chave acaba inventando uma, e chave inventada faz o aparelho
-        // recusar todo comando depois - longe daqui, sem ligacao aparente
-        // com o que foi feito.
-        helperText: 'Vem sozinha por "Configurar aparelho". '
-            'Você não precisa saber esta chave.',
-        helperMaxLines: 2,
-        prefixIcon: const Icon(Icons.vpn_key_outlined, color: Colors.white38),
-        suffixIcon: IconButton(
-          tooltip: _ocultarChave ? 'Mostrar chave' : 'Ocultar chave',
-          icon: Icon(
-            _ocultarChave
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
-            color: Colors.white54,
-          ),
-          onPressed: () => setState(() => _ocultarChave = !_ocultarChave),
-        ),
-        labelStyle: const TextStyle(color: Colors.white54),
-        hintStyle: const TextStyle(color: Colors.white30),
-        helperStyle: const TextStyle(color: Colors.white38),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.white24),
-        ),
-      ),
-    );
-  }
 }

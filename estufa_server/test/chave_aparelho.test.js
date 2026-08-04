@@ -425,3 +425,41 @@ test('lista ausente e recusada, para nao apagar tudo por engano', async () => {
   assert.equal(status, 400);
   assert.equal(db.linhas.length, 1);
 });
+
+// ---- O simulador e demonstracao, e nao pede credencial ----
+// Os valores dele sao inventados pelo servidor e nao ha estufa por tras.
+// Exigir segredo para ver dado falso cobra o preco todo sem proteger nada — e
+// impedia cadastrar a demonstracao sem decorar uma chave.
+
+test('o simulador responde sem credencial nenhuma', async () => {
+  const app = criarApp({ db: dbFalso() });
+  const { status } = await requisitar(
+    app,
+    '/status?idHardware=ESP32_REALISTIC_V2',
+  );
+  assert.notEqual(status, 401);
+});
+
+test('a isencao vale SO para o simulador', async () => {
+  const app = criarApp({ db: dbFalso({ [ID_A]: 'chave-do-a' }) });
+  const { status } = await requisitar(app, `/status?idHardware=${ID_A}`);
+  assert.equal(status, 401);
+});
+
+// Comandar o simulador tambem: e a demonstracao mexendo nela mesma.
+test('o simulador aceita comando sem credencial', async () => {
+  const app = criarApp({ db: dbFalso() });
+  const { status } = await requisitar(
+    app,
+    '/sincronizar',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        idHardware: 'ESP32_REALISTIC_V2',
+        temperaturaMeta: 120,
+      }),
+    },
+  );
+  assert.notEqual(status, 401);
+});

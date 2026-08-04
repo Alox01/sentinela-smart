@@ -203,17 +203,10 @@ void main() {
         ['Estufa do Fundo', 'sentinela-215788.local'],
       );
 
-      // O convite preenche o id mesmo com a secao fechada — abrir e so para ver.
-      await tester.tap(find.text('Opções avançadas'));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widgetList<TextField>(find.byType(TextField))
-            .map((c) => c.controller?.text)
-            .toList(),
-        ['Estufa do Fundo', 'sentinela-215788.local', 'ESP32_215788'],
-      );
-      expect(find.text('Chave de acesso: configurada'), findsOneWidget);
+      // Chave e id nao tem campo nenhum nesta tela — nem escondido. O convite
+      // preenche os dois por baixo, e e o que o cadastro grava.
+      expect(find.text('Chave de acesso'), findsNothing);
+      expect(find.text('ID do aparelho'), findsNothing);
     });
 
     testWidgets('sem convite continua o formulário em branco de sempre', (
@@ -237,16 +230,8 @@ void main() {
         ['', ''],
       );
 
-      await tester.tap(find.text('Opções avançadas'));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widgetList<TextField>(find.byType(TextField))
-            .map((c) => c.controller?.text)
-            .toList(),
-        ['', '', '', ''],
-      );
       expect(find.text('Colar convite'), findsOneWidget);
+      expect(find.text('Usar o simulador'), findsOneWidget);
     });
   });
 }

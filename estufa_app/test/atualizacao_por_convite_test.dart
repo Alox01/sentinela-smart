@@ -320,17 +320,15 @@ void main() {
     testWidgets('digitado à mão, sem convite, a recusa continua valendo', (
       tester,
     ) async {
-      // Sem convite, chave e endereco sao palpite de quem digita — nao ha
-      // autoridade nenhuma para sobrescrever a chave de uma estufa que funciona.
+      // Sem convite nao ha autoridade para mexer numa estufa que funciona, e a
+      // recusa de sempre vale. O conflito alcancavel a mao e o de ENDERECO: o
+      // campo de id saiu da tela, entao apontar duas estufas ao mesmo aparelho
+      // por id digitado deixou de ser possivel — fechado por construcao, e nao
+      // por guarda.
       await abrir(tester);
 
       await tester.enterText(find.byType(TextField).at(0), 'Estufa Nova');
-      await tester.enterText(find.byType(TextField).at(1), '192.168.0.99');
-      // O id nao esta na vista normal: quem digita a mao passa por "Opcoes
-      // avancadas", que e onde ele agora mora.
-      await tester.tap(find.text('Opções avançadas'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).at(3), 'ESP32_215788');
+      await tester.enterText(find.byType(TextField).at(1), '192.168.0.50');
       await tester.pump();
 
       await salvar(tester);
@@ -339,9 +337,20 @@ void main() {
       expect(repositorio.atualizacoes, isEmpty);
       expect(repositorio.salvamentos, isEmpty);
       expect(
-        find.textContaining('já está cadastrado como "Estufa do Fundo"'),
+        find.textContaining('já usa este endereço'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a tela de cadastro não pede chave nem id', (tester) async {
+      // O que substituiu a recusa por id: nao ha onde digitar um. Os tres
+      // caminhos de entrada preenchem os dois sozinhos.
+      await abrir(tester);
+
+      expect(find.text('Chave de acesso'), findsNothing);
+      expect(find.text('ID do aparelho'), findsNothing);
+      expect(find.text('Opções avançadas'), findsNothing);
+      expect(find.byType(TextField), findsNWidgets(2));
     });
   });
 }

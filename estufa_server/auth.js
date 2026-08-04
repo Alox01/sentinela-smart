@@ -1,4 +1,8 @@
 const crypto = require('crypto');
+
+/// Id do aparelho de demonstracao. Duplicado de `routes/estado_estufa.js` de
+/// proposito: a porteira nao pode depender das rotas, que dependem dela.
+const ID_SIMULADOR = 'ESP32_REALISTIC_V2';
 const { log } = require('./log');
 
 // [chaveDoAparelho] permite autorizar uma requisicao pela chave DAQUELE aparelho,
@@ -37,6 +41,19 @@ function createAuthMiddleware(
   return async (req, res, next) => {
     const tokenRecebido = extrairToken(req);
     const idHardware = idHardwareDaRequisicao(req);
+
+    // O simulador nao pede credencial nenhuma. Ele e uma DEMONSTRACAO: os
+    // valores sao inventados pelo proprio servidor, nao ha estufa por tras, e
+    // comandar so mexe na demonstracao. Exigir segredo para ver dado falso nao
+    // protege nada e cobra o preco todo — foi o que impediu o produtor de
+    // cadastrar o simulador sem decorar uma chave.
+    //
+    // Vale so para ESTE id. Os aparelhos reais seguem a regra de sempre.
+    if (idHardware === ID_SIMULADOR) {
+      next();
+      return;
+    }
+
     let chaveRegistrada = null;
 
     if (tokenRecebido && chaveDoAparelho && idHardware) {
@@ -110,6 +127,7 @@ function tokensIguais(recebido, esperado) {
 
 module.exports = {
   createAuthMiddleware,
+  ID_SIMULADOR,
   idHardwareDaRequisicao,
   extrairToken,
   tokensIguais,
