@@ -17,12 +17,14 @@
   Placa: ESP32 (framework Arduino).
 
   ATENCAO:
-    1. WIFI_SSID, WIFI_PASS e DEVICE_TOKEN abaixo sao apenas o valor DE
-       FABRICA, usado ate alguem configurar o aparelho.
-    2. Depois de gravado, da para trocar rede e chave sem computador:
-       segure os TRES botoes por 3 s, conecte na rede "Sentinela-Config" e
-       abra o navegador. O que for salvo ali fica na NVS e tem precedencia.
-    3. O DEVICE_TOKEN deve ser IGUAL a chave de acesso cadastrada no app.
+    1. WIFI_SSID e WIFI_PASS abaixo sao apenas o valor DE FABRICA, usado ate
+       alguem configurar o aparelho.
+    2. Depois de gravado, da para trocar de rede sem computador: segure os TRES
+       botoes por 3 s, conecte na rede "Sentinela-Config" e abra o app (ou o
+       navegador). O que for salvo ali fica na NVS e tem precedencia.
+    3. NAO ha o que preencher em DEVICE_TOKEN. O aparelho gera a propria chave
+       no primeiro boot e o app a le dele, com o PIN do visor. Ninguem digita
+       chave em lugar nenhum.
 */
 
 #include <WiFi.h>
@@ -41,14 +43,24 @@
 // ===================== CONFIG (preencher) =====================
 const char* WIFI_SSID       = "SUA_REDE_WIFI";
 const char* WIFI_PASS       = "SUA_SENHA_WIFI";
-// Mesma chave usada no app (campo "Chave de acesso") e no ESTUFA_API_TOKEN.
-// Deixe "" para liberar comandos sem token (apenas em rede local confiavel).
+// Deixe como esta. Ate a 1.19.0 esta constante tinha de casar com um campo
+// "Chave de acesso" no app; desde a 1.20.0 o aparelho gera a propria chave no
+// primeiro boot e o app a le por `/config/identidade`, e na v1.25.0 o campo
+// saiu do app de vez. O valor abaixo e reconhecido como "de fabrica" no setup e
+// substituido por uma chave aleatoria - preenche-lo a mao so serve para gravar
+// varios aparelhos com a MESMA chave, que e o contrario do que se quer.
+// Vazio libera comandos sem token, e so faz sentido em bancada.
 const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // O id do aparelho e gerado do chip (MAC) no setup -> unico por ESP, sem
 // precisar configurar nada. Cada aparelho vira o seu na nuvem (status por
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
 // /status, qual firmware um aparelho em campo esta rodando.
+// 1.25.0: `semsenha=1` no POST /salvar grava senha vazia DE PROPOSITO. Vazio
+//        sozinho sempre quis dizer "mantenha a atual", e por isso nao havia como
+//        dizer "esta rede nao tem senha": o aparelho guardava a senha antiga,
+//        tentava entrar com ela numa rede aberta e nao conectava, sem nada
+//        explicando. Ausente = comportamento de antes.
 // 1.24.0: PIN de 4 digitos no visor para entregar a chave. O ponto de acesso do
 //        modo de configuracao e ABERTO: sem o PIN, quem estivesse ao alcance do
 //        wifi naquele momento pediria /config/identidade e levaria a chave sem
@@ -803,12 +815,26 @@ void handleConfigPagina() {
       // nao conectaria. Esta caixa e a unica forma de pedir senha nenhuma.
       "<label style=\"font-weight:normal\"><input type=\"checkbox\" "
       "name=\"semsenha\" value=\"1\"> Rede sem senha</label>"
+      // A chave sai da frente. Ela ficava lado a lado com a rede, com um campo
+      // vazio esperando texto - convite a digitar algo. Digitar aqui grava por
+      // cima da chave que o aparelho gerou e que o app ja conhece, e o aparelho
+      // some da nuvem. Quem precisa disso e raro; quem abre esta pagina para
+      // trocar de Wi-Fi e a regra.
+      "<details><summary>Chave de acesso (avan&ccedil;ado)</summary>"
+      "<p class=\"aviso\">O aparelho tem chave propria e o app a le sozinho. "
+      "N&atilde;o preencha nada aqui no uso normal: o que for digitado grava por "
+      "cima da chave atual e o aparelho some do app e da nuvem.</p>"
       "<label>Chave de acesso</label>"
-      "<input name=\"token\" placeholder=\"(deixe vazio para manter a atual)\">"
+      "<input name=\"token\" placeholder=\"(vazio mant&eacute;m a chave do "
+      "aparelho)\">"
       "<label style=\"font-weight:normal\"><input type=\"checkbox\" "
       "name=\"novachave\" value=\"1\"> Gerar uma chave nova</label>"
       "<p class=\"aviso\">Marque so ao trocar de dono ou se a chave vazou. A "
-      "chave nova aparece na tela seguinte e precisa ser atualizada no app.</p>"
+      "chave nova aparece na tela seguinte. Depois disso entre de novo no modo "
+      "de configura&ccedil;&atilde;o e refa&ccedil;a \"Conectar o aparelho ao "
+      "Wi-Fi\" pelo app: e assim que ele pega a chave nova. Ate la os comandos "
+      "param de funcionar.</p>"
+      "</details>"
       "<details><summary>Endere&ccedil;o fixo (opcional)</summary>"
       "<p class=\"aviso\">Use quando n&atilde;o der para reservar o IP no "
       "roteador. Deixe vazio para o roteador escolher.</p>"
@@ -933,8 +959,8 @@ void handleConfigSalvar() {
 
   prefs.begin("sentinela", false);
   prefs.putString("wifiSsid", ssid);
-  // Senha vazia mantem a atual: assim da para so trocar a chave de acesso sem
-  // precisar digitar a senha do Wi-Fi de novo. Isso nao consegue exprimir "esta
+  // Senha vazia mantem a atual: assim da para voltar aqui e mexer so no
+  // endereco fixo, ou so na chave, sem redigitar a senha do Wi-Fi. Isso nao consegue exprimir "esta
   // rede nao tem senha" — a antiga ficaria gravada, o aparelho tentaria entrar
   // com ela numa rede aberta e nao conectaria, sem nada dizendo por que. Daí a
   // marca explicita: quem quer rede aberta pede rede aberta.
@@ -978,8 +1004,11 @@ void handleConfigSalvar() {
   if (gerarNova) {
     // Ultima tela em que a chave nova aparece. Depois do reinicio ela volta a
     // ser segredo: em operacao normal /status so diz se existe chave, nunca qual.
+    // Anotar nao e mais o caminho principal - o app le a chave sozinho no modo
+    // de configuracao - mas continua sendo a rede de seguranca de quem esta com
+    // o navegador na mao e sem o app.
     confirmacao += F(
-        "</b></p><p>Chave nova (anote e atualize no app):<br>"
+        "</b></p><p>Chave nova:<br>"
         "<b style=\"font-size:18px;color:#7bd88f\">");
     confirmacao += escaparHtml(token);
   }
