@@ -70,6 +70,17 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
   String? _pinTentado;
   String? _erroPin;
+  /// O aparelho respondeu, mas nao serve a rota da identidade — firmware
+  /// anterior a 1.20.0. So entao o campo da chave volta a existir: sem isso, ele
+  /// aparecia enquanto o celular nem estava na rede do aparelho, e sumia depois
+  /// do PIN, o que parecia defeito.
+  bool _firmwareSemIdentidade = false;
+
+  /// O aparelho ja se apresentou — pela identidade (caminho normal) ou por ter
+  /// respondido sem servir a rota dela (firmware antigo). Antes disso nao ha o
+  /// que preencher: o endereco, a chave e a faixa da rede vem dele.
+  bool get _aparelhoRespondeu =>
+      _chaveDoAparelho != null || _firmwareSemIdentidade;
   Timer? _tentativas;
   bool _senhaVisivel = false;
   bool _conferindo = false;
@@ -165,7 +176,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         });
         return;
       }
-      if (resposta.statusCode != 200) return;
+      if (resposta.statusCode != 200) {
+        _marcarFirmwareAntigoSePreciso();
+        return;
+      }
       // Deu certo: o teclado sai de cena. Ficar aberto sobre uma tela que ja
       // seguiu adiante faz parecer que ainda falta digitar algo.
       FocusManager.instance.primaryFocus?.unfocus();
@@ -193,8 +207,19 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         }
       });
     } catch (_) {
-      // Firmware antigo ou fora do modo de configuracao: segue pelo campo.
+      _marcarFirmwareAntigoSePreciso();
     }
+  }
+
+  /// O aparelho atendeu em `/dados` mas nao entregou identidade: ou a rota nao
+  /// existe (firmware anterior a 1.20.0), ou ela devolveu algo que nao e o JSON
+  /// esperado. Nos dois casos o caminho automatico nao serve, e o campo da chave
+  /// precisa voltar — mas so aqui, com o aparelho ja respondendo. Enquanto o
+  /// celular nem alcanca o aparelho, nao ha o que concluir.
+  void _marcarFirmwareAntigoSePreciso() {
+    if (!mounted || _nomeLocal == null || _erroPin != null) return;
+    if (_firmwareSemIdentidade) return;
+    setState(() => _firmwareSemIdentidade = true);
   }
 
   /// Confere se o aparelho voltou a ser alcancavel pelo nome, agora que os dois
@@ -451,21 +476,37 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// a leitura se repete sozinha, este aviso vira o retorno de que faltava so a
   /// rede.
   Widget _cartaoEstadoDaConversa() {
-    final achou = _chaveDoAparelho != null;
+    final achou = _chaveDoAparelho != null || _firmwareSemIdentidade;
+    // Antes de qualquer tentativa o app NAO tentou nada, e dizer "nao achei"
+    // ali e falso — chegou a convencer duas vezes de que o Wi-Fi do aparelho
+    // estava quebrado quando o processo nem tinha comecado.
+    final aindaNaoTentou = !achou && _pinTentado == null;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: (achou ? Colors.greenAccent : Colors.orangeAccent).withValues(
-          alpha: 0.08,
-        ),
+        color:
+            (achou
+                    ? Colors.greenAccent
+                    : aindaNaoTentou
+                    ? Colors.white
+                    : Colors.orangeAccent)
+                .withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(
-            achou ? Icons.link_rounded : Icons.link_off_rounded,
-            color: achou ? Colors.greenAccent : Colors.orangeAccent,
+            achou
+                ? Icons.link_rounded
+                : aindaNaoTentou
+                ? Icons.hourglass_empty_rounded
+                : Icons.link_off_rounded,
+            color: achou
+                ? Colors.greenAccent
+                : aindaNaoTentou
+                ? Colors.white54
+                : Colors.orangeAccent,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -474,10 +515,17 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               achou
                   ? 'Falando com o aparelho. A chave dele vem junto — você não '
                         'precisa digitar nada.'
-                  : 'Ainda não achei o aparelho. Siga os 3 passos abaixo e '
-                        'digite os 4 números que aparecem no visor dele.',
+                  : aindaNaoTentou
+                  ? 'Esperando o PIN. Assim que você digitar os 4 números, o '
+                        'resto desta tela se completa.'
+                  : 'Não achei o aparelho com esse PIN. Confira o número no '
+                        'visor e se o celular está na rede "Sentinela-Config".',
               style: TextStyle(
-                color: achou ? Colors.greenAccent : Colors.orangeAccent,
+                color: achou
+                    ? Colors.greenAccent
+                    : aindaNaoTentou
+                    ? Colors.white60
+                    : Colors.orangeAccent,
                 fontSize: 12,
               ),
             ),
@@ -554,7 +602,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
-        _cartaoEstadoDaConversa(),
         _cartaoNome(),
         Container(
           padding: const EdgeInsets.all(12),
@@ -574,7 +621,13 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        // O aviso vem DEPOIS das instrucoes, e nao antes: no topo ele era a
+        // primeira coisa lida e anunciava falha antes de o produtor ter feito
+        // qualquer passo — chegou a convencer duas vezes de que o Wi-Fi do
+        // aparelho estava quebrado quando nada tinha sido tentado ainda.
+        _cartaoEstadoDaConversa(),
+        const SizedBox(height: 8),
         // Os 4 digitos do visor. E o unico numero que o produtor digita em todo
         // o processo, e e ele que troca a chave longa por presenca fisica.
         if (_chaveDoAparelho == null) ...[
@@ -593,6 +646,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             },
           ),
         ],
+        // Nada abaixo do PIN antes de o aparelho responder. Os campos apareciam
+        // desde a abertura, o da chave sumia depois do PIN e o do IP fixo so
+        // entao vinha preenchido — a tela mudava sozinha e parecia defeito. Agora
+        // ela tem duas fases claras: pedir o PIN, e so entao preencher.
+        if (!_aparelhoRespondeu) const SizedBox.shrink() else ...[
         _campo(
           controlador: _rede,
           rotulo: 'Rede Wi-Fi da propriedade',
@@ -685,6 +743,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             ],
           ),
         ),
+        ],
         if (_erro != null) ...[
           const SizedBox(height: 16),
           Text(
@@ -696,7 +755,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: _enviando ? null : _salvar,
+            // Desligado ate o aparelho responder: sem ele nao ha onde gravar, e
+            // um botao que so produz erro convida a apertar de novo.
+            onPressed: (_enviando || !_aparelhoRespondeu) ? null : _salvar,
             // Sem cor propria: estilo padrao do tema, o mesmo do botao "Iniciar"
             // da estufada (lilas, texto em caixa normal). So o padding maior,
             // por ser um botao de largura total.
