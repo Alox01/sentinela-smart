@@ -101,7 +101,7 @@ emparelhamento, protegido como no pareamento de Bluetooth/TV:
 - **limite de tentativas** (bloqueia após poucos erros);
 - só funciona na **rede local**.
 
-### Modelo B — **implementado** (firmware 1.24.0, 31/07/2026)
+### Modelo B — **implementado** (31/07/2026)
 
 O PIN é sorteado a cada entrada no modo de configuração e ocupa o visor de 4
 dígitos enquanto vale. `GET /config/identidade` passa a exigi-lo; o app pede os
@@ -138,9 +138,16 @@ enquanto dura. No meio de uma estufada, pedir que alguém vá até lá e interro
 monitoramento para instalar o app é caro e desnecessário: quem já pode comandar
 pode delegar. É a família, não um estranho.
 
-O menu da estufa gera um **convite** e o manda pelo compartilhamento do sistema
-(o produtor escolhe por onde). No outro celular, "Nova Estufa" → "Colar
-convite" preenche tudo.
+O menu da estufa mostra um **QR** com o convite. A câmera comum do outro celular
+o lê e oferece abrir o Sentinela com a estufa preenchida.
+
+**O convite escrito foi removido (04/08/2026).** Ele era mandado pelo
+compartilhamento do sistema e colado no outro celular em "Nova Estufa" → "Colar
+convite". Decisão do produtor: convite mandado por mensagem **fica gravado na
+conversa, com a chave dentro, para sempre**, e apagar do próprio celular não
+apaga do outro nem do backup dele. O preço está declarado — **compartilhar passou
+a exigir estar junto**, e não há rede de segurança se a câmera do outro celular
+não reconhecer o código.
 
 Decisões:
 
@@ -151,8 +158,12 @@ Decisões:
   interpretado pela metade: meio cadastro é pior que nenhum.
 - **Acha o convite no meio da conversa**, porque é assim que ele chega — colado
   junto com o "oi pai, entra aí".
-- **O aviso viaja no texto**, não só na tela de quem compartilha: quem recebe
-  pode não ter lido a tela, e o convite carrega a chave da estufa.
+- ~~**O aviso viaja no texto**~~ — valia enquanto havia texto. Com só o QR, o
+  aviso é da tela de quem compartilha, e ele encolheu para a única coisa que o
+  produtor decide: *compartilhe só com quem você confia, porque quem tiver esta
+  estufa no app comanda o aparelho de qualquer lugar*. Explicar que existe uma
+  chave, e que ela viaja no convite, era explicar a máquina para justificar a
+  regra.
 
 **Limitação declarada:** com chave por aparelho não há como revogar **um**
 celular. Gerar chave nova tranca todos, e todos reemparelham. Revogar

@@ -25,6 +25,25 @@ então nenhum deles espera gravação.
 | Ponte de leitura | energia sim, internet da propriedade não, celular no 4G → **sem** falso "sem comunicação" | APK |
 | Cadastrar / atualizar estufa | os fluxos novos de provisionamento | APK |
 
+### Acrescentados em 04/08/2026 — dependem de **gravar o firmware**
+
+O aparelho está com a 1.24.0. Nada abaixo existe no ESP até ele ser regravado.
+
+| Teste | O que prova | Como saber que falhou |
+|---|---|---|
+| Segurar os 3 botões | os LEDs acendem **enquanto conta** e o apito só vem ao entrar; a contagem aguenta o dedo escorregando | LED não acende, ou a contagem parece loteria como antes |
+| Entrar em configuração logo depois de uma leitura | a nuvem espera enquanto os 3 botões estão na mão | segurar 3 s não faz nada, aleatoriamente |
+| Configurar numa rede **sem senha** | `semsenha=1` grava senha vazia de propósito | o aparelho não conecta e não diz por quê |
+| Salvar pelo app numa rede com senha | senha vazia continua mantendo a atual | o aparelho some da nuvem depois de salvar |
+
+E, sem depender de gravação:
+
+| Teste | O que prova |
+|---|---|
+| Abrir o relatório de uma estufada **encerrada há mais de uma hora** | o gráfico desenha linha e pontos (era o caso que abria vazio) |
+| Abrir "Relatórios" logo depois do monitoramento | entra sem o giro de carregamento |
+| Compartilhar acesso por QR num segundo celular | o único caminho que sobrou; sem convite escrito não há reserva |
+
 ### Desembaraçar as três estufas (29/07/2026) — **primeiro de todos**
 
 As três estufas cadastradas ficaram apontadas para o **mesmo aparelho** (o ESP
@@ -51,7 +70,7 @@ Esp32-1 parando de piscar entre LOCAL e NUVEM (a histerese de duas falhas).
 |---|---|
 | Salvar duas estufas no mesmo endereço | é **recusado**, com explicação |
 | Cartão sem id | diz **SEM ID**, não OFFLINE |
-| Detalhes da conexão | mostram `1.17.0` e o id do aparelho |
+| Detalhes da conexão | mostram a versão do firmware e o id do aparelho |
 
 **O que anotar em cada um:** o que aconteceu, quanto tempo levou e se o app
 estava aberto ou fechado. Esses números viram a seção de resultados do TCC — e,

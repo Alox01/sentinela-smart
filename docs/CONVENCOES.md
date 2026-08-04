@@ -41,6 +41,12 @@ App: `flutter test` dentro de `estufa_app`.
 
 - **Temperatura em Fahrenheit de propósito.** O produtor pensa em °F; converter
   para Celsius "para ficar certo" quebra a leitura dele.
+- **Número de versão do firmware não sobe sozinho.** Reiniciou em `1.0` em
+  04/08/2026 e só muda quando o produtor pede — ele diz *o que está na mão de
+  alguém*, não *o que mudou no código*, que o `git log` já conta. Versões citadas
+  em documentos antigos (`v1.16.0`, `v1.18.0`, `v1.24.0`…) são da numeração de
+  bancada, listada em `HISTORICO_FIRMWARE.md`, e não existem mais como alvo de
+  gravação.
 - **Umidade nunca dispara alarme.** Só temperatura e fogo. Isso vale também na
   **aparência**: no relatório da estufada a umidade sai como `registro`, em
   cinza, e não com a marca vermelha de quem acionou alarme. Ela chegou a sair

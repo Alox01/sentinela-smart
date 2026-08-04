@@ -2,11 +2,11 @@
 
 Ponto de retomada para continuar o trabalho em qualquer máquina (o histórico do
 chat fica local; este arquivo e o Git são a memória portátil do projeto).
-Atualizado em 25/07/2026: segurança, controle remoto, firmware real, CI,
-retenção, push completo (incl. som de alarme), persistência dos ajustes,
-escopo das notificações (global × por estufa), ponte de leitura, validade dos
-avisos de comunicação, **agendamento de ajuste** e **canais de alarme por
-assunto**.
+Atualizado em **04/08/2026**. Antes disso, em 25/07: segurança, controle remoto,
+firmware real, CI, retenção, push completo (incl. som de alarme), persistência
+dos ajustes, escopo das notificações (global × por estufa), ponte de leitura,
+validade dos avisos de comunicação, agendamento de ajuste e canais de alarme por
+assunto. O que mudou em 04/08 está em "A limpeza de 04/08/2026", no fim.
 
 ## Repositório oficial
 
@@ -25,11 +25,14 @@ em `GET /versao` (mostra o commit no ar).
 - Leitura ao vivo **compartilhada** entre a home e a tela de monitoramento (um
   `EstufaMonitor` por estufa) — abrir uma estufa é instantâneo, sem busca dupla.
 - Sincronização LWW por campo; fila offline de comandos; captura automática do
-  `idHardware` na 1ª conexão local (+ campo manual no cadastro, para estufa só de
-  nuvem/simulador).
+  `idHardware` na 1ª conexão local ou pela configuração do aparelho. O campo
+  manual no cadastro **saiu** (04/08): o produtor não tem de onde tirar aquele
+  número. A estufa de demonstração entra por um atalho próprio.
 - Relatório por estufada: resumo, gráfico (degraus + linha de ajuste, amostragem
   10 min/eventos), eventos, exportação **PDF e CSV**; apagar estufadas.
-- Backup/restore local (JSON), sem a chave de acesso no arquivo exportado.
+- Exportação **PDF e CSV** do relatório. O **backup/restore local (JSON) foi
+  removido** em 04/08: ele exportava a chave de acesso de cada estufa para um
+  arquivo que ia parar no WhatsApp, e o `SEGURANCA.md` afirmava o contrário.
 
 **Servidor (Node/Express, Render + Supabase)**
 - Rotas: `GET /status`, `/historico`, `/`, `/dados` (autenticadas), `POST /leitura`,
@@ -49,9 +52,13 @@ em `GET /versao` (mostra o commit no ar).
   Supabase (500 MB). Ver `PLANO_BANCO_DADOS.md`.
 - ESP32 virtual (push HTTP) + keep-alive contra o sleep do plano grátis.
 
-**Firmware (ESP32, `firmware/sentinela_esp32`)** — v1.16.0, **compilado**
-(86% flash / 15% RAM no core esp32 3.2.0). A **1.18.0 está gravada** no aparelho, e a
-chave própria dele já está registrada na nuvem.
+**Firmware (ESP32, `firmware/sentinela_esp32`)** — **v1.0**, compilado (86%
+flash / 15% RAM no core esp32 3.2.0). A numeração reiniciou em 04/08/2026 e não
+sobe mais sozinha: ver `HISTORICO_FIRMWARE.md`.
+
+⚠️ **O aparelho na mesa está com a 1.24.0**, gravada em 31/07. Tudo o que veio
+depois — senha vazia explícita, tolerância dos três botões, LEDs contando —
+**está no código e não no ESP**. Gravar é o próximo passo de campo.
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
   acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
   conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
@@ -289,8 +296,8 @@ flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.on
 
 - Servidor: `cd estufa_server && npm test` · App: `cd estufa_app && flutter analyze lib test && flutter test` · Firmware: compilar no Arduino IDE / arduino-cli (core esp32 3.2.0).
 - Deploy no ar: `GET https://estufa-server.onrender.com/versao` → commit atual.
-- Em 25/07/2026: **160 testes no servidor**, **57 no app**, analyze limpo,
-  firmware 1.16.0 compilando em 86% do flash.
+- Em 04/08/2026: **128 testes no app**, analyze limpo, firmware compilando em
+  86% do flash. (Em 25/07 eram 160 no servidor e 57 no app.)
 - Testar alarme sem esperar acontecer: `POST /push/verificar-silencio` (roda o
   watchdog na hora) e `POST /agendamentos/verificar` (aplica o que venceu).
   Ambos autenticados.
@@ -298,3 +305,42 @@ flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.on
   canal existente **não se reconfigura** — mudar som ou importância exige
   incrementar o sufixo do id (`_v1` → `_v2`), senão a mudança não vale para quem
   já tinha o app.
+
+## A limpeza de 04/08/2026
+
+Um dia inteiro de campo com o app na mão, e o tema foi um só: **o produtor não
+sabe que existe chave de acesso, e o app inteiro falava com ele como se
+soubesse.**
+
+**A chave saiu de toda tela.** Do cadastro de estufa, da configuração do
+aparelho, dos detalhes da conexão, da tela de compartilhar. O aparelho gera a
+própria chave, o app a lê pelo PIN do visor, e ninguém digita nada. O formulário
+do navegador do ESP ainda tem o campo, agora atrás de "avançado" e com aviso de
+que não se preenche no uso normal — é a saída de quem está sem o app.
+
+**Aparelho com firmware anterior ao PIN não é mais configurado pelo app.** Ele
+não entrega chave, e gravar nele mandaria token vazio que as versões antigas
+escrevem por cima: o aparelho sortearia chave nova e sumiria. A tela diz isso e
+manda usar `192.168.4.1`.
+
+**Três bugs de campo, todos silenciosos:**
+
+- **O gráfico da estufada quase nunca desenhava.** A janela era "a última hora
+  terminando agora", então relatório de estufada encerrada abria vazio — moldura,
+  eixos, botões, sem linha. Agora a janela é a estufada. Quatro testes contam os
+  pontos, porque gráfico vazio não acusa nada.
+- **A umidade saía marcada como alarme** no relatório, em vermelho, no meio de
+  "Alarme acionado". Ela não aciona alarme em lugar nenhum — e numa estufa de
+  secagem ficar longe do ajuste é o objetivo.
+- **A combinação dos três botões** dependia de sorte: leitura sem debounce (um
+  chacoalho zerava a contagem), nenhum retorno antes dos 3 s, e a checagem rodava
+  depois das chamadas HTTPS, que travam o loop por 1-2 s. Agora tolera 150 ms,
+  acende os três LEDs enquanto conta, e a nuvem espera.
+
+**O backup local foi removido.** Ver `SEGURANCA.md`.
+
+**A numeração do firmware reiniciou em 1.0**, e não sobe mais sozinha: o produtor
+avisa quando muda. Histórico em `HISTORICO_FIRMWARE.md`.
+
+**O relatório começa a carregar quando o monitoramento abre**, não quando o
+produtor toca em "Relatórios".
