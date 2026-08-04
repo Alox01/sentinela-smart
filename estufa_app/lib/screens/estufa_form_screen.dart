@@ -639,8 +639,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Configure o Wi-Fi e a chave dele antes de cadastrar. '
-                    'O aparelho vai mostrar o endereço para preencher abaixo.',
+                    'Configure o Wi-Fi antes de adicionar a estufa. '
+                    'O aparelho vai preencher o endereço abaixo.',
                     style: TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ],
