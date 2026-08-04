@@ -344,3 +344,12 @@ avisa quando muda. Histórico em `HISTORICO_FIRMWARE.md`.
 
 **O relatório começa a carregar quando o monitoramento abre**, não quando o
 produtor toca em "Relatórios".
+
+**As plataformas viraram Android e iOS, só.** A web saiu inteira — banco em
+memória, desvios `kIsWeb`, pares `_web`/`_io`/`_stub`, modelos `_web` — e junto
+`linux/`, `macos/` e `windows/`. Com isso some a armadilha dos
+`generated_plugin_registrant` reaparecendo modificado a cada build, que já entrou
+em commit por engano duas vezes. **iOS é alvo declarado mas ainda não existe**:
+falta `GoogleService-Info.plist`, as permissões de rede local no `Info.plist`
+(sem elas o iOS bloqueia mDNS), um Mac e conta de desenvolvedor. Ver
+`CONVENCOES.md`.

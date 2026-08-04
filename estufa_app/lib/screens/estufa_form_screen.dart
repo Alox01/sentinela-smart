@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -10,7 +9,6 @@ import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/atualizacao_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../services/isar_service.dart';
-import '../utils/browser_text_input.dart';
 
 /// O que o formulario fez, para quem o abriu poder anunciar a coisa certa.
 ///
@@ -65,12 +63,6 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   bool _salvando = false;
 
   bool get _editando => widget.estufa != null;
-
-  bool get _usarEntradaNativaWeb {
-    if (!kIsWeb) return false;
-    return defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-  }
 
   @override
   void initState() {
@@ -383,23 +375,6 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
     return true;
   }
 
-  Future<void> _editarTextoNativo({
-    required String titulo,
-    required TextEditingController controller,
-    int? limite,
-  }) async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    final valor = await pedirTextoNativo(
-      titulo: titulo,
-      valorAtual: controller.text,
-    );
-    if (valor == null) return;
-
-    final ajustado = limite == null || valor.length <= limite
-        ? valor
-        : valor.substring(0, limite);
-    setState(() => controller.text = ajustado.trim());
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -437,14 +412,14 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                       ),
                     ),
                     const SizedBox(height: 22),
-                    // Só ao adicionar (não ao editar) e fora da web: é aqui que
+                    // Só ao adicionar, não ao editar: é aqui que
                     // o iniciante chega na primeira vez. O aparelho novo ainda
                     // não está na rede, então antes de preencher o endereço
                     // abaixo ele configura o Wi-Fi do aparelho por aqui. Não dá
                     // para embutir num formulário só: configurar exige o celular
                     // na rede do aparelho (Sentinela-Config), e cadastrar exige
                     // o celular na rede da casa — redes diferentes, duas etapas.
-                    if (!_editando && !kIsWeb) ...[
+                    if (!_editando) ...[
                       _buildAtalhoConfigurar(),
                       const SizedBox(height: 12),
                       // O segundo caminho para a mesma estufa: quem ja tem
@@ -452,10 +427,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                       _buildAtalhoSimulador(),
                       const SizedBox(height: 22),
                     ],
-                    if (_usarEntradaNativaWeb)
-                      _buildEntradaNativaWeb()
-                    else
-                      _buildEntradaFlutter(),
+                    _buildEntradaFlutter(),
                     const SizedBox(height: 26),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -679,148 +651,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   }
 
 
-  Widget _buildEntradaNativaWeb() {
-    final nome = _nomeController.text.trim();
-    final ip = _ipController.text.trim();
-    final chaveConfigurada = _chaveController.text.trim().isNotEmpty;
-    final idHardware = _idHardwareController.text.trim();
 
-    return Column(
-      children: [
-        _buildCampoNativoCard(
-          titulo: 'Nome',
-          valor: nome.isEmpty ? 'Toque para informar' : nome,
-          subtitulo: 'Use até 24 caracteres.',
-          icone: Icons.badge_outlined,
-          onTap: () => _editarTextoNativo(
-            titulo: 'Nome da estufa',
-            controller: _nomeController,
-            limite: _limiteNomeEstufa,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildCampoNativoCard(
-          titulo: 'IP ou endereço',
-          valor: ip.isEmpty ? 'Ex: 192.168.1.11' : ip,
-          subtitulo: 'Endereço usado pelo aplicativo.',
-          icone: Icons.router_outlined,
-          onTap: () => _editarTextoNativo(
-            titulo: 'IP ou endereço da estufa',
-            controller: _ipController,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildCampoNativoCard(
-          titulo: 'Chave de acesso',
-          valor: chaveConfigurada ? 'Configurada' : 'Opcional',
-          // A chave nao e para o produtor decorar nem inventar: ela vem do
-          // aparelho, por "Configurar aparelho". Dizer isso aqui evita ele
-          // procurar um valor que nao precisa conhecer - e evita inventar um,
-          // que faria o aparelho recusar todo comando depois.
-          subtitulo: chaveConfigurada
-              ? 'Veio do aparelho. Você não precisa vê-la nem guardá-la.'
-              : 'Vem sozinha ao usar "Configurar aparelho". '
-                    'Você não precisa saber esta chave.',
-          icone: chaveConfigurada
-              ? Icons.lock_outline
-              : Icons.vpn_key_outlined,
-          // Configurada deixa de ser tocavel: abrir so serviria para ver a
-          // chave, e ver a chave nao e tarefa do produtor. Trocar continua
-          // possivel por "Configurar aparelho", que a le do aparelho de novo.
-          onTap: chaveConfigurada
-              ? null
-              : () => _editarTextoNativo(
-                  titulo: 'Chave de acesso',
-                  controller: _chaveController,
-                ),
-        ),
-        const SizedBox(height: 12),
-        _buildCampoNativoCard(
-          titulo: 'ID do aparelho',
-          valor: idHardware.isEmpty ? 'Automático' : idHardware,
-          subtitulo:
-              'Preenchido sozinho na primeira conexão local. '
-              'Informe à mão só para acessar apenas pela nuvem.',
-          icone: Icons.memory_rounded,
-          onTap: () => _editarTextoNativo(
-            titulo: 'ID do aparelho',
-            controller: _idHardwareController,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCampoNativoCard({
-    required String titulo,
-    required String valor,
-    required String subtitulo,
-    required IconData icone,
-    // Nulo deixa o cartao apenas informativo: e o caso da chave ja configurada,
-    // que nao ha por que abrir.
-    required VoidCallback? onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.035),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12),
-        ),
-        child: Row(
-          children: [
-            Icon(icone, color: Colors.white54, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    titulo,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    valor,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitulo,
-                    style: const TextStyle(color: Colors.white38, fontSize: 12),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'EDITAR',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
 
   Widget _buildNomeField() {

@@ -84,23 +84,34 @@ barato; se não for, deixe.
 O que sobrou na raiz hoje (`screens/`, três widgets, `utils/`) é legado, não
 modelo a seguir.
 
-## Plataforma web — pendência com prazo
+## Plataformas: Android e iOS, mais nada
 
-O app tem `web/`, desvios `kIsWeb` e **tres** pares `_web`/`_io`/`_stub`
-(`isar_service`, `csv_exporter`, `browser_text_input`). Eram quatro; o de
-`backup_file_service` saiu com o backup, em 04/08/2026.
-O produto é Android; a web nunca foi usada em campo.
+**Decidido em 04/08/2026.** A web saiu, e junto foram `linux/`, `macos/` e
+`windows/`, que existiam só porque o Flutter os cria.
 
-**Mantida por ora, sem decisão tomada** (01/08/2026): pode servir de
-demonstração na banca. Enquanto durar, quem mexer nesses três assuntos precisa
-lembrar que existe o outro lado — e isso **já custou**: em 04/08, remover o
-backup exigiu editar os dois lados do `isar_service`, e a remoção automática
-comeu junto o `_limparHistoricoAntigo` do lado web. O `analyze` pegou, mas o
-lado que ninguém executa foi quem quase quebrou a retenção do histórico.
+O que a web custava, e que agora não existe: um **banco em memória inteiro**
+escrito à mão (`isar_service_web`, 316 linhas) mais uma segunda cópia dentro do
+próprio `isar_service_native` (22 desvios `kIsWeb`), três pares
+`_web`/`_io`/`_stub`, cinco modelos `_web` e um caminho separado de formulário. E
+o preço apareceu no mesmo dia: remover o backup exigiu editar os dois lados do
+banco, e a remoção automática levou junto o `_limparHistoricoAntigo` do lado web.
+O `analyze` pegou — mas o lado que ninguém executava foi quem quase quebrou a
+retenção do lado que todo mundo executa.
 
-**Decidir antes de começar a escrita do TCC.** Manter "por via das dúvidas" é
-como dívida técnica costuma nascer, e cada desvio é um caminho a mais onde um
-defeito se esconde.
+Além disso a web nunca poderia contar a história do sistema: **no navegador não
+existe rede local com o aparelho**, então ela seria só a nuvem — o contrário do
+edge-first que o projeto defende.
+
+**iOS é alvo declarado, e ainda não existe de fato.** A pasta `ios/` é o
+esqueleto que o Flutter criou. Para valer, falta: `GoogleService-Info.plist`
+(push), `NSLocalNetworkUsageDescription` e `NSBonjourServices` no `Info.plist`
+(sem isso o iOS **bloqueia mDNS e a rede local**, e o app só falaria com a
+nuvem), um Mac para compilar e conta de desenvolvedor. Nada disso é obstáculo de
+código — mas quem mexer no app deve saber que **iOS hoje não é testado**.
+
+**Consequência boa e imediata:** sumiu a armadilha de `estufa_app/{linux,macos,
+windows}/flutter/generated_*` reaparecer modificado a cada build e entrar em
+commit sem querer. Ela já pegou duas vezes.
 
 ## Arquivos gerados (`.g.dart`)
 

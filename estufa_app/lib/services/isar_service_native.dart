@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -24,31 +23,14 @@ class IsarService {
   int _ultimoCleanupMs = 0;
 
   // Fallback web (quando Isar web nÃ£o estiver disponÃ­vel na versÃ£o em uso).
-  final List<EstufaEntity> _webEstufas = <EstufaEntity>[];
-  final List<CicloSecagemEntity> _webCiclos = <CicloSecagemEntity>[];
-  final List<EventoCicloEntity> _webEventos = <EventoCicloEntity>[];
-  final List<HistoricoLeituraEntity> _webHistorico = <HistoricoLeituraEntity>[];
-  final List<PendingSyncCommandEntity> _webPendencias =
-      <PendingSyncCommandEntity>[];
-  int _webEstufaId = 1;
-  int _webCicloId = 1;
-  int _webEventoId = 1;
-  int _webHistoricoId = 1;
-  int _webPendenciaId = 1;
 
   Future<Isar> get database async {
-    if (kIsWeb) {
-      throw UnsupportedError(
-        'Banco nativo Isar nÃ£o utilizado no web fallback.',
-      );
-    }
     if (_isar != null) return _isar!;
     await init();
     return _isar!;
   }
 
   Future<void> init() async {
-    if (kIsWeb) return;
     if (_isar != null) return;
 
     final existing = Isar.getInstance(_dbName);
@@ -72,13 +54,6 @@ class IsarService {
   }
 
   Future<List<EstufaEntity>> listarEstufas() async {
-    if (kIsWeb) {
-      final itens = List<EstufaEntity>.from(_webEstufas);
-      itens.sort(
-        (a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()),
-      );
-      return itens;
-    }
 
     final isar = await database;
     final itens = await isar.collection<EstufaEntity>().where().findAll();
@@ -100,20 +75,6 @@ class IsarService {
       ..idHardware = _normalizarTextoOpcional(idHardware)
       ..criadaEm = DateTime.now();
 
-    if (kIsWeb) {
-      final existenteIndex = _webEstufas.indexWhere(
-        (e) => e.chave == estufa.chave,
-      );
-      if (existenteIndex >= 0) {
-        final existente = _webEstufas[existenteIndex];
-        estufa.id = existente.id;
-        _webEstufas[existenteIndex] = estufa;
-      } else {
-        estufa.id = _webEstufaId++;
-        _webEstufas.add(estufa);
-      }
-      return estufa;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -149,17 +110,6 @@ class IsarService {
       ..idHardware = idHardwareLimpo
       ..criadaEm = DateTime.now();
 
-    if (kIsWeb) {
-      final index = _webEstufas.indexWhere((e) => e.id == id);
-      if (index >= 0) {
-        estufa.criadaEm = _webEstufas[index].criadaEm;
-        estufa.idHardware ??= _idHerdado(_webEstufas[index], ipLimpo);
-        _webEstufas[index] = estufa;
-      } else {
-        _webEstufas.add(estufa);
-      }
-      return estufa;
-    }
 
     final isar = await database;
     final existente = await isar.collection<EstufaEntity>().get(id);
@@ -175,10 +125,6 @@ class IsarService {
   }
 
   Future<void> removerEstufa(int id) async {
-    if (kIsWeb) {
-      _webEstufas.removeWhere((e) => e.id == id);
-      return;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -207,12 +153,6 @@ class IsarService {
       ..aviso = aviso
       ..alertaIncendio = alertaIncendio;
 
-    if (kIsWeb) {
-      leitura.id = _webHistoricoId++;
-      _webHistorico.add(leitura);
-      _executarLimpezaWebSeNecessario();
-      return;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -242,11 +182,6 @@ class IsarService {
       ..valorAnterior = valorAnterior
       ..valorAtual = valorAtual;
 
-    if (kIsWeb) {
-      evento.id = _webEventoId++;
-      _webEventos.add(evento);
-      return;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -255,11 +190,6 @@ class IsarService {
   }
 
   Future<List<EventoCicloEntity>> listarEventosPorCiclo(int cicloId) async {
-    if (kIsWeb) {
-      final itens = _webEventos.where((e) => e.cicloId == cicloId).toList();
-      itens.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      return itens;
-    }
 
     final isar = await database;
     final itens = await isar
@@ -272,13 +202,6 @@ class IsarService {
   }
 
   Future<CicloSecagemEntity?> buscarCicloAbertoPorIp(String ipEstufa) async {
-    if (kIsWeb) {
-      final abertos = _webCiclos
-          .where((e) => e.ipEstufa == ipEstufa && e.status == 'em_andamento')
-          .toList();
-      abertos.sort((a, b) => b.inicio.compareTo(a.inicio));
-      return abertos.isEmpty ? null : abertos.first;
-    }
 
     final isar = await database;
     final ciclos = await isar
@@ -307,11 +230,6 @@ class IsarService {
       ..status = 'em_andamento'
       ..observacao = '';
 
-    if (kIsWeb) {
-      ciclo.id = _webCicloId++;
-      _webCiclos.add(ciclo);
-      return ciclo;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -321,15 +239,6 @@ class IsarService {
   }
 
   Future<CicloSecagemEntity?> finalizarCicloSecagem(int id) async {
-    if (kIsWeb) {
-      final index = _webCiclos.indexWhere((e) => e.id == id);
-      if (index < 0) return null;
-      final ciclo = _webCiclos[index]
-        ..fim = DateTime.now()
-        ..status = 'finalizado';
-      _webCiclos[index] = ciclo;
-      return ciclo;
-    }
 
     final isar = await database;
     late final CicloSecagemEntity? ciclo;
@@ -345,11 +254,6 @@ class IsarService {
   }
 
   Future<List<CicloSecagemEntity>> listarCiclosPorIp(String ipEstufa) async {
-    if (kIsWeb) {
-      final itens = _webCiclos.where((e) => e.ipEstufa == ipEstufa).toList();
-      itens.sort((a, b) => b.inicio.compareTo(a.inicio));
-      return itens;
-    }
 
     final isar = await database;
     final itens = await isar
@@ -364,26 +268,6 @@ class IsarService {
   /// Apaga uma estufada por completo: o ciclo, seus eventos e as leituras
   /// gravadas dentro do periodo dele (inicio..fim). Irreversivel.
   Future<void> apagarCiclo(int cicloId) async {
-    if (kIsWeb) {
-      CicloSecagemEntity? ciclo;
-      for (final c in _webCiclos) {
-        if (c.id == cicloId) {
-          ciclo = c;
-          break;
-        }
-      }
-      if (ciclo == null) return;
-      final fim = ciclo.fim ?? DateTime.now();
-      _webEventos.removeWhere((e) => e.cicloId == cicloId);
-      _webHistorico.removeWhere(
-        (h) =>
-            h.ipEstufa == ciclo!.ipEstufa &&
-            !h.timestamp.isBefore(ciclo.inicio) &&
-            !h.timestamp.isAfter(fim),
-      );
-      _webCiclos.removeWhere((c) => c.id == cicloId);
-      return;
-    }
 
     final isar = await database;
     final ciclo = await isar.collection<CicloSecagemEntity>().get(cicloId);
@@ -417,11 +301,6 @@ class IsarService {
   Future<List<HistoricoLeituraEntity>> listarHistoricoPorIp(
     String ipEstufa,
   ) async {
-    if (kIsWeb) {
-      final itens = _webHistorico.where((e) => e.ipEstufa == ipEstufa).toList();
-      itens.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      return itens;
-    }
 
     final isar = await database;
     final itens = await isar
@@ -438,18 +317,6 @@ class IsarService {
     DateTime inicio,
     DateTime fim,
   ) async {
-    if (kIsWeb) {
-      final itens = _webHistorico
-          .where(
-            (e) =>
-                e.ipEstufa == ipEstufa &&
-                !e.timestamp.isBefore(inicio) &&
-                !e.timestamp.isAfter(fim),
-          )
-          .toList();
-      itens.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      return itens;
-    }
 
     final isar = await database;
     final itens = await isar
@@ -470,14 +337,6 @@ class IsarService {
   /// sobrescrever pelo endereco repontava uma estufa ja identificada para o
   /// aparelho errado - e ela passava a puxar da nuvem os dados de outra.
   Future<void> definirIdHardwarePorIp(String ip, String idHardware) async {
-    if (kIsWeb) {
-      for (final e in _webEstufas) {
-        if (e.ip == ip && (e.idHardware == null || e.idHardware!.isEmpty)) {
-          e.idHardware = idHardware;
-        }
-      }
-      return;
-    }
     final isar = await database;
     await isar.writeTxn(() async {
       final estufas = await isar
@@ -504,18 +363,6 @@ class IsarService {
       ..payloadJson = jsonEncode(payload)
       ..createdAt = DateTime.now();
 
-    if (kIsWeb) {
-      if (chaveCoalescencia != null) {
-        _webPendencias.removeWhere(
-          (e) =>
-              e.ipEstufa == ipEstufa &&
-              _chaveCoalescenciaPayloadJson(e.payloadJson) == chaveCoalescencia,
-        );
-      }
-      entity.id = _webPendenciaId++;
-      _webPendencias.add(entity);
-      return;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -547,14 +394,6 @@ class IsarService {
     String ipEstufa, {
     int limite = 200,
   }) async {
-    if (kIsWeb) {
-      final itens = _webPendencias
-          .where((e) => e.ipEstufa == ipEstufa)
-          .toList();
-      itens.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-      if (itens.length <= limite) return itens;
-      return itens.take(limite).toList();
-    }
 
     final isar = await database;
     final itens = await isar
@@ -568,9 +407,6 @@ class IsarService {
   }
 
   Future<int> contarPendenciasPorIp(String ipEstufa) async {
-    if (kIsWeb) {
-      return _webPendencias.where((e) => e.ipEstufa == ipEstufa).length;
-    }
 
     final isar = await database;
     return isar
@@ -583,10 +419,6 @@ class IsarService {
   Future<void> removerPendenciasPorIds(List<int> ids) async {
     if (ids.isEmpty) return;
 
-    if (kIsWeb) {
-      _webPendencias.removeWhere((e) => ids.contains(e.id));
-      return;
-    }
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -595,11 +427,6 @@ class IsarService {
   }
 
   Future<int> limparPendenciasPorIp(String ipEstufa) async {
-    if (kIsWeb) {
-      final totalAntes = _webPendencias.length;
-      _webPendencias.removeWhere((e) => e.ipEstufa == ipEstufa);
-      return totalAntes - _webPendencias.length;
-    }
 
     final isar = await database;
     late final int removidas;
@@ -631,15 +458,6 @@ class IsarService {
           .timestampLessThan(limite)
           .deleteAll();
     });
-  }
-
-  void _executarLimpezaWebSeNecessario({bool force = false}) {
-    final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    if (!force && (agoraMs - _ultimoCleanupMs) < _intervaloLimpezaMs) return;
-
-    _ultimoCleanupMs = agoraMs;
-    final limite = _subtrairMeses(DateTime.now(), _retencaoMesesHistorico);
-    _webHistorico.removeWhere((e) => e.timestamp.isBefore(limite));
   }
 
   DateTime _subtrairMeses(DateTime data, int meses) {
