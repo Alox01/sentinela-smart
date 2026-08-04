@@ -16,7 +16,14 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Então o teste não confere "existe um item chamado X" — isso passaria com os
 /// itens embaralhados ou com um deles em outra seção. Ele monta a lista inteira
-/// das 16 posições, na ordem, e compara com a esperada.
+/// das posições, na ordem, e compara com a esperada.
+///
+/// Uma posição some DE PROPÓSITO: "Avisos no celular" só existe quando este
+/// celular não vai ser avisado. Estar tudo certo é o caso comum, e anunciá-lo
+/// para quem não sabe o que é uma inscrição de push só levantava dúvida. O
+/// inventário normal tem 15 linhas por isso — e há um teste só para provar que
+/// a 16ª volta quando há problema, senão esta economia viraria justamente o item
+/// sumindo em silêncio que o arquivo inteiro existe para impedir.
 ///
 /// ## Os três *singletons*
 ///
@@ -49,7 +56,7 @@ void main() {
   // A gaveta tem ~1.200 px de conteúdo. Numa janela de teste padrão (600 px) o
   // `ListView` construiria só os primeiros itens e o inventário sairia curto —
   // falha por preguiça de layout, que se pareceria com item sumido. Uma janela
-  // alta faz os 16 existirem de fato.
+  // alta faz todos existirem de fato.
   void janelaAlta(WidgetTester tester) {
     tester.view.physicalSize = const Size(1000, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -76,7 +83,7 @@ void main() {
   }
 
   group('inventário da gaveta', () {
-    testWidgets('16 posições, na ordem, com o aparelho ainda calado', (
+    testWidgets('15 posições, na ordem, com o aparelho ainda calado', (
       tester,
     ) async {
       // Tudo o que o aparelho ainda não informou vem `null`: é o estado em que a
@@ -92,7 +99,8 @@ void main() {
         'divisor',
         'seção: AVISOS',
         'item: Silenciar avisos',
-        'item: Avisos no celular',
+        // Sem "Avisos no celular": `vigiada` é `null` (ainda conferindo), e a
+        // linha só aparece no caso `false`.
         'item: Sirene do aparelho',
         // Sim, "Compartilhar acesso" fica em AVISOS, e não em AÇÕES RÁPIDAS.
         // Parece deslocado e é de propósito — quem mudar isso muda de verdade, e
@@ -106,7 +114,7 @@ void main() {
       ]);
     });
 
-    testWidgets('as mesmas 16 posições com o aparelho já reportando', (
+    testWidgets('as mesmas 15 posições com o aparelho já reportando', (
       tester,
     ) async {
       // Dois itens trocam de título conforme o estado, e um `switch` que ganhe um
@@ -127,7 +135,39 @@ void main() {
         'divisor',
         'seção: AVISOS',
         'item: Silenciar avisos',
-        'item: Avisos no celular: ativos',
+        // Inscrito: continua fora. Era aqui que a linha dizia "ativos".
+        'item: Sirene do aparelho: ligada',
+        'item: Compartilhar acesso',
+        'divisor',
+        'seção: AÇÕES RÁPIDAS',
+        'item: Agendar ajuste',
+        'item: Reiniciar ajustes do aparelho',
+        'item: Apagar estufadas',
+      ]);
+    });
+
+    testWidgets('a 16ª posição volta quando o celular não será avisado', (
+      tester,
+    ) async {
+      // O contrário dos dois acima, e a razão de o item existir: uma estufa não
+      // inscrita é idêntica a uma inscrita na tela, e foi assim que um aparelho
+      // ficou 24 h fora do ar sem nenhum aviso sair. Esconder no caso bom só se
+      // paga se o caso ruim aparecer.
+      final inventario = await abrirGaveta(
+        tester,
+        _dados(vigiada: false, buzzerAparelhoAtivo: true),
+      );
+
+      expect(inventario, [
+        'cabeçalho: Estufa do Fundo + AÇÕES',
+        'divisor',
+        'seção: CONEXÃO',
+        'item: Detalhes da conexão',
+        'item: Configurar aparelho',
+        'divisor',
+        'seção: AVISOS',
+        'item: Silenciar avisos',
+        'item: Este celular não será avisado',
         'item: Sirene do aparelho: ligada',
         'item: Compartilhar acesso',
         'divisor',
@@ -165,7 +205,6 @@ void main() {
       expect(secaoDe('item: Configurar aparelho'), 'seção: CONEXÃO');
 
       expect(secaoDe('item: Silenciar avisos'), 'seção: AVISOS');
-      expect(secaoDe('item: Avisos no celular'), 'seção: AVISOS');
       expect(secaoDe('item: Sirene do aparelho'), 'seção: AVISOS');
       // Mantido em AVISOS de propósito. Ver o comentário no inventário.
       expect(secaoDe('item: Compartilhar acesso'), 'seção: AVISOS');

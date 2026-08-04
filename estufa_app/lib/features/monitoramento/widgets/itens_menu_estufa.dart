@@ -33,11 +33,21 @@ class TituloMenu extends StatelessWidget {
   }
 }
 
-/// Diz se ESTE celular será avisado sobre ESTA estufa.
+/// Avisa quando ESTE celular NÃO será avisado sobre ESTA estufa.
 ///
 /// Uma estufa que não está inscrita para avisos é IDÊNTICA a uma inscrita, na
 /// tela. Foi assim que um aparelho ficou 24 h fora do ar sem nenhum aviso sair,
 /// e só apareceu ao olhar o banco da nuvem.
+///
+/// ## Só aparece quando há problema
+///
+/// Ele já anunciou "ativos" o tempo todo, e isso era ruído: o produtor não sabe
+/// o que é uma inscrição de push, nem que ela pode faltar, então a linha só
+/// levantava uma dúvida que não era dele. Quem precisa da confirmação é quem
+/// está caçando defeito, e para esse a ausência da linha diz o mesmo.
+///
+/// O que ele existe para pegar é o caso contrário — e esse continua aparecendo,
+/// em laranja, dizendo o que fazer.
 class ItemVigilancia extends StatelessWidget {
   /// `null` = ainda conferindo. `false` = não está inscrita.
   final bool? vigiada;
@@ -54,36 +64,32 @@ class ItemVigilancia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (titulo, legenda, cor) = switch (vigiada) {
-      true => (
-        'Avisos no celular: ativos',
-        'Este celular é avisado se algo acontecer com esta estufa.',
-        Colors.white70,
-      ),
-      false when semIdHardware => (
-        'Avisos no celular: NÃO ativos',
-        'Esta estufa ainda não sabe de qual aparelho é, então não há como '
-            'avisar. Conecte-se a ela na rede local uma vez, ou informe o ID '
-            'no cadastro.',
-        Colors.orangeAccent,
-      ),
-      false => (
-        'Avisos no celular: NÃO ativos',
-        'Não consegui inscrever este celular. Abra o app com internet para '
-            'tentar de novo.',
-        Colors.orangeAccent,
-      ),
-      null => ('Avisos no celular', 'Conferindo...', Colors.white38),
-    };
+    // Inscrita, ou ainda conferindo: nada a dizer. "Conferindo..." tambem sai —
+    // era uma linha que piscava na abertura do menu e sumia sozinha.
+    if (vigiada != false) return const SizedBox.shrink();
+
+    // Sem acento em "NAO" seria estranho aqui: o produtor le isto, e a diferenca
+    // entre os dois casos e o que ele faz a seguir, nao a causa tecnica.
+    final legenda = semIdHardware
+        // O cadastro nao tem mais campo de ID - ele saiu junto com o da chave -,
+        // entao mandar "informe o ID" era mandar fazer o impossivel. O caminho
+        // real e o aparelho se apresentar, o que acontece nas duas situacoes
+        // abaixo.
+        ? 'Esta estufa ainda não sabe de qual aparelho é. Abra o app perto '
+              'dela, na mesma rede, ou use "Conectar o aparelho ao Wi-Fi" uma '
+              'vez.'
+        : 'Não consegui avisar este celular. Abra o app com internet para '
+              'tentar de novo.';
 
     return ListTile(
-      leading: Icon(
-        vigiada == false
-            ? Icons.notifications_off_outlined
-            : Icons.notifications_active_outlined,
-        color: cor,
+      leading: const Icon(
+        Icons.notifications_off_outlined,
+        color: Colors.orangeAccent,
       ),
-      title: Text(titulo, style: TextStyle(color: cor)),
+      title: const Text(
+        'Este celular não será avisado',
+        style: TextStyle(color: Colors.orangeAccent),
+      ),
       subtitle: Text(
         legenda,
         style: const TextStyle(color: Colors.white38, fontSize: 12),

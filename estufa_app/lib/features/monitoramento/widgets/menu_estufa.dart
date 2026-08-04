@@ -116,7 +116,10 @@ class MenuEstufa extends StatelessWidget {
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(
-                'Trocar o Wi-Fi ou a chave',
+                // A chave saiu: nao ha mais campo para ela em tela nenhuma do
+                // app, e o aparelho a gera sozinho. Wi-Fi e endereco e o que
+                // sobrou de verdade aqui.
+                'Trocar o Wi-Fi ou o endereço na rede',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
