@@ -24,6 +24,27 @@ desconfigurada e **toda estufa aparece OFFLINE**, incluindo o simulador:
 flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
 ```
 
+Esse comando gera **um APK só, com as três arquiteturas dentro** — 64,6 MB, dos
+quais o celular usa um terço. Para instalar num aparelho de verdade, prefira
+separado por arquitetura:
+
+```
+flutter build apk --release --split-per-abi --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
+```
+
+Saem três, em `build/app/outputs/flutter-apk/`:
+
+| Arquivo | Tamanho | Para quem |
+|---|---|---|
+| `app-arm64-v8a-release.apk` | 23,7 MB | **qualquer celular Android dos últimos ~8 anos** — é este |
+| `app-armeabi-v7a-release.apk` | 21,4 MB | aparelho antigo, 32 bits |
+| `app-x86_64-release.apk` | 25,3 MB | emulador no PC |
+
+Na dúvida sobre o aparelho: `adb shell getprop ro.product.cpu.abi`.
+
+O APK único continua servindo para **mandar para alguém sem perguntar o modelo
+do celular** — ele instala em qualquer um, ao custo dos 40 MB que sobram.
+
 **Firmware** — o `arduino-cli` não está no PATH; ele vem dentro da instalação da
 IDE do Arduino:
 
