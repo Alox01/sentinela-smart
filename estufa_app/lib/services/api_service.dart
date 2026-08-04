@@ -73,8 +73,23 @@ class ApiService {
   ApiCommandFailure _ultimaFalhaComando = ApiCommandFailure.none;
   ResultadoAlcance? _ultimoAlcance;
 
-  ApiService(String ip, {String? cloudUrl, String? token, this.idHardware})
-    : ipOriginal = ip,
+  /// Quem fala HTTP. Existe como campo, e nao como `http.get` solto, para o
+  /// teste poder responder no lugar da rede.
+  ///
+  /// Sem isto nenhuma requisicao desta classe podia ser afirmada em teste — e
+  /// foi assim que a sonda de alcance passou meses pedindo `/status` sem o
+  /// `idHardware`, dizendo "Nuvem: offline" com a leitura da nuvem na tela. Um
+  /// teste de tres linhas teria pego; nao havia por onde escrever esse teste.
+  final http.Client _cliente;
+
+  ApiService(
+    String ip, {
+    String? cloudUrl,
+    String? token,
+    this.idHardware,
+    http.Client? cliente,
+  }) : _cliente = cliente ?? http.Client(),
+       ipOriginal = ip,
       localBaseUrl = _normalizarBaseUrl(ip),
       localPort80FallbackUrl = _normalizarFallbackPorta80(ip),
       cloudBaseUrl = _normalizarCloudUrl(cloudUrl ?? _cloudPadrao),
@@ -322,7 +337,7 @@ class ApiService {
     };
 
     try {
-      final resposta = await http
+      final resposta = await _cliente
           .post(
             Uri.parse('$nuvem/leitura'),
             headers: _headers({'Content-Type': 'application/json'}),
@@ -496,7 +511,7 @@ class ApiService {
     if (ativa == null) return null;
 
     try {
-      return await http
+      return await _cliente
           .get(Uri.parse('$ativa$path'), headers: _headers())
           .timeout(_timeoutGet(ativa));
     } catch (_) {
@@ -505,7 +520,7 @@ class ApiService {
       if (fallback == null) return null;
 
       try {
-        return await http
+        return await _cliente
             .get(Uri.parse('$fallback$path'), headers: _headers())
             .timeout(_timeoutGet(fallback));
       } catch (_) {
@@ -523,7 +538,7 @@ class ApiService {
     if (ativa == null) return null;
 
     try {
-      return await http
+      return await _cliente
           .post(Uri.parse('$ativa$path'), headers: headers, body: body)
           .timeout(_timeoutPost(ativa));
     } catch (_) {
@@ -532,7 +547,7 @@ class ApiService {
       if (fallback == null) return null;
 
       try {
-        return await http
+        return await _cliente
             .post(Uri.parse('$fallback$path'), headers: headers, body: body)
             .timeout(_timeoutPost(fallback));
       } catch (_) {
@@ -633,7 +648,7 @@ class ApiService {
         ? '/status'
         : '/status?idHardware=${Uri.encodeComponent(id)}';
     try {
-      final response = await http
+      final response = await _cliente
           .get(Uri.parse('$base$caminho'), headers: _headers())
           .timeout(timeout);
       if (response.statusCode == 200 && _pareceSentinela(response.body)) {
@@ -644,7 +659,7 @@ class ApiService {
     }
 
     try {
-      final response = await http
+      final response = await _cliente
           .get(Uri.parse('$base/'), headers: _headers())
           .timeout(timeout);
       return response.statusCode == 200 &&
@@ -815,7 +830,7 @@ class ApiService {
     Map<String, String> corpo,
   ) async {
     try {
-      final resposta = await http
+      final resposta = await _cliente
           .post(
             Uri.parse(url),
             headers: _headers({'Content-Type': 'application/json'}),

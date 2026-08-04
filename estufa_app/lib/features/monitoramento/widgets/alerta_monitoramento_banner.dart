@@ -1,20 +1,32 @@
 import 'package:flutter/material.dart';
 
+import '../limiar_incendio.dart';
+
 class AlertaMonitoramentoBanner extends StatelessWidget {
   final bool incendioDetectado;
   final double temperaturaAtual;
+
+  /// O ajuste em vigor. Sem ele nao da para saber onde comeca o fogo: o limite
+  /// acompanha o ajuste quando ele passa de 170 (ver [limiteFogoF]).
+  final double temperaturaAjuste;
   final String avisoEmergencia;
 
   const AlertaMonitoramentoBanner({
     super.key,
     required this.incendioDetectado,
     required this.temperaturaAtual,
+    required this.temperaturaAjuste,
     required this.avisoEmergencia,
   });
 
   @override
   Widget build(BuildContext context) {
-    final alertaCritico = incendioDetectado || temperaturaAtual >= 175.0;
+    // Era `>= 175.0`, cravado. O aparelho e o servidor ja seguiam o ajuste, e
+    // este banner nao: numa cura com ajuste em 180, os dois ficavam quietos ate
+    // 185 enquanto a tela pintava emergencia em vermelho desde 175 — com a
+    // estufa fazendo exatamente o que foi mandada fazer.
+    final alertaCritico =
+        incendioDetectado || temperaturaAtual >= limiteFogoF(temperaturaAjuste);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),

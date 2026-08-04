@@ -385,6 +385,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                     AlertaMonitoramentoBanner(
                       incendioDetectado: isFire,
                       temperaturaAtual: temperatura,
+                      temperaturaAjuste: tempAjuste,
                       avisoEmergencia: avisoEmergencia,
                     ),
                   // Sem banner de falta de energia: o aparelho nao tem sensor de

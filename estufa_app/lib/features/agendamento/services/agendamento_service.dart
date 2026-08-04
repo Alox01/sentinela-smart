@@ -24,6 +24,32 @@ import '../models/agendamento_ajuste.dart';
 ///
 /// Por isso o servidor **nao** manda push: se mandasse, o mesmo evento chegaria
 /// duas vezes. Ele so troca o ajuste, em silencio.
+/// Quais agendamentos ainda valem uma tentativa de registro na nuvem.
+///
+/// Sai da classe porque e a unica parte de [AgendamentoService.reenviarPendentes]
+/// que decide alguma coisa — o resto e plugin de notificacao, disco e rede, que
+/// nao existem num teste. Regra em tres partes, e cada uma exclui um jeito de
+/// gastar requisicao a toa:
+///
+/// - **ja registrado** nao se registra de novo;
+/// - **sem `idHardware`** nao ha a quem amarrar o ajuste: a nuvem recusaria;
+/// - **ja passou da hora** e tarde. O alarme local ja tocou (ou nao), e mandar
+///   a nuvem aplicar um ajuste marcado para as 3h as 5h mudaria a estufa sem
+///   ninguem esperar por isso.
+List<AgendamentoAjuste> pendentesDeRegistroNaNuvem(
+  List<AgendamentoAjuste> agendamentos,
+  DateTime agora,
+) {
+  return agendamentos
+      .where(
+        (a) =>
+            !a.registradoNaNuvem &&
+            a.idHardware != null &&
+            a.quando.isAfter(agora),
+      )
+      .toList();
+}
+
 class AgendamentoService extends ChangeNotifier {
   static const String _chave = 'agendamentos_ajuste_v1';
   static const String _cloudApiUrl = String.fromEnvironment('CLOUD_API_URL');
@@ -126,15 +152,7 @@ class AgendamentoService extends ChangeNotifier {
   /// A chave nao viaja junto do agendamento salvo — e segredo, e nao tem por que
   /// ficar duplicada no disco. Vem da estufa cadastrada na hora de reenviar.
   Future<void> reenviarPendentes() async {
-    final agora = DateTime.now();
-    final pendentes = _agendamentos
-        .where(
-          (a) =>
-              !a.registradoNaNuvem &&
-              a.idHardware != null &&
-              a.quando.isAfter(agora),
-        )
-        .toList();
+    final pendentes = pendentesDeRegistroNaNuvem(_agendamentos, DateTime.now());
     if (pendentes.isEmpty) return;
 
     Map<int, String?> tokenPorEstufa;
