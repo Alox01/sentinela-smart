@@ -23,7 +23,6 @@ Future<void> mostrarDetalhesConexaoDialog({
   required String? baseUrlAtiva,
   required String localBaseUrl,
   required String? cloudBaseUrl,
-  required bool temTokenConfigurado,
   // Este celular esta inscrito para receber avisos deste aparelho? `null` = a
   // conferencia ainda nao terminou. Estava no menu da estufa e saiu de la: o
   // produtor nao sabe o que e uma inscricao de push, nao pode agir sobre ela, e
@@ -84,12 +83,12 @@ Future<void> mostrarDetalhesConexaoDialog({
                           'Firmware',
                           versaoFirmware ?? 'Desconhecida',
                         ),
-                        _LinhaDetalhe(
-                          'Chave',
-                          temTokenConfigurado
-                              ? 'Configurada'
-                              : 'N\u00E3o configurada',
-                        ),
+                        // Nao ha linha de "Chave". Ela dizia "Configurada"
+                        // ou "Nao configurada" para um segredo que o produtor
+                        // nunca viu, nao escolheu e nao tem como configurar —
+                        // e no simulador dizia "Nao configurada" o tempo todo,
+                        // que parece defeito e nao e. Quem precisa saber se a
+                        // chave chegou olha o aparelho no modo de configuracao.
                         _LinhaDetalhe('Pend\u00EAncias', '$totalPendencias'),
                         const SizedBox(height: 14),
                         const Text(

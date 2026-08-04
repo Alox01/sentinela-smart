@@ -54,11 +54,18 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // O id do aparelho e gerado do chip (MAC) no setup -> unico por ESP, sem
 // precisar configurar nada. Cada aparelho vira o seu na nuvem (status por
 // aparelho). Ex.: "ESP32_A1B2C3".
-// Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
-// /status, qual firmware um aparelho em campo esta rodando. O que cada versao
-// mudou, e por que, esta em docs/HISTORICO_FIRMWARE.md - aqui eram 94 linhas de
-// registro antes da primeira linha de codigo.
-const char* VERSAO_FIRMWARE = "1.26.0";
+// Reiniciado em 1.0 em 04/08/2026, por decisao do produtor: a numeracao anterior
+// ia ate 1.26.0 e era de bancada, contando cada experimento. A de agora e a do
+// produto, e comeca quando o aparelho esta pronto para ser usado de verdade.
+//
+// NAO INCREMENTAR SOZINHO. O produtor avisa quando a versao muda - o numero
+// passou a significar "o que esta na mao de alguem", e nao "o que mudou no
+// codigo", que e o que o git ja conta. O historico antigo, com o motivo medido
+// em campo de cada mudanca, esta em docs/HISTORICO_FIRMWARE.md.
+//
+// Continua sendo o unico jeito de saber, pelo /status, o que um aparelho em
+// campo esta rodando - por isso ele existe e aparece no app.
+const char* VERSAO_FIRMWARE = "1.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.

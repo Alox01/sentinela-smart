@@ -11,12 +11,23 @@ o ajuste, por que a chave nunca é trocada sozinha. Cada uma dessas foi uma
 estufa real se comportando diferente do esperado. Apagar isso obrigaria a
 redescobrir na próxima estufada.
 
-## Uma ressalva sobre a numeração
+## A numeração reiniciou
 
-Os números abaixo são de desenvolvimento. A intenção declarada (04/08/2026) é
-**reiniciar em 1.0 quando o app e o firmware estiverem prontos para uso real**,
-e só então numerar a sério, com aparelho em operação. Até lá esta lista é
-histórico de bancada, não de produto.
+Em **04/08/2026** o firmware voltou para **1.0**, por decisão do produtor. Tudo
+o que está listado abaixo é numeração de bancada — 25 versões contando cada
+experimento, que ninguém além de nós viu rodar. A numeração de agora é a do
+produto e começa quando o aparelho está pronto para ser usado de verdade.
+
+Uma consequência prática: **o número não sobe sozinho a cada mudança de
+comportamento.** Ele passou a significar *o que está na mão de alguém*, e não *o
+que mudou no código* — que o `git log` já conta. Quem mexer no firmware **não
+incrementa** `VERSAO_FIRMWARE`; o produtor avisa quando muda.
+
+Por isso este arquivo para aqui. O que vier depois de 1.0 é histórico de
+produto, e as entradas abaixo continuam valendo pelo **motivo**, não pelo
+número: cada uma foi uma estufa real se comportando diferente do esperado.
+
+## O que foi numerado em bancada
 
 ### 1.26.0
 
