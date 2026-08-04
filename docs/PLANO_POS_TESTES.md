@@ -25,9 +25,11 @@ então nenhum deles espera gravação.
 | Ponte de leitura | energia sim, internet da propriedade não, celular no 4G → **sem** falso "sem comunicação" | APK |
 | Cadastrar / atualizar estufa | os fluxos novos de provisionamento | APK |
 
-### Acrescentados em 04/08/2026 — dependem de **gravar o firmware**
+### Acrescentados em 04/08/2026 — **liberados**, o firmware foi gravado
 
-O aparelho está com a 1.24.0. Nada abaixo existe no ESP até ele ser regravado.
+O aparelho foi regravado em 04/08 e está com a 1.0. Antes de qualquer um destes,
+confirme em "Detalhes da conexão" que o app mostra **Firmware 1.0**: se disser
+1.24.0, é o firmware velho e o teste mede a coisa errada.
 
 | Teste | O que prova | Como saber que falhou |
 |---|---|---|

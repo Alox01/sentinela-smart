@@ -56,9 +56,9 @@ em `GET /versao` (mostra o commit no ar).
 flash / 15% RAM no core esp32 3.2.0). A numeração reiniciou em 04/08/2026 e não
 sobe mais sozinha: ver `HISTORICO_FIRMWARE.md`.
 
-⚠️ **O aparelho na mesa está com a 1.24.0**, gravada em 31/07. Tudo o que veio
-depois — senha vazia explícita, tolerância dos três botões, LEDs contando —
-**está no código e não no ESP**. Gravar é o próximo passo de campo.
+O aparelho foi **regravado em 04/08/2026** e está com a 1.0. Conferência de um
+segundo, sem sair do lugar: "Detalhes da conexão" no menu da estufa deve mostrar
+**Firmware 1.0**. Se ainda disser 1.24.0, a gravação não pegou.
 - **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
   acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
   conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
