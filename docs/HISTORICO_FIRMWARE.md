@@ -18,6 +18,19 @@ Os números abaixo são de desenvolvimento. A intenção declarada (04/08/2026) 
 e só então numerar a sério, com aparelho em operação. Até lá esta lista é
 histórico de bancada, não de produto.
 
+### 1.26.0
+
+Entrar no modo de configuracao deixou de ser sorte. Tres coisas conspiravam: a
+leitura dos tres botoes era crua, sem debounce (unico lugar do firmware assim),
+entao um chacoalho de contato zerava a contagem inteira; nao havia retorno
+nenhum antes dos 3 s, entao a contagem podia ter reiniciado sem ninguem saber; e
+`verificarModoConfig()` rodava DEPOIS das chamadas a nuvem, que seguram o loop
+por 1-2 s num handshake HTTPS - apertar bem nessa hora significava ser notado
+so 2 s depois, com a contagem comecando dali. Agora ha tolerancia de 150 ms para
+solturas, os tres LEDs ficam acesos enquanto conta (o apito continua sendo so a
+confirmacao de que entrou), a leitura vem antes da nuvem e a nuvem espera
+enquanto os tres botoes estao na mao.
+
 ### 1.25.0
 
 `semsenha=1` no POST /salvar grava senha vazia DE PROPOSITO. Vazio sozinho sempre quis dizer "mantenha a atual", e por isso nao havia como dizer "esta rede nao tem senha": o aparelho guardava a senha antiga, tentava entrar com ela numa rede aberta e nao conectava, sem nada explicando. Ausente = comportamento de antes.

@@ -97,6 +97,13 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   bool _enviando = false;
   String? _erro;
   bool _concluido = false;
+
+  /// Ja houve uma gravacao bem-sucedida nesta visita. Guardado a parte de
+  /// [_concluido] porque o produtor pode voltar da tela de sucesso para o
+  /// formulario — e dai precisa de um caminho de volta ao resultado, que ele nao
+  /// consegue reproduzir: o aparelho ja reiniciou e saiu do modo de
+  /// configuracao, entao salvar de novo nao funciona.
+  bool _jaGravou = false;
   // Nome local do aparelho (ex.: sentinela-a1b2c3.local). E o endereco que o
   // produtor cadastra na estufa, e ate a versao 1.10 do firmware ele so
   // aparecia no Monitor Serial - inutil para quem nao tem a IDE do Arduino.
@@ -349,7 +356,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
       if (!mounted) return;
       if (resposta.statusCode >= 200 && resposta.statusCode < 300) {
-        setState(() => _concluido = true);
+        setState(() {
+          _concluido = true;
+          _jaGravou = true;
+        });
       } else {
         setState(
           () => _erro = 'O aparelho recusou (código ${resposta.statusCode}).',
@@ -371,14 +381,25 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0E1012),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF17191D),
-        foregroundColor: Colors.white,
-        title: const Text('Configurar aparelho'),
+    // O "voltar" da tela de sucesso saia da configuracao inteira e jogava o
+    // produtor no cadastro de estufa, com tudo o que ele fez perdido — e ele
+    // esta parado nessa tela de proposito, esperando o celular voltar para o
+    // Wi-Fi de casa, que e quando a mao encosta no botao errado. Agora ele
+    // recua um passo, para o formulario; sair de vez e o segundo toque.
+    return PopScope(
+      canPop: !_concluido,
+      onPopInvokedWithResult: (saiu, resultado) {
+        if (!saiu && mounted) setState(() => _concluido = false);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0E1012),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF17191D),
+          foregroundColor: Colors.white,
+          title: const Text('Configurar aparelho'),
+        ),
+        body: SafeArea(child: _concluido ? _sucesso() : _formulario()),
       ),
-      body: SafeArea(child: _concluido ? _sucesso() : _formulario()),
     );
   }
 
@@ -706,6 +727,19 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // qualquer passo — chegou a convencer duas vezes de que o Wi-Fi do
         // aparelho estava quebrado quando nada tinha sido tentado ainda.
         _cartaoEstadoDaConversa(),
+        // Caminho de volta ao resultado. Sem isto, recuar da tela de sucesso
+        // seria uma porta de mao unica: o aparelho ja reiniciou e saiu do modo
+        // de configuracao, entao gravar de novo nao funciona e o endereco que
+        // ele mostrou nao teria como reaparecer.
+        if (_jaGravou) ...[
+          const SizedBox(height: 4),
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _concluido = true),
+            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+            label: const Text('Voltar para o endereço do aparelho'),
+          ),
+          const SizedBox(height: 8),
+        ],
         const SizedBox(height: 8),
         // Os 4 digitos do visor. E o unico numero que o produtor digita em todo
         // o processo, e e ele que troca a chave longa por presenca fisica.
@@ -865,6 +899,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           labelStyle: const TextStyle(color: Colors.white54),
           helperText: dica,
           helperStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+          // O padrao e UMA linha, e a legenda mais longa (a da senha) vinha
+          // cortada no fim - justo a parte que diz o que fazer numa rede sem
+          // senha. Legenda que so cabe pela metade nao e legenda.
+          helperMaxLines: 3,
           suffixIcon: acao,
           // Sem esta folga o rotulo flutuante encosta no texto digitado: o
           // Material desenha os dois dentro da mesma caixa preenchida, e sem

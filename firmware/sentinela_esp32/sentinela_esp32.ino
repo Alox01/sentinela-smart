@@ -58,7 +58,7 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // /status, qual firmware um aparelho em campo esta rodando. O que cada versao
 // mudou, e por que, esta em docs/HISTORICO_FIRMWARE.md - aqui eram 94 linhas de
 // registro antes da primeira linha de codigo.
-const char* VERSAO_FIRMWARE = "1.25.0";
+const char* VERSAO_FIRMWARE = "1.26.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
 // longe da propriedade. Deixe "" para operar so na rede local.
@@ -243,6 +243,10 @@ DNSServer dnsServer;
 const byte PORTA_DNS = 53;
 const char* NOME_AP_CONFIG = "Sentinela-Config";
 const unsigned long TEMPO_SEGURAR_CONFIG_MS = 3000;
+// Quanto tempo os tres podem parecer soltos sem que a contagem recomece. Um
+// unico digitalRead solto zerava tudo, e sem nada na tela dizendo - a pessoa
+// continuava segurando achando que estava em 2,5 s quando estava em 0,3.
+const unsigned long TOLERANCIA_SOLTURA_MS = 150;
 const unsigned long TEMPO_CONFIG_OCIOSO_MS = 5UL * 60UL * 1000UL;
 bool modoConfig = false;
 // PIN de emparelhamento: 4 digitos sorteados a cada entrada no modo de
@@ -258,6 +262,9 @@ int pinConfig = -1;
 int tentativasPin = 0;
 const int MAX_TENTATIVAS_PIN = 5;
 unsigned long tresBotoesDesdeMs = 0;
+// Ultima vez que os tres estavam mesmo apertados. Serve para nao desistir da
+// contagem por causa de um chacoalho do contato ou de um dedo que escorrega.
+unsigned long ultimoTodosPressionadosMs = 0;
 unsigned long ultimaAtividadeConfig = 0;
 
 // --- Liga/desliga a sirene de temperatura no proprio aparelho ---
@@ -394,13 +401,23 @@ void loop() {
   if (modoConfig) dnsServer.processNextRequest();
   manterWifi();
 
+  // Antes da nuvem, de proposito. Cada conversa com ela e um handshake HTTPS
+  // que segura o loop por 1-2 s, e nesse intervalo os pinos nao sao lidos: quem
+  // apertasse os tres bem na hora so seria notado 2 s depois, e a contagem
+  // comecava dali - dava para segurar 3 s de verdade e nao acontecer nada.
+  // Lendo antes, a combinacao entra na conta antes de o loop travar.
+  verificarModoConfig();
+
   // Emergencia nao espera o proximo envio agendado. Sem isto, um incendio so
   // chegaria a nuvem ate um minuto depois - e um teste rapido no sensor de
   // chama comecava e terminava entre dois envios, sem a nuvem ver nada.
   // No modo de configuracao o aparelho e um ponto de acesso, sem saida para a
   // internet: tentar falar com a nuvem so gastaria segundos do loop em
   // conexoes fadadas a falhar.
-  if (!modoConfig) {
+  // Com os tres botoes na mao, a nuvem espera. Sao 20 s ate a proxima busca e
+  // 60 ate o proximo envio - nada que se perca -, e sem isto um handshake
+  // caindo no meio da contagem engolia os 3 s de quem estava segurando.
+  if (!modoConfig && tresBotoesDesdeMs == 0) {
     if (estadoDeAlertaMudou()) {
       ultimoPushNuvem = millis();
       empurrarLeituraNuvem();
@@ -419,7 +436,6 @@ void loop() {
   }
 
   verificarSensorLuz();
-  verificarModoConfig();
   verificarBotoes();
   verificarTempos();
   salvarConfigSeNecessario();
@@ -589,9 +605,17 @@ void verificarModoConfig() {
                            digitalRead(BOTAO_VERDE) == LOW &&
                            digitalRead(BOTAO_VERMELHO) == LOW;
   if (!todosPressionados) {
+    // Uma leitura solta nao cancela nada: contato de botao chacoalha, e a mao
+    // que segura tres botoes de uma vez inevitavelmente escorrega. So desiste
+    // depois de TOLERANCIA_SOLTURA_MS realmente sem os tres.
+    if (tresBotoesDesdeMs != 0
+        && millis() - ultimoTodosPressionadosMs < TOLERANCIA_SOLTURA_MS) {
+      return;
+    }
     tresBotoesDesdeMs = 0;
     return;
   }
+  ultimoTodosPressionadosMs = millis();
 
   if (tresBotoesDesdeMs == 0) {
     tresBotoesDesdeMs = millis();
@@ -1874,6 +1898,20 @@ void atualizarSaidas() {
     digitalWrite(LED_UMIDADE, HIGH);
   } else {
     digitalWrite(LED_UMIDADE, LOW);
+  }
+
+  // Os tres LEDs acesos enquanto a combinacao esta sendo contada. Ate aqui nao
+  // havia retorno NENHUM antes dos 3 s: nao dava para distinguir "falta pouco"
+  // de "zerou e voce esta perdendo tempo", e a coisa parecia loteria. O apito
+  // continua sendo so a confirmacao de que entrou - luz enquanto conta, som
+  // quando conseguiu.
+  //
+  // Sobrescreve os LEDs, nunca o buzzer: o resto da funcao segue e o fogo toca
+  // igual com os tres botoes na mao.
+  if (tresBotoesDesdeMs != 0) {
+    digitalWrite(LED_ALERTA, HIGH);
+    digitalWrite(LED_UMIDADE, HIGH);
+    digitalWrite(LED_CONTROLE_TEMP, HIGH);
   }
 
   if (!existeAlerta) {
