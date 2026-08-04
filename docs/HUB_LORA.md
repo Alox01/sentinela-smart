@@ -776,14 +776,43 @@ agora com o alvo certo: caminhar **para a lavoura**, não entre as estufas. É o
 alcance da perna longa que decide se o projeto existe — a curta já está resolvida
 por um roteador.
 
-## A pergunta que ficou aberta
+## O que o produtor leva para a roça — **módulo por Bluetooth** (03/08/2026)
 
-**O que o produtor leva para a roça?** Celular não fala LoRa, então a perna longa
-precisa de um segundo aparelho — de bolso com visor próprio, ou um módulo
-emparelhado ao celular por Bluetooth. As duas mudam o projeto de forma diferente,
-e nenhuma dá para arbitrar daqui.
+Escolhido: um **módulo LoRa emparelhado ao celular**, com o app lendo dele. Não
+um aparelho de bolso com visor próprio. Decisão de futuro, sem prazo.
 
-Responder isso vem **antes de comprar qualquer coisa**: muda o que se compra.
+### O que isso barateia
+
+- **Sem visor, sem botão, sem caixa com interface.** O celular é a tela, e ela já
+  existe e já sabe desenhar estufa. O módulo vira ESP32 + LoRa + bateria numa
+  caixa fechada;
+- **Sem segunda interface para manter.** Um visor próprio significaria decidir o
+  que cabe em poucos dígitos, e repetir ali cada mudança que o app receber.
+
+### O que isso encarece, e é onde mora o risco
+
+- **O app passa a falar Bluetooth**, o que é dependência nativa com permissão —
+  a mesma classe que já mordeu este projeto duas vezes (`isar_flutter_libs`
+  forçando `compileSdk`, e outro quebrando por symlink no Windows). A partir do
+  Android 12 são permissões próprias (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`), e
+  isso se prova **construindo o APK**, não com teste unitário;
+- **Uma terceira fonte de leitura.** Hoje o app tem LOCAL, NUVEM, CONECTANDO e
+  OFFLINE, e a máquina inteira supõe HTTP. Rádio não é HTTP: chega por Bluetooth,
+  em quadro compacto, com **menos campos e mais atraso**. Encaixar isso no
+  `ApiService`/`MonitorEstufas` é a maior mudança que o app já sofreu neste
+  projeto — maior que o push, maior que o agendamento;
+- **A tela tem de dizer que está por rádio.** Menos campos e leitura de minutos
+  atrás não podem parecer leitura ao vivo. É a mesma regra que este projeto vem
+  aplicando desde o "SEM ID" e o "não sai desta sala": estado ruim não pode
+  parecer estado bom. Uma marca "por rádio, há X min" resolve;
+- **Bateria — aqui sim.** Todas as estufas têm tomada, mas o módulo de bolso não.
+  É o único ponto do projeto onde consumo importa de verdade.
+
+### O que isso muda na lista de compras
+
+O módulo de bolso deixa de precisar de placa com visor: qualquer ESP32 + LoRa
+915 MHz serve, mais bateria e uma caixa. **A placa com visor continua boa para o
+hub**, onde o visor ajuda a diagnosticar sem computador.
 
 ---
 
