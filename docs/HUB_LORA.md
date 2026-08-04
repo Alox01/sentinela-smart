@@ -16,6 +16,11 @@ conferidas.
 
 ---
 
+> **Leia antes as "Respostas do produtor" no fim.** Este documento foi
+> dimensionado para quilômetros; as distâncias reais são de 10 a 50 m, e isso
+> derruba a justificativa do hub no caso comum. O que sobra — e é real — são as
+> propriedades maiores e a independência do roteador da casa.
+
 ## O problema
 
 Hoje cada aparelho fala Wi-Fi e empurra a leitura para a nuvem
@@ -675,31 +680,66 @@ e barato come mais ganho do que a antena entrega.
 
 ---
 
-## Perguntas para o produtor
+## Respostas do produtor (03/08/2026) — e o que elas mudam
 
-Estas mudam o projeto de verdade, e nenhuma pode ser arbitrada daqui:
+| Pergunta | Resposta |
+|---|---|
+| Distância casa → estufa | **10 a 50 m**, normalmente. Casos que passam disso |
+| No caminho | Paredes de **madeira ou tijolo**; às vezes pilha de lenha, carreta ou trator. 2 a 3 paredes na propriedade dele |
+| Quantas estufas | **1 a 5**, normalmente. Até 6 em certos casos |
+| Energia nas estufas | **Todas têm** |
+| Wi-Fi hoje | O 2,4 GHz da casa **já alcança duas estufas**, através dessas paredes |
 
-1. **Qual a distância entre a casa (onde ficaria o hub) e a estufa mais
-   distante?** Muda o SF, muda a antena, e muda se o projeto é viável. Ordem de
-   grandeza basta: 500 m? 2 km? 5 km?
-2. **O que tem no meio do caminho?** Morro, mata fechada, galpão de telha
-   metálica, outro prédio? Vegetação densa e relevo custam muito mais que
-   distância limpa — 1 km com um morro no meio é pior que 5 km de campo aberto.
-3. **Dá para ver a estufa da casa?** Linha de visada muda tudo. E dá para pôr a
-   antena do hub alto (telhado, caixa d'água, mastro)? **Altura vale mais que
-   ganho de antena.**
-4. **Quantas estufas, no futuro?** Duas ou vinte muda a cadência e a conta de
-   colisão (decisão 3). Vinte também muda a resposta sobre um segundo hub.
-5. **A estufa distante tem energia elétrica?** Ela tem motor de circulação, então
-   presumivelmente sim **[inferência]** — mas se algum ponto for sem rede, o nó
-   precisa de bateria/solar, e aí a cadência de 1 min e o SF10 são caros demais.
-6. **A casa tem Wi-Fi estável onde o hub ficaria?** O hub precisa de Wi-Fi e de
-   energia contínua. Se o melhor ponto de rádio (alto, com visada) não é o melhor
-   ponto de Wi-Fi, os dois têm de ser conciliados antes de furar parede.
-7. **Existe portão automático ou alarme sem fio na propriedade?** Não impede
-   nada em 915 MHz, mas é bom saber antes de investigar interferência.
+### Isto derruba a premissa no caso comum, e é melhor dizer agora
 
----
+Este documento foi dimensionado para **quilômetros**: SF10, 330 ms no ar, antena
+alta, visada. A realidade é **10 a 50 m com duas ou três paredes** — de cem a
+quinhentas vezes menos distância.
+
+Nessa escala, LoRa resolve um problema que **o Wi-Fi já resolve**. E a prova
+está na própria resposta: o roteador da casa já alcança duas estufas atravessando
+as mesmas paredes. Onde não alcança, um ponto de acesso ou repetidor custa menos
+que o hub, **não precisa de protocolo novo, nem de quadro binário, nem de
+autenticação de rádio, nem de cartão SD** — e o firmware que está na estufa hoje
+continua funcionando sem uma linha alterada.
+
+Gastar as oito etapas deste plano para vencer 50 m é usar caminhão para levar
+carta.
+
+### Onde o hub continua fazendo sentido
+
+Três casos, e nenhum é o comum:
+
+1. **As propriedades que passam de 50 m** — "tem casos que podem passar disso".
+   É aqui que o rádio ganha de verdade, e é o caso que o Wi-Fi não estica;
+2. **Independência do roteador da casa.** Hoje toda estufa depende do Wi-Fi
+   doméstico: trocou de roteador, mudou a senha, caiu a internet do provedor, e
+   todas param juntas. O rádio não passa por ele;
+3. **Estufa sem tomada**, se um dia houver. Não é o caso hoje — todas têm energia.
+
+**Decisão do produtor:** montar e testar mesmo assim, como trabalho futuro, sem
+compromisso de entrar no TCC. Registrado assim de propósito: o valor está em
+provar o enlace para as propriedades maiores, não em substituir o que já funciona.
+
+### O que as respostas simplificam, se for em frente
+
+Tudo, e por larga margem:
+
+- **SF7 em vez de SF10.** A 50 m com paredes, o alcance de SF7 (~1–2 km em
+  visada) sobra. Tempo no ar cai de 330 ms para **51 ms** — some a preocupação com
+  o limite de permanência de 400 ms, e some a conta de colisão;
+- **6 nós no pior caso**, não vinte. Com 51 ms de transmissão e um minuto de
+  cadência, seis nós ocupam **0,5% do canal**. Não precisa de escalonamento,
+  janela, nem sorteio: mandar quando tiver o que mandar basta;
+- **Energia em todas.** Cai a parte de bateria e consumo. O nó pode transmitir
+  com folga, e a decisão 5 (nó sem Wi-Fi) deixa de ter custo de energia;
+- **Antena.** Sem necessidade de mastro, telhado ou caixa d'água. A antena que
+  vem com o módulo resolve.
+
+A **Etapa 2 — a caminhada que decide o projeto** continua sendo a etapa que
+manda, mas agora com outro objetivo: em vez de descobrir se o enlace fecha, ela
+mede **quanta margem sobra** — e é essa margem que diz se o rádio vale para as
+propriedades maiores, que são a razão de existir do hub.
 
 ## O que este documento não cobre
 
