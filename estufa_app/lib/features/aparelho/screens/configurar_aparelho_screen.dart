@@ -499,10 +499,15 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Voltar'),
-        ),
+        // Nao ha "Voltar" aqui, e nao deve voltar a haver. Ele saia da
+        // configuracao inteira e jogava fora TUDO: o PIN, a rede, a senha, o
+        // endereco que o aparelho acabou de entregar. E o pior e que refazer nao
+        // e digitar de novo - e ir ate a estufa, segurar os tres botoes por 3 s,
+        // reconectar o celular no "Sentinela-Config" e recomecar. Um botao
+        // discreto, ao lado do que continua o processo, custava isso.
+        //
+        // Sair continua possivel pelo "voltar" do sistema, que recua para o
+        // formulario em vez de descartar (ver o PopScope em build).
       ],
     );
   }

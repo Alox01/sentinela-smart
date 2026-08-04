@@ -1,5 +1,6 @@
-# Roda a cada push/PR: testes do servidor, analise, testes e build do APK,
-# alem de uma compilacao real do firmware.
+# Roda a cada push/PR: testes do servidor, analise e testes do app, alem de uma
+# compilacao real do firmware. O app NAO e empacotado aqui - ver o comentario no
+# job `app`.
 name: CI
 
 on:
@@ -38,13 +39,20 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze lib test
       - run: flutter test
-      # Era `flutter build web`, que deixou de existir junto com a plataforma
-      # web (04/08/2026). O APK e o que se instala de verdade, entao e ele que
-      # vale provar que compila. O `--dart-define` acompanha porque sem ele o
-      # app sobe com a nuvem desconfigurada - aqui nao muda o resultado da
-      # compilacao, mas manter os dois comandos iguais evita que o de CI e o de
-      # release se separem sem ninguem notar.
-      - run: flutter build apk --release --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
+      # NAO ha build aqui, e a razao vale registrar.
+      #
+      # Havia `flutter build web`, que morreu junto com a plataforma web
+      # (04/08/2026). Trocar pelo APK parecia obvio - e o que se instala - mas o
+      # build do Android exige `google-services.json`, que e do Firebase e esta
+      # no .gitignore de proposito. A maquina do CI nao o tem, entao
+      # `processReleaseGoogleServices` falha, e o vermelho passa a ser sobre o
+      # segredo faltando, nao sobre o codigo.
+      #
+      # `flutter test` ja compila todo o Dart do app; o que fica descoberto e a
+      # camada Gradle/Android. Para cobri-la seria preciso guardar o
+      # `google-services.json` como secret do repositorio e escreve-lo aqui
+      # antes do build. Vale o dia em que a camada Android quebrar sozinha - ate
+      # la, e cerimonia com um segredo a mais para vazar.
 
   firmware:
     name: Firmware (ESP32)
