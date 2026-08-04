@@ -130,9 +130,10 @@ funciona:
   porque a pasta não existia, sem que isso fosse decisão de ninguém.*
 - [x] **B4. Arquivo morto:** `features/monitoramento/widgets/relatorio_estufada_button.dart`
   não era importado por ninguém. *Removido.*
-- [x] **B5. Plataforma web mantida sem uso real.** 31 usos de `kIsWeb` e **quatro
+- [x] **B5. Plataforma web mantida sem uso real.** Usos de `kIsWeb` e **quatro
   pares** de arquivos `_web`/`_io`/`_stub` (`isar_service`, `csv_exporter`,
-  `backup_file_service`, `browser_text_input`). O produto é Android. Isso é
+  `backup_file_service`, `browser_text_input`) — hoje **tres**, porque o do
+  backup saiu junto com o backup (04/08/2026). O produto é Android. Isso é
   código que ninguém executa e todo mundo lê. *Decisão do produtor (01/08/2026):
   **não sabe se vai usar** — pode servir de demonstração na banca. Mantida por
   ora, registrada em `CONVENCOES.md` como pendência **com prazo**: decidir antes

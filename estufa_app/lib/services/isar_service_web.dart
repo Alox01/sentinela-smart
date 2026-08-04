@@ -7,21 +7,6 @@ import '../models/historico_leitura_entity.dart';
 import '../models/pending_sync_command_entity.dart';
 import 'coalescencia_comando.dart';
 
-class BackupImportResult {
-  final int estufasImportadas;
-  final int leiturasImportadas;
-  final int ciclosImportados;
-  final int eventosImportados;
-  final int pendenciasImportadas;
-
-  const BackupImportResult({
-    required this.estufasImportadas,
-    required this.leiturasImportadas,
-    required this.ciclosImportados,
-    required this.eventosImportados,
-    required this.pendenciasImportadas,
-  });
-}
 
 /// Armazenamento leve usado apenas pela versao Web.
 ///
@@ -312,180 +297,6 @@ class IsarService {
     return antes - _pendencias.length;
   }
 
-  Future<String> exportarBackupJson() async {
-    final payload = <String, dynamic>{
-      'exportadoEm': DateTime.now().toIso8601String(),
-      'retencaoMeses': _retencaoMesesHistorico,
-      'estufas': _estufas
-          .map(
-            (e) => {
-              'id': e.id,
-              'chave': e.chave,
-              'nome': e.nome,
-              'ip': e.ip,
-              'idHardware': e.idHardware,
-              'criadaEm': e.criadaEm.toIso8601String(),
-            },
-          )
-          .toList(),
-      'ciclos': _ciclos
-          .map(
-            (e) => {
-              'id': e.id,
-              'ipEstufa': e.ipEstufa,
-              'nomeEstufa': e.nomeEstufa,
-              'inicio': e.inicio.toIso8601String(),
-              'fim': e.fim?.toIso8601String(),
-              'status': e.status,
-              'observacao': e.observacao,
-            },
-          )
-          .toList(),
-      'eventos': _eventos
-          .map(
-            (e) => {
-              'id': e.id,
-              'ipEstufa': e.ipEstufa,
-              'nomeEstufa': e.nomeEstufa,
-              'cicloId': e.cicloId,
-              'timestamp': e.timestamp.toIso8601String(),
-              'tipo': e.tipo,
-              'severidade': e.severidade,
-              'descricao': e.descricao,
-              'valorAnterior': e.valorAnterior,
-              'valorAtual': e.valorAtual,
-            },
-          )
-          .toList(),
-      'historico': _historico
-          .map(
-            (e) => {
-              'id': e.id,
-              'ipEstufa': e.ipEstufa,
-              'nomeEstufa': e.nomeEstufa,
-              'timestamp': e.timestamp.toIso8601String(),
-              'temperatura': e.temperatura,
-              'umidade': e.umidade,
-              'temperaturaMeta': e.temperaturaMeta,
-              'umidadeMeta': e.umidadeMeta,
-              'aviso': e.aviso,
-              'alertaIncendio': e.alertaIncendio,
-            },
-          )
-          .toList(),
-      'pendencias': _pendencias
-          .map(
-            (e) => {
-              'id': e.id,
-              'ipEstufa': e.ipEstufa,
-              'payloadJson': e.payloadJson,
-              'createdAt': e.createdAt.toIso8601String(),
-            },
-          )
-          .toList(),
-    };
-    return const JsonEncoder.withIndent('  ').convert(payload);
-  }
-
-  Future<BackupImportResult> importarBackupJson(
-    String jsonContent, {
-    bool substituirTudo = true,
-  }) async {
-    final decoded = jsonDecode(jsonContent);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Estrutura de backup invalida.');
-    }
-    final estufas = _mapas(decoded['estufas']).map(_mapearEstufa).toList();
-    final historico = _mapas(
-      decoded['historico'],
-    ).map(_mapearHistorico).toList();
-    final ciclos = _mapas(decoded['ciclos']).map(_mapearCiclo).toList();
-    final eventos = _mapas(decoded['eventos']).map(_mapearEvento).toList();
-    final pendencias = _mapas(
-      decoded['pendencias'],
-    ).map(_mapearPendencia).toList();
-    if (substituirTudo) {
-      _estufas.clear();
-      _historico.clear();
-      _ciclos.clear();
-      _eventos.clear();
-      _pendencias.clear();
-    }
-    _estufas.addAll(estufas);
-    _historico.addAll(historico);
-    _ciclos.addAll(ciclos);
-    _eventos.addAll(eventos);
-    _pendencias.addAll(pendencias);
-    _recalcularIds();
-    _limparHistoricoAntigo();
-    return BackupImportResult(
-      estufasImportadas: estufas.length,
-      leiturasImportadas: historico.length,
-      ciclosImportados: ciclos.length,
-      eventosImportados: eventos.length,
-      pendenciasImportadas: pendencias.length,
-    );
-  }
-
-  List<Map<String, dynamic>> _mapas(dynamic value) =>
-      (value as List<dynamic>? ?? [])
-          .whereType<Map<String, dynamic>>()
-          .toList();
-
-  EstufaEntity _mapearEstufa(Map<String, dynamic> m) => EstufaEntity()
-    ..id = _inteiro(m['id'])
-    ..chave = _texto(m['chave'])
-    ..nome = _texto(m['nome'])
-    ..ip = _texto(m['ip'])
-    ..tokenAcesso = _textoOpcional(m['tokenAcesso']?.toString())
-    ..idHardware = _textoOpcional(m['idHardware']?.toString())
-    ..criadaEm = _data(m['criadaEm']);
-
-  HistoricoLeituraEntity _mapearHistorico(Map<String, dynamic> m) =>
-      HistoricoLeituraEntity()
-        ..id = _inteiro(m['id'])
-        ..ipEstufa = _texto(m['ipEstufa'])
-        ..nomeEstufa = _texto(m['nomeEstufa'])
-        ..timestamp = _data(m['timestamp'])
-        ..temperatura = _decimal(m['temperatura'])
-        ..umidade = _decimal(m['umidade'])
-        ..temperaturaMeta = _decimal(m['temperaturaMeta'])
-        ..umidadeMeta = _decimal(m['umidadeMeta'])
-        ..aviso = _texto(m['aviso'])
-        ..alertaIncendio = _booleano(m['alertaIncendio']);
-
-  CicloSecagemEntity _mapearCiclo(Map<String, dynamic> m) {
-    final status = _texto(m['status']);
-    return CicloSecagemEntity()
-      ..id = _inteiro(m['id'])
-      ..ipEstufa = _texto(m['ipEstufa'])
-      ..nomeEstufa = _texto(m['nomeEstufa'])
-      ..inicio = _data(m['inicio'])
-      ..fim = m['fim'] == null ? null : _data(m['fim'])
-      ..status = status.isEmpty ? 'finalizado' : status
-      ..observacao = _texto(m['observacao']);
-  }
-
-  EventoCicloEntity _mapearEvento(Map<String, dynamic> m) => EventoCicloEntity()
-    ..id = _inteiro(m['id'])
-    ..ipEstufa = _texto(m['ipEstufa'])
-    ..nomeEstufa = _texto(m['nomeEstufa'])
-    ..cicloId = _inteiro(m['cicloId'])
-    ..timestamp = _data(m['timestamp'])
-    ..tipo = _texto(m['tipo'])
-    ..severidade = _texto(m['severidade'])
-    ..descricao = _texto(m['descricao'])
-    ..valorAnterior = m['valorAnterior'] == null
-        ? null
-        : _decimal(m['valorAnterior'])
-    ..valorAtual = m['valorAtual'] == null ? null : _decimal(m['valorAtual']);
-
-  PendingSyncCommandEntity _mapearPendencia(Map<String, dynamic> m) =>
-      PendingSyncCommandEntity()
-        ..id = _inteiro(m['id'])
-        ..ipEstufa = _texto(m['ipEstufa'])
-        ..payloadJson = _texto(m['payloadJson'])
-        ..createdAt = _data(m['createdAt']);
 
   void _limparHistoricoAntigo() {
     final agora = DateTime.now();
@@ -497,28 +308,9 @@ class IsarService {
     _historico.removeWhere((e) => e.timestamp.isBefore(limite));
   }
 
-  void _recalcularIds() {
-    int proximo<T>(Iterable<T> itens, int Function(T) id) =>
-        itens.fold<int>(0, (maximo, e) => id(e) > maximo ? id(e) : maximo) + 1;
-    _estufaId = proximo(_estufas, (e) => e.id);
-    _cicloId = proximo(_ciclos, (e) => e.id);
-    _eventoId = proximo(_eventos, (e) => e.id);
-    _historicoId = proximo(_historico, (e) => e.id);
-    _pendenciaId = proximo(_pendencias, (e) => e.id);
-  }
-
-  int _inteiro(dynamic value) =>
-      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
-  double _decimal(dynamic value) =>
-      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
-  String _texto(dynamic value) => value?.toString() ?? '';
   String? _textoOpcional(String? value) {
     final texto = value?.trim() ?? '';
     return texto.isEmpty ? null : texto;
   }
 
-  bool _booleano(dynamic value) =>
-      value == true || '$value'.toLowerCase() == 'true' || '$value' == '1';
-  DateTime _data(dynamic value) =>
-      DateTime.tryParse('$value') ?? DateTime.now();
 }

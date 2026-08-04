@@ -44,8 +44,6 @@ dependencies:
   path_provider: ^2.1.5
   pdf: ^3.11.1
   printing: ^5.13.3
-  share_plus: ^10.1.4
-  file_picker: ^8.1.6
   shared_preferences: ^2.3.2
   firebase_core: ^4.12.1
   firebase_messaging: ^16.4.3

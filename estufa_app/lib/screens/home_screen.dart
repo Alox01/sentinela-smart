@@ -1,10 +1,4 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../features/home/models/convite_estufa.dart';
 import '../features/home/models/modelo_estufa.dart';
@@ -13,7 +7,6 @@ import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
 import '../features/home/widgets/ouvinte_convite_link.dart';
 import '../features/notificacoes/screens/notificacoes_screen.dart';
-import '../services/backup_file_service.dart';
 import '../services/isar_service.dart';
 import '../services/monitor_estufas.dart';
 import 'estufa_form_screen.dart';
@@ -83,27 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificacoesScreen()),
             ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.storage_rounded, color: Colors.white70),
-            tooltip: 'Dados locais',
-            onSelected: (value) async {
-              if (value == 'exportar') {
-                await _exportarBackup();
-              } else if (value == 'importar') {
-                await _importarBackup();
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(
-                value: 'exportar',
-                child: Text('Exportar backup'),
-              ),
-              PopupMenuItem<String>(
-                value: 'importar',
-                child: Text('Importar backup'),
-              ),
-            ],
           ),
         ],
         title: Column(
@@ -248,109 +220,5 @@ class _HomeScreenState extends State<HomeScreen> {
     await _carregarEstufas();
   }
 
-  Future<void> _exportarBackup() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final json = await IsarService.instance.exportarBackupJson();
-      final fileName =
-          'backup_estufa_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}';
-      final destino = await salvarBackupJson(
-        fileNameBase: fileName,
-        jsonContent: json,
-      );
-      if (!mounted) return;
 
-      if (kIsWeb) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Backup exportado.')),
-        );
-        return;
-      }
-      // Abre o compartilhamento nativo: o produtor pode salvar no Drive,
-      // mandar por WhatsApp, e-mail, etc. O aviso importa: o arquivo carrega
-      // as chaves de acesso das estufas, entao vaza-lo e vazar as chaves.
-      await Share.shareXFiles(
-        [XFile(destino, mimeType: 'application/json')],
-        subject: 'Backup Sentinela Smart',
-        text:
-            'Backup das estufas ($fileName). '
-            'Contém as chaves de acesso — guarde como uma senha.',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Falha ao exportar backup: $e')),
-      );
-    }
-  }
-
-  Future<void> _importarBackup() async {
-    final messenger = ScaffoldMessenger.of(context);
-
-    final selecionado = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-      withData: true,
-    );
-    if (selecionado == null || selecionado.files.isEmpty) {
-      return; // usuário cancelou
-    }
-    final bytes = selecionado.files.single.bytes;
-    if (bytes == null) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Não foi possível ler o arquivo.')),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text(
-          'Importar backup',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Isso vai substituir os dados atuais do app pelos do backup. Continuar?',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Importar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmar != true) return;
-
-    try {
-      final jsonContent = utf8.decode(bytes);
-      final resultado = await IsarService.instance.importarBackupJson(
-        jsonContent,
-        substituirTudo: true,
-      );
-      await _carregarEstufas();
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Backup importado: ${resultado.estufasImportadas} estufas, ${resultado.ciclosImportados} ciclos, ${resultado.eventosImportados} eventos, ${resultado.leiturasImportadas} leituras, ${resultado.pendenciasImportadas} pendências.',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Falha ao importar backup: $e')),
-      );
-    }
-  }
 }

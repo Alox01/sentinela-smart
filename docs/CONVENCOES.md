@@ -80,8 +80,9 @@ modelo a seguir.
 
 ## Plataforma web — pendência com prazo
 
-O app tem `web/`, 31 desvios `kIsWeb` e quatro pares `_web`/`_io`/`_stub`
-(`isar_service`, `csv_exporter`, `backup_file_service`, `browser_text_input`).
+O app tem `web/`, desvios `kIsWeb` e **tres** pares `_web`/`_io`/`_stub`
+(`isar_service`, `csv_exporter`, `browser_text_input`). Eram quatro; o de
+`backup_file_service` saiu com o backup, em 04/08/2026.
 O produto é Android; a web nunca foi usada em campo.
 
 **Mantida por ora, sem decisão tomada** (01/08/2026): pode servir de

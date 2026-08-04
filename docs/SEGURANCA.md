@@ -39,8 +39,15 @@ O ESP32 opera normalmente na rede Wi-Fi da propriedade. O servidor em nuvem pode
 ### Aplicativo
 
 - A chave e enviada nas requisicoes autenticadas.
-- A chave de acesso nao e incluida no backup exportado.
-- Backups antigos que ainda contenham chave continuam importaveis, mas a chave nao volta a ser exportada.
+- **Nao existe mais exportar/importar backup** (removido em 04/08/2026, decisao
+  do produtor). Ele gerava um JSON com o banco local inteiro e abria o
+  compartilhamento do Android — e-mail, WhatsApp, Drive.
+- **As duas linhas que estavam aqui eram falsas.** Diziam que a chave de acesso
+  nao ia no backup; ela ia, no campo `chave` de cada estufa. Quem lesse este
+  documento acharia que estava protegido. O aviso do proprio compartilhamento
+  ("Contem as chaves de acesso") era o que dizia a verdade.
+- O que o backup guardava tem outro caminho: o historico esta na nuvem, e uma
+  estufa se recadastra lendo o aparelho no modo de configuracao.
 
 ### Repositorio e configuracao
 
