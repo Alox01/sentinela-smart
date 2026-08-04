@@ -230,7 +230,7 @@ void main() {
         ['', ''],
       );
 
-      expect(find.text('Usar o simulador'), findsOneWidget);
+      expect(find.text('Usar a estufa de demonstração'), findsOneWidget);
     });
   });
 }

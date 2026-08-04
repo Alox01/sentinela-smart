@@ -561,7 +561,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Usar o simulador',
+                    'Usar a estufa de demonstração',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -630,7 +630,7 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Primeira configuração do aparelho',
+                    'Conectar o aparelho ao Wi-Fi',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
