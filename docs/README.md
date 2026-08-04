@@ -1,6 +1,6 @@
 # Índice da documentação
 
-São 24 arquivos. Este índice existe para ninguém abrir seis para achar um — e
+São 25 arquivos. Este índice existe para ninguém abrir seis para achar um — e
 para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## Comece por aqui
@@ -19,6 +19,9 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
   rede, chave por aparelho e PIN de emparelhamento. O maior e o mais consultado.
 - **`NOTIFICACOES_PUSH.md`** — quais avisos existem, quem acorda de madrugada, e
   a pegadinha dos canais do Android que estão congelados desde a criação.
+- **`HISTORICO_FIRMWARE.md`** — o que cada versao do firmware mudou e por que.
+  Morava no topo do `.ino`; o motivo medido em campo esta aqui, o *quando* esta
+  no `git log`.
 - **`AMBIENTE_ESTUFA.md`** — como é a propriedade e a estufa. Sem isso, decisão
   de limiar e de sensor vira chute.
 - **`SEGURANCA.md`** e **`SEGURANCA_COMANDOS.md`** — o modelo de ameaça e o

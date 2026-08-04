@@ -55,101 +55,9 @@ const char* DEVICE_TOKEN    = "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
 // precisar configurar nada. Cada aparelho vira o seu na nuvem (status por
 // aparelho). Ex.: "ESP32_A1B2C3".
 // Incrementar a cada mudanca de comportamento: e o unico jeito de saber, pelo
-// /status, qual firmware um aparelho em campo esta rodando.
-// 1.25.0: `semsenha=1` no POST /salvar grava senha vazia DE PROPOSITO. Vazio
-//        sozinho sempre quis dizer "mantenha a atual", e por isso nao havia como
-//        dizer "esta rede nao tem senha": o aparelho guardava a senha antiga,
-//        tentava entrar com ela numa rede aberta e nao conectava, sem nada
-//        explicando. Ausente = comportamento de antes.
-// 1.24.0: PIN de 4 digitos no visor para entregar a chave. O ponto de acesso do
-//        modo de configuracao e ABERTO: sem o PIN, quem estivesse ao alcance do
-//        wifi naquele momento pediria /config/identidade e levaria a chave sem
-//        nunca chegar perto do aparelho. Sorteado a cada entrada, morre depois
-//        de 5 erros, e o visor de 4 digitos o mostra inteiro.
-// 1.23.0: reporta o proprio `ipLocal` em cada leitura. O nome mDNS era a unica
-//        porta local do app; quando ele nao resolve, o endereco guardado vira a
-//        segunda. Tambem permite dizer de fora onde o aparelho esta, em vez de
-//        mandar procurar no roteador.
-// 1.22.0: chave vazia no formulario MANTEM a atual, em vez de apagar. Apagar
-//        fazia o boot seguinte gerar uma chave aleatoria desconhecida do app e
-//        da nuvem, e o aparelho ficava mudo sem nada explicando. O formulario
-//        ja prometia isso; era a gravacao que nao cumpria.
-// 1.21.0: guarda o gateway e a mascara que o ROTEADOR entrega no DHCP e usa
-//        esses valores quando um IP fixo e configurado sem eles. O produtor
-//        nao tem por que saber esses numeros, e adivinhar .1 quebrava redes com
-//        o gateway em .254 - local funcionando e nuvem muda, sem nada explicando.
-//        Os campos sairam do app; o formulario do aparelho ainda os aceita.
-//        O gateway aprendido tambem vai em /config/identidade, para o app
-//        deixar o campo de IP fixo quase pronto com a faixa certa.
-// 1.20.0: o app le a identidade (id, nome local e CHAVE) de
-//        `GET /config/identidade`, que so responde no modo de configuracao -
-//        presenca fisica. O formulario HTML deixa de vir com a chave
-//        preenchida. Assim o produtor nunca precisa ver nem digitar a chave;
-//        sem exibir, a recuperacao passa a ser entrar no modo de configuracao
-//        de novo, que e o modelo do adesivo do roteador.
-// 1.19.0: reporta `alertaTemperatura` - a CONDICAO de temperatura fora da
-//        faixa - separada de `alarmeAtivo`, que diz se a sirene esta tocando.
-//        Desligar a sirene do aparelho zerava `alarmeAtivo`, e a nuvem deixava
-//        de mandar a notificacao de temperatura para o celular: a sirene da
-//        estufa estava mandando no aviso do celular, que tem preferencias
-//        proprias.
-// 1.18.0: chave de acesso POR APARELHO. Gera uma aleatoria quando nao existe
-//        nenhuma (aparelho novo), registra na nuvem por TOFU e oferece "gerar
-//        nova chave" no modo de configuracao - presenca fisica -, rotacionando
-//        na nuvem com prova de posse da anterior. Aparelho que ja tem chave
-//        nunca e trocado sozinho: se o registro falhasse, o produtor perderia
-//        o acesso ao que funcionava.
-// 1.17.0: o limite de incendio por temperatura passa a acompanhar o ajuste
-//        (ajuste > 170 F -> ajuste + 5), como logica.js ja fazia no servidor.
-//        Os dois discordavam: com ajuste em 172, o aparelho alarmava aos 175 e
-//        a nuvem so aos 177.
-// 1.16.0: o silencio cobre so o fogo que JA existia quando o botao foi
-//        apertado. Fogo que comeca durante os 10 min cancela o silencio e toca:
-//        apertar diz "ja sei DESTE fogo", nao "nao me avise de fogo por 10 min".
-//        As duas causas contam separado, e uma que cessa e volta conta como
-//        nova. Achado em teste de campo - silenciar e poucos minutos depois
-//        acender a chama no sensor nao produzia som nenhum.
-// 1.15.0: a temperatura de incendio (>175 F) passa a tocar CONTINUO, como a
-//        chama. Ate aqui ela caia no bipe intermitente do alarme comum, apesar
-//        de ser tao grave - quem esta na estufa distingue os dois pelo som.
-// 1.14.0: o silencio de 10 min passa a valer tambem para FOGO. Quem aperta o
-//        botao (ou o do app) ja esta ciente - viu o aviso ou ouviu a sirene - e
-//        foi buscar agua ou chamar socorro; a sirene ao lado so atrapalha. Nao
-//        e liga/desliga: o prazo vence sozinho e o alarme volta, entao nao da
-//        para silenciar e esquecer.
-// 1.13.0: segurar SO o botao do buzzer por 3 s liga/desliga a sirene de
-//        temperatura deste aparelho, sem celular nem internet. O interruptor do
-//        app e global (vale para todas as estufas); desligar uma so e uma
-//        decisao tomada na frente dela. Confirma com apitos e LED.
-// 1.12.0: o alarme de TEMPERATURA pode ser desligado pelo app (buzzerAtivo,
-//        LWW, NVS). Fogo nunca e afetado: sensor de chama e temperatura de
-//        incendio (limiteFogoF()) tocam sempre. So a sirene fisica cala - o
-//        push segue.
-// 1.11.0: ao entrar no modo de configuracao, apita e pisca os 3 LEDs (sinal
-//        fisico inconfundivel); visor mostra "----" em vez de tentar "ConF",
-//        que um display de 7 segmentos nao escreve legivel.
-// 1.10.0: a pagina de configuracao mostra o nome local do aparelho (antes so
-//        aparecia no Monitor Serial, que exige um computador com a IDE) e
-//        aceita IP fixo, para roteador do provedor onde nao da para reservar.
-// 1.9.0: modo de configuracao por ponto de acesso (segurar os 3 botoes por
-//        3 s) - Wi-Fi e chave passam a sair da NVS, entao trocar de roteador
-//        nao exige mais regravar o firmware com um computador.
-// 1.8.0: teto da folga da acomodacao de 20 para 8 F/% - o teto antigo cabia
-//        um desvio grande demais dentro do "perdao" de um ajuste.
-// 1.7.0: janela de acomodacao de 20 para 5 min - medido na estufa real, que
-//        alcanca o alvo novo antes disso; a janela antiga atrasava o alerta.
-// 1.6.0: ajustes guardados na memoria nao-volatil - uma queda de energia nao
-//        devolve mais o alvo ao padrao no meio de uma estufada.
-// 1.5.0: a folga da acomodacao cobre so a distancia que a mudanca criou -
-//        aproximar o alvo da temperatura atual nao silencia mais o alarme.
-// 1.4.0: acomodacao no proprio aparelho apos mudar o alvo - antes o ESP
-//        alarmava na hora ao subir o ajuste, ignorando a acomodacao que so
-//        existia no app.
-// 1.3.0: envio imediato quando o alarme/incendio comeca ou termina (antes a
-//        nuvem so sabia no ciclo de 1 min, e um teste rapido nem chegava).
-// 1.2.0: nome local mDNS exclusivo por aparelho, com fallback para o IP.
-// 1.1.0: silencio com prazo de 10 min, busca de comandos na nuvem, leituras
-//        inteiras, id unico por chip.
+// /status, qual firmware um aparelho em campo esta rodando. O que cada versao
+// mudou, e por que, esta em docs/HISTORICO_FIRMWARE.md - aqui eram 94 linhas de
+// registro antes da primeira linha de codigo.
 const char* VERSAO_FIRMWARE = "1.25.0";
 // URL da nuvem: para onde o aparelho empurra as leituras (historico + acesso
 // remoto) e de onde ele busca os ajustes feitos pelo app quando o celular esta
@@ -392,6 +300,9 @@ void handleConfigIdentidade();
 // ============================================================
 //  SETUP
 // ============================================================
+// Monta o aparelho na ordem em que uma coisa depende da outra: identidade a
+// partir do chip, config gravada, sensores e saidas, rede, e so entao as rotas
+// HTTP. O controle local ja funciona antes da rede - e o ponto do edge-first.
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -473,6 +384,9 @@ void setup() {
 // ============================================================
 //  LOOP
 // ============================================================
+// O laco e todo por tempo decorrido, sem delay(): qualquer espera bloqueante
+// aqui atrasaria a leitura do sensor e a resposta dos botoes, que sao a parte
+// que precisa funcionar mesmo com a internet fora.
 void loop() {
   unsigned long agora = millis();
 
@@ -522,6 +436,8 @@ void loop() {
 // ============================================================
 //  REDE
 // ============================================================
+// Primeira tentativa de entrar na rede da casa, com prazo. Falhar nao e fatal:
+// o aparelho segue no controle local e manterWifi() continua tentando.
 void conectarWifi() {
   if (wifiSsid.length() == 0) return;
   WiFi.mode(WIFI_STA);
@@ -686,6 +602,9 @@ void verificarModoConfig() {
   }
 }
 
+// Abre o ponto de acesso "Sentinela-Config" e sorteia o PIN do visor. Enquanto
+// estiver aberto, o aparelho aceita ser reconfigurado - por isso ele sai
+// sozinho por inatividade.
 void entrarModoConfig() {
   modoConfig = true;
   tresBotoesDesdeMs = 0;
@@ -774,6 +693,8 @@ String escaparHtml(const String& texto) {
   return saida;
 }
 
+// Serve o formulario de configuracao pelo navegador. E o caminho de quem esta
+// sem o app, e continua sendo a recuperacao quando algo no app nao serve.
 void handleConfigPagina() {
   ultimaAtividadeConfig = millis();
 
@@ -1064,7 +985,8 @@ int margemVigente() {
   return margemF + folgaAcomodacao;
 }
 
-// Le os ajustes gravados na NVS. Sem valor gravado, mantem o padrao do codigo.
+// Le da NVS tudo o que precisa sobreviver a uma queda de energia: ajustes,
+// rede, chave. Onde nao ha nada gravado, vale o valor de fabrica do topo.
 void carregarConfigPersistida() {
   prefs.begin("sentinela", true);  // somente leitura
   temperaturaAlvoF = prefs.getInt("tempAlvo", temperaturaAlvoF);
@@ -1347,6 +1269,8 @@ long long nowMs() {
   return (long long)millis();
 }
 
+// Converte o RSSI em algo que o produtor consiga ler. Aproximacao grosseira de
+// proposito: serve para dizer "fraco" ou "bom", nao para medir.
 int wifiSinalPercent() {
   if (WiFi.status() != WL_CONNECTED) return 0;
   long rssi = WiFi.RSSI();
@@ -1355,6 +1279,8 @@ int wifiSinalPercent() {
   return (int)(2 * (rssi + 100));
 }
 
+// Nome da fase da cura correspondente ao ajuste atual. E vocabulario do
+// produtor, nao do sistema: e assim que ele fala da estufada.
 const char* fasePorAlvo(int alvo) {
   if (alvo <= 100) return "1. Amarelacao";
   if (alvo <= 110) return "2. Murchamento";
@@ -1389,6 +1315,8 @@ String gerarChaveAleatoria() {
   return chave;
 }
 
+// Ha fogo agora? Chama vista pelo sensor de luz OU temperatura acima do limite
+// de incendio. Nunca depende de umidade, e nunca e silenciavel por ajuste.
 bool riscoIncendioAgora() {
   return leituraOk && temperaturaF > limiteFogoF();
 }
@@ -1430,6 +1358,7 @@ bool fogoNovoDuranteSilencio() {
   return novo;
 }
 
+// Encerra o silencio na hora, sem esperar o prazo vencer.
 void reativarAlarme() {
   silencioAteMillis = 0;
   ultimoTempoBuzzer = 0;
@@ -1463,12 +1392,15 @@ String avisoAtual() {
   return "Estável";
 }
 
+// Cor do cartao no app, derivada do mesmo estado que gera o aviso.
 String corStatusAtual() {
   if (alertaLuz || riscoIncendioAgora()) return "red";
   if (alertaTemperatura) return temperaturaF > temperaturaAlvoF ? "orange" : "purple";
   return "green";
 }
 
+// Confere a chave de quem esta mandando um comando. Leitura e livre na rede
+// local; alterar o aparelho exige a chave dele.
 bool tokenValido() {
   String esperado = tokenAparelho;
   if (esperado.length() == 0) return true;  // sem token = liberado
@@ -1491,6 +1423,8 @@ bool tokenValido() {
 // ============================================================
 //  HANDLERS HTTP (contrato do app)
 // ============================================================
+// Estado completo em JSON: leitura, ajustes, alarme e identidade. E a rota que
+// a nuvem e o app usam para saber tudo de uma vez.
 void handleStatus() {
   JsonDocument doc;
 
@@ -1531,6 +1465,8 @@ void handleStatus() {
   server.send(200, "application/json", saida);
 }
 
+// Formato enxuto, compativel com o app desde antes de /status existir. No modo
+// de configuracao a raiz vira o formulario, mas /dados continua JSON.
 void handleSimple() {
   // No ponto de acesso a raiz e o formulario, nao o JSON: quem abre o navegador
   // ali esta configurando o aparelho, nao consultando leitura.
@@ -1771,6 +1707,8 @@ void confirmarAlternanciaBuzzer(bool ligou) {
   }
 }
 
+// Le os tres botoes a cada volta do loop: ajuste de alvo, silencio e as
+// combinacoes. Toda interacao fisica do produtor passa por aqui.
 void verificarBotoes() {
   // Enquanto os tres estao apertados (ou ja no modo de configuracao), nenhum
   // botao age sozinho: senao a combinacao silenciaria o alarme e mexeria no
@@ -1827,6 +1765,8 @@ void verificarBotoes() {
   }
 }
 
+// Abre a janela em que os botoes mexem no ajuste em vez de comandarem o
+// alarme. Fecha sozinha por inatividade, em verificarTempos().
 void entrarModoAjuste() {
   modoAjuste = true;
   mostrandoUmidade = false;
@@ -1836,6 +1776,7 @@ void entrarModoAjuste() {
   Serial.println("Modo ajuste ativado");
 }
 
+// Fecha a janela de ajuste e devolve os botoes ao uso normal.
 void sairModoAjuste() {
   modoAjuste = false;
   mostrandoUmidade = false;
@@ -1843,6 +1784,8 @@ void sairModoAjuste() {
   Serial.println("Modo ajuste encerrado");
 }
 
+// Vence os prazos que correm sozinhos: a janela de ajuste e a de acomodacao
+// depois de mudar o alvo.
 void verificarTempos() {
   if (!modoAjuste && mostrandoUmidade) {
     if (millis() - tempoInicioUmidade >= tempoMostrarUmidade) {
@@ -1857,6 +1800,8 @@ void verificarTempos() {
   }
 }
 
+// Le o sensor de chama. E a deteccao de incendio mais rapida que o aparelho
+// tem - antes de a temperatura sequer subir.
 void verificarSensorLuz() {
   int leituraLuz = digitalRead(SENSOR_LUZ);
   if (SENSOR_LUZ_ATIVO_LOW) {
@@ -1866,6 +1811,8 @@ void verificarSensorLuz() {
   }
 }
 
+// Le temperatura e umidade. Leitura invalida e descartada em vez de virar
+// zero: um zero falso apagaria um alarme verdadeiro.
 void lerDHT22() {
   float leituraUmidade = dht.readHumidity();
   float leituraTemperaturaF = dht.readTemperature(true);  // true = Fahrenheit
@@ -1890,6 +1837,8 @@ void lerDHT22() {
   Serial.println(" %");
 }
 
+// Decide se a temperatura esta fora da faixa, respeitando a margem vigente.
+// Separa a CONDICAO (alertaTemperatura) de a sirene estar tocando.
 void atualizarEstadoTemperatura() {
   if (!leituraOk) {
     alertaTemperatura = false;
@@ -1913,6 +1862,8 @@ void atualizarEstadoTemperatura() {
   }
 }
 
+// Traduz o estado em LEDs e buzzer. Unico lugar que decide se a sirene toca, e
+// onde fogo se distingue de temperatura: continuo contra intermitente.
 void atualizarSaidas() {
   bool existeAlerta = alertaLuz || alertaTemperatura;
 
@@ -1975,6 +1926,8 @@ void atualizarSaidas() {
   controlarBuzzerIntermitente();
 }
 
+// O bipe do alarme comum, cadenciado por tempo decorrido. Fogo nao passa por
+// aqui - ele toca continuo.
 void controlarBuzzerIntermitente() {
   unsigned long agora = millis();
 
@@ -1990,6 +1943,8 @@ void controlarBuzzerIntermitente() {
   }
 }
 
+// Escreve no visor de 4 digitos: temperatura no uso normal, alvo no modo de
+// ajuste, PIN no modo de configuracao.
 void atualizarDisplay() {
   // No modo de configuracao o visor mostra "----": um estado claramente
   // diferente de uma leitura, sem tentar escrever letras (o display de 7
