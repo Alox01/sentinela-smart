@@ -92,8 +92,11 @@ O app tem `web/`, desvios `kIsWeb` e **tres** pares `_web`/`_io`/`_stub`
 O produto é Android; a web nunca foi usada em campo.
 
 **Mantida por ora, sem decisão tomada** (01/08/2026): pode servir de
-demonstração na banca. Enquanto durar, quem mexer nesses quatro assuntos precisa
-lembrar que existe o outro lado.
+demonstração na banca. Enquanto durar, quem mexer nesses três assuntos precisa
+lembrar que existe o outro lado — e isso **já custou**: em 04/08, remover o
+backup exigiu editar os dois lados do `isar_service`, e a remoção automática
+comeu junto o `_limparHistoricoAntigo` do lado web. O `analyze` pegou, mas o
+lado que ninguém executa foi quem quase quebrou a retenção do histórico.
 
 **Decidir antes de começar a escrita do TCC.** Manter "por via das dúvidas" é
 como dívida técnica costuma nascer, e cada desvio é um caminho a mais onde um
