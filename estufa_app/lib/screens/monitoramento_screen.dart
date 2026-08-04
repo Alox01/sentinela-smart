@@ -17,6 +17,7 @@ import '../features/aparelho/screens/configurar_aparelho_screen.dart';
 import '../features/notificacoes/services/push_notification_service.dart';
 import '../features/notificacoes/services/silenciamento_estufas.dart';
 import '../models/ciclo_secagem_entity.dart';
+import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../services/api_service.dart';
 import '../services/isar_service.dart';
 import '../services/monitor_estufas.dart';
@@ -135,6 +136,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // em vez de esperar a propria busca.
     _monitor.assinar(_aoMudarLeitura);
     _aoMudarLeitura();
+    // Adianta o relatorio desta estufa. Ele custa tres consultas ao banco local,
+    // e ate agora elas comecavam quando o produtor ja estava olhando a tela de
+    // relatorios, esperando. Nada nelas depende daquela tela - o endereco esta
+    // aqui desde sempre -, entao nao havia motivo para so entao comecar.
+    RelatorioEstufadaRepository(IsarService.instance)
+        .precarregar(widget.ipEstufa);
   }
 
   @override

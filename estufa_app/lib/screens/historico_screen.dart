@@ -46,7 +46,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       RelatorioEstufadaRepository(IsarService.instance);
   late final ApiService _api = ApiService(widget.ipEstufa);
 
-  late Future<_DadosRelatorioEstufada> _dadosFuture;
+  late Future<DadosRelatorioEstufada> _dadosFuture;
   List<HistoricoLeituraEntity> _leiturasBrutas = [];
   // Histórico já mesclado com a nuvem (preenchido em segundo plano) e controle
   // de qual ciclo já foi buscado, para não travar a tela esperando a rede.
@@ -68,7 +68,11 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   @override
   void initState() {
     super.initState();
-    _dadosFuture = _carregarDadosRelatorio();
+    // Aproveita o relatorio que o monitoramento adiantou. Sem ele, e a carga
+    // normal: nada aqui depende da precarga ter acontecido.
+    _dadosFuture =
+        _relatorioRepository.consumirPrecarga(widget.ipEstufa) ??
+        _carregarDadosRelatorio();
   }
 
   @override
@@ -91,7 +95,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     await futuro;
   }
 
-  Future<_DadosRelatorioEstufada> _carregarDadosRelatorio({
+  Future<DadosRelatorioEstufada> _carregarDadosRelatorio({
     int? cicloPreferidoId,
   }) async {
     // Reinicia o estado da busca da nuvem a cada (re)carregamento.
@@ -99,42 +103,23 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     _cicloNuvemCarregadoId = null;
     _cicloNuvemEmProgresso = null;
 
-    final ciclos = await _relatorioRepository.listarCiclosPorIp(
+    final dados = await _relatorioRepository.carregarRelatorio(
       widget.ipEstufa,
+      cicloPreferidoId: cicloPreferidoId,
     );
-    final cicloSelecionado = _escolherCicloInicial(ciclos, cicloPreferidoId);
 
-    if (cicloSelecionado == null) {
-      return _DadosRelatorioEstufada(
-        leituras: const [],
-        ciclos: ciclos,
-        eventos: const [],
-        cicloSelecionado: null,
+    final ciclo = dados.cicloSelecionado;
+    if (ciclo != null) {
+      // Renderiza ja com o local (instantaneo) e busca a nuvem em segundo plano.
+      unawaited(
+        _carregarHistoricoNuvem(
+          ciclo,
+          ciclo.fim ?? DateTime.now(),
+          dados.leituras,
+        ),
       );
     }
-
-    final fimCiclo = cicloSelecionado.fim ?? DateTime.now();
-    final resultados = await Future.wait([
-      _relatorioRepository.listarHistoricoPorIpNoPeriodo(
-        widget.ipEstufa,
-        inicio: cicloSelecionado.inicio,
-        fim: fimCiclo,
-      ),
-      _relatorioRepository.listarEventosPorCiclo(cicloSelecionado.id),
-    ]);
-
-    final leiturasLocais = resultados[0] as List<HistoricoLeituraEntity>;
-    // Renderiza ja com o local (instantaneo) e busca a nuvem em segundo plano.
-    unawaited(
-      _carregarHistoricoNuvem(cicloSelecionado, fimCiclo, leiturasLocais),
-    );
-
-    return _DadosRelatorioEstufada(
-      leituras: leiturasLocais,
-      ciclos: ciclos,
-      eventos: resultados[1] as List<EventoCicloEntity>,
-      cicloSelecionado: cicloSelecionado,
-    );
+    return dados;
   }
 
   Future<void> _carregarHistoricoNuvem(
@@ -240,24 +225,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     return resultado;
   }
 
-  CicloSecagemEntity? _escolherCicloInicial(
-    List<CicloSecagemEntity> ciclos,
-    int? cicloPreferidoId,
-  ) {
-    if (ciclos.isEmpty) return null;
 
-    if (cicloPreferidoId != null) {
-      for (final ciclo in ciclos) {
-        if (ciclo.id == cicloPreferidoId) return ciclo;
-      }
-    }
-
-    for (final ciclo in ciclos) {
-      if (ciclo.status == 'em_andamento') return ciclo;
-    }
-
-    return ciclos.first;
-  }
 
   void _adiarExibicaoGrafico() {
     if (_mostrarGrafico || _timerGrafico != null) return;
@@ -370,14 +338,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           onRefresh: _recarregarRelatorio,
           color: Colors.white,
           backgroundColor: const Color(0xFF1C1C1E),
-          child: FutureBuilder<_DadosRelatorioEstufada>(
+          child: FutureBuilder<DadosRelatorioEstufada>(
             future: _dadosFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final dados = snapshot.data ?? _DadosRelatorioEstufada.vazio();
+              final dados = snapshot.data ?? DadosRelatorioEstufada.vazio();
               _ciclos = dados.ciclos;
               _recalcularPosicoes();
               _eventos = dados.eventos;
@@ -481,8 +449,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                         ? GraficoEstufadaCard(
                             leituras: leituras,
                             graficoTemperatura: _graficoTemperatura,
-                            filtroAtivo:
-                                _inicioFiltro != null || _fimFiltro != null,
                             tituloSecaoStyle: _tituloSecaoStyle,
                             onGraficoChanged: _alterarTipoGrafico,
                           )
@@ -845,25 +811,3 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   }
 }
 
-class _DadosRelatorioEstufada {
-  final List<HistoricoLeituraEntity> leituras;
-  final List<CicloSecagemEntity> ciclos;
-  final List<EventoCicloEntity> eventos;
-  final CicloSecagemEntity? cicloSelecionado;
-
-  const _DadosRelatorioEstufada({
-    required this.leituras,
-    required this.ciclos,
-    required this.eventos,
-    required this.cicloSelecionado,
-  });
-
-  factory _DadosRelatorioEstufada.vazio() {
-    return const _DadosRelatorioEstufada(
-      leituras: [],
-      ciclos: [],
-      eventos: [],
-      cicloSelecionado: null,
-    );
-  }
-}
