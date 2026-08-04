@@ -47,3 +47,8 @@ app.*.map.json
 # Firebase (segredos - nunca versionar)
 google-services.json
 **/google-services.json
+# O par do iOS. Mesmo motivo: identifica o projeto Firebase e nao entra no
+# repositorio. Baixe do console e ponha em ios/Runner/, adicionando ao alvo
+# Runner pelo Xcode (nao basta copiar a pasta).
+GoogleService-Info.plist
+**/GoogleService-Info.plist

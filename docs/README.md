@@ -1,6 +1,6 @@
 # Índice da documentação
 
-São 25 arquivos. Este índice existe para ninguém abrir seis para achar um — e
+São 26 arquivos. Este índice existe para ninguém abrir seis para achar um — e
 para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## Comece por aqui
@@ -52,6 +52,9 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## Apoio a quem desenvolve
 
+- **`IOS.md`** — o que já está configurado para iPhone, o que só se resolve com
+  um Mac, e por que a falta de duas chaves no `Info.plist` mata a rede local sem
+  dar erro nenhum.
 - **`EXECUCAO_LOCAL.md`** — subir servidor e app na máquina.
 - **`ESP32_VIRTUAL.md`** e **`TESTE_ESP32_REAL.md`** — testar com e sem aparelho.
 - **`DEMO.md`** — roteiro de demonstração.

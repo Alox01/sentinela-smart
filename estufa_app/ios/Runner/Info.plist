@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Estufa App</string>
+	<string>Sentinela Smart</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -41,6 +41,55 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- ==================================================================
+	     Ajustado em 04/08/2026, quando iOS virou alvo declarado. NADA disto
+	     foi testado num iPhone: nao ha Mac no projeto. Sao as tres coisas
+	     que o iOS exige e cuja falta NAO da erro de compilacao - o app
+	     compila, instala, abre, e simplesmente nao acha o aparelho nem
+	     recebe convite, sem nada na tela dizendo por que.
+	     ================================================================== -->
+
+	<!-- Sem isto o iOS 14+ bloqueia a rede local INTEIRA para o app: mDNS
+	     (`sentinela-xxxxxx.local`) nao resolve e nem o IP direto responde. O
+	     app continuaria funcionando pela nuvem, e a metade edge-first do
+	     projeto - a que existe para a propriedade sem internet - morreria em
+	     silencio. O texto e mostrado ao produtor no pedido de permissao,
+	     entao fala a lingua dele. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>O Sentinela precisa da rede local para falar direto com o aparelho da estufa, sem depender da internet.</string>
+
+	<!-- O iOS so procura os servicos declarados aqui. O firmware anuncia
+	     `_http._tcp` no mDNS (ver `iniciarMdns()` no firmware). -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+	</array>
+
+	<!-- O convite por QR. A camera do iPhone le `sentinela://convite?c=...` e
+	     precisa saber que este app atende esse esquema - e o equivalente ao
+	     intent-filter do AndroidManifest. Sem isto o QR nao abre nada, e
+	     compartilhar acesso fica sem NENHUM caminho: o convite escrito foi
+	     removido em 04/08. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>br.com.sentinelasmart.estufa.convite</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sentinela</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Push com o app fechado/em segundo plano, como no Android. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
