@@ -108,6 +108,43 @@ void main() {
     expect(ev!.tipo, 'oscilacao_umidade');
     expect(ev.descricao, contains('%'));
   });
+
+  group('umidade nunca sai como alarme', () {
+    // A regra vale no aparelho, na nuvem e no push; faltava valer no relatorio,
+    // onde a umidade saia com a MESMA marca vermelha da temperatura critica, no
+    // meio de linhas de "Alarme acionado". Numa estufa de secagem ficar muito
+    // abaixo do ajuste de umidade e o objetivo, nao um defeito.
+    test('mesmo 70 pontos fora do ajuste, e so registro', () {
+      final d = DetectorOscilacao();
+      d.avaliarUmidade(leitura: 25, ajuste: 95, nowMs: 0);
+      final ev = d.avaliarUmidade(leitura: 25, ajuste: 95, nowMs: 10 * min);
+
+      expect(ev, isNotNull);
+      expect(ev!.severidade, 'registro');
+      // Prova que nao e o caminho de "normal": a diferenca esta la, e grande.
+      expect(ev.descricao, contains('70'));
+    });
+
+    test('nem quando continua fora por horas', () {
+      final d = DetectorOscilacao();
+      d.avaliarUmidade(leitura: 25, ajuste: 95, nowMs: 0);
+      d.avaliarUmidade(leitura: 25, ajuste: 95, nowMs: 10 * min);
+      final ev = d.avaliarUmidade(leitura: 25, ajuste: 95, nowMs: 300 * min);
+
+      expect(ev?.tipo, 'oscilacao_umidade_continua');
+      expect(ev?.severidade, 'registro');
+    });
+
+    test('e a temperatura continua alarmando, no mesmo detector', () {
+      // O contraponto: se este teste passar a devolver 'registro', a mudanca
+      // vazou para o lado que DEVE alarmar.
+      final d = DetectorOscilacao();
+      d.avaliarTemperatura(leitura: 100, ajuste: 130, nowMs: 0);
+      final ev = d.avaliarTemperatura(leitura: 100, ajuste: 130, nowMs: 10 * min);
+
+      expect(ev?.severidade, 'critico');
+    });
+  });
   test('folga cobre so a distancia que a mudanca criou', () {
     final d = DetectorOscilacao();
     const t0 = 1000000;

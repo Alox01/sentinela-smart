@@ -150,6 +150,7 @@ class DetectorOscilacao {
       unidade: '%',
       limiteAtencaoTexto: '5%',
       limiteCriticoTexto: '20%',
+      podeAlarmar: false,
     );
   }
 
@@ -163,6 +164,14 @@ class DetectorOscilacao {
     required String unidade,
     required String limiteAtencaoTexto,
     required String limiteCriticoTexto,
+    // Umidade nunca sobe de 'registro'. Ela nao aciona alarme em lugar nenhum
+    // do sistema - nem no aparelho, nem na nuvem, nem no push -, mas no
+    // relatorio saia com a MESMA marca vermelha da temperatura critica, no meio
+    // de linhas de "Alarme acionado" e "Alarme normalizado". Lida ali, a estufa
+    // parecia ter tido dezessete emergencias que nunca existiram - e numa estufa
+    // de secagem a umidade ficar muito abaixo do ajuste e o objetivo do
+    // processo, nao um defeito.
+    bool podeAlarmar = true,
   }) {
     final diferenca = leitura - ajuste;
     final diferencaAbs = diferenca.abs();
@@ -180,7 +189,7 @@ class DetectorOscilacao {
         estado.estado = 'normal';
         return EventoOscilacao(
           tipo: 'oscilacao_${prefixoTipo}_normalizada',
-          severidade: 'info',
+          severidade: podeAlarmar ? 'info' : 'registro',
           descricao: '$nomeGrandeza voltou para a faixa proxima do ajuste.',
           valorAtual: leitura,
         );
@@ -218,7 +227,11 @@ class DetectorOscilacao {
       estado.ultimoRegistroMs = nowMs;
       return EventoOscilacao(
         tipo: 'oscilacao_${prefixoTipo}_continua',
-        severidade: estadoAlvo == 'critico' ? 'critico' : 'alerta',
+        severidade: !podeAlarmar
+            ? 'registro'
+            : estadoAlvo == 'critico'
+            ? 'critico'
+            : 'alerta',
         descricao:
             '$nomeGrandeza ainda fora do ajuste (${diferencaAbs.toStringAsFixed(0)}$unidade de diferença).',
         valorAnterior: ajuste,
@@ -234,7 +247,11 @@ class DetectorOscilacao {
         : limiteAtencaoTexto;
     return EventoOscilacao(
       tipo: 'oscilacao_$prefixoTipo',
-      severidade: estadoAlvo == 'critico' ? 'critico' : 'alerta',
+      severidade: !podeAlarmar
+          ? 'registro'
+          : estadoAlvo == 'critico'
+          ? 'critico'
+          : 'alerta',
       descricao:
           '$nomeGrandeza $direcao do ajuste por mais de $limiteTexto (${diferencaAbs.toStringAsFixed(0)}$unidade de diferença).',
       valorAnterior: ajuste,

@@ -106,6 +106,11 @@ class _EventoLinha extends StatelessWidget {
     final cor = switch (evento.severidade) {
       'critico' => Colors.redAccent,
       'alerta' => Colors.orangeAccent,
+      // Anotado, nao julgado. E o que a umidade produz: ela nao aciona alarme em
+      // lugar nenhum do sistema, entao nao pode sair aqui com a marca de quem
+      // acionou. Verde tambem nao serviria - diria que esta tudo bem, e o valor
+      // pode estar longe do ajuste.
+      'registro' => Colors.white38,
       _ => Colors.greenAccent,
     };
     final horario = DateFormat('HH:mm').format(evento.timestamp);

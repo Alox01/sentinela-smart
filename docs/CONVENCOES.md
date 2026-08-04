@@ -41,7 +41,12 @@ App: `flutter test` dentro de `estufa_app`.
 
 - **Temperatura em Fahrenheit de propósito.** O produtor pensa em °F; converter
   para Celsius "para ficar certo" quebra a leitura dele.
-- **Umidade nunca dispara alarme.** Só temperatura e fogo.
+- **Umidade nunca dispara alarme.** Só temperatura e fogo. Isso vale também na
+  **aparência**: no relatório da estufada a umidade sai como `registro`, em
+  cinza, e não com a marca vermelha de quem acionou alarme. Ela chegou a sair
+  vermelha, no meio das linhas de "Alarme acionado", e a estufada parecia ter
+  tido dezessete emergências que nunca existiram. Numa estufa de secagem a
+  umidade ficar muito abaixo do ajuste é **o objetivo do processo**.
 - **O aparelho é a fonte da verdade.** O app espelha o que ele reporta, não emite
   um segundo parecer.
 - **O interruptor da sirene é sobre o ALARME**, não sobre todo som: apitos de
