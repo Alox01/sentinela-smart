@@ -162,6 +162,28 @@ vai estar por perto
   sem registrar, o produtor é avisado de que não foi aplicado.
 - Detalhes e comportamento nas falhas em `AGENDAMENTO_CURA.md`.
 
+## O que a auditoria de 31/07 mudou
+
+Levantamento completo em `AUDITORIA.md`, com as caixas marcadas. O resumo:
+
+- **Segurança conferida, e pouco a consertar.** SQL 100% parametrizado, nenhum
+  segredo versionado, nenhum erro de servidor vazando detalhe no corpo, nenhum
+  log imprimindo chave. Das 8 vulnerabilidades de dependência, 2 foram
+  resolvidas (incluindo a alta); as 6 restantes vêm do `firebase-admin` e o único
+  conserto oferecido era rebaixá-lo 4 versões maiores — recusado, e declarado.
+- **Os dois arquivos-deus foram quebrados.** `estufa_routes.js` foi de 993 para
+  **84 linhas** (rotas separadas por assunto, mais dois módulos que guardam o
+  estado compartilhado e a decisão de quando avisar). `monitoramento_screen.dart`
+  foi de 1.543 para **1.193**, com a gaveta inteira num widget próprio.
+- **A arquitetura ganhou destino.** `features/` é o alvo, infraestrutura fica na
+  raiz, migração por oportunidade. Está em `CONVENCOES.md`, que toda sessão lê.
+- **O servidor ganhou níveis de log** (`LOG_LEVEL`). Em produção vale `erro`.
+- **As regras do projeto saíram da cabeça de alguém** e viraram
+  `CONVENCOES.md` — commit, build, domínio, e como trabalhar em partes.
+
+Sobrou de propósito: a **plataforma web** segue mantida sem decisão, com prazo
+para decidir antes da escrita do TCC.
+
 ## O que falta
 
 Nada de **produção**: o escopo da proposta está implementado. O que resta é

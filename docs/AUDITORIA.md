@@ -151,8 +151,11 @@ funciona:
   **manter versionado**. *Dito em `CONVENCOES.md`, com a regra que faltava:
   ao mexer numa entidade do Isar, regenerar e commitar junto — foi código
   gerado desatualizado que derrubou o app no boot.*
-- [ ] **C3. Documentação sem índice.** 21 arquivos em `docs/`, alguns já
-  históricos. Um `docs/README.md` dizendo qual ler para quê.
+- [x] **C3. Documentação sem índice.** 21 arquivos em `docs/`, alguns já
+  históricos. *Feito: `docs/README.md` separa o que vale hoje do que é registro
+  do que já foi, e diz por onde começar conforme a intenção. Inclui a regra que
+  faltava: quando documento e código discordam, **o código está certo** — e o
+  documento virou dívida, a corrigir no mesmo commit.*
 
 ---
 
@@ -193,9 +196,15 @@ Cada fase é commitável sozinha e deixa o sistema funcionando.
 - [x] B5 web mantida por ora, com prazo para decidir
 - [x] C2 registrar a decisão sobre `.g.dart`
 
-### Fase 5 — Documentação
-- [ ] C3 índice em `docs/`
-- [ ] Atualizar `HANDOFF.md` com o que esta auditoria mudou
+### Fase 5 — Documentação ✅
+- [x] C3 índice em `docs/`
+- [x] Atualizar `HANDOFF.md` com o que esta auditoria mudou
+
+---
+
+**As cinco fases estão fechadas** (03/08/2026). O que a auditoria deixou em
+aberto de propósito está declarado com prazo: a decisão sobre a plataforma web,
+antes de começar a escrita do TCC.
 
 ---
 
