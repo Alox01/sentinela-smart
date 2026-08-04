@@ -1068,6 +1068,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       localBaseUrl: api.localBaseUrl,
       cloudBaseUrl: api.cloudBaseUrl,
       temTokenConfigurado: api.temTokenConfigurado,
+      vigiadaPorPush: PushNotificationService.instance.vigiada(
+        (widget.idHardware ?? api.idHardware)?.trim(),
+      ),
       totalPendencias: _pendenciasSincronizacao,
       pendencias: pendencias,
       alcanceConhecido: api.ultimoAlcance,

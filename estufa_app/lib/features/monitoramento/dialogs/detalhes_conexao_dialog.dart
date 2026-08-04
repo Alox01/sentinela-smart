@@ -24,6 +24,12 @@ Future<void> mostrarDetalhesConexaoDialog({
   required String localBaseUrl,
   required String? cloudBaseUrl,
   required bool temTokenConfigurado,
+  // Este celular esta inscrito para receber avisos deste aparelho? `null` = a
+  // conferencia ainda nao terminou. Estava no menu da estufa e saiu de la: o
+  // produtor nao sabe o que e uma inscricao de push, nao pode agir sobre ela, e
+  // ler "ativos" so levantava duvida. Aqui e diagnostico, e quem abre isto esta
+  // procurando defeito - inclusive o defeito de nunca ter chegado um aviso.
+  required bool? vigiadaPorPush,
   required int totalPendencias,
   required List<PendingSyncCommandEntity> pendencias,
   // O ultimo teste ja feito nesta estufa (nulo na primeira vez) e como refazer.
@@ -106,6 +112,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                         // acesso a nada (a chave nunca e mostrada), mas nao ha
                         // motivo para o nome do aparelho viajar em cada print.
                         _DetalhesTecnicos(
+                          vigiadaPorPush: vigiadaPorPush,
                           idHardware: idHardware,
                           baseUrlAtiva: baseUrlAtiva,
                           localBaseUrl: localBaseUrl,
@@ -194,6 +201,7 @@ Future<void> mostrarDetalhesConexaoDialog({
 /// "por que nao conecta", nao informacao de rotina para quem cuida da estufa.
 class _DetalhesTecnicos extends StatefulWidget {
   final String? idHardware;
+  final bool? vigiadaPorPush;
   final String? baseUrlAtiva;
   final String localBaseUrl;
   final String? cloudBaseUrl;
@@ -203,6 +211,7 @@ class _DetalhesTecnicos extends StatefulWidget {
     required this.baseUrlAtiva,
     required this.localBaseUrl,
     required this.cloudBaseUrl,
+    required this.vigiadaPorPush,
   });
 
   @override
@@ -244,6 +253,14 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
           _LinhaDetalhe('Ativo', widget.baseUrlAtiva ?? '-'),
           _LinhaDetalhe('Local', widget.localBaseUrl),
           _LinhaDetalhe('Nuvem', widget.cloudBaseUrl ?? 'Não configurada'),
+          _LinhaDetalhe(
+            'Avisos push',
+            switch (widget.vigiadaPorPush) {
+              true => 'Este celular inscrito',
+              false => 'NÃO inscrito',
+              null => 'Conferindo',
+            },
+          ),
         ],
       ],
     );

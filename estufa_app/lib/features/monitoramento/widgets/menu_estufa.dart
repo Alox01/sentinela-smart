@@ -399,7 +399,11 @@ class _ItemCompartilharAcesso extends StatelessWidget {
         style: TextStyle(color: Colors.white),
       ),
       subtitle: const Text(
-        'Manda para outro celular acompanhar e comandar esta estufa',
+        // "celular", nao "aparelho": neste app "aparelho" e sempre o ESP32 —
+        // "Configurar aparelho", "Sirene do aparelho", "Reiniciar ajustes do
+        // aparelho" —, e "adicionar esta estufa em outro aparelho" leria como
+        // ligar a estufa a um segundo ESP.
+        'QR Code para adicionar esta estufa em outro celular',
         style: TextStyle(color: Colors.white38, fontSize: 12),
       ),
       onTap: () {
