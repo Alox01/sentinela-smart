@@ -207,13 +207,9 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       await mudanca.aplicar(_repository);
       if (!mounted) return;
       Navigator.of(context).pop(ResultadoFormEstufa.atualizada);
-    } catch (_) {
+    } catch (erro, pilha) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível atualizar a estufa. Tente de novo.'),
-        ),
-      );
+      _mostrarFalha('Não foi possível atualizar a estufa.', erro, pilha);
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
@@ -311,16 +307,56 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
             ? ResultadoFormEstufa.atualizada
             : ResultadoFormEstufa.cadastrada,
       );
-    } catch (_) {
+    } catch (erro, pilha) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar a estufa. Tente novamente.'),
-        ),
-      );
+      _mostrarFalha('Não foi possível salvar a estufa.', erro, pilha);
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
+  }
+
+  /// Mostra a falha ao produtor E guarda a causa ao alcance de quem conserta.
+  ///
+  /// Antes o `catch` descartava a exceção e dizia só "não foi possível". Quando
+  /// isso aconteceu de verdade, não havia o que investigar: nem no aparelho, nem
+  /// no `logcat` — a causa tinha sido jogada fora dentro do próprio app. Um dia
+  /// inteiro de depuração começou com essa linha faltando.
+  ///
+  /// A mensagem curta continua sendo o que o produtor lê. O detalhe fica atrás
+  /// de "Detalhes", selecionável para poder ser copiado e mandado.
+  void _mostrarFalha(String mensagem, Object erro, StackTrace pilha) {
+    debugPrint('SENTINELA falha: $erro\n$pilha');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: 'Detalhes',
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1C1C1E),
+              title: const Text(
+                'O que deu errado',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              content: SingleChildScrollView(
+                child: SelectableText(
+                  '$erro\n\n$pilha',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Fechar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // Validacao leve do endereco: aceita IP, nome de host (inclusive mDNS como
@@ -428,7 +464,14 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                         TextButton(
                           onPressed: _salvando
                               ? null
-                              : () => Navigator.of(context).pop(false),
+                              // Sem resultado, e nao `false`: a rota devolve
+                              // ResultadoFormEstufa, e um bool aqui explodia na
+                              // conversao DEPOIS de a rota ja estar marcada como
+                              // fechada — a tela ficava presa, o voltar sumia, e
+                              // todo pop seguinte falhava com "No element".
+                              // Cancelar nao produziu resultado nenhum, entao o
+                              // valor certo e a ausencia dele.
+                              : () => Navigator.of(context).pop(),
                           child: const Text('Cancelar'),
                         ),
                         const SizedBox(width: 8),
