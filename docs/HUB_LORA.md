@@ -16,10 +16,11 @@ conferidas.
 
 ---
 
-> **Leia antes as "Respostas do produtor" no fim.** Este documento foi
-> dimensionado para quilômetros; as distâncias reais são de 10 a 50 m, e isso
-> derruba a justificativa do hub no caso comum. O que sobra — e é real — são as
-> propriedades maiores e a independência do roteador da casa.
+> **Leia antes as "Respostas do produtor" no fim.** Há **duas pernas de rádio**
+> neste projeto, com distâncias muito diferentes, e este documento tratou só de
+> uma. Hub ↔ estufas são 10 a 50 m — perto demais para o rádio se justificar
+> sozinho. Casa ↔ produtor **na roça** são quilômetros, sem dados móveis, e é aí
+> que o LoRa não tem substituto.
 
 ## O problema
 
@@ -690,7 +691,18 @@ e barato come mais ganho do que a antena entrega.
 | Energia nas estufas | **Todas têm** |
 | Wi-Fi hoje | O 2,4 GHz da casa **já alcança duas estufas**, através dessas paredes |
 
-### Isto derruba a premissa no caso comum, e é melhor dizer agora
+### São duas pernas, e só uma foi dimensionada aqui
+
+O documento inteiro supôs **uma** perna: o hub perto e as estufas longe. As
+respostas mostram que a coisa é outra — e que existe uma segunda perna, que é a
+que realmente pede rádio:
+
+| Perna | Distância | O rádio se justifica? |
+|---|---|---|
+| **Hub ↔ estufas** | 10 a 50 m, 2–3 paredes | Pouco. Ver abaixo |
+| **Casa ↔ produtor na roça** | **quilômetros, sem dados móveis** | **Sim, e sem substituto** |
+
+### A perna curta: o Wi-Fi já resolve o caso comum
 
 Este documento foi dimensionado para **quilômetros**: SF10, 330 ms no ar, antena
 alta, visada. A realidade é **10 a 50 m com duas ou três paredes** — de cem a
@@ -706,7 +718,30 @@ continua funcionando sem uma linha alterada.
 Gastar as oito etapas deste plano para vencer 50 m é usar caminhão para levar
 carta.
 
-### Onde o hub continua fazendo sentido
+### A perna longa: é ela que sustenta o projeto
+
+O produtor está na lavoura, a quilômetros da sede, **onde não pega dado móvel**,
+e quer saber como está a estufa. Nenhuma das camadas que existem hoje alcança
+isso: o app usa Wi-Fi da casa ou internet da operadora, e ali não há nem um nem
+outro.
+
+Isso muda o que o hub é. Ele deixa de ser "quem recolhe as estufas" — que o
+Wi-Fi já faz — e passa a ser **quem transmite para longe**. E abre uma pergunta
+que este documento ainda não respondeu, porque **celular não fala LoRa**:
+
+- um **segundo aparelho portátil** (ESP32 + LoRa + visor pequeno) que o produtor
+  leva no bolso ou na carreta; ou
+- um **módulo LoRa emparelhado ao celular** por Bluetooth, com o app lendo dele.
+
+As duas mudam o projeto de forma diferente, e a escolha não pode ser arbitrada
+daqui. **É a próxima pergunta a responder**, antes de qualquer compra.
+
+O que já dá para dizer: nessa perna, as contas de SF10 e 400 ms de permanência
+**voltam a valer** — as que a perna curta tinha tornado desnecessárias. E a
+direção que importa é a de **descida** (estufa → produtor), não a de subida;
+comandar de longe é desejável, não essencial.
+
+### Onde a perna curta ainda faz sentido
 
 Três casos, e nenhum é o comum:
 
@@ -717,13 +752,13 @@ Três casos, e nenhum é o comum:
    todas param juntas. O rádio não passa por ele;
 3. **Estufa sem tomada**, se um dia houver. Não é o caso hoje — todas têm energia.
 
-**Decisão do produtor:** montar e testar mesmo assim, como trabalho futuro, sem
-compromisso de entrar no TCC. Registrado assim de propósito: o valor está em
-provar o enlace para as propriedades maiores, não em substituir o que já funciona.
+**Decisão do produtor:** montar e testar como trabalho futuro, sem compromisso
+de entrar no TCC. O valor está na **perna longa** — levar a estufa até onde não
+chega internet nenhuma —, não em substituir o Wi-Fi que já funciona nos 50 m.
 
-### O que as respostas simplificam, se for em frente
+### O que as respostas simplificam **na perna curta**
 
-Tudo, e por larga margem:
+Se o hub for recolher as estufas por rádio, isso fica fácil:
 
 - **SF7 em vez de SF10.** A 50 m com paredes, o alcance de SF7 (~1–2 km em
   visada) sobra. Tempo no ar cai de 330 ms para **51 ms** — some a preocupação com
@@ -736,10 +771,21 @@ Tudo, e por larga margem:
 - **Antena.** Sem necessidade de mastro, telhado ou caixa d'água. A antena que
   vem com o módulo resolve.
 
-A **Etapa 2 — a caminhada que decide o projeto** continua sendo a etapa que
-manda, mas agora com outro objetivo: em vez de descobrir se o enlace fecha, ela
-mede **quanta margem sobra** — e é essa margem que diz se o rádio vale para as
-propriedades maiores, que são a razão de existir do hub.
+A **Etapa 2 — a caminhada que decide o projeto** continua sendo a que manda, e
+agora com o alvo certo: caminhar **para a lavoura**, não entre as estufas. É o
+alcance da perna longa que decide se o projeto existe — a curta já está resolvida
+por um roteador.
+
+## A pergunta que ficou aberta
+
+**O que o produtor leva para a roça?** Celular não fala LoRa, então a perna longa
+precisa de um segundo aparelho — de bolso com visor próprio, ou um módulo
+emparelhado ao celular por Bluetooth. As duas mudam o projeto de forma diferente,
+e nenhuma dá para arbitrar daqui.
+
+Responder isso vem **antes de comprar qualquer coisa**: muda o que se compra.
+
+---
 
 ## O que este documento não cobre
 
