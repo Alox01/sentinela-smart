@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../features/monitoramento/tempo_decorrido.dart';
 import '../features/monitoramento/dialogs/detalhes_conexao_dialog.dart';
 import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
 import '../features/monitoramento/services/detector_oscilacao.dart';
@@ -567,7 +568,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final ms = _ultimaLeituraMs;
     final texto = ms == null
         ? 'Aparelho sem comunicação com a nuvem.'
-        : 'Aparelho sem comunicação há ${_formatarTempoDecorrido(ms)}. '
+        : 'Aparelho sem comunicação há ${formatarTempoDecorrido(ms)}. '
               'Pode ser falta de energia ou de internet na estufa — verifique.';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -682,7 +683,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       final ms = _ultimaLeituraMs;
       return ms == null
           ? 'Sem comunicação'
-          : 'Sem comunicação há ${_formatarTempoDecorrido(ms)}';
+          : 'Sem comunicação há ${formatarTempoDecorrido(ms)}';
     }
     return switch (_modoConexao) {
       'CONECTANDO' => 'Verificando...',
@@ -690,15 +691,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       'LOCAL' => 'Reportando (rede local)',
       _ => 'Reportando (via nuvem)',
     };
-  }
-
-  String _formatarTempoDecorrido(int desdeMs) {
-    final minutos = (DateTime.now().millisecondsSinceEpoch - desdeMs) ~/ 60000;
-    if (minutos < 1) return 'menos de 1 min';
-    if (minutos < 60) return '$minutos min';
-    final horas = minutos ~/ 60;
-    final resto = minutos % 60;
-    return resto == 0 ? '${horas}h' : '${horas}h ${resto}min';
   }
 
 
