@@ -274,6 +274,25 @@ preencha nada").
 continuam valendo, e firmware anterior a 1.25.0 a ignora — nesse par o caso da
 rede aberta volta a falhar do jeito descrito acima.
 
+### Sair do modo de configuracao (v05/08/2026)
+
+Antes so havia duas saidas: gravar com sucesso, ou esperar os **5 minutos** de
+inatividade. Duas coisas apareceram em teste de campo:
+
+- **PIN queimado e o modo continuava aberto.** Depois de 5 erros o PIN morre — e
+  as duas rotas que fazem alguma coisa (`/config/identidade` e `/salvar`) exigem
+  o PIN. Ou seja: um ponto de acesso **sem senha** no ar, sem servir para nada,
+  ate o prazo vencer. Agora o aparelho **reinicia na hora** em que o PIN morre.
+- **Nao havia como desistir.** Quem abriu por engano, ou errou o PIN, tinha de
+  esperar. Agora **segurar qualquer botao por 1,5 s** sai, com dois apitos de
+  confirmacao.
+
+**Segurar, e nao tocar**, de proposito: o aparelho fica na estufa e um esbarrao
+no meio do preenchimento custaria refazer os 3 s dos tres botoes e reconectar o
+celular na rede dele. E so conta depois que os botoes ficarem **soltos uma vez** —
+entrar exige segura-los, entao no instante em que o modo abre a mao ainda esta em
+cima: sem esperar a soltura, os mesmos dedos que abriram fechariam 1,5 s depois.
+
 ## Chave de acesso
 
 A chave de acesso protege comandos que alteram o aparelho, como ajuste de

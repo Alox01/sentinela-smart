@@ -75,8 +75,27 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   final _pin = TextEditingController();
 
   /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
+  /// TODO os PINs que ja falharam nesta visita, e nao so o ultimo.
+  ///
+  /// Guardando so o ultimo, alternar dois numeros errados reenviava cada um: o
+  /// produtor digitava 1111, depois 0000, e o 0000 gastava uma SEGUNDA tentativa
+  /// no aparelho por um numero que ele ja sabia estar errado. Cinco tentativas
+  /// existem para o produtor acertar, nao para o app gastar.
+  final Set<String> _pinsQueFalharam = {};
+
+  /// Qual PIN produziu a mensagem que esta na tela agora.
+  ///
+  /// Sem isto, apertar "concluido" de novo logo depois de errar — que e o que
+  /// acontece so de fechar o teclado em boa parte dos celulares — trocava
+  /// "restam 4 tentativas" por "este PIN ja falhou", e o produtor perdia o
+  /// numero que importa sem ter feito nada.
+  String? _pinDoErro;
   String? _pinTentado;
   String? _erroPin;
+
+  /// As 5 tentativas acabaram. O aparelho reinicia e sai do modo de
+  /// configuracao, entao nao ha mais nada a fazer nesta tela sem voltar ate ele.
+  bool _pinBloqueado = false;
 
   /// O aparelho respondeu, mas nao serve a rota da identidade — firmware
   /// anterior a 1.20.0. So entao o campo da chave volta a existir: sem isso, ele
@@ -162,14 +181,43 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// A rota so responde no modo de configuracao — estar na frente do aparelho é
   /// o que autoriza. Firmware anterior a 1.20.0 não a serve, e para esse caso
   /// esta tela nao tem saida: ver [_marcarFirmwareAntigoSePreciso].
-  Future<void> _lerIdentidadeDoAparelho() async {
+  /// [pedidoDoProdutor] separa "ele apertou agora" de "o relogio de 3 s bateu".
+  ///
+  /// A insistencia automatica existe porque a tela manda conectar na rede do
+  /// aparelho DEPOIS de abrir. Mas ela nao pode falar por cima do que o produtor
+  /// esta lendo: a mensagem com as tentativas restantes durava 3 segundos e era
+  /// substituida sozinha pelo aviso de PIN repetido — ele via "perdi uma
+  /// tentativa" sumir sem ter tocado em nada, e ficava sem saber quantas
+  /// sobravam.
+  Future<void> _lerIdentidadeDoAparelho({bool pedidoDoProdutor = false}) async {
     final pin = _pin.text.trim();
     // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
     // gastaria as tentativas dele.
     if (pin.length != 4) return;
+    // Bloqueado: o aparelho reiniciou e nao esta mais ouvindo. Insistir so
+    // produziria "nao achei o aparelho", que manda conferir a coisa errada.
+    if (_pinBloqueado) return;
     // E nunca reenviar um PIN que ja falhou. A leitura se repete a cada 3 s, e
     // sem isto um PIN errado consumiria as 5 tentativas do aparelho em 15
     // segundos - o proprio app bloquearia o emparelhamento.
+    // Nenhum PIN ja recusado volta ao aparelho. A leitura se repete a cada 3 s,
+    // e sem isto um PIN errado consumiria as 5 tentativas em 15 segundos. Nao
+    // fazer nada visivel, porem, parecia app travado - entao ele diz.
+    if (_pinsQueFalharam.contains(pin)) {
+      // So responde a quem apertou. Vindo do relogio, fica calado: a contagem
+      // de tentativas ja esta na tela e e ela que interessa.
+      // E o mesmo PIN que acabou de falhar? A mensagem na tela ja e sobre ele, e
+      // ela diz quantas tentativas sobraram - informacao melhor. So avisa quando
+      // o produtor volta a um PIN errado ANTERIOR, que e quando ele nao tem como
+      // saber que ja tentou aquele.
+      if (pedidoDoProdutor && mounted && pin != _pinDoErro) {
+        setState(() {
+          _erroPin = 'Este PIN já falhou. Confira o número no visor.';
+          _pinDoErro = pin;
+        });
+      }
+      return;
+    }
     if (pin == _pinTentado) return;
     _pinTentado = pin;
     try {
@@ -181,11 +229,22 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         final corpo = jsonDecode(resposta.body);
         final restantes = corpo is Map ? corpo['restantes'] : null;
         setState(() {
+          _pinsQueFalharam.add(pin);
+          _pinDoErro = pin;
+          // Bloqueado nao e "errei de novo": o aparelho sai do modo de
+          // configuracao e some da rede, entao continuar digitando ali nao leva
+          // a lugar nenhum. Vira estado proprio, com cartao proprio - so a
+          // legenda embaixo do campo passava batido, e o produtor ficava
+          // tentando contra um aparelho que ja tinha ido embora.
+          _pinBloqueado = restantes == 0;
+          // "restam N" e nao "(N tentativas)": entre parenteses lia como
+          // quantas ja foram gastas, que e o contrario.
           _erroPin = restantes == 0
-              ? 'PIN bloqueado. Saia e entre de novo no modo de configuração '
-                    'no aparelho.'
-              : 'PIN não confere. Confira o número no visor do aparelho'
-                    '${restantes is int ? ' ($restantes tentativas)' : ''}.';
+              ? 'PIN bloqueado.'
+              : restantes is int
+              ? 'PIN não confere. Confira o número no visor do aparelho — '
+                    'restam $restantes ${restantes == 1 ? 'tentativa' : 'tentativas'}.'
+              : 'PIN não confere. Confira o número no visor do aparelho.';
         });
         return;
       }
@@ -309,12 +368,55 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     return texto;
   }
 
+  /// Confirma que a rede e mesmo aberta, antes de gravar senha vazia.
+  ///
+  /// Nao e cerimonia: o erro que ela evita nao aparece na hora. O aparelho
+  /// aceita, reinicia, tenta entrar na rede de casa sem senha, nao consegue, e o
+  /// produtor so descobre quando a estufa aparece SEM SINAL — sem nenhuma pista
+  /// de que a causa foi um campo deixado em branco minutos antes.
+  Future<bool> _confirmarRedeSemSenha() async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text(
+          'A rede não tem senha?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Você deixou a senha em branco, então o aparelho vai entrar na rede '
+          '"${_rede.text.trim()}" sem senha nenhuma. '
+          'Se a rede tiver senha, ele não vai conseguir conectar e a estufa '
+          'vai ficar sem sinal.',
+          style: const TextStyle(color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar e digitar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('É aberta, salvar'),
+          ),
+        ],
+      ),
+    );
+    return confirmou ?? false;
+  }
+
   Future<void> _salvar() async {
     final rede = _rede.text.trim();
     if (rede.isEmpty) {
       setState(() => _erro = 'Informe o nome da rede Wi-Fi.');
       return;
     }
+    // Senha em branco agora significa "esta rede nao tem senha", e o aparelho
+    // grava vazio DE PROPOSITO (semsenha=1). Numa rede com senha isso o deixa
+    // sem conseguir entrar - ele some da nuvem e a estufa fica SEM SINAL, sem
+    // nada na tela ligando uma coisa a outra. Ja aconteceu, no primeiro dia em
+    // que a marca existiu. Entao pergunta antes, uma vez.
+    if (_senha.text.isEmpty && !await _confirmarRedeSemSenha()) return;
     // A senha NAO e exigida, de proposito: rede aberta existe, e barrar o
     // salvamento deixaria essa propriedade sem caminho pelo app. O que mudou foi
     // a legenda — ela dizia "deixe vazio para manter a senha atual", que so
@@ -333,6 +435,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             // O aparelho le os campos com server.arg(), que espera formulario.
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: {
+              // O aparelho passou a exigir o PIN tambem para GRAVAR, e nao so
+              // para entregar a chave. E o mesmo numero que ja esta digitado na
+              // tela: quem chegou ate aqui ja acertou uma vez.
+              'pin': _pin.text.trim(),
               'ssid': rede,
               'senha': _senha.text,
               // Campo vazio quer dizer rede aberta, e e o que a legenda promete
@@ -524,6 +630,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // Firmware antigo tem cartao proprio, logo abaixo: aqui ele nao e "achei"
     // (nao da para configurar) nem "nao achei" (o aparelho respondeu).
     if (_firmwareSemIdentidade) return const SizedBox.shrink();
+    if (_pinBloqueado) return _cartaoPinBloqueado();
     final achou = _chaveDoAparelho != null;
     // Antes de qualquer tentativa o app NAO tentou nada, e dizer "nao achei"
     // ali e falso — chegou a convencer duas vezes de que o Wi-Fi do aparelho
@@ -577,6 +684,59 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 fontSize: 12,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// As 5 tentativas acabaram.
+  ///
+  /// Precisa ser cartao, e nao a legenda embaixo do campo: o aparelho REINICIA
+  /// e sai do modo de configuracao, entao o produtor podia ficar digitando
+  /// contra algo que ja tinha ido embora. E a tela nao pode cair no "nao achei o
+  /// aparelho com esse PIN", que manda conferir o numero e a rede — os dois
+  /// estao certos; o que acabou foram as tentativas.
+  Widget _cartaoPinBloqueado() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orangeAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.25)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lock_clock_outlined,
+                  color: Colors.orangeAccent, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '5 tentativas erradas',
+                  style: TextStyle(
+                    color: Colors.orangeAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Text(
+            'O aparelho bloqueou o PIN e saiu do modo de configuração — o visor '
+            'voltou ao normal e a rede "Sentinela-Config" sumiu.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Vá até o aparelho, segure os 3 botões por 3 s de novo e refaça. O '
+            'visor mostra um PIN novo.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
         ],
       ),
@@ -748,7 +908,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         const SizedBox(height: 8),
         // Os 4 digitos do visor. E o unico numero que o produtor digita em todo
         // o processo, e e ele que troca a chave longa por presenca fisica.
-        if (_chaveDoAparelho == null && !_firmwareSemIdentidade) ...[
+        // Some com o campo quando o PIN esta bloqueado: nao ha aparelho do
+        // outro lado, e um campo digitavel convida a tentar de novo.
+        if (_chaveDoAparelho == null &&
+            !_firmwareSemIdentidade &&
+            !_pinBloqueado) ...[
           _campo(
             controlador: _pin,
             rotulo: 'PIN do visor (4 números)',
@@ -762,7 +926,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             // comecado. Aqui quem decide a hora e o produtor.
             aoConfirmar: () {
               FocusManager.instance.primaryFocus?.unfocus();
-              unawaited(_lerIdentidadeDoAparelho());
+              unawaited(_lerIdentidadeDoAparelho(pedidoDoProdutor: true));
             },
           ),
         ],

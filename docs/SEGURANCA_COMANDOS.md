@@ -112,6 +112,16 @@ ele, qualquer um ao alcance do Wi-Fi naquele momento pediria a identidade e
 levaria a chave **sem nunca chegar perto do aparelho**. Com ele, é preciso estar
 olhando o visor.
 
+**Corrigido em 05/08/2026: `POST /salvar` também exige o PIN.** Ele ficou de fora
+quando o PIN nasceu, e o buraco era maior que o que o PIN fechou: `/salvar`
+**grava** rede, endereço e chave — quem estivesse ao alcance do Wi-Fi durante os
+5 minutos podia trocar a chave do aparelho e ficar com ele. O raciocínio ("o
+ponto de acesso é aberto, estar nele não prova nada") sempre valeu para as duas
+rotas; só uma tinha sido protegida. A conferência virou uma função só,
+`pinDoVisorConfere()`, usada pelas duas — separadas, elas voltariam a divergir. O
+formulário do navegador ganhou o campo do PIN, e o app manda o número que já está
+digitado na tela.
+
 As três proteções que fazem 4 dígitos bastarem, todas no firmware:
 
 - **sorteado por entrada** — um PIN fixo viraria segredo permanente de 4 dígitos;

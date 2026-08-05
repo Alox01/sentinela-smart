@@ -24,3 +24,7 @@ Thumbs.db
 # Aponta para docs/CONVENCOES.md. Fica fora do versionamento porque o
 # repositorio e trabalho academico e nao precisa anunciar ferramenta.
 CLAUDE.md
+# Configuracao local de ferramenta. Ja estava fora, mas por um .gitignore GLOBAL
+# da maquina - o que so vale nesta maquina. Declarado aqui para o repositorio
+# nao depender do ambiente de quem clona.
+.claude/settings.local.json
