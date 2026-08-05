@@ -75,8 +75,19 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   final _pin = TextEditingController();
 
   /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
+  /// TODO os PINs que ja falharam nesta visita, e nao so o ultimo.
+  ///
+  /// Guardando so o ultimo, alternar dois numeros errados reenviava cada um: o
+  /// produtor digitava 1111, depois 0000, e o 0000 gastava uma SEGUNDA tentativa
+  /// no aparelho por um numero que ele ja sabia estar errado. Cinco tentativas
+  /// existem para o produtor acertar, nao para o app gastar.
+  final Set<String> _pinsQueFalharam = {};
   String? _pinTentado;
   String? _erroPin;
+
+  /// As 5 tentativas acabaram. O aparelho reinicia e sai do modo de
+  /// configuracao, entao nao ha mais nada a fazer nesta tela sem voltar ate ele.
+  bool _pinBloqueado = false;
 
   /// O aparelho respondeu, mas nao serve a rota da identidade — firmware
   /// anterior a 1.20.0. So entao o campo da chave volta a existir: sem isso, ele
@@ -167,24 +178,24 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
     // gastaria as tentativas dele.
     if (pin.length != 4) return;
+    // Bloqueado: o aparelho reiniciou e nao esta mais ouvindo. Insistir so
+    // produziria "nao achei o aparelho", que manda conferir a coisa errada.
+    if (_pinBloqueado) return;
     // E nunca reenviar um PIN que ja falhou. A leitura se repete a cada 3 s, e
     // sem isto um PIN errado consumiria as 5 tentativas do aparelho em 15
     // segundos - o proprio app bloquearia o emparelhamento.
-    if (pin == _pinTentado) {
-      // Repetir o MESMO PIN que ja falhou nao vai ao aparelho: a leitura se
-      // repete a cada 3 s, e sem esta guarda um PIN errado consumiria as 5
-      // tentativas em 15 segundos. Mas digitar de novo e apertar tambem nao
-      // fazia nada visivel, o que parece que o app parou de responder — e da a
-      // impressao errada de que o aparelho nao conta aquela tentativa. Ele
-      // conta: quem nao mandou fomos nos.
-      if (_erroPin != null && mounted) {
+    // Nenhum PIN ja recusado volta ao aparelho. A leitura se repete a cada 3 s,
+    // e sem isto um PIN errado consumiria as 5 tentativas em 15 segundos. Nao
+    // fazer nada visivel, porem, parecia app travado - entao ele diz.
+    if (_pinsQueFalharam.contains(pin)) {
+      if (mounted) {
         setState(() {
-          _erroPin = 'Este PIN já falhou. Confira o número no visor e digite '
-              'outro — repetir o mesmo não é enviado ao aparelho.';
+          _erroPin = 'Este PIN já falhou. Confira o número no visor.';
         });
       }
       return;
     }
+    if (pin == _pinTentado) return;
     _pinTentado = pin;
     try {
       final resposta = await http
@@ -195,9 +206,15 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         final corpo = jsonDecode(resposta.body);
         final restantes = corpo is Map ? corpo['restantes'] : null;
         setState(() {
+          _pinsQueFalharam.add(pin);
+          // Bloqueado nao e "errei de novo": o aparelho sai do modo de
+          // configuracao e some da rede, entao continuar digitando ali nao leva
+          // a lugar nenhum. Vira estado proprio, com cartao proprio - so a
+          // legenda embaixo do campo passava batido, e o produtor ficava
+          // tentando contra um aparelho que ja tinha ido embora.
+          _pinBloqueado = restantes == 0;
           _erroPin = restantes == 0
-              ? 'PIN bloqueado. Saia e entre de novo no modo de configuração '
-                    'no aparelho.'
+              ? 'PIN bloqueado.'
               : 'PIN não confere. Confira o número no visor do aparelho'
                     '${restantes is int ? ' ($restantes tentativas)' : ''}.';
         });
@@ -542,6 +559,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // Firmware antigo tem cartao proprio, logo abaixo: aqui ele nao e "achei"
     // (nao da para configurar) nem "nao achei" (o aparelho respondeu).
     if (_firmwareSemIdentidade) return const SizedBox.shrink();
+    if (_pinBloqueado) return _cartaoPinBloqueado();
     final achou = _chaveDoAparelho != null;
     // Antes de qualquer tentativa o app NAO tentou nada, e dizer "nao achei"
     // ali e falso — chegou a convencer duas vezes de que o Wi-Fi do aparelho
@@ -595,6 +613,60 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 fontSize: 12,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// As 5 tentativas acabaram.
+  ///
+  /// Precisa ser cartao, e nao a legenda embaixo do campo: o aparelho REINICIA
+  /// e sai do modo de configuracao, entao o produtor podia ficar digitando
+  /// contra algo que ja tinha ido embora. E a tela nao pode cair no "nao achei o
+  /// aparelho com esse PIN", que manda conferir o numero e a rede — os dois
+  /// estao certos; o que acabou foram as tentativas.
+  Widget _cartaoPinBloqueado() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orangeAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.25)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lock_clock_outlined,
+                  color: Colors.orangeAccent, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '5 tentativas erradas',
+                  style: TextStyle(
+                    color: Colors.orangeAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Text(
+            'O aparelho bloqueou o PIN e saiu do modo de configuração — o visor '
+            'voltou ao normal e a rede "Sentinela-Config" sumiu. Continuar '
+            'digitando aqui não leva a nada.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Vá até o aparelho, segure os 3 botões por 3 s de novo e refaça. O '
+            'visor mostra um PIN NOVO — o antigo não vale mais.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
         ],
       ),
@@ -766,7 +838,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         const SizedBox(height: 8),
         // Os 4 digitos do visor. E o unico numero que o produtor digita em todo
         // o processo, e e ele que troca a chave longa por presenca fisica.
-        if (_chaveDoAparelho == null && !_firmwareSemIdentidade) ...[
+        // Some com o campo quando o PIN esta bloqueado: nao ha aparelho do
+        // outro lado, e um campo digitavel convida a tentar de novo.
+        if (_chaveDoAparelho == null &&
+            !_firmwareSemIdentidade &&
+            !_pinBloqueado) ...[
           _campo(
             controlador: _pin,
             rotulo: 'PIN do visor (4 números)',
