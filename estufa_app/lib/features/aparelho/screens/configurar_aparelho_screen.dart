@@ -82,6 +82,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// no aparelho por um numero que ele ja sabia estar errado. Cinco tentativas
   /// existem para o produtor acertar, nao para o app gastar.
   final Set<String> _pinsQueFalharam = {};
+
+  /// Qual PIN produziu a mensagem que esta na tela agora.
+  ///
+  /// Sem isto, apertar "concluido" de novo logo depois de errar — que e o que
+  /// acontece so de fechar o teclado em boa parte dos celulares — trocava
+  /// "restam 4 tentativas" por "este PIN ja falhou", e o produtor perdia o
+  /// numero que importa sem ter feito nada.
+  String? _pinDoErro;
   String? _pinTentado;
   String? _erroPin;
 
@@ -198,9 +206,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     if (_pinsQueFalharam.contains(pin)) {
       // So responde a quem apertou. Vindo do relogio, fica calado: a contagem
       // de tentativas ja esta na tela e e ela que interessa.
-      if (pedidoDoProdutor && mounted) {
+      // E o mesmo PIN que acabou de falhar? A mensagem na tela ja e sobre ele, e
+      // ela diz quantas tentativas sobraram - informacao melhor. So avisa quando
+      // o produtor volta a um PIN errado ANTERIOR, que e quando ele nao tem como
+      // saber que ja tentou aquele.
+      if (pedidoDoProdutor && mounted && pin != _pinDoErro) {
         setState(() {
           _erroPin = 'Este PIN já falhou. Confira o número no visor.';
+          _pinDoErro = pin;
         });
       }
       return;
@@ -217,6 +230,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         final restantes = corpo is Map ? corpo['restantes'] : null;
         setState(() {
           _pinsQueFalharam.add(pin);
+          _pinDoErro = pin;
           // Bloqueado nao e "errei de novo": o aparelho sai do modo de
           // configuracao e some da rede, entao continuar digitando ali nao leva
           // a lugar nenhum. Vira estado proprio, com cartao proprio - so a
@@ -354,12 +368,55 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     return texto;
   }
 
+  /// Confirma que a rede e mesmo aberta, antes de gravar senha vazia.
+  ///
+  /// Nao e cerimonia: o erro que ela evita nao aparece na hora. O aparelho
+  /// aceita, reinicia, tenta entrar na rede de casa sem senha, nao consegue, e o
+  /// produtor so descobre quando a estufa aparece SEM SINAL — sem nenhuma pista
+  /// de que a causa foi um campo deixado em branco minutos antes.
+  Future<bool> _confirmarRedeSemSenha() async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text(
+          'A rede não tem senha?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Você deixou a senha em branco, então o aparelho vai entrar na rede '
+          '"${_rede.text.trim()}" sem senha nenhuma. '
+          'Se a rede tiver senha, ele não vai conseguir conectar e a estufa '
+          'vai ficar sem sinal.',
+          style: const TextStyle(color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar e digitar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('É aberta, salvar'),
+          ),
+        ],
+      ),
+    );
+    return confirmou ?? false;
+  }
+
   Future<void> _salvar() async {
     final rede = _rede.text.trim();
     if (rede.isEmpty) {
       setState(() => _erro = 'Informe o nome da rede Wi-Fi.');
       return;
     }
+    // Senha em branco agora significa "esta rede nao tem senha", e o aparelho
+    // grava vazio DE PROPOSITO (semsenha=1). Numa rede com senha isso o deixa
+    // sem conseguir entrar - ele some da nuvem e a estufa fica SEM SINAL, sem
+    // nada na tela ligando uma coisa a outra. Ja aconteceu, no primeiro dia em
+    // que a marca existiu. Entao pergunta antes, uma vez.
+    if (_senha.text.isEmpty && !await _confirmarRedeSemSenha()) return;
     // A senha NAO e exigida, de proposito: rede aberta existe, e barrar o
     // salvamento deixaria essa propriedade sem caminho pelo app. O que mudou foi
     // a legenda — ela dizia "deixe vazio para manter a senha atual", que so
