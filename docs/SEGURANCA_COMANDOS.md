@@ -225,6 +225,46 @@ Gravar o firmware, e então: revogar, confirmar que **este** celular continua
 comandando, confirmar que um segundo celular com o QR antigo **não** comanda mais,
 compartilhar um QR novo e confirmar que ele volta a comandar.
 
+## Troca de dono (venda do aparelho)
+
+Escrito em 05/08/2026. O caminho **existe hoje** — é o de sempre mais um passo —,
+mas nunca tinha sido descrito, e é um caso que a banca pergunta.
+
+### O procedimento
+
+1. O novo dono tem o aparelho na mão, então tem tudo o que o sistema exige:
+   segura os 3 botões, conecta no `Sentinela-Config`, lê o PIN do visor e faz
+   **"Conectar o aparelho ao Wi-Fi"** pelo app. A estufa nasce cadastrada.
+2. **Em seguida, "Tirar acesso dos outros celulares".** É este passo que fecha a
+   venda: a chave gira, e o app do vendedor para de comandar — local e remoto.
+
+**Nesta ordem, e não o contrário.** O vendedor revogando antes de entregar não
+resolve: o novo dono leria a chave nova do aparelho do mesmo jeito, e o vendedor
+teria uma janela com ela em mãos. Quem revoga tem de ser quem fica.
+
+### Por que o passo 2 não é opcional
+
+Configurar **não** tira o acesso de ninguém — a chave não muda. O app do vendedor
+continua com ela, e a nuvem continua aceitando. Ele não alcança pela rede local,
+porque está longe, mas **comanda pela internet**: mexe na temperatura de uma
+estufa que não é mais dele.
+
+### O que a revogação NÃO resolve
+
+Duas coisas ficam para trás, e nenhuma tem conserto pelo lado de quem compra:
+
+- **O vendedor continua recebendo notificações.** A inscrição de push é por
+  celular e por `idHardware`, guardada na nuvem, e só sai quando ele **apagar a
+  estufa do app dele** (`EstufasRepository.remover` chama
+  `PushNotificationService.removerEstufa`). Revogar tira o controle, não os
+  avisos: ele segue sendo acordado às 3h por uma estufa que vendeu. Depende da
+  boa vontade dele.
+- **O histórico é do aparelho, não do dono.** As leituras na nuvem são por
+  `idHardware`, então o novo dono passa a ver as estufadas do anterior, e o
+  anterior mantém no celular o que já baixou. Para temperatura de estufa isso é
+  inofensivo — mas **não se pode afirmar que "os dados vão junto com o dono"**,
+  porque não vão.
+
 ## Limite desta camada
 
 Esta medida evita que uma pessoa envie comandos simples para a estufa sem
