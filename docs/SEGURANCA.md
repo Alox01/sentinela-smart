@@ -49,6 +49,39 @@ O ESP32 opera normalmente na rede Wi-Fi da propriedade. O servidor em nuvem pode
 - O que o backup guardava tem outro caminho: o historico esta na nuvem, e uma
   estufa se recadastra lendo o aparelho no modo de configuracao.
 
+### Limitacoes aceitas conscientemente (05/08/2026)
+
+Nao sao esquecimento. Foram avaliadas, e a decisao foi **declarar em vez de
+corrigir agora** — corrigir traria risco maior do que o que evita, as vesperas da
+apresentacao.
+
+**1. O aparelho nao valida o certificado da nuvem** (`cliente.setInsecure()` no
+firmware). A conexao e criptografada, mas o ESP32 nao confere quem esta do outro
+lado: alguem no caminho de rede poderia se passar pela nuvem.
+
+Por que fica assim por ora: validar exige uma CA fixada e **relogio certo**. O
+ESP pega hora por NTP, que precisa de internet — numa queda longa ele volta com
+o relogio errado e a validacao falha, deixando o aparelho **mudo mesmo com
+internet de volta**. E cair para `setInsecure()` quando falha anularia a
+protecao. O ataque exige alguem no caminho entre a estufa e a Render, na roca; o
+risco introduzido e a estufa parar de avisar de incendio numa madrugada.
+
+Solucao correta, para quando houver: conjunto de CAs confiaveis, sincronia de
+relogio robusta, e **nunca** voltar automaticamente ao modo inseguro.
+
+**2. A chave global (`ESTUFA_API_TOKEN`) ainda autoriza comandos** para aparelho
+que ainda nao registrou a sua. Esta marcado como transitorio em `auth.js`.
+
+Por que nao sai agora: **nao e mudanca de codigo** — o suporte ja existe
+(`exigirChaveDoAparelho`). E mudanca operacional: todo aparelho em campo precisa
+ter registrado a chave propria ANTES, senao vira tijolo na hora em que a global
+deixar de valer. O caminho e conferir no banco quais `idHardware` ja tem chave e
+so entao virar.
+
+**3. Nao ha registro de auditoria** — quem mandou o que, quando, e se o aparelho
+obedeceu. E a que mais renderia no TCC, por ser resultado alem de seguranca, mas
+e funcionalidade nova.
+
 ### Repositorio e configuracao
 
 - Arquivos `.env` e credenciais locais nao devem ser versionados.
