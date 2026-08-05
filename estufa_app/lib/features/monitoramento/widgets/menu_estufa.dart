@@ -148,7 +148,8 @@ class MenuEstufa extends StatelessWidget {
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(
-                'Troca a chave da estufa. Quem tem o QR antigo perde o controle',
+                'Troca a chave da estufa. Quem tem o QR Code antigo perde o '
+                'controle',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {

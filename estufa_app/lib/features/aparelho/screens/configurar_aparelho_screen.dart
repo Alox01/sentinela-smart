@@ -530,6 +530,16 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         if (_revogando) {
           final corpo = _lerJson(resposta.body);
           chaveNova = corpo?['chaveNova']?.toString();
+          // Diagnostico de uma operacao que so acontece uma vez e nao da para
+          // repetir: se a chave nova nao chegar, o produtor perde o acesso e nao
+          // ha como reconstruir o que o aparelho respondeu. Sem conteudo de
+          // segredo - so o tipo da resposta e o tamanho.
+          debugPrint(
+            'SENTINELA revogacao: http=${resposta.statusCode} '
+            'json=${corpo != null} campos=${corpo?.keys.join(",")} '
+            'chaveNova=${chaveNova == null ? "ausente" : "${chaveNova.length} chars"} '
+            'corpo0=${resposta.body.length > 60 ? resposta.body.substring(0, 60) : resposta.body}',
+          );
         }
         setState(() {
           if (chaveNova != null && chaveNova.isNotEmpty) {
@@ -622,10 +632,13 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                               '(programa antigo). ESTE celular também perdeu o '
                               'acesso: refaça "Conectar o aparelho ao Wi-Fi" '
                               'para recuperá-lo.'
-                        : 'Este celular continua com acesso. Os outros perderam '
-                              '— para devolver a algum deles, compartilhe um QR '
-                              'novo. O comando pela internet volta quando o '
-                              'aparelho reconectar.')
+                        // Mesma frase da tela anterior, palavra por palavra: o
+                        // produtor acabou de ler aquilo, e reescrever a mesma
+                        // ideia com outras palavras faz procurar a diferenca.
+                        : 'Este celular continua com acesso — para devolver a '
+                              'alguém, é só compartilhar um QR Code novo. O '
+                              'comando pela internet volta quando o aparelho '
+                              'reconectar.')
                   : 'O aparelho está reiniciando e vai entrar na rede nova. '
                         'A rede "Sentinela-Config" vai sumir — reconecte o '
                         'celular no Wi-Fi de sempre.',
@@ -869,9 +882,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            'Os celulares que receberam o QR desta estufa perdem o controle. '
-            'Este celular continua com acesso — para devolver a alguém, é só '
-            'compartilhar um QR novo. O Wi-Fi do aparelho não muda.',
+            'Os celulares que receberam o QR Code desta estufa perdem o '
+            'controle. Este celular continua com acesso — para devolver a '
+            'alguém, é só compartilhar um QR Code novo. O Wi-Fi do aparelho '
+            'não muda.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
           SizedBox(height: 10),
