@@ -46,6 +46,44 @@ E, sem depender de gravação:
 | Abrir "Relatórios" logo depois do monitoramento | entra sem o giro de carregamento |
 | Compartilhar acesso por QR num segundo celular | o único caminho que sobrou; sem convite escrito não há reserva |
 
+### Revogação de acesso — **testada e aprovada** (05/08/2026)
+
+Feita com dois celulares e o aparelho real, na rede local. O ciclo inteiro:
+
+1. QR Code compartilhado, estufa cadastrada no segundo celular, **comando
+   confirmado** — sem esta etapa uma recusa depois não provaria nada;
+2. revogação pelo celular principal ("Tirar acesso dos outros celulares");
+3. **o segundo celular passou a ser recusado** — é este passo que prova;
+4. QR Code novo compartilhado, **o segundo celular voltou a comandar**;
+5. o celular principal **nunca perdeu o acesso**.
+
+**Ressalva medida: há um atraso de alguns segundos.** Depois de o segundo celular
+atualizar a estufa pelo QR Code novo, o primeiro comando ainda deu "Chave
+inválida"; sair da estufa e entrar de novo resolveu. Duas causas plausíveis, e
+não foi determinado qual das duas (ou as duas):
+
+- o app entrega a chave **por cópia** — lista, cartão e monitor seguram valores
+  em memória, e há uma janela entre gravar no banco e todos pegarem o novo. É a
+  mesma família do defeito corrigido horas antes, em outro caminho (ver
+  `AUDITORIA.md`, item D1);
+- o nome `.local` ainda não resolvia no segundo celular, então o comando foi pela
+  nuvem e caiu na janela de consistência eventual descrita em
+  `SEGURANCA_COMANDOS.md`.
+
+Nos dois casos **se resolve sozinho**, e o contorno é natural (sair e entrar).
+Registrado como está: um resultado com ressalva medida vale mais que um resultado
+redondo que esconde o que aconteceu.
+
+### O caminho até aqui (o que os testes acharam em 05/08)
+
+Vale para a seção de resultados: a revogação **não funcionou de primeira**, e as
+quatro tentativas frustradas acharam quatro defeitos diferentes — firmware antigo
+sem a rota que devolve a chave, sonda de alcance engolindo a chave nova, mDNS não
+resolvendo e mandando tudo para a nuvem, e por fim a lista da home segurando a
+chave velha. Nenhum deles apareceu como erro: todos se manifestaram como a mesma
+frase, "Chave inválida", apontando para a causa errada.
+
+
 ### Desembaraçar as três estufas (29/07/2026) — **primeiro de todos**
 
 As três estufas cadastradas ficaram apontadas para o **mesmo aparelho** (o ESP

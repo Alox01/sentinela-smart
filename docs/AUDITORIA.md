@@ -144,6 +144,32 @@ funciona:
   `CONVENCOES.md`, que agora registra também o que falta para o iOS existir de
   verdade.*
 
+### 2.4 Aberto — achado em campo (05/08/2026)
+
+- [ ] **D1. A interface entrega a chave por cópia, e as cópias envelhecem.**
+  A tela de monitoramento recebe `tokenAcesso` de quem a abriu; o cartão da lista
+  recebe da lista; a lista recebe do banco quando carregou. Trocar a chave lá
+  dentro grava **no banco** e não nesses três lugares.
+
+  *Já cobrou caro.* Reabrir a estufa depois de revogar devolvia a chave velha, o
+  `MonitorEstufas` via "nada mudou" e reusava o `ApiService` antigo: todo comando
+  virava "Chave inválida", **inclusive na rede local com o aparelho ao lado**, e
+  só reiniciar o app resolvia. Levou uma tarde para ser encontrado, porque o
+  sintoma apontava para o aparelho, para a nuvem e para o firmware — nunca para a
+  interface. Corrigido **num caminho só** (a lista recarrega ao voltar do
+  monitoramento, `estufa_resumo_card.dart`), e o teste de campo do mesmo dia
+  mostrou a mesma família aparecendo em outro: depois de atualizar pelo QR Code,
+  o segundo celular levou alguns segundos até aceitar comando.
+
+  *Correção que mata a família toda:* a tela de monitoramento **lê a estufa do
+  banco ao abrir**, em vez de confiar no que recebeu. Nenhum lugar da interface
+  precisaria mais estar "em dia" com o banco.
+
+  *Por que não foi feito agora:* mexe no `initState` de
+  `monitoramento_screen.dart` (1.197 linhas, onde mais defeito de campo apareceu)
+  a três dias da escrita, para um sintoma que **se resolve sozinho em segundos** e
+  cujo contorno é sair e entrar. Decisão de adiar, não de ignorar.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
