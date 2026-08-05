@@ -21,8 +21,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Uma posição some DE PROPÓSITO: "Avisos no celular" só existe quando este
 /// celular não vai ser avisado. Estar tudo certo é o caso comum, e anunciá-lo
 /// para quem não sabe o que é uma inscrição de push só levantava dúvida. O
-/// inventário normal tem 15 linhas por isso — e há um teste só para provar que
-/// a 16ª volta quando há problema, senão esta economia viraria justamente o item
+/// inventário normal tem 16 linhas por isso — e há um teste só para provar que
+/// a 17ª volta quando há problema, senão esta economia viraria justamente o item
 /// sumindo em silêncio que o arquivo inteiro existe para impedir.
 ///
 /// ## Os três *singletons*
@@ -83,7 +83,7 @@ void main() {
   }
 
   group('inventário da gaveta', () {
-    testWidgets('15 posições, na ordem, com o aparelho ainda calado', (
+    testWidgets('16 posições, na ordem, com o aparelho ainda calado', (
       tester,
     ) async {
       // Tudo o que o aparelho ainda não informou vem `null`: é o estado em que a
@@ -106,6 +106,7 @@ void main() {
         // Parece deslocado e é de propósito — quem mudar isso muda de verdade, e
         // este teste é o lugar de discutir, não o diff silencioso.
         'item: Compartilhar acesso',
+        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AÇÕES RÁPIDAS',
         'item: Agendar ajuste',
@@ -114,7 +115,7 @@ void main() {
       ]);
     });
 
-    testWidgets('as mesmas 15 posições com o aparelho já reportando', (
+    testWidgets('as mesmas 16 posições com o aparelho já reportando', (
       tester,
     ) async {
       // Dois itens trocam de título conforme o estado, e um `switch` que ganhe um
@@ -138,6 +139,7 @@ void main() {
         // Inscrito: continua fora. Era aqui que a linha dizia "ativos".
         'item: Sirene do aparelho: ligada',
         'item: Compartilhar acesso',
+        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AÇÕES RÁPIDAS',
         'item: Agendar ajuste',
@@ -146,7 +148,7 @@ void main() {
       ]);
     });
 
-    testWidgets('a 16ª posição volta quando o celular não será avisado', (
+    testWidgets('a 17ª posição volta quando o celular não será avisado', (
       tester,
     ) async {
       // O contrário dos dois acima, e a razão de o item existir: uma estufa não
@@ -170,6 +172,7 @@ void main() {
         'item: Este celular não será avisado',
         'item: Sirene do aparelho: ligada',
         'item: Compartilhar acesso',
+        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AÇÕES RÁPIDAS',
         'item: Agendar ajuste',
@@ -208,6 +211,12 @@ void main() {
       expect(secaoDe('item: Sirene do aparelho'), 'seção: AVISOS');
       // Mantido em AVISOS de propósito. Ver o comentário no inventário.
       expect(secaoDe('item: Compartilhar acesso'), 'seção: AVISOS');
+      // Ao lado do compartilhar de propósito: é o contrário dele, e é ali que
+      // alguém procura depois de ter compartilhado com quem não devia.
+      expect(
+        secaoDe('item: Tirar acesso dos outros celulares'),
+        'seção: AVISOS',
+      );
 
       expect(secaoDe('item: Agendar ajuste'), 'seção: AÇÕES RÁPIDAS');
       expect(
@@ -248,6 +257,7 @@ void main() {
 final _acoesInertes = AcoesMenuEstufa(
   aoAbrirDetalhesConexao: () {},
   aoConfigurarAparelho: () {},
+  aoTirarAcessoDosOutros: () {},
   aoReiniciarAjustes: () {},
 );
 

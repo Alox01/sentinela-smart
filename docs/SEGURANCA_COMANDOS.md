@@ -131,12 +131,15 @@ As três proteções que fazem 4 dígitos bastarem, todas no firmware:
 
 O Modelo A (etiqueta) fica descartado: era justamente digitar chave longa.
 
-## Revogar acesso pelo app — **planejado**, não implementado (05/08/2026)
+## Revogar acesso pelo app — **implementado** (05/08/2026)
 
-Desenho fechado, escrito antes de existir. **Nada abaixo está no código.** O que
-existe hoje é a revogação pelo formulário do navegador do aparelho
-(`192.168.4.1` → "Chave de acesso (avançado)" → "Gerar uma chave nova"), que
-funciona e continua sendo o caminho de recuperação.
+Desenho escrito antes de existir, e construído no mesmo dia. O formulário do
+navegador do aparelho (`192.168.4.1` → "Chave de acesso (avançado)" → "Gerar uma
+chave nova") continua valendo como caminho de recuperação e manutenção.
+
+No app: menu da estufa → **"Tirar acesso dos outros celulares"**, ao lado de
+"Compartilhar acesso" — é o contrário dele, e é ali que se procura depois de ter
+compartilhado com quem não devia.
 
 ### O problema que isto resolve
 
@@ -166,13 +169,15 @@ caminho existe e é invisível.
    reinicia.
 8. O app substitui a chave guardada e oferece o QR novo.
 
-### As duas mudanças de código que isto exige
+### As duas mudanças no firmware
 
-São só estas duas, e as duas no firmware:
+Foram só estas duas:
 
-- **`GET /config/identidade` passa a devolver `wifiSsid`.** Sem ele o app não tem
+- **`GET /config/identidade` devolve `wifiSsid`.** Sem ele o app não tem
   como reenviar a mesma rede, e `POST /salvar` recusa SSID vazio.
-- **`POST /salvar` devolve a chave nova** quando `novachave=1`. É a peça que faz
+- **`POST /salvar` devolve a chave nova** quando recebe `formato=json` — o
+  formulário do navegador não manda essa marca, então continua recebendo a página
+  HTML de sempre. É a peça que faz
   o passo 8 existir: o aparelho **reinicia** logo depois de gravar
   (`ESP.restart()`), então o app não tem uma segunda chance de ler. Sem isso, o
   produtor teria de segurar os três botões de novo e digitar um PIN novo — duas
@@ -206,13 +211,19 @@ E o app **precisa dizer isso**, senão parece defeito:
 > Acesso local atualizado. O acesso pela internet volta assim que o aparelho
 > conectar.
 
-### Por que não foi feito agora
+### Firmware antigo: o app avisa em vez de mentir
 
-Decisão de 05/08/2026, a três dias da escrita do TCC: é funcionalidade nova
-mexendo em **credencial**, e o ganho para o trabalho é zero — a revogação já
-existe e já é feita sob presença física, o que é o que se afirma no texto.
-Implementar depois é curto e bem delimitado; implementar agora arrisca
-desestabilizar uma parte que está funcionando.
+Aparelho que não devolve a chave nova (programa anterior a esta rota) **rotaciona
+mesmo assim** — a chave velha deixa de valer. Nesse caso **este celular perde o
+acesso junto com os outros**, e a tela diz isso, mandando refazer "Conectar o
+aparelho ao Wi-Fi" para recuperá-lo. Dizer "pronto" ali seria mentira, e a
+descoberta viria depois, como comando recusado sem explicação.
+
+### Ainda por testar em campo
+
+Gravar o firmware, e então: revogar, confirmar que **este** celular continua
+comandando, confirmar que um segundo celular com o QR antigo **não** comanda mais,
+compartilhar um QR novo e confirmar que ele volta a comandar.
 
 ## Limite desta camada
 

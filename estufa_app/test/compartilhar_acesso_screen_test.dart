@@ -136,6 +136,7 @@ void main() {
               acoes: AcoesMenuEstufa(
                 aoAbrirDetalhesConexao: () {},
                 aoConfigurarAparelho: () {},
+                aoTirarAcessoDosOutros: () {},
                 aoReiniciarAjustes: () {},
               ),
             ),

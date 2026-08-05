@@ -493,11 +493,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   /// Sem isto, trocar a chave no aparelho deixava a do app velha: os comandos
   /// passavam a ser recusados com "chave invalida" e nada indicava o porque -
   /// justamente depois de uma acao que o produtor acabou de fazer no app.
-  Future<void> _reconfigurarAparelho() async {
+  Future<void> _reconfigurarAparelho({
+    UsoDaConfiguracao uso = UsoDaConfiguracao.atualizacao,
+  }) async {
     final dados = await Navigator.of(context).push<DadosAparelhoConfigurado>(
       MaterialPageRoute(
-        builder: (_) =>
-            const ConfigurarAparelhoScreen(uso: UsoDaConfiguracao.atualizacao),
+        builder: (_) => ConfigurarAparelhoScreen(uso: uso),
       ),
     );
     if (dados == null || !mounted) return;
@@ -559,6 +560,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       acoes: AcoesMenuEstufa(
         aoAbrirDetalhesConexao: () => unawaited(_mostrarDetalhesConexao()),
         aoConfigurarAparelho: () => unawaited(_reconfigurarAparelho()),
+        aoTirarAcessoDosOutros: () => unawaited(
+          _reconfigurarAparelho(uso: UsoDaConfiguracao.revogacao),
+        ),
         aoReiniciarAjustes: () => unawaited(_prepararNovaEstufada()),
       ),
     );

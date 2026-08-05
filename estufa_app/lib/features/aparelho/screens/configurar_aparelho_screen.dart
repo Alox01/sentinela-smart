@@ -30,6 +30,15 @@ enum UsoDaConfiguracao {
   /// Estufa ja cadastrada: se a chave mudou, a guardada no app ficou velha e os
   /// comandos passariam a ser recusados. Oferece atualizar.
   atualizacao,
+
+  /// Tirar o acesso dos outros celulares: o aparelho gera uma chave nova, e
+  /// todo QR compartilhado antes deixa de valer.
+  ///
+  /// Reaproveita esta tela inteira porque o caminho e o mesmo — presenca fisica,
+  /// PIN do visor, gravacao — mudando so o que se pede e o que se diz. A rede
+  /// Wi-Fi nem aparece: ela nao muda, e o aparelho devolve a atual em
+  /// `/config/identidade` para o app reenviar igual.
+  revogacao,
 }
 
 class ConfigurarAparelhoScreen extends StatefulWidget {
@@ -127,6 +136,28 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   // produtor cadastra na estufa, e ate a versao 1.10 do firmware ele so
   // aparecia no Monitor Serial - inutil para quem nao tem a IDE do Arduino.
   String? _nomeLocal;
+
+  /// A rede em que o aparelho ja esta, lida da identidade.
+  ///
+  /// So serve a revogacao: `/salvar` recusa SSID vazio, entao trocar a chave sem
+  /// mexer no Wi-Fi exige reenviar a MESMA rede — e no modo de configuracao o
+  /// celular esta na rede do aparelho, sem como descobrir a de casa.
+  String? _ssidDoAparelho;
+
+  bool get _revogando => widget.uso == UsoDaConfiguracao.revogacao;
+
+  /// A revogacao aconteceu no aparelho, mas o app nao recebeu a chave nova.
+  /// Firmware antigo. Os comandos deste celular tambem param — e preciso dizer.
+  bool _revogouSemChave = false;
+
+  Map<String, dynamic>? _lerJson(String corpo) {
+    try {
+      final decodificado = jsonDecode(corpo);
+      return decodificado is Map<String, dynamic> ? decodificado : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -262,6 +293,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       final nome = dados['nomeLocal']?.toString();
       final id = dados['idHardware']?.toString();
       final gateway = dados['gatewayAprendido']?.toString();
+      final ssid = dados['wifiSsid']?.toString();
       if (chave == null || chave.isEmpty) return;
       setState(() {
         _chaveDoAparelho = chave;
@@ -269,6 +301,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         if (nome != null && nome.isNotEmpty) {
           _nomeLocal = ApiService.completarNomeMdns(nome);
         }
+        if (ssid != null && ssid.isNotEmpty) _ssidDoAparelho = ssid;
         _prefixoDaRede = _prefixoDe(gateway);
         // Deixa o campo quase pronto: falta so o ultimo numero. O celular esta
         // na rede do aparelho agora e nao teria como descobrir a faixa da casa;
@@ -406,9 +439,16 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   }
 
   Future<void> _salvar() async {
-    final rede = _rede.text.trim();
+    // Na revogacao a rede nao e digitada: e a mesma em que o aparelho ja esta,
+    // reenviada igual. So a chave muda.
+    final rede = _revogando ? (_ssidDoAparelho ?? '') : _rede.text.trim();
     if (rede.isEmpty) {
-      setState(() => _erro = 'Informe o nome da rede Wi-Fi.');
+      setState(() {
+        _erro = _revogando
+            ? 'O aparelho não informou em qual rede está. Saia e entre de novo '
+                  'no modo de configuração.'
+            : 'Informe o nome da rede Wi-Fi.';
+      });
       return;
     }
     // Senha em branco agora significa "esta rede nao tem senha", e o aparelho
@@ -416,7 +456,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // sem conseguir entrar - ele some da nuvem e a estufa fica SEM SINAL, sem
     // nada na tela ligando uma coisa a outra. Ja aconteceu, no primeiro dia em
     // que a marca existiu. Entao pergunta antes, uma vez.
-    if (_senha.text.isEmpty && !await _confirmarRedeSemSenha()) return;
+    // A pergunta da rede aberta so faz sentido para quem esta escolhendo a rede.
+    // Na revogacao a senha vai vazia de proposito, o que MANTEM a atual.
+    if (!_revogando && _senha.text.isEmpty && !await _confirmarRedeSemSenha()) {
+      return;
+    }
     // A senha NAO e exigida, de proposito: rede aberta existe, e barrar o
     // salvamento deixaria essa propriedade sem caminho pelo app. O que mudou foi
     // a legenda — ela dizia "deixe vazio para manter a senha atual", que so
@@ -440,13 +484,20 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               // tela: quem chegou ate aqui ja acertou uma vez.
               'pin': _pin.text.trim(),
               'ssid': rede,
+              // A rotacao, e o pedido para o aparelho responder em JSON com a
+              // chave nova. Ele reinicia logo depois de gravar: nao ha segunda
+              // chance de ler, e sem isto trocar a chave exigiria voltar ate a
+              // estufa e refazer tudo.
+              if (_revogando) ...{'novachave': '1', 'formato': 'json'},
               'senha': _senha.text,
               // Campo vazio quer dizer rede aberta, e e o que a legenda promete
               // — mas para o aparelho vazio sempre significou "mantenha a senha
               // que voce ja tem". Numa rede sem senha ele guardaria a antiga e
               // nao conectaria. Esta marca (firmware 1.25.0) diz a diferenca; em
               // firmware anterior ela e ignorada e o caso raro volta a falhar.
-              if (_senha.text.isEmpty) 'semsenha': '1',
+              // Rede aberta so quando o produtor escolheu a rede. Na revogacao
+              // vazio quer dizer "mantenha a senha que voce tem".
+              if (!_revogando && _senha.text.isEmpty) 'semsenha': '1',
               // Sempre vazio: desde a 1.22.0 isso mantem a chave que o aparelho
               // ja tem. Nao ha mais de onde vir outra — quem a gera e ele.
               'token': '',
@@ -462,9 +513,24 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
       if (!mounted) return;
       if (resposta.statusCode >= 200 && resposta.statusCode < 300) {
+        // A chave nova vem AQUI, na resposta da gravacao, e em lugar nenhum
+        // depois: o aparelho reinicia em seguida e sai do modo de configuracao.
+        // Perde-la aqui significaria mandar o produtor de volta ate a estufa.
+        String? chaveNova;
+        if (_revogando) {
+          final corpo = _lerJson(resposta.body);
+          chaveNova = corpo?['chaveNova']?.toString();
+        }
         setState(() {
+          if (chaveNova != null && chaveNova.isNotEmpty) {
+            _chaveDoAparelho = chaveNova;
+          }
           _concluido = true;
           _jaGravou = true;
+          // O aparelho nao devolveu a chave: e firmware anterior a esta rota.
+          // Rotacionou de verdade — a chave velha ja nao vale —, mas o app ficou
+          // sem a nova, e dizer "pronto" seria mentira.
+          _revogouSemChave = _revogando && (chaveNova == null || chaveNova.isEmpty);
         });
       } else {
         setState(
@@ -502,7 +568,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         appBar: AppBar(
           backgroundColor: const Color(0xFF17191D),
           foregroundColor: Colors.white,
-          title: const Text('Configurar aparelho'),
+          title: Text(
+            _revogando ? 'Tirar acesso' : 'Configurar aparelho',
+          ),
         ),
         body: SafeArea(child: _concluido ? _sucesso() : _formulario()),
       ),
@@ -523,8 +591,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               size: 56,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Configuração enviada',
+            Text(
+              _revogando ? 'Acesso trocado' : 'Configuração enviada',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -533,11 +601,25 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
-            const Text(
-              'O aparelho está reiniciando e vai entrar na rede nova. '
-              'A rede "Sentinela-Config" vai sumir — reconecte o celular no '
-              'Wi-Fi de sempre.',
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+            Text(
+              _revogando
+                  ? (_revogouSemChave
+                        // Rotacionou no aparelho e o app ficou sem a chave nova:
+                        // este celular perdeu o acesso junto com os outros. Dizer
+                        // "pronto" aqui seria mentira, e a descoberta viria depois,
+                        // como comando recusado sem explicacao.
+                        ? 'O aparelho trocou a chave, mas não devolveu a nova '
+                              '(programa antigo). ESTE celular também perdeu o '
+                              'acesso: refaça "Conectar o aparelho ao Wi-Fi" '
+                              'para recuperá-lo.'
+                        : 'Este celular continua com acesso. Os outros perderam '
+                              '— para devolver a algum deles, compartilhe um QR '
+                              'novo. O comando pela internet volta quando o '
+                              'aparelho reconectar.')
+                  : 'O aparelho está reiniciando e vai entrar na rede nova. '
+                        'A rede "Sentinela-Config" vai sumir — reconecte o '
+                        'celular no Wi-Fi de sempre.',
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -587,6 +669,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                   ? 'Procurando o aparelho...'
                   : widget.uso == UsoDaConfiguracao.cadastro
                   ? 'Usar estes dados no cadastro'
+                  : _revogando
+                  ? 'Guardar a chave nova'
                   : 'Atualizar esta estufa',
             ),
             style: FilledButton.styleFrom(
@@ -750,6 +834,47 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// sem nada na tela dizendo por que. Entao esta tela nao o configura. Diz o
   /// que ele e e aponta o caminho que continua funcionando: a pagina do proprio
   /// aparelho, no navegador.
+  /// O que a revogacao mostra no lugar dos campos de Wi-Fi.
+  ///
+  /// Ela nao pede nada alem do PIN — a rede e a senha nao mudam. Entao o espaco
+  /// vai para dizer o que vai acontecer, que e a unica decisao aqui.
+  Widget _cartaoConfirmarRevogacao() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'O que vai acontecer',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Os celulares que receberam o QR desta estufa perdem o controle. '
+            'Este celular continua com acesso — para devolver a alguém, é só '
+            'compartilhar um QR novo. O Wi-Fi do aparelho não muda.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'As estufadas e os relatórios continuam onde estão — o que muda é '
+            'só quem pode comandar.',
+            style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _cartaoFirmwareAntigo() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -936,7 +1061,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // ela tem duas fases claras: pedir o PIN, e so entao preencher.
         if (_firmwareSemIdentidade)
           _cartaoFirmwareAntigo()
-        else if (_aparelhoRespondeu) ...[
+        else if (_aparelhoRespondeu && _revogando) ...[
+          // Revogacao nao pergunta rede nem senha: elas nao mudam. O aparelho
+          // devolveu a rede atual na identidade, e ela e reenviada igual.
+          _cartaoConfirmarRevogacao(),
+        ] else if (_aparelhoRespondeu) ...[
           _campo(
             controlador: _rede,
             rotulo: 'Rede Wi-Fi da propriedade',
@@ -1030,7 +1159,13 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: Text(_enviando ? 'Salvando...' : 'Salvar no aparelho'),
+              child: Text(
+                _enviando
+                    ? 'Salvando...'
+                    : _revogando
+                    ? 'Trocar a chave agora'
+                    : 'Salvar no aparelho',
+              ),
             ),
           ),
           const SizedBox(height: 12),

@@ -923,6 +923,12 @@ void handleConfigIdentidade() {
   doc["idHardware"] = idHardware;
   doc["nomeLocal"] = nomeLocal;
   doc["chave"] = tokenAparelho;
+  // A rede em que o aparelho esta hoje. O app precisa dela para reenviar a MESMA
+  // rede quando volta aqui so para trocar a chave: `/salvar` recusa SSID vazio,
+  // e no modo de configuracao o celular esta na rede do aparelho, sem como
+  // descobrir a de casa sozinho. Nao e segredo — aparece na lista de redes de
+  // qualquer celular ao alcance.
+  doc["wifiSsid"] = wifiSsid;
   doc["versaoFirmware"] = VERSAO_FIRMWARE;
   // Gateway aprendido do roteador. O app usa a faixa dele para ja deixar o
   // campo de IP fixo quase pronto: no modo de configuracao o celular esta na
@@ -1017,6 +1023,29 @@ void handleConfigSalvar() {
 
   Serial.print("Configuracao gravada. Rede: ");
   Serial.println(ssid);
+
+  // Quem chamou pede JSON? Entao e o app, e ele precisa da CHAVE NOVA aqui.
+  //
+  // O aparelho reinicia logo abaixo e sai do modo de configuracao: nao ha
+  // segunda chance de ler. Sem devolve-la agora, trocar a chave pelo app exigiria
+  // voltar ate a estufa, segurar os tres botoes de novo e digitar um PIN novo —
+  // duas idas para uma operacao so.
+  //
+  // So sai quando a chave ACABOU de ser gerada nesta chamada. A chave em uso nao
+  // volta por aqui: para le-la existe `/config/identidade`, que cobra o PIN.
+  if (server.arg("formato") == "json") {
+    JsonDocument doc;
+    doc["sucesso"] = true;
+    doc["nomeLocal"] = nomeLocal + ".local";
+    if (gerarNova) doc["chaveNova"] = token;
+    if (ip.length() > 0) doc["ipFixo"] = ip;
+    String corpo;
+    serializeJson(doc, corpo);
+    server.send(200, "application/json", corpo);
+    delay(1500);  // deixa a resposta sair antes de reiniciar
+    ESP.restart();
+    return;
+  }
 
   // Repete o endereco aqui tambem: o ponto de acesso vai sumir no reinicio, e
   // esta e a ultima tela em que o produtor pode anotar o nome.

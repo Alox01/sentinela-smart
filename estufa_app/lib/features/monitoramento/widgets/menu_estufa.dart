@@ -141,6 +141,29 @@ class MenuEstufa extends StatelessWidget {
             ),
             ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
             _ItemCompartilharAcesso(dados: dados),
+            // Ao lado de "Compartilhar acesso" de proposito: e o contrario dele,
+            // e e ali que alguem vai procurar depois de ter compartilhado com
+            // quem nao devia. Ate agora a revogacao existia so no formulario do
+            // navegador do aparelho, atras de "avancado" — o caminho existia e
+            // era invisivel.
+            ListTile(
+              leading: const Icon(
+                Icons.person_remove_outlined,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Tirar acesso dos outros celulares',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: const Text(
+                'Troca a chave da estufa. Quem tem o QR antigo perde o controle',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                acoes.aoTirarAcessoDosOutros();
+              },
+            ),
             const Divider(color: Colors.white12, height: 1),
             const TituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
@@ -273,12 +296,17 @@ class AcoesMenuEstufa {
   /// Reconfigura o aparelho e grava a estufa com o endereço/chave novos.
   final VoidCallback aoConfigurarAparelho;
 
+  /// Troca a chave do aparelho: os celulares que receberam o QR antigo perdem
+  /// o controle, e este continua.
+  final VoidCallback aoTirarAcessoDosOutros;
+
   /// Confirma e devolve temperatura e umidade aos valores de nova estufada.
   final VoidCallback aoReiniciarAjustes;
 
   const AcoesMenuEstufa({
     required this.aoAbrirDetalhesConexao,
     required this.aoConfigurarAparelho,
+    required this.aoTirarAcessoDosOutros,
     required this.aoReiniciarAjustes,
   });
 }
