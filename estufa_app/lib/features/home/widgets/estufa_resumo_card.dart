@@ -9,11 +9,24 @@ class EstufaResumoCard extends StatefulWidget {
   final VoidCallback onEditar;
   final VoidCallback onRemover;
 
+  /// Recarrega a lista quando o produtor volta do monitoramento.
+  ///
+  /// Existe por causa de um defeito que custou uma tarde: dentro do
+  /// monitoramento da para trocar a CHAVE do aparelho (reconfigurar, tirar o
+  /// acesso dos outros), e isso grava no banco — mas a lista aqui continua com a
+  /// estufa que ela carregou ao abrir, com a chave velha. Ao reabrir a estufa,
+  /// era a chave velha que ia junto, o `MonitorEstufas` via "nada mudou", devolvia
+  /// o mesmo `ApiService` de antes, e todo comando voltava "Chave inválida" —
+  /// inclusive na rede local, com o aparelho ali do lado. Só reiniciando o app
+  /// aquilo se resolvia, e nada na tela ligava uma coisa à outra.
+  final VoidCallback aoVoltar;
+
   const EstufaResumoCard({
     super.key,
     required this.estufa,
     required this.onEditar,
     required this.onRemover,
+    required this.aoVoltar,
   });
 
   @override
@@ -93,9 +106,10 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
                 idHardware: widget.estufa.idHardware,
               ),
             ),
-          );
-          // Nao precisa buscar ao voltar: as duas telas compartilham o mesmo
-          // monitor, entao o card ja esta com a leitura mais recente.
+            // A LEITURA nao precisa de recarga - as duas telas compartilham o
+            // mesmo monitor. A IDENTIDADE precisa: chave, endereco e id podem
+            // ter mudado la dentro, e ficam no banco, nao neste objeto.
+          ).then((_) => widget.aoVoltar());
         },
         child: Container(
           decoration: BoxDecoration(

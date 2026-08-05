@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../features/home/models/convite_estufa.dart';
@@ -144,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             onRemover: () =>
                                 _confirmarRemocaoEstufa(minhasEstufas[index]),
+                            aoVoltar: () => unawaited(_carregarEstufas()),
                           );
                         },
                       ),

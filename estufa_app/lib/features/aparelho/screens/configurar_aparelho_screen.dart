@@ -150,6 +150,24 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// Firmware antigo. Os comandos deste celular tambem param — e preciso dizer.
   bool _revogouSemChave = false;
 
+  /// Marca curta de uma chave, para conferir sem mostrar a chave.
+  ///
+  /// FNV-1a de 32 bits, exibido em 4 digitos hex. Serve para comparar o que o
+  /// app guardou com o que o aparelho e a nuvem tem, sem que nada de segredo
+  /// apareca na tela nem numa foto dela.
+  static String marcaDaChave(String? chave) {
+    if (chave == null || chave.isEmpty) return '----';
+    var h = 0x811c9dc5;
+    for (final c in chave.codeUnits) {
+      h = (h ^ c) & 0xffffffff;
+      h = (h * 0x01000193) & 0xffffffff;
+    }
+    return (h & 0xffff).toRadixString(16).padLeft(4, '0');
+  }
+
+  /// O que o aparelho respondeu na revogacao, resumido para conferencia.
+  String? _diagnosticoRevogacao;
+
   Map<String, dynamic>? _lerJson(String corpo) {
     try {
       final decodificado = jsonDecode(corpo);
@@ -534,12 +552,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           // repetir: se a chave nova nao chegar, o produtor perde o acesso e nao
           // ha como reconstruir o que o aparelho respondeu. Sem conteudo de
           // segredo - so o tipo da resposta e o tamanho.
-          debugPrint(
-            'SENTINELA revogacao: http=${resposta.statusCode} '
-            'json=${corpo != null} campos=${corpo?.keys.join(",")} '
-            'chaveNova=${chaveNova == null ? "ausente" : "${chaveNova.length} chars"} '
-            'corpo0=${resposta.body.length > 60 ? resposta.body.substring(0, 60) : resposta.body}',
-          );
+          _diagnosticoRevogacao =
+              'http ${resposta.statusCode} · json ${corpo != null ? "sim" : "nao"}'
+              ' · campos ${corpo?.keys.join("/") ?? "-"}'
+              ' · chave nova ${chaveNova == null ? "AUSENTE" : "${chaveNova.length} chars"}'
+              ' · marca ${marcaDaChave(chaveNova)}';
         }
         setState(() {
           if (chaveNova != null && chaveNova.isNotEmpty) {
@@ -700,6 +717,23 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
+          // Diagnostico de uma operacao que acontece uma vez e nao da para
+          // repetir: se a chave nova nao chegar, o produtor perde o acesso e nao
+          // sobra nada que diga o que o aparelho respondeu. A "marca" e um hash
+          // de 4 digitos — da para comparar com o que a nuvem tem sem que a
+          // chave apareca na tela nem numa foto dela.
+          //
+          // Ja se pagou: foi ela que provou que a chave chegava certa ao app, e
+          // mandou procurar o defeito onde ele estava — na lista da home
+          // segurando a chave velha em memoria.
+          if (_diagnosticoRevogacao != null) ...[
+            const SizedBox(height: 10),
+            SelectableText(
+              _diagnosticoRevogacao!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+          ],
           const SizedBox(height: 8),
           // O nome so resolve com os dois na mesma rede. Como o botao acima
           // confere antes de seguir, o aviso passa a ser sobre a ORDEM: trocar
