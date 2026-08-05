@@ -170,7 +170,21 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // E nunca reenviar um PIN que ja falhou. A leitura se repete a cada 3 s, e
     // sem isto um PIN errado consumiria as 5 tentativas do aparelho em 15
     // segundos - o proprio app bloquearia o emparelhamento.
-    if (pin == _pinTentado) return;
+    if (pin == _pinTentado) {
+      // Repetir o MESMO PIN que ja falhou nao vai ao aparelho: a leitura se
+      // repete a cada 3 s, e sem esta guarda um PIN errado consumiria as 5
+      // tentativas em 15 segundos. Mas digitar de novo e apertar tambem nao
+      // fazia nada visivel, o que parece que o app parou de responder — e da a
+      // impressao errada de que o aparelho nao conta aquela tentativa. Ele
+      // conta: quem nao mandou fomos nos.
+      if (_erroPin != null && mounted) {
+        setState(() {
+          _erroPin = 'Este PIN já falhou. Confira o número no visor e digite '
+              'outro — repetir o mesmo não é enviado ao aparelho.';
+        });
+      }
+      return;
+    }
     _pinTentado = pin;
     try {
       final resposta = await http

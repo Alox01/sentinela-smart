@@ -254,6 +254,16 @@ const unsigned long TEMPO_SEGURAR_CONFIG_MS = 3000;
 // unico digitalRead solto zerava tudo, e sem nada na tela dizendo - a pessoa
 // continuava segurando achando que estava em 2,5 s quando estava em 0,3.
 const unsigned long TOLERANCIA_SOLTURA_MS = 150;
+// Quanto tempo segurar QUALQUER botao para sair do modo de configuracao. Nao e
+// toque: o aparelho fica na estufa, e um esbarrao no meio do preenchimento
+// custaria refazer os 3 s dos tres botoes e reconectar o celular na rede dele.
+const unsigned long TEMPO_SAIR_CONFIG_MS = 1500;
+unsigned long algumBotaoDesdeMs = 0;
+// Entrar exige segurar os tres botoes por 3 s, entao no instante em que o modo
+// abre a mao AINDA esta em cima deles. Sem esperar a soltura, os mesmos dedos
+// que abriram fechariam 1,5 s depois - o modo piscaria e ninguem entenderia por
+// que. So conta para sair depois que todos ficarem soltos uma vez.
+bool botoesSoltosDesdeQueEntrou = false;
 const unsigned long TEMPO_CONFIG_OCIOSO_MS = 5UL * 60UL * 1000UL;
 bool modoConfig = false;
 // PIN de emparelhamento: 4 digitos sorteados a cada entrada no modo de
@@ -600,8 +610,48 @@ void iniciarMdns() {
 // Vigia a combinacao dos tres botoes e o tempo ocioso do modo aberto.
 void verificarModoConfig() {
   if (modoConfig) {
+    // PIN queimado: o modo nao serve mais para NADA - as duas rotas que fazem
+    // alguma coisa exigem o PIN, e ele morreu. Ficar aberto ate o prazo vencer e
+    // so um ponto de acesso sem senha no ar sem utilidade nenhuma. Sai na hora.
+    if (pinConfig < 0) {
+      Serial.println("PIN bloqueado: saindo do modo de configuracao.");
+      delay(200);
+      ESP.restart();
+    }
     if (millis() - ultimaAtividadeConfig >= TEMPO_CONFIG_OCIOSO_MS) {
       Serial.println("Modo de configuracao ocioso: reiniciando.");
+      delay(200);
+      ESP.restart();
+    }
+    // Sair na mao, sem esperar os 5 minutos. Quem desistiu, ou errou o PIN, nao
+    // tem por que deixar o aparelho fora do ar - em configuracao ele nao le
+    // sensor para a nuvem nem reporta nada.
+    //
+    // Segurar, e nao tocar: um toque acidental aqui custaria refazer tudo.
+    bool algum = digitalRead(BOTAO_BUZZER) == LOW ||
+                 digitalRead(BOTAO_VERDE) == LOW ||
+                 digitalRead(BOTAO_VERMELHO) == LOW;
+    if (!algum) {
+      botoesSoltosDesdeQueEntrou = true;
+      algumBotaoDesdeMs = 0;
+      return;
+    }
+    if (!botoesSoltosDesdeQueEntrou) return;
+    if (algumBotaoDesdeMs == 0) {
+      algumBotaoDesdeMs = millis();
+      return;
+    }
+    if (millis() - algumBotaoDesdeMs >= TEMPO_SAIR_CONFIG_MS) {
+      // Dois apitos curtos: o mesmo par que confirma qualquer decisao tomada no
+      // aparelho. Sem som, soltar o botao e ver o visor apagar seria
+      // indistinguivel de o aparelho ter travado.
+      for (int i = 0; i < 2; i++) {
+        digitalWrite(BUZZER, HIGH);
+        delay(80);
+        digitalWrite(BUZZER, LOW);
+        delay(80);
+      }
+      Serial.println("Saindo do modo de configuracao pelo botao.");
       delay(200);
       ESP.restart();
     }
@@ -639,6 +689,8 @@ void verificarModoConfig() {
 void entrarModoConfig() {
   modoConfig = true;
   tresBotoesDesdeMs = 0;
+  botoesSoltosDesdeQueEntrou = false;
+  algumBotaoDesdeMs = 0;
   ultimaAtividadeConfig = millis();
 
   // Confirmacao fisica de que entrou no modo: um apito curto e um pisca dos
