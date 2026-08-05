@@ -658,14 +658,13 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           SizedBox(height: 10),
           Text(
             'O aparelho bloqueou o PIN e saiu do modo de configuração — o visor '
-            'voltou ao normal e a rede "Sentinela-Config" sumiu. Continuar '
-            'digitando aqui não leva a nada.',
+            'voltou ao normal e a rede "Sentinela-Config" sumiu.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
           SizedBox(height: 10),
           Text(
             'Vá até o aparelho, segure os 3 botões por 3 s de novo e refaça. O '
-            'visor mostra um PIN NOVO — o antigo não vale mais.',
+            'visor mostra um PIN novo.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
         ],
