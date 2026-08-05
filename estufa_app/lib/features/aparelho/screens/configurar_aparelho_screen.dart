@@ -341,7 +341,17 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// mesmo. Nao barra o cadastro - o aparelho pode so estar demorando a
   /// reiniciar, e travar o fluxo seria pior do que uma estufa a conferir depois.
   Future<void> _confirmarEUsar() async {
-    if (_alcancou == null) {
+    // Revogacao nao passa pelo teste de alcance, e isto impede o pior acidente
+    // desta tela.
+    //
+    // O teste existe para nao cadastrar uma estufa num endereco que nunca
+    // responde. Na revogacao o endereco nao mudou — o que mudou foi a CHAVE, e
+    // ela so existe aqui, na memoria desta tela: o aparelho ja reiniciou e nao
+    // devolve de novo. Como o celular ainda esta na rede "Sentinela-Config",
+    // que acabou de sumir, a sonda falharia, a funcao sairia sem devolver nada,
+    // e a chave nova morreria com a tela — deixando ESTE celular trancado para
+    // fora junto com os outros, depois de uma acao que parecia ter dado certo.
+    if (_alcancou == null && !_revogando) {
       await _conferirAlcance();
       if (!mounted || _alcancou == false) return;
     }
