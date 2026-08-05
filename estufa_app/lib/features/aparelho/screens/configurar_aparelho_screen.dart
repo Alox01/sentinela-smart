@@ -173,7 +173,15 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// A rota so responde no modo de configuracao — estar na frente do aparelho é
   /// o que autoriza. Firmware anterior a 1.20.0 não a serve, e para esse caso
   /// esta tela nao tem saida: ver [_marcarFirmwareAntigoSePreciso].
-  Future<void> _lerIdentidadeDoAparelho() async {
+  /// [pedidoDoProdutor] separa "ele apertou agora" de "o relogio de 3 s bateu".
+  ///
+  /// A insistencia automatica existe porque a tela manda conectar na rede do
+  /// aparelho DEPOIS de abrir. Mas ela nao pode falar por cima do que o produtor
+  /// esta lendo: a mensagem com as tentativas restantes durava 3 segundos e era
+  /// substituida sozinha pelo aviso de PIN repetido — ele via "perdi uma
+  /// tentativa" sumir sem ter tocado em nada, e ficava sem saber quantas
+  /// sobravam.
+  Future<void> _lerIdentidadeDoAparelho({bool pedidoDoProdutor = false}) async {
     final pin = _pin.text.trim();
     // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
     // gastaria as tentativas dele.
@@ -188,7 +196,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // e sem isto um PIN errado consumiria as 5 tentativas em 15 segundos. Nao
     // fazer nada visivel, porem, parecia app travado - entao ele diz.
     if (_pinsQueFalharam.contains(pin)) {
-      if (mounted) {
+      // So responde a quem apertou. Vindo do relogio, fica calado: a contagem
+      // de tentativas ja esta na tela e e ela que interessa.
+      if (pedidoDoProdutor && mounted) {
         setState(() {
           _erroPin = 'Este PIN já falhou. Confira o número no visor.';
         });
@@ -213,10 +223,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           // legenda embaixo do campo passava batido, e o produtor ficava
           // tentando contra um aparelho que ja tinha ido embora.
           _pinBloqueado = restantes == 0;
+          // "restam N" e nao "(N tentativas)": entre parenteses lia como
+          // quantas ja foram gastas, que e o contrario.
           _erroPin = restantes == 0
               ? 'PIN bloqueado.'
-              : 'PIN não confere. Confira o número no visor do aparelho'
-                    '${restantes is int ? ' ($restantes tentativas)' : ''}.';
+              : restantes is int
+              ? 'PIN não confere. Confira o número no visor do aparelho — '
+                    'restam $restantes ${restantes == 1 ? 'tentativa' : 'tentativas'}.'
+              : 'PIN não confere. Confira o número no visor do aparelho.';
         });
         return;
       }
@@ -855,7 +869,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             // comecado. Aqui quem decide a hora e o produtor.
             aoConfirmar: () {
               FocusManager.instance.primaryFocus?.unfocus();
-              unawaited(_lerIdentidadeDoAparelho());
+              unawaited(_lerIdentidadeDoAparelho(pedidoDoProdutor: true));
             },
           ),
         ],
