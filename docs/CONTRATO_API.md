@@ -119,7 +119,11 @@ Campos opcionais recomendados:
 
 - `umidadeAlvo`: number, para o app diferenciar umidade lida e ajuste de umidade. O simulador local já envia esse campo; o ESP32 atual ainda pode omitir.
 - `tokenConfigurado`: boolean, para indicar se o aparelho exige chave de acesso.
-- `versaoFirmware`: string, para diagnóstico.
+- `versaoFirmware`: string, para diagnóstico. **Vai nas três saídas** — `/dados`,
+  `/status` e o envio para a nuvem. Faltava em `/status` até 05/08/2026, e como é
+  ele que o app lê quando está LOCAL, os "Detalhes da conexão" diziam "Firmware:
+  Desconhecida" justamente na conexão direta com o aparelho — que é onde a
+  pergunta "o que está gravado nele?" mais aparece.
 - `nomeLocal`: string, nome mDNS exclusivo anunciado pelo aparelho na rede local.
 
 O firmware atual arredonda as leituras do DHT22 antes de montar o JSON.

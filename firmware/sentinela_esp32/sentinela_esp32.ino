@@ -1583,6 +1583,11 @@ void handleStatus() {
   status["faseAtual"] = fasePorAlvo(temperaturaAlvoF);
   status["aviso"] = avisoAtual();
   status["corStatus"] = corStatusAtual();
+  // Faltava so aqui. `/dados` e o envio para a nuvem sempre mandaram a versao;
+  // `/status` nao — e e ele que o app le quando esta LOCAL. O resultado era
+  // "Firmware: Desconhecida" justamente na conexao direta com o aparelho, que e
+  // onde a pergunta "o que esta gravado nele?" mais aparece.
+  status["versaoFirmware"] = VERSAO_FIRMWARE;
 
   JsonObject config = doc["config"].to<JsonObject>();
   config["idHardware"] = idHardware;
