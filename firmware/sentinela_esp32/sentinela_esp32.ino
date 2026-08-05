@@ -756,6 +756,10 @@ void handleConfigPagina() {
   html += F(
       "</b></div>"
       "<form method=\"POST\" action=\"/salvar\">"
+      // O mesmo numero que o app pede. Vem primeiro porque sem ele nada do
+      // resto e gravado, e descobrir isso depois de preencher tudo seria pior.
+      "<label>PIN do visor (4 n&uacute;meros)</label>"
+      "<input name=\"pin\" inputmode=\"numeric\" maxlength=\"4\" required>"
       "<label>Rede Wi-Fi</label><input name=\"ssid\" value=\"");
   html += escaparHtml(wifiSsid);
   html += F(
@@ -811,6 +815,35 @@ void handleConfigPagina() {
   server.send(200, "text/html; charset=utf-8", html);
 }
 
+/// Confere o PIN do visor. Devolve false JA TENDO RESPONDIDO ao cliente.
+///
+/// Compartilhado entre a rota que ENTREGA a chave e a que a GRAVA. Por um tempo
+/// so a primeira pedia o PIN, o que deixava a segunda — a que pode trocar a
+/// rede, o endereco e a propria chave — aberta a quem estivesse ao alcance do
+/// wifi durante os 5 minutos do modo de configuracao. O ponto de acesso e
+/// ABERTO: estar nele nao prova nada.
+bool pinDoVisorConfere() {
+  if (pinConfig < 0) {
+    server.send(403, "application/json",
+                "{\"erro\":\"pin bloqueado\",\"detalhe\":\"Saia e entre de novo no modo de configuracao.\"}");
+    return false;
+  }
+  const int pinRecebido = server.hasArg("pin") ? server.arg("pin").toInt() : -1;
+  if (pinRecebido != pinConfig) {
+    tentativasPin++;
+    // Poucos erros e o PIN morre: 4 digitos so sao seguros com limite de
+    // tentativas, senao da para varrer os 10 mil em minutos.
+    if (tentativasPin >= MAX_TENTATIVAS_PIN) pinConfig = -1;
+    server.send(403, "application/json",
+                String("{\"erro\":\"pin invalido\",\"restantes\":")
+                    + (pinConfig < 0 ? 0 : (MAX_TENTATIVAS_PIN - tentativasPin))
+                    + "}");
+    return false;
+  }
+  tentativasPin = 0;
+  return true;
+}
+
 // Entrega ao app a identidade do aparelho, incluindo a CHAVE. So responde no
 // modo de configuracao, e essa restricao e a seguranca inteira: entrar nele
 // exige segurar os tres botoes, ou seja, estar na frente do aparelho, e ele sai
@@ -832,24 +865,7 @@ void handleConfigIdentidade() {
   // Estar na rede do aparelho nao basta: o ponto de acesso e aberto. Sem o PIN
   // do visor, quem estiver ao alcance do wifi levaria a chave sem nunca chegar
   // perto do aparelho.
-  if (pinConfig < 0) {
-    server.send(403, "application/json",
-                "{\"erro\":\"pin bloqueado\",\"detalhe\":\"Saia e entre de novo no modo de configuracao.\"}");
-    return;
-  }
-  const int pinRecebido = server.hasArg("pin") ? server.arg("pin").toInt() : -1;
-  if (pinRecebido != pinConfig) {
-    tentativasPin++;
-    // Poucos erros e o PIN morre: 4 digitos so sao seguros com limite de
-    // tentativas, senao da para varrer os 10 mil em minutos.
-    if (tentativasPin >= MAX_TENTATIVAS_PIN) pinConfig = -1;
-    server.send(403, "application/json",
-                String("{\"erro\":\"pin invalido\",\"restantes\":")
-                    + (pinConfig < 0 ? 0 : (MAX_TENTATIVAS_PIN - tentativasPin))
-                    + "}");
-    return;
-  }
-  tentativasPin = 0;
+  if (!pinDoVisorConfere()) return;
 
   JsonDocument doc;
   doc["idHardware"] = idHardware;
@@ -868,6 +884,13 @@ void handleConfigIdentidade() {
 
 void handleConfigSalvar() {
   ultimaAtividadeConfig = millis();
+
+  // Mesma prova de presenca da rota que entrega a chave, e por um motivo mais
+  // forte: aqui da para TROCAR a rede, o endereco e a propria chave. Ficou de
+  // fora quando o PIN foi criado - o raciocinio ("o ponto de acesso e aberto,
+  // estar nele nao prova nada") sempre valeu para as duas, e so uma foi
+  // protegida.
+  if (!pinDoVisorConfere()) return;
 
   String ssid = server.arg("ssid");
   String senha = server.arg("senha");

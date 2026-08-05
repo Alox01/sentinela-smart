@@ -333,6 +333,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             // O aparelho le os campos com server.arg(), que espera formulario.
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: {
+              // O aparelho passou a exigir o PIN tambem para GRAVAR, e nao so
+              // para entregar a chave. E o mesmo numero que ja esta digitado na
+              // tela: quem chegou ate aqui ja acertou uma vez.
+              'pin': _pin.text.trim(),
               'ssid': rede,
               'senha': _senha.text,
               // Campo vazio quer dizer rede aberta, e e o que a legenda promete
