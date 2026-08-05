@@ -92,8 +92,11 @@ funciona:
   *Verificado: `flutter analyze` sem nenhum problema, **71 testes** passando (os
   mesmos de antes), APK de release construído com o `--dart-define`, e o
   inventário da gaveta comparado linha a linha com o do `HEAD` — os 16 itens,
-  na mesma ordem e nas mesmas seções, incluindo "Compartilhar acesso", que fica
-  em AVISOS e não em AÇÕES RÁPIDAS.*
+  na mesma ordem e nas mesmas seções, incluindo "Compartilhar acesso", que
+  ficava em AVISOS. **Essa posição era herança da tela antiga**, preservada aqui
+  só para o refactor não mudar comportamento — e virou CONEXÃO em 05/08/2026,
+  junto com "Tirar acesso dos outros celulares": os dois decidem quem comanda a
+  estufa, o que não é assunto de aviso.*
   *Essa conferência virou teste: `estufa_app/test/menu_estufa_test.dart` (5
   testes) monta `MenuEstufa` e afirma as 16 posições na ordem, as três seções e
   a seção de cada item. Nenhuma mudança na produção foi necessária — os três

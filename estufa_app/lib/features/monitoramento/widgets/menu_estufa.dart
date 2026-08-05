@@ -127,19 +127,11 @@ class MenuEstufa extends StatelessWidget {
                 acoes.aoConfigurarAparelho();
               },
             ),
-            // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
-            // solto no fim daquela lista.
-            const Divider(color: Colors.white12, height: 1),
-            const TituloMenu('AVISOS'),
-            _ItemSilenciarAvisos(
-              idHardware: dados.idHardware,
-              tokenAcesso: dados.tokenAcesso,
-            ),
-            ItemVigilancia(
-              vigiada: dados.vigiada,
-              semIdHardware: (dados.idHardware?.trim() ?? '').isEmpty,
-            ),
-            ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
+            // Quem alcanca este aparelho, e como. Compartilhar e tirar acesso
+            // moravam em AVISOS — posicao herdada da tela antiga, preservada
+            // sem discussao quando a gaveta foi extraida. Nao e assunto de
+            // aviso: os dois decidem QUEM COMANDA a estufa, que e do que esta
+            // secao trata. E ficam juntos porque um desfaz o outro.
             _ItemCompartilharAcesso(dados: dados),
             // Ao lado de "Compartilhar acesso" de proposito: e o contrario dele,
             // e e ali que alguem vai procurar depois de ter compartilhado com
@@ -164,6 +156,19 @@ class MenuEstufa extends StatelessWidget {
                 acoes.aoTirarAcessoDosOutros();
               },
             ),
+            // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
+            // solto no fim daquela lista.
+            const Divider(color: Colors.white12, height: 1),
+            const TituloMenu('AVISOS'),
+            _ItemSilenciarAvisos(
+              idHardware: dados.idHardware,
+              tokenAcesso: dados.tokenAcesso,
+            ),
+            ItemVigilancia(
+              vigiada: dados.vigiada,
+              semIdHardware: (dados.idHardware?.trim() ?? '').isEmpty,
+            ),
+            ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
             const Divider(color: Colors.white12, height: 1),
             const TituloMenu('AÇÕES RÁPIDAS'),
             ListTile(

@@ -96,17 +96,14 @@ void main() {
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
         'item: Configurar aparelho',
+        'item: Compartilhar acesso',
+        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AVISOS',
         'item: Silenciar avisos',
         // Sem "Avisos no celular": `vigiada` é `null` (ainda conferindo), e a
         // linha só aparece no caso `false`.
         'item: Sirene do aparelho',
-        // Sim, "Compartilhar acesso" fica em AVISOS, e não em AÇÕES RÁPIDAS.
-        // Parece deslocado e é de propósito — quem mudar isso muda de verdade, e
-        // este teste é o lugar de discutir, não o diff silencioso.
-        'item: Compartilhar acesso',
-        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AÇÕES RÁPIDAS',
         'item: Agendar ajuste',
@@ -133,13 +130,13 @@ void main() {
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
         'item: Configurar aparelho',
+        'item: Compartilhar acesso',
+        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AVISOS',
         'item: Silenciar avisos',
         // Inscrito: continua fora. Era aqui que a linha dizia "ativos".
         'item: Sirene do aparelho: ligada',
-        'item: Compartilhar acesso',
-        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AÇÕES RÁPIDAS',
         'item: Agendar ajuste',
@@ -166,13 +163,13 @@ void main() {
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
         'item: Configurar aparelho',
+        'item: Compartilhar acesso',
+        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AVISOS',
         'item: Silenciar avisos',
         'item: Este celular não será avisado',
         'item: Sirene do aparelho: ligada',
-        'item: Compartilhar acesso',
-        'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AÇÕES RÁPIDAS',
         'item: Agendar ajuste',
@@ -209,13 +206,14 @@ void main() {
 
       expect(secaoDe('item: Silenciar avisos'), 'seção: AVISOS');
       expect(secaoDe('item: Sirene do aparelho'), 'seção: AVISOS');
-      // Mantido em AVISOS de propósito. Ver o comentário no inventário.
-      expect(secaoDe('item: Compartilhar acesso'), 'seção: AVISOS');
-      // Ao lado do compartilhar de propósito: é o contrário dele, e é ali que
-      // alguém procura depois de ter compartilhado com quem não devia.
+      // Compartilhar e tirar acesso ficam em CONEXÃO desde 05/08/2026. Moravam
+      // em AVISOS — posição herdada da tela antiga e preservada sem discussão
+      // quando a gaveta foi extraída. Os dois decidem QUEM COMANDA a estufa, o
+      // que não é assunto de aviso, e ficam juntos porque um desfaz o outro.
+      expect(secaoDe('item: Compartilhar acesso'), 'seção: CONEXÃO');
       expect(
         secaoDe('item: Tirar acesso dos outros celulares'),
-        'seção: AVISOS',
+        'seção: CONEXÃO',
       );
 
       expect(secaoDe('item: Agendar ajuste'), 'seção: AÇÕES RÁPIDAS');
