@@ -131,6 +131,89 @@ As três proteções que fazem 4 dígitos bastarem, todas no firmware:
 
 O Modelo A (etiqueta) fica descartado: era justamente digitar chave longa.
 
+## Revogar acesso pelo app — **planejado**, não implementado (05/08/2026)
+
+Desenho fechado, escrito antes de existir. **Nada abaixo está no código.** O que
+existe hoje é a revogação pelo formulário do navegador do aparelho
+(`192.168.4.1` → "Chave de acesso (avançado)" → "Gerar uma chave nova"), que
+funciona e continua sendo o caminho de recuperação.
+
+### O problema que isto resolve
+
+Não é a rotação faltar — ela existe. É **ninguém conseguir achá-la** no dia em
+que precisar. Está escondida atrás de um `<details>` num formulário que o
+produtor nunca abre, e o app não menciona em lugar nenhum. Se um QR vazar, o
+caminho existe e é invisível.
+
+### O fluxo
+
+1. No menu da estufa: **"Tirar acesso dos outros celulares"**. (Esse é o texto da
+   tela. "Revogação de acesso" fica para a documentação — não é o vocabulário de
+   quem usa.)
+2. Aviso antes de qualquer coisa: **todos os celulares que receberam o QR antigo
+   perdem o controle**, e vão precisar de um QR novo. E, explicitamente: **as
+   estufadas e os relatórios continuam** — só a credencial muda. "Revogar acesso"
+   soa como perder dados.
+3. Pede para colocar o aparelho no modo de configuração (3 botões, 3 s) e
+   conectar o celular na rede `Sentinela-Config`.
+4. Pede o **PIN do visor**, como o fluxo de configuração já faz. O app **nunca**
+   preenche o PIN: a presença física é o que impede alguém só com o aplicativo de
+   expulsar os outros celulares.
+5. O app consulta `GET /config/identidade` e recebe também o **`wifiSsid`**.
+6. O app manda `POST /salvar` com: o mesmo SSID, **senha vazia** (mantém a
+   atual), `novachave=1` e o PIN.
+7. O aparelho gera a chave nova, grava, **devolve a chave nova na resposta** e
+   reinicia.
+8. O app substitui a chave guardada e oferece o QR novo.
+
+### As duas mudanças de código que isto exige
+
+São só estas duas, e as duas no firmware:
+
+- **`GET /config/identidade` passa a devolver `wifiSsid`.** Sem ele o app não tem
+  como reenviar a mesma rede, e `POST /salvar` recusa SSID vazio.
+- **`POST /salvar` devolve a chave nova** quando `novachave=1`. É a peça que faz
+  o passo 8 existir: o aparelho **reinicia** logo depois de gravar
+  (`ESP.restart()`), então o app não tem uma segunda chance de ler. Sem isso, o
+  produtor teria de segurar os três botões de novo e digitar um PIN novo — duas
+  idas ao aparelho para uma operação só. O aparelho já mostra essa chave na tela
+  de confirmação do navegador; falta devolvê-la também em JSON.
+
+**O que NÃO precisa ser feito, porque já existe:** guardar a chave anterior para
+provar posse na rotação com a nuvem. Está no firmware (`chaveAnt` na NVS,
+`chaveAnterior` em memória, usada por `sincronizarChaveNuvem`), e o servidor já
+serve `POST /aparelhos/chave/rotacionar`.
+
+### Consistência eventual, e por que não dá para prometer mais
+
+Houve a ideia de garantir que "uma falha de internet não deixe app, nuvem e
+aparelho com chaves diferentes". **Isso não é alcançável**, e tentar seria
+desenhar contra a realidade: o aparelho troca a chave **localmente**, e a
+configuração acontece justamente quando ele ainda não está na rede de casa.
+Sempre existirá uma janela com aparelho e app na chave nova e a nuvem na antiga.
+
+O que se garante:
+
+| | Quando |
+|---|---|
+| **Aparelho e celular** | juntos, na mesma resposta do `/salvar` — nunca divergem |
+| **Controle local** | volta na hora |
+| **Nuvem** | quando o aparelho recuperar internet, por repetição automática |
+| **Controle remoto** | indisponível até lá |
+
+E o app **precisa dizer isso**, senão parece defeito:
+
+> Acesso local atualizado. O acesso pela internet volta assim que o aparelho
+> conectar.
+
+### Por que não foi feito agora
+
+Decisão de 05/08/2026, a três dias da escrita do TCC: é funcionalidade nova
+mexendo em **credencial**, e o ganho para o trabalho é zero — a revogação já
+existe e já é feita sob presença física, o que é o que se afirma no texto.
+Implementar depois é curto e bem delimitado; implementar agora arrisca
+desestabilizar uma parte que está funcionando.
+
 ## Limite desta camada
 
 Esta medida evita que uma pessoa envie comandos simples para a estufa sem
