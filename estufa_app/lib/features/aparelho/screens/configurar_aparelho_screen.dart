@@ -629,7 +629,12 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _revogando ? 'Acesso trocado' : 'Configuração enviada',
+              // "Acesso trocado" descrevia o mecanismo e nao dizia de quem. O
+              // produtor escolheu "Tirar acesso dos outros celulares"; o titulo
+              // do fim responde isso, com as mesmas palavras.
+              _revogando
+                  ? 'Os outros celulares perderam o acesso'
+                  : 'Configuração enviada',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -809,11 +814,21 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           Expanded(
             child: Text(
               achou
-                  ? 'Falando com o aparelho. Pode preencher a rede de casa '
-                        'abaixo.'
+                  ? (_revogando
+                        // Na revogacao nao ha campo nenhum abaixo, e o botao ja
+                        // diz o que fazer. O cartao so precisa confirmar que o
+                        // aparelho esta do outro lado.
+                        ? 'Falando com o aparelho.'
+                        : 'Falando com o aparelho. Pode preencher a rede de '
+                              'casa abaixo.')
                   : aindaNaoTentou
-                  ? 'Esperando o PIN. Assim que você digitar os 4 números, o '
-                        'resto desta tela se completa.'
+                  ? (_revogando
+                        // Na revogacao nada "se completa": nao ha campo abaixo,
+                        // so o botao — que fica desligado ate o PIN valer.
+                        ? 'Esperando o PIN. Digite os 4 números do visor para '
+                              'liberar a troca.'
+                        : 'Esperando o PIN. Assim que você digitar os 4 '
+                              'números, o resto desta tela se completa.')
                   : 'Não achei o aparelho com esse PIN. Confira o número no '
                         'visor e se o celular está na rede "Sentinela-Config".',
               style: TextStyle(
@@ -1037,6 +1052,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             widget.uso == null
                 ? 'Cadastre no campo de endereço da estufa. Ele continua '
                       'valendo mesmo que o roteador troque o IP.'
+                : _revogando
+                // Aqui o endereco nao vai para lugar nenhum: a estufa ja existe.
+                // O cartao fica so como prova de que o celular esta MESMO na
+                // rede do aparelho — se o nome aparece, a conversa funciona.
+                ? 'É este o aparelho cuja chave vai ser trocada.'
                 : 'Vai junto para o cadastro. Ele continua valendo mesmo que '
                       'o roteador troque o IP.',
             style: const TextStyle(color: Colors.white38, fontSize: 12),
@@ -1058,15 +1078,21 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white10),
           ),
-          child: const Text(
-            'Antes de preencher:\n\n'
+          child: Text(
+            // "Antes de preencher" nao serve a quem nao vai preencher nada.
+            '${_revogando ? "Antes de trocar a chave" : "Antes de preencher"}:'
+            '\n\n'
             '1. No aparelho, segure os três botões por 3 segundos, até apitar e '
             'os LEDs piscarem.\n'
             '2. No Wi-Fi do celular, conecte na rede "Sentinela-Config".\n'
             '3. O Android avisa que a rede não tem internet — aceite continuar '
             'conectado.\n'
             '4. Digite abaixo os 4 números que aparecem no visor do aparelho.',
-            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              height: 1.5,
+            ),
           ),
         ),
         const SizedBox(height: 12),
