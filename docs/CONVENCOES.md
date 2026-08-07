@@ -42,6 +42,18 @@ Saem três, em `build/app/outputs/flutter-apk/`:
 
 Na dúvida sobre o aparelho: `adb shell getprop ro.product.cpu.abi`.
 
+**APK do escopo do TCC** — esconde compartilhar e tirar acesso, que são os dois
+itens fora dos objetivos declarados e os únicos que contradizem a explicação da
+autenticação ("só comanda quem esteve na frente do aparelho"):
+
+```
+flutter build apk --release --split-per-abi --dart-define=ESCOPO_TCC=true --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
+```
+
+Sem a marca, o app é o completo. **Um código, um conjunto de testes, um
+firmware** — a escolha é na hora de gerar o APK, e não um repositório à parte.
+O porquê está em `estufa_app/lib/escopo.dart`.
+
 O APK único continua servindo para **mandar para alguém sem perguntar o modelo
 do celular** — ele instala em qualquer um, ao custo dos 40 MB que sobram.
 

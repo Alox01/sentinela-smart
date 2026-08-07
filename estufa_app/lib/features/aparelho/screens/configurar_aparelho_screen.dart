@@ -31,6 +31,19 @@ enum UsoDaConfiguracao {
   /// comandos passariam a ser recusados. Oferece atualizar.
   atualizacao,
 
+  /// Segundo celular pegando acesso a um aparelho JA configurado.
+  ///
+  /// Ele nao quer reconfigurar nada — a rede do aparelho esta certa, os ajustes
+  /// estao certos. Quer so a chave, e a chave so sai daqui, com o PIN do visor.
+  /// Sem este modo, o caminho existia mas cobrava um pedagio absurdo: preencher
+  /// a rede e a senha do Wi-Fi de novo, e gravar por cima de uma configuracao
+  /// que ja estava boa, correndo o risco de estraga-la.
+  ///
+  /// E o unico caminho para um segundo celular quando o compartilhamento por QR
+  /// esta fora (ver `escopo.dart`) — e o que faz "so comanda quem esteve na
+  /// frente do aparelho" valer sem excecao.
+  apenasAcesso,
+
   /// Tirar o acesso dos outros celulares: o aparelho gera uma chave nova, e
   /// todo QR compartilhado antes deixa de valer.
   ///
@@ -102,6 +115,45 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   String? _pinTentado;
   String? _erroPin;
 
+  /// O que este celular vai levar, e o que ele NAO vai mexer.
+  ///
+  /// A duvida natural de quem chega aqui e "vou estragar a configuracao que ja
+  /// esta funcionando?". A resposta e nao, e ela precisa estar escrita: o
+  /// aparelho nao e gravado neste modo.
+  Widget _cartaoPegarAcesso() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Pronto para usar neste celular',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Este celular vai passar a comandar a estufa. Nada é gravado no '
+            'aparelho: a rede, a senha e os ajustes ficam como estão.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Os celulares que já tinham acesso continuam com ele.',
+            style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// As 5 tentativas acabaram. O aparelho reinicia e sai do modo de
   /// configuracao, entao nao ha mais nada a fazer nesta tela sem voltar ate ele.
   bool _pinBloqueado = false;
@@ -145,6 +197,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   String? _ssidDoAparelho;
 
   bool get _revogando => widget.uso == UsoDaConfiguracao.revogacao;
+
+  /// So pegar a chave: nada e gravado no aparelho.
+  bool get _apenasAcesso => widget.uso == UsoDaConfiguracao.apenasAcesso;
 
   /// A revogacao aconteceu no aparelho, mas o app nao recebeu a chave nova.
   /// Firmware antigo. Os comandos deste celular tambem param — e preciso dizer.
@@ -1080,7 +1135,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           child: Text(
             // "Antes de preencher" nao serve a quem nao vai preencher nada.
-            '${_revogando ? "Antes de trocar a chave" : "Antes de preencher"}:'
+            '${_revogando ? "Antes de trocar a chave" : _apenasAcesso ? "Para pegar o acesso" : "Antes de preencher"}:'
             '\n\n'
             '1. No aparelho, segure os três botões por 3 segundos, até apitar e '
             'os LEDs piscarem.\n'
@@ -1145,7 +1200,22 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // ela tem duas fases claras: pedir o PIN, e so entao preencher.
         if (_firmwareSemIdentidade)
           _cartaoFirmwareAntigo()
-        else if (_aparelhoRespondeu && _revogando) ...[
+        else if (_aparelhoRespondeu && _apenasAcesso) ...[
+          // Nada a preencher e nada a gravar: o aparelho ja esta configurado, e
+          // este celular so quer a chave. O botao leva os dados ao cadastro.
+          _cartaoPegarAcesso(),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _confirmarEUsar,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: const Text('Usar esta estufa neste celular'),
+            ),
+          ),
+        ] else if (_aparelhoRespondeu && _revogando) ...[
           // Revogacao nao pergunta rede nem senha: elas nao mudam. O aparelho
           // devolveu a rede atual na identidade, e ela e reenviada igual.
           _cartaoConfirmarRevogacao(),
@@ -1229,7 +1299,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             style: const TextStyle(color: Colors.redAccent, fontSize: 13),
           ),
         ],
-        if (!_firmwareSemIdentidade) ...[
+        // Nada de botao de salvar quando o modo e so pegar acesso: nao ha o que
+        // gravar, e o botao proprio ja esta logo acima.
+        if (!_firmwareSemIdentidade && !_apenasAcesso) ...[
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,

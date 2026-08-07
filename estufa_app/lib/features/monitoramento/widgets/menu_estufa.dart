@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../escopo.dart';
+
 import '../../agendamento/screens/agendamentos_screen.dart';
 import '../../home/models/convite_estufa.dart';
 import '../../home/screens/compartilhar_acesso_screen.dart';
@@ -132,7 +134,11 @@ class MenuEstufa extends StatelessWidget {
             // sem discussao quando a gaveta foi extraida. Nao e assunto de
             // aviso: os dois decidem QUEM COMANDA a estufa, que e do que esta
             // secao trata. E ficam juntos porque um desfaz o outro.
-            _ItemCompartilharAcesso(dados: dados),
+            // Os dois de acesso saem juntos no escopo do TCC: um oferece o
+            // atalho que contradiz "presenca fisica", o outro existe so para
+            // desfazer o primeiro.
+            if (!dados.escopoReduzido) ...[
+              _ItemCompartilharAcesso(dados: dados),
             // Ao lado de "Compartilhar acesso" de proposito: e o contrario dele,
             // e e ali que alguem vai procurar depois de ter compartilhado com
             // quem nao devia. Ate agora a revogacao existia so no formulario do
@@ -157,6 +163,7 @@ class MenuEstufa extends StatelessWidget {
                 acoes.aoTirarAcessoDosOutros();
               },
             ),
+            ],
             // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
             // solto no fim daquela lista.
             const Divider(color: Colors.white12, height: 1),
@@ -279,7 +286,15 @@ class DadosMenuEstufa {
   final double temperaturaNovaEstufada;
   final double umidadeNovaEstufada;
 
+  /// Esconde compartilhar e tirar acesso. Ver [escopoTcc].
+  ///
+  /// Vem por aqui, e não lido direto da constante, para o teste conseguir montar
+  /// a gaveta nos dois escopos: `bool.fromEnvironment` é resolvido na
+  /// compilação, e um teste não tem como mudá-lo.
+  final bool escopoReduzido;
+
   const DadosMenuEstufa({
+    this.escopoReduzido = escopoTcc,
     required this.idEstufa,
     required this.nomeEstufa,
     required this.ipEstufa,

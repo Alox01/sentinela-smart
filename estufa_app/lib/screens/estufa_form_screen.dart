@@ -422,6 +422,13 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                     if (!_editando) ...[
                       _buildAtalhoConfigurar(),
                       const SizedBox(height: 12),
+                      // O segundo celular da casa: o aparelho ja esta na rede e
+                      // configurado, e ele so precisa da chave. Sem este atalho
+                      // o caminho existia, mas passava pelo formulario de
+                      // configuracao inteiro — redigitando a rede e a senha do
+                      // Wi-Fi para gravar por cima de algo que ja estava bom.
+                      _buildAtalhoPegarAcesso(),
+                      const SizedBox(height: 12),
                       // O segundo caminho para a mesma estufa: quem ja tem
                       // acesso delega, sem tocar no aparelho.
                       _buildAtalhoSimulador(),
@@ -468,11 +475,12 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   /// Abre a primeira configuracao e traz de volta o que ela definiu. Sem isto o
   /// produtor via o endereco numa tela e tinha de digita-lo na outra, de
   /// memoria — um nome como `sentinela-215788.local` erra facil.
-  Future<void> _abrirConfiguracaoAparelho() async {
+  Future<void> _abrirConfiguracaoAparelho({
+    UsoDaConfiguracao uso = UsoDaConfiguracao.cadastro,
+  }) async {
     final dados = await Navigator.of(context).push<DadosAparelhoConfigurado>(
       MaterialPageRoute(
-        builder: (_) =>
-            const ConfigurarAparelhoScreen(uso: UsoDaConfiguracao.cadastro),
+        builder: (_) => ConfigurarAparelhoScreen(uso: uso),
       ),
     );
     if (dados == null || !mounted) return;
@@ -572,6 +580,55 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
       const SnackBar(
         content: Text('Pronto. Toque em Salvar.'),
         duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Widget _buildAtalhoPegarAcesso() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => unawaited(
+        _abrirConfiguracaoAparelho(uso: UsoDaConfiguracao.apenasAcesso),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.035),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.key_outlined,
+              color: Colors.white54,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Aparelho já configurado: pegar acesso',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Para outro celular da casa. Vá até o aparelho, digite o PIN '
+                    'do visor e ele passa a comandar. Nada muda no aparelho.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white24),
+          ],
+        ),
       ),
     );
   }

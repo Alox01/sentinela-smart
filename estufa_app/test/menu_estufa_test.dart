@@ -179,6 +179,31 @@ void main() {
     });
   });
 
+  testWidgets('no escopo do TCC, os dois itens de acesso não aparecem', (
+    tester,
+  ) async {
+    // Compartilhar e tirar acesso saem juntos: um é o atalho que contradiz
+    // "presença física", o outro existe só para desfazer o primeiro. Sair um sem
+    // o outro deixaria o produtor com como dar acesso e sem como tirar.
+    final inventario = await abrirGaveta(
+      tester,
+      _dados(escopoReduzido: true),
+    );
+
+    expect(inventario, isNot(contains('item: Compartilhar acesso')));
+    expect(
+      inventario,
+      isNot(contains('item: Tirar acesso dos outros celulares')),
+    );
+    // O resto da gaveta fica inteiro — a marca esconde dois itens, não muda a
+    // tela.
+    expect(inventario, contains('item: Detalhes da conexão'));
+    expect(inventario, contains('item: Configurar aparelho'));
+    expect(inventario, contains('item: Silenciar avisos'));
+    expect(inventario, contains('item: Agendar ajuste'));
+    expect(inventario.where((l) => l.startsWith('seção: ')).length, 3);
+  });
+
   group('as três seções', () {
     testWidgets('aparecem uma vez cada, nesta ordem', (tester) async {
       final inventario = await abrirGaveta(tester, _dadosBase);
@@ -263,7 +288,9 @@ DadosMenuEstufa _dados({
   String? idHardware = 'AABBCCDDEEFF',
   bool? vigiada,
   bool? buzzerAparelhoAtivo,
+  bool escopoReduzido = false,
 }) => DadosMenuEstufa(
+  escopoReduzido: escopoReduzido,
   idEstufa: 7,
   nomeEstufa: 'Estufa do Fundo',
   ipEstufa: '192.168.0.50',
