@@ -1,6 +1,6 @@
 # Índice da documentação
 
-São 26 arquivos. Este índice existe para ninguém abrir seis para achar um — e
+São 27 arquivos. Este índice existe para ninguém abrir seis para achar um — e
 para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## Comece por aqui
@@ -45,6 +45,10 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 - **`VIABILIDADE_COMERCIAL.md`** — se um dia virar produto.
 
 ## TCC
+
+- **`MAPA_DO_CODIGO.md`** — o que responder quando perguntarem "qual biblioteca
+  você usou para isso?" ou "onde está a lógica do alarme?". Feito para ler uma vez
+  antes de apresentar.
 
 - **`ARTIGO_TCC_OUTLINE.md`** e **`ARTIGO_CONTINUACAO.md`** — estrutura e
   rascunhos do texto.
