@@ -385,6 +385,16 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         }
       });
     } catch (_) {
+      // A requisicao nem chegou ao aparelho — o celular ainda nao esta na rede
+      // dele. Isso NAO e uma tentativa gasta, entao o PIN volta a valer.
+      //
+      // Sem isto, digitar o PIN antes de entrar no "Sentinela-Config" queimava
+      // aquele numero para sempre: a guarda que impede reenviar o mesmo PIN
+      // existe para nao consumir as 5 tentativas DO APARELHO, e passava a valer
+      // para uma tentativa que o aparelho nunca viu. O relogio de 3 s nunca mais
+      // tentava, a tela dizia "nao achei o aparelho com esse PIN", e so sair e
+      // voltar resolvia — parecendo PIN errado quando era rede.
+      _pinTentado = null;
       _marcarFirmwareAntigoSePreciso();
     }
   }
@@ -884,8 +894,16 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                               'liberar a troca.'
                         : 'Esperando o PIN. Assim que você digitar os 4 '
                               'números, o resto desta tela se completa.')
+                  // Duas falhas diferentes, e a diferenca decide o que fazer.
+                  // Se o aparelho NUNCA respondeu (`_nomeLocal` vazio), o
+                  // celular nao esta na rede dele — culpar o PIN manda conferir
+                  // o numero certo, que e o caminho mais longo ate a causa.
+                  : _nomeLocal == null
+                  ? 'Não estou alcançando o aparelho. Confira no Wi-Fi do '
+                        'celular se você está na rede "Sentinela-Config" — o PIN '
+                        'só vale depois disso.'
                   : 'Não achei o aparelho com esse PIN. Confira o número no '
-                        'visor e se o celular está na rede "Sentinela-Config".',
+                        'visor do aparelho.',
               style: TextStyle(
                 color: achou
                     ? Colors.greenAccent
