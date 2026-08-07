@@ -19,12 +19,18 @@
 ///
 /// ## O que sai, e por quê
 ///
-/// **Compartilhar acesso e tirar acesso**, os dois por QR Code. Nenhum dos cinco
-/// objetivos declarados fala em delegar controle entre celulares — mas o motivo
-/// forte é outro: eles **contradizem a explicação da autenticação**. A regra que
-/// se defende é "para comandar, é preciso ter estado na frente do aparelho";
-/// no instante em que existe um QR que atravessa a cidade, ela deixa de valer
-/// sem exceção.
+/// **Só o compartilhar acesso por QR Code.** Nenhum dos cinco objetivos
+/// declarados fala em delegar controle entre celulares — mas o motivo forte é
+/// outro: ele **contradiz a explicação da autenticação**. A regra que se defende
+/// é "para comandar, é preciso ter estado na frente do aparelho"; no instante em
+/// que existe um QR que atravessa a cidade, ela deixa de valer sem exceção.
+///
+/// **"Tirar acesso dos outros celulares" FICA**, e a primeira versão disto o
+/// tirava junto — engano. Ele exige os três botões e o PIN, ou seja, presença
+/// física: é a outra metade da mesma regra, e não a contradiz em nada. É também
+/// a resposta para "e se o senhor vender o aparelho, ou alguém que não deveria
+/// tiver acesso?" — sem ele, a pergunta ficaria sem resposta justamente na
+/// versão apresentada.
 ///
 /// Nada é apagado: no APK de desenvolvimento continua tudo lá.
 const bool escopoTcc = bool.fromEnvironment('ESCOPO_TCC');

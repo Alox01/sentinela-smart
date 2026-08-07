@@ -179,22 +179,21 @@ void main() {
     });
   });
 
-  testWidgets('no escopo do TCC, os dois itens de acesso não aparecem', (
+  testWidgets('no escopo do TCC sai o compartilhar, e a revogação FICA', (
     tester,
   ) async {
-    // Compartilhar e tirar acesso saem juntos: um é o atalho que contradiz
-    // "presença física", o outro existe só para desfazer o primeiro. Sair um sem
-    // o outro deixaria o produtor com como dar acesso e sem como tirar.
+    // A primeira versão tirava os dois, e estava errada. O que contradiz "só
+    // comanda quem esteve na frente do aparelho" é o QR Code, que faz o acesso
+    // atravessar a cidade. A revogação exige os três botões e o PIN — é a outra
+    // metade da mesma regra, e é a resposta para "e se o senhor vender o
+    // aparelho?".
     final inventario = await abrirGaveta(
       tester,
       _dados(escopoReduzido: true),
     );
 
     expect(inventario, isNot(contains('item: Compartilhar acesso')));
-    expect(
-      inventario,
-      isNot(contains('item: Tirar acesso dos outros celulares')),
-    );
+    expect(inventario, contains('item: Tirar acesso dos outros celulares'));
     // O resto da gaveta fica inteiro — a marca esconde dois itens, não muda a
     // tela.
     expect(inventario, contains('item: Detalhes da conexão'));

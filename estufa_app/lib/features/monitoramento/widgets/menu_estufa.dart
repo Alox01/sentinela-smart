@@ -134,11 +134,16 @@ class MenuEstufa extends StatelessWidget {
             // sem discussao quando a gaveta foi extraida. Nao e assunto de
             // aviso: os dois decidem QUEM COMANDA a estufa, que e do que esta
             // secao trata. E ficam juntos porque um desfaz o outro.
-            // Os dois de acesso saem juntos no escopo do TCC: um oferece o
-            // atalho que contradiz "presenca fisica", o outro existe so para
-            // desfazer o primeiro.
-            if (!dados.escopoReduzido) ...[
-              _ItemCompartilharAcesso(dados: dados),
+            // So o compartilhamento sai no escopo do TCC. A revogacao FICA, e a
+            // primeira versao disto tirava os dois — engano meu.
+            //
+            // O que contradiz "so comanda quem esteve na frente do aparelho" e o
+            // QR Code, que faz o acesso atravessar a cidade. A revogacao exige os
+            // tres botoes e o PIN: ela e a outra metade da mesma regra, presenca
+            // fisica para dar e presenca fisica para tirar. E e a resposta para
+            // "e se o senhor vender o aparelho?" — sem ela, a pergunta fica sem
+            // resposta na versao apresentada.
+            if (!dados.escopoReduzido) _ItemCompartilharAcesso(dados: dados),
             // Ao lado de "Compartilhar acesso" de proposito: e o contrario dele,
             // e e ali que alguem vai procurar depois de ter compartilhado com
             // quem nao devia. Ate agora a revogacao existia so no formulario do
@@ -163,7 +168,6 @@ class MenuEstufa extends StatelessWidget {
                 acoes.aoTirarAcessoDosOutros();
               },
             ),
-            ],
             // Secao propria: silenciar aviso nao e assunto de conexao, e ficava
             // solto no fim daquela lista.
             const Divider(color: Colors.white12, height: 1),
