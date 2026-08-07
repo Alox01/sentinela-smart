@@ -158,10 +158,17 @@ class MenuEstufa extends StatelessWidget {
                 'Tirar acesso dos outros celulares',
                 style: TextStyle(color: Colors.white),
               ),
-              subtitle: const Text(
-                'Troca a chave da estufa. Quem tem o QR Code antigo perde o '
-                'controle',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
+              subtitle: Text(
+                // Sem o compartilhamento por QR Code na tela, citar o QR Code
+                // aqui e falar de uma coisa que nao existe. O que sobra e o que
+                // sempre foi verdade nos dois escopos: todo celular que tinha
+                // acesso perde, independente de como o conseguiu.
+                dados.escopoReduzido
+                    ? 'Gera uma chave nova no aparelho. Todos os outros '
+                          'celulares perdem o controle'
+                    : 'Troca a chave da estufa. Quem tem o QR Code antigo perde '
+                          'o controle',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
                 Navigator.of(context).pop();
