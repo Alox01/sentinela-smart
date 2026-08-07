@@ -140,13 +140,18 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            'Este celular vai passar a comandar a estufa. Nada é gravado no '
-            'aparelho: a rede, a senha e os ajustes ficam como estão.',
+            'Este celular vai passar a comandar a estufa. Os que já tinham '
+            'acesso continuam com ele.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
           SizedBox(height: 8),
+          // O aparelho NAO reinicia neste modo — nada foi gravado nele. Entao
+          // ele fica no modo de configuracao, com o PIN no visor, ate alguem
+          // tirar. Sem esta linha, parece que travou.
           Text(
-            'Os celulares que já tinham acesso continuam com ele.',
+            'Depois de tocar abaixo, o aparelho continua no modo de '
+            'configuração: segure qualquer botão por 1,5 s para ele voltar ao '
+            'normal (ou espere 5 minutos).',
             style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
           ),
         ],
@@ -434,7 +439,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // que acabou de sumir, a sonda falharia, a funcao sairia sem devolver nada,
     // e a chave nova morreria com a tela — deixando ESTE celular trancado para
     // fora junto com os outros, depois de uma acao que parecia ter dado certo.
-    if (_alcancou == null && !_revogando) {
+    if (_alcancou == null && !_revogando && !_apenasAcesso) {
       await _conferirAlcance();
       if (!mounted || _alcancou == false) return;
     }
@@ -879,19 +884,21 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           Expanded(
             child: Text(
               achou
-                  ? (_revogando
-                        // Na revogacao nao ha campo nenhum abaixo, e o botao ja
-                        // diz o que fazer. O cartao so precisa confirmar que o
-                        // aparelho esta do outro lado.
+                  ? (_revogando || _apenasAcesso
+                        // Sem campo nenhum abaixo: o botao ja diz o que fazer.
+                        // O cartao so confirma que o aparelho esta do outro lado.
                         ? 'Falando com o aparelho.'
                         : 'Falando com o aparelho. Pode preencher a rede de '
                               'casa abaixo.')
                   : aindaNaoTentou
                   ? (_revogando
-                        // Na revogacao nada "se completa": nao ha campo abaixo,
-                        // so o botao — que fica desligado ate o PIN valer.
+                        // Nada "se completa" aqui: nao ha campo abaixo, so o
+                        // botao — que fica desligado ate o PIN valer.
                         ? 'Esperando o PIN. Digite os 4 números do visor para '
                               'liberar a troca.'
+                        : _apenasAcesso
+                        ? 'Esperando o PIN. Digite os 4 números do visor para '
+                              'pegar o acesso.'
                         : 'Esperando o PIN. Assim que você digitar os 4 '
                               'números, o resto desta tela se completa.')
                   // Duas falhas diferentes, e a diferenca decide o que fazer.
@@ -1144,6 +1151,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
         _cartaoNome(),
+        // As instrucoes descrevem o que fazer ATE o aparelho responder. Depois
+        // que ele respondeu, todas ja foram cumpridas — deixa-las na tela e
+        // pedir de novo o que acabou de ser feito, e empurra para baixo o que
+        // interessa agora.
+        if (!_aparelhoRespondeu)
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
