@@ -677,7 +677,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           backgroundColor: const Color(0xFF17191D),
           foregroundColor: Colors.white,
           title: Text(
-            _revogando ? 'Tirar acesso' : 'Configurar aparelho',
+            _revogando
+                ? 'Tirar acesso'
+                : _apenasAcesso
+                ? 'Pegar acesso'
+                : 'Configurar aparelho',
           ),
         ),
         body: SafeArea(child: _concluido ? _sucesso() : _formulario()),
@@ -1229,10 +1233,13 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           _campo(
             controlador: _pin,
             rotulo: 'PIN do visor (4 números)',
+            // "no modo de configuracao" e verdade, mas e vocabulario do sistema
+            // — e soa estranho numa tela chamada "Pegar acesso", que diz que
+            // nada e configurado. Dizer QUANDO eles aparecem, na acao que a
+            // pessoa acabou de fazer, serve aos tres usos desta tela.
             dica:
                 _erroPin ??
-                'Aparecem no visor do aparelho no modo de '
-                    'configuração',
+                'Aparecem no visor depois que você segura os 3 botões',
             numerico: true,
             // Confirma em vez de disparar sozinho no 4o digito: a busca comecava
             // com o teclado ainda aberto por cima, sem nada dizendo que ja tinha
