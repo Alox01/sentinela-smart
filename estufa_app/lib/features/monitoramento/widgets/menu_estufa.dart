@@ -297,7 +297,7 @@ class DadosMenuEstufa {
   final double temperaturaNovaEstufada;
   final double umidadeNovaEstufada;
 
-  /// Esconde compartilhar e tirar acesso. Ver [escopoTcc].
+  /// Esconde o compartilhar por QR Code. A revogacao FICA — ver [escopoTcc].
   ///
   /// Vem por aqui, e não lido direto da constante, para o teste conseguir montar
   /// a gaveta nos dois escopos: `bool.fromEnvironment` é resolvido na

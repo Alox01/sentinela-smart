@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../escopo.dart';
 import '../../../services/api_service.dart';
 
 /// Configura a rede do aparelho pelo app, sem digitar endereco.
@@ -727,6 +728,15 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                         // Mesma frase da tela anterior, palavra por palavra: o
                         // produtor acabou de ler aquilo, e reescrever a mesma
                         // ideia com outras palavras faz procurar a diferenca.
+                        // Sem o compartilhamento na tela, mandar compartilhar
+                        // um QR Code manda fazer o que nao existe. Devolver o
+                        // acesso volta a ser o que sempre foi no escopo
+                        // reduzido: ir ate o aparelho.
+                        : escopoTcc
+                        ? 'Este celular continua com acesso — para devolver a '
+                              'alguém, ele vai até o aparelho e usa "pegar '
+                              'acesso". O comando pela internet volta quando o '
+                              'aparelho reconectar.'
                         : 'Este celular continua com acesso — para devolver a '
                               'alguém, é só compartilhar um QR Code novo. O '
                               'comando pela internet volta quando o aparelho '
@@ -1011,10 +1021,15 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            'Os celulares que receberam o QR Code desta estufa perdem o '
-            'controle. Este celular continua com acesso — para devolver a '
-            'alguém, é só compartilhar um QR Code novo. O Wi-Fi do aparelho '
-            'não muda.',
+            escopoTcc
+                ? 'Todos os outros celulares perdem o controle. Este continua '
+                      'com acesso — para devolver a alguém, ele vai até o '
+                      'aparelho e usa "pegar acesso". O Wi-Fi do aparelho não '
+                      'muda.'
+                : 'Os celulares que receberam o QR Code desta estufa perdem o '
+                      'controle. Este celular continua com acesso — para '
+                      'devolver a alguém, é só compartilhar um QR Code novo. O '
+                      'Wi-Fi do aparelho não muda.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
           SizedBox(height: 10),

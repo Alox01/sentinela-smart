@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../escopo.dart';
 import '../features/home/models/convite_estufa.dart';
 import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
@@ -49,6 +50,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // caminho inteiro: o mesmo formulario, a mesma recarga da lista e o mesmo
     // aviso de "Estufa cadastrada" do botao "Adicionar estufa". Um convite que
     // chega pelo QR nao deveria terminar diferente de um digitado a mao.
+    // No escopo do TCC o app nao GERA convite, e tambem nao RECEBE. Ouvir o
+    // link ali seria uma porta que a versao apresentada nao consegue abrir mas
+    // aceita que abram por ela: um QR guardado de antes ainda cadastraria a
+    // estufa com a chave, e "so comanda quem esteve na frente do aparelho"
+    // deixaria de valer justamente na versao em que essa frase e defendida.
+    if (escopoTcc) return _buildHome(context);
     return OuvinteConviteLink(
       aoReceber: (convite) => _abrirFormularioEstufa(convite: convite),
       child: _buildHome(context),
