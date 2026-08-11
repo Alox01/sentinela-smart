@@ -32,5 +32,13 @@
 /// tiver acesso?" — sem ele, a pergunta ficaria sem resposta justamente na
 /// versão apresentada.
 ///
+/// Sai também **a linha de diagnóstico da revogação** — aquela com o código HTTP
+/// e a marca da chave. Ela é ferramenta de suporte, e numa apresentação vira
+/// ruído técnico embaixo da única ação da tela. Quem depura usa o APK completo.
+///
+/// E o app deixa de **receber** convite por link: no escopo reduzido ele não
+/// gera QR Code, e continuar ouvindo o esquema seria manter aberta uma porta que
+/// esta versão não consegue abrir mas aceitaria que abrissem por ela.
+///
 /// Nada é apagado: no APK de desenvolvimento continua tudo lá.
 const bool escopoTcc = bool.fromEnvironment('ESCOPO_TCC');

@@ -811,7 +811,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           // Ja se pagou: foi ela que provou que a chave chegava certa ao app, e
           // mandou procurar o defeito onde ele estava — na lista da home
           // segurando a chave velha em memoria.
-          if (_diagnosticoRevogacao != null) ...[
+          //
+          // Fora do escopo do TCC: e ferramenta de suporte, e numa apresentacao
+          // vira ruido tecnico embaixo da unica acao da tela. O valor dela e
+          // para quem esta depurando, e quem depura usa o APK completo.
+          if (!escopoTcc && _diagnosticoRevogacao != null) ...[
             const SizedBox(height: 10),
             SelectableText(
               _diagnosticoRevogacao!,
