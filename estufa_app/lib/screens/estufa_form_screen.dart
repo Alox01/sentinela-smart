@@ -610,7 +610,9 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Aparelho já configurado: pegar acesso',
+                    // Verbo na frente: e uma acao, e o produtor le a primeira
+                    // palavra para decidir se e aqui que ele toca.
+                    'Pegar acesso do aparelho já configurado',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -619,8 +621,13 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Para outro celular da casa. Vá até o aparelho, digite o PIN '
-                    'do visor e ele passa a comandar. Nada muda no aparelho.',
+                    // "Recebe", e nao "compartilha": quem toca aqui e o celular
+                    // que VAI GANHAR o acesso, nao o que ja tem. Escrito do
+                    // outro lado, mandaria a pessoa procurar a tela no celular
+                    // errado — e "compartilhar" ainda sugeriria que o outro
+                    // celular precisa fazer algo, quando ele nem fica sabendo.
+                    'Recebe acesso para comandar, com o PIN que aparece no '
+                    'visor do aparelho.',
                     style: TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ],
