@@ -141,18 +141,22 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            'Este celular vai passar a comandar a estufa. Os que já tinham '
-            'acesso continuam com ele.',
+            'Este celular vai passar a comandar o aparelho também.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
           SizedBox(height: 8),
           // O aparelho NAO reinicia neste modo — nada foi gravado nele. Entao
           // ele fica no modo de configuracao, com o PIN no visor, ate alguem
           // tirar. Sem esta linha, parece que travou.
+          //
+          // "2 segundos" e o firmware espera 1,5: numero quebrado nao se manda
+          // para quem esta contando na cabeca, e arredondar PARA CIMA sempre
+          // funciona — quem segura 2 ja passou de 1,5. Para baixo e que seria
+          // erro, porque a pessoa soltaria antes da hora.
           Text(
-            'Depois de tocar abaixo, o aparelho continua no modo de '
-            'configuração: segure qualquer botão por 1,5 s para ele voltar ao '
-            'normal (ou espere 5 minutos).',
+            'Depois de tocar o botão abaixo, o aparelho continua no modo de '
+            'configuração: segure qualquer botão por 2 segundos para ele voltar '
+            'ao normal (ou espere 5 minutos).',
             style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
           ),
         ],
@@ -1274,7 +1278,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: const Text('Usar esta estufa neste celular'),
+              child: const Text('Pegar acesso'),
             ),
           ),
         ] else if (_aparelhoRespondeu && _revogando) ...[
