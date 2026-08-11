@@ -1151,17 +1151,23 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           // fica nos dois casos porque, alem do endereco, ele e a confirmacao de
           // que o celular esta MESMO na rede do aparelho - se o nome aparece, a
           // conversa funciona.
+          // Nao se fala mais em roteador nem em IP aqui. Aquela frase existia
+          // para justificar por que o endereco e um NOME e nao um numero — uma
+          // decisao que o produtor nunca teve de tomar, porque ele nunca digitou
+          // numero nenhum: o app preenche sozinho. Era resposta para uma
+          // pergunta que ele nao faz, no meio de uma tela em que ele esta
+          // tentando fazer outra coisa.
+          //
+          // No lugar, cada modo diz o que aquele cartao significa ALI.
           Text(
             widget.uso == null
-                ? 'Cadastre no campo de endereço da estufa. Ele continua '
-                      'valendo mesmo que o roteador troque o IP.'
+                ? 'Cadastre este endereço no app. É o nome deste aparelho na '
+                      'rede, e ele não muda.'
                 : _revogando
-                // Aqui o endereco nao vai para lugar nenhum: a estufa ja existe.
-                // O cartao fica so como prova de que o celular esta MESMO na
-                // rede do aparelho — se o nome aparece, a conversa funciona.
                 ? 'É este o aparelho cuja chave vai ser trocada.'
-                : 'Vai junto para o cadastro. Ele continua valendo mesmo que '
-                      'o roteador troque o IP.',
+                : _apenasAcesso
+                ? 'É este o aparelho que este celular vai passar a comandar.'
+                : 'Vai junto para o cadastro — você não precisa digitar.',
             style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
         ],
