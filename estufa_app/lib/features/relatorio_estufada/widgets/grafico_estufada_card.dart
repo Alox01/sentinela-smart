@@ -305,21 +305,66 @@ class _CabecalhoGrafico extends StatelessWidget {
           const SizedBox(height: 10),
           Center(child: seletor),
           const SizedBox(height: 8),
+          const _LegendaDoGrafico(),
+          const SizedBox(height: 6),
           const _DicaRolagemGrafico(),
         ],
       );
     }
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: Text(
-            'GRÁFICO DA ESTUFADA',
-            style: tituloSecaoStyle,
-            textAlign: TextAlign.center,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'GRÁFICO DA ESTUFADA',
+                style: tituloSecaoStyle,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            seletor,
+          ],
+        ),
+        const SizedBox(height: 6),
+        // A legenda vale nos dois tamanhos: a duvida sobre o tracejado nao
+        // depende da largura da tela.
+        const _LegendaDoGrafico(),
+      ],
+    );
+  }
+}
+
+/// Diz o que e a linha tracejada.
+///
+/// Sem isto, o cinza pontilhado ao lado da leitura nao se explica: quem nao
+/// construiu o app nao tem como saber que aquilo e o ajuste, e um gráfico com
+/// duas linhas sem legenda convida a interpretar a errada. O balao de toque ja
+/// mostrava "Leitura" e "Ajuste", mas so depois de tocar — e ninguem toca no que
+/// nao entende.
+class _LegendaDoGrafico extends StatelessWidget {
+  const _LegendaDoGrafico();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Dois tracinhos, e nao uma linha inteira: o simbolo tem de PARECER o
+        // que esta no grafico, senao a legenda vira mais uma coisa a decifrar.
+        for (var i = 0; i < 2; i++) ...[
+          Container(width: 7, height: 1.5, color: Colors.white38),
+          const SizedBox(width: 3),
+        ],
+        const SizedBox(width: 3),
+        const Text(
+          'linha tracejada = ajuste programado',
+          style: TextStyle(
+            color: Colors.white38,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        seletor,
       ],
     );
   }
