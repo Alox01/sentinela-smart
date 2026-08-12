@@ -114,7 +114,11 @@ class MenuEstufa extends StatelessWidget {
                 color: Colors.white70,
               ),
               title: const Text(
-                'Configurar aparelho',
+                // "Re-" porque aqui o aparelho JA esta configurado e
+                // reportando: a primeira vez tem lugar proprio, no "Adicionar
+                // estufa". E o prefixo avisa que se vai mexer no que funciona —
+                // quem entrou por engano le a palavra e pensa duas vezes.
+                'Reconfigurar aparelho',
                 style: TextStyle(color: Colors.white),
               ),
               subtitle: const Text(

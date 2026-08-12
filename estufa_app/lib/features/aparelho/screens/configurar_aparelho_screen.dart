@@ -685,6 +685,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 ? 'Tirar acesso'
                 : _apenasAcesso
                 ? 'Pegar acesso'
+                : widget.uso == UsoDaConfiguracao.atualizacao
+                // Vindo do menu da estufa, o aparelho ja esta configurado: o que
+                // se faz aqui e trocar o que ja existe.
+                ? 'Reconfigurar aparelho'
                 : 'Configurar aparelho',
           ),
         ),

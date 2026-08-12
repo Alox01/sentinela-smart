@@ -95,7 +95,7 @@ void main() {
         'divisor',
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
-        'item: Configurar aparelho',
+        'item: Reconfigurar aparelho',
         'item: Compartilhar acesso',
         'item: Tirar acesso dos outros celulares',
         'divisor',
@@ -129,7 +129,7 @@ void main() {
         'divisor',
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
-        'item: Configurar aparelho',
+        'item: Reconfigurar aparelho',
         'item: Compartilhar acesso',
         'item: Tirar acesso dos outros celulares',
         'divisor',
@@ -162,7 +162,7 @@ void main() {
         'divisor',
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
-        'item: Configurar aparelho',
+        'item: Reconfigurar aparelho',
         'item: Compartilhar acesso',
         'item: Tirar acesso dos outros celulares',
         'divisor',
@@ -199,7 +199,7 @@ void main() {
     // O resto da gaveta fica inteiro — a marca esconde dois itens, não muda a
     // tela.
     expect(inventario, contains('item: Detalhes da conexão'));
-    expect(inventario, contains('item: Configurar aparelho'));
+    expect(inventario, contains('item: Reconfigurar aparelho'));
     expect(inventario, contains('item: Silenciar avisos'));
     expect(inventario, contains('item: Reiniciar ajustes do aparelho'));
     expect(inventario.where((l) => l.startsWith('seção: ')).length, 3);
@@ -228,7 +228,7 @@ void main() {
       }
 
       expect(secaoDe('item: Detalhes da conexão'), 'seção: CONEXÃO');
-      expect(secaoDe('item: Configurar aparelho'), 'seção: CONEXÃO');
+      expect(secaoDe('item: Reconfigurar aparelho'), 'seção: CONEXÃO');
 
       expect(secaoDe('item: Silenciar avisos'), 'seção: AVISOS');
       expect(secaoDe('item: Sirene do aparelho'), 'seção: AVISOS');
