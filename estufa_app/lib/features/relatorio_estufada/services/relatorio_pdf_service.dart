@@ -26,7 +26,15 @@ class RelatorioPdfService {
     final inicio = leituras.first.timestamp;
     final fim = leituras.last.timestamp;
     final duracao = fim.difference(inicio);
-    final totalAlarmes = leituras.where((e) => e.alertaIncendio).length;
+    // Mesma conta da tela: EPISODIOS de alarme, e nao leituras gravadas com a
+    // sirene ligada. O PDF e o que sai da propriedade — divergir da tela aqui
+    // seria dois numeros para a mesma estufada, e o impresso ganharia a
+    // discussao por estar no papel.
+    final totalAlarmes = eventos
+        .where(
+          (e) => e.tipo == 'alarme_processo' || e.tipo == 'alerta_incendio',
+        )
+        .length;
 
     doc.addPage(
       pw.MultiPage(

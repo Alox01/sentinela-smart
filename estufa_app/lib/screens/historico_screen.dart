@@ -410,8 +410,30 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
               final temperaturaAjusteFinal = ultimaLeitura.temperaturaMeta;
               final umidadeAjusteInicial = primeiraLeitura.umidadeMeta;
               final umidadeAjusteFinal = ultimaLeitura.umidadeMeta;
-              final totalAlarmes = leituras
-                  .where((e) => e.alertaIncendio)
+              // Conta EPISODIOS, e nao leituras.
+              //
+              // Antes era `leituras.where((e) => e.alertaIncendio)`, o que dava
+              // o numero de LEITURAS gravadas com a sirene ligada — o campo,
+              // apesar do nome, guarda `alarmeAtivo`, que e temperatura ou fogo.
+              // "ALARMES: 17" nao eram 17 alarmes: era duracao disfarcada de
+              // contagem, numa unidade que ninguem adivinha (leituras, cuja
+              // cadencia depende de afinamento e de fonte).
+              //
+              // Os eventos ja registram a BORDA — `alarme_processo` e
+              // `alerta_incendio` nascem quando a sirene liga, uma vez por
+              // episodio. E o numero passa a bater com o que o produtor consegue
+              // contar a mao na lista logo abaixo, que e a unica conferencia que
+              // ele tem.
+              //
+              // Oscilacao NAO entra: ela e desvio detectado pelo app, e a sirene
+              // tem margem e janela de acomodacao. Uma estufada pode ter varias
+              // oscilacoes e nenhum alarme — e ai zero e a resposta certa.
+              final totalAlarmes = _aplicarFiltroEventos(_eventos)
+                  .where(
+                    (e) =>
+                        e.tipo == 'alarme_processo' ||
+                        e.tipo == 'alerta_incendio',
+                  )
                   .length;
               _adiarExibicaoGrafico();
 
