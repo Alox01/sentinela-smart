@@ -751,7 +751,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                               'reconectar.')
                   : 'O aparelho está reiniciando e vai entrar na rede nova. '
                         'A rede "Sentinela-Config" vai sumir — reconecte o '
-                        'celular no Wi-Fi de sempre.',
+                        'celular no Wi-Fi da propriedade.',
               style: const TextStyle(color: Colors.white54, fontSize: 13),
               textAlign: TextAlign.center,
             ),
@@ -836,7 +836,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           // confere antes de seguir, o aviso passa a ser sobre a ORDEM: trocar
           // de Wi-Fi primeiro, apertar depois.
           const Text(
-            'Reconecte o celular no Wi-Fi de sempre antes de continuar — '
+            'Reconecte o celular no Wi-Fi da propriedade antes de continuar — '
             'o endereço só responde quando os dois estão na mesma rede.',
             style: TextStyle(color: Colors.white38, fontSize: 12),
             textAlign: TextAlign.center,
