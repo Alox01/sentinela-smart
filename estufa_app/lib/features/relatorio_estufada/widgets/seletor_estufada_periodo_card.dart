@@ -84,11 +84,9 @@ class SeletorEstufadaPeriodoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          RotuloEstufada(
             textoSelecionado,
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            estilo: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
           const SizedBox(height: 12),
           _FiltroPeriodo(
@@ -291,7 +289,37 @@ class _OpcaoEstufada extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('Estufada $rotulo', overflow: TextOverflow.ellipsis);
+    return RotuloEstufada('Estufada $rotulo');
+  }
+}
+
+/// Rótulo de estufada que cabe inteiro, em até duas linhas.
+///
+/// O rótulo tem nome, data, hora e "em andamento" — quase sempre mais do que
+/// cabe numa linha de celular, e o que sobrava era justamente o fim: onde está a
+/// informação que distingue uma estufada da outra. Cortado, o produtor escolhia
+/// entre duas linhas iguais.
+///
+/// Duas linhas, e não o balão de toque que a barra do monitoramento usa: lá a
+/// altura é fixa e não há para onde crescer, e aqui há. Além disso os dois
+/// lugares onde isto aparece JÁ respondem ao toque — um abre a lista, o outro
+/// seleciona a estufada —, e um balão brigaria com o gesto que já existe.
+class RotuloEstufada extends StatelessWidget {
+  final String texto;
+  final TextStyle? estilo;
+
+  const RotuloEstufada(this.texto, {super.key, this.estilo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      texto,
+      style: estilo,
+      maxLines: 2,
+      // A reticência continua como rede de segurança: nome de estufa longo com
+      // data ainda pode passar de duas linhas, e transbordar quebra o layout.
+      overflow: TextOverflow.ellipsis,
+    );
   }
 }
 
