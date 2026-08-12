@@ -32,6 +32,12 @@
 /// tiver acesso?" — sem ele, a pergunta ficaria sem resposta justamente na
 /// versão apresentada.
 ///
+/// Sai também o **agendamento de ajuste** — "às 14h deixe em 120 °F" é automação
+/// de curva, e nenhum dos cinco objetivos declarados fala nisso: monitorar,
+/// controlar, sincronizar, registrar e alertar. Some o item do menu e a
+/// preferência de som do lembrete, porque um aviso que nunca toca não precisa de
+/// interruptor.
+///
 /// Sai também **a linha de diagnóstico da revogação** — aquela com o código HTTP
 /// e a marca da chave. Ela é ferramenta de suporte, e numa apresentação vira
 /// ruído técnico embaixo da única ação da tela. Quem depura usa o APK completo.

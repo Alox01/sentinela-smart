@@ -194,12 +194,14 @@ void main() {
 
     expect(inventario, isNot(contains('item: Compartilhar acesso')));
     expect(inventario, contains('item: Tirar acesso dos outros celulares'));
+    // Agendamento tambem sai: e automacao de curva, fora dos cinco objetivos.
+    expect(inventario, isNot(contains('item: Agendar ajuste')));
     // O resto da gaveta fica inteiro — a marca esconde dois itens, não muda a
     // tela.
     expect(inventario, contains('item: Detalhes da conexão'));
     expect(inventario, contains('item: Configurar aparelho'));
     expect(inventario, contains('item: Silenciar avisos'));
-    expect(inventario, contains('item: Agendar ajuste'));
+    expect(inventario, contains('item: Reiniciar ajustes do aparelho'));
     expect(inventario.where((l) => l.startsWith('seção: ')).length, 3);
   });
 

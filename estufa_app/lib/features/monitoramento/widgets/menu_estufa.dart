@@ -190,6 +190,12 @@ class MenuEstufa extends StatelessWidget {
             ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
             const Divider(color: Colors.white12, height: 1),
             const TituloMenu('AÇÕES RÁPIDAS'),
+            // Agendamento sai no escopo do TCC: "às 14h deixe em 120 °F" é
+            // automação de curva, e nenhum dos cinco objetivos declarados fala
+            // nisso — monitorar, controlar, sincronizar, registrar e alertar.
+            // Sai junto a preferência de som dele na tela de notificações; um
+            // lembrete que não existe não precisa de interruptor.
+            if (!dados.escopoReduzido)
             ListTile(
               leading: const Icon(
                 Icons.alarm_add_outlined,

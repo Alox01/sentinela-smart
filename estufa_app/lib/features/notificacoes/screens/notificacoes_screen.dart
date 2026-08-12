@@ -1,3 +1,4 @@
+import '../../../escopo.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -287,7 +288,12 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (_ehAndroid && _modoDeSom != 'normal') _cartaoModoDeSom(),
-                for (final evento in EventoNotificacao.values)
+                // Sem o agendamento no escopo do TCC, o lembrete dele nunca
+                // toca — e um interruptor para um aviso que nao existe so
+                // confunde. Ver `escopo.dart`.
+                for (final evento in EventoNotificacao.values.where(
+                  (e) => !escopoTcc || e != EventoNotificacao.ajusteAgendado,
+                ))
                   _CartaoEvento(
                     evento: evento,
                     opcao: prefs.opcao(evento),
