@@ -745,14 +745,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                         // acesso volta a ser o que sempre foi no escopo
                         // reduzido: ir ate o aparelho.
                         : escopoTcc
-                        ? 'Este celular continua com acesso — para devolver a '
-                              'alguém, ele vai até o aparelho e usa "pegar '
-                              'acesso". O comando pela internet volta quando o '
-                              'aparelho reconectar.'
-                        : 'Este celular continua com acesso — para devolver a '
-                              'alguém, é só compartilhar um QR Code novo. O '
-                              'comando pela internet volta quando o aparelho '
-                              'reconectar.')
+                        ? 'Este celular continua com acesso — para devolver '
+                              'para outro celular, ele vai até o aparelho e '
+                              'usa "pegar acesso" no app. O comando pela '
+                              'internet volta quando o aparelho reconectar.'
+                        : 'Este celular continua com acesso — para devolver '
+                              'para outro celular, é só compartilhar um QR '
+                              'Code novo. O comando pela internet volta quando '
+                              'o aparelho reconectar.')
                   : 'O aparelho está reiniciando e vai entrar na rede nova. '
                         'A rede "Sentinela-Config" vai sumir — reconecte o '
                         'celular no Wi-Fi da propriedade.',
@@ -1039,19 +1039,19 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           Text(
             escopoTcc
                 ? 'Todos os outros celulares perdem o controle. Este continua '
-                      'com acesso — para devolver a alguém, ele vai até o '
-                      'aparelho e usa "pegar acesso". O Wi-Fi do aparelho não '
-                      'muda.'
+                      'com acesso — para devolver para outro celular, ele vai '
+                      'até o aparelho e usa "pegar acesso" no app. O Wi-Fi do '
+                      'aparelho não muda.'
                 : 'Os celulares que receberam o QR Code desta estufa perdem o '
                       'controle. Este celular continua com acesso — para '
-                      'devolver a alguém, é só compartilhar um QR Code novo. O '
-                      'Wi-Fi do aparelho não muda.',
+                      'devolver para outro celular, é só compartilhar um QR '
+                      'Code novo. O Wi-Fi do aparelho não muda.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
           SizedBox(height: 10),
           Text(
-            'As estufadas e os relatórios continuam onde estão — o que muda é '
-            'só quem pode comandar.',
+            'As estufadas e relatórios não somem — o que muda é só quem pode '
+            'comandar.',
             style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
           ),
         ],
