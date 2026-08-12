@@ -180,6 +180,34 @@ funciona:
   trocar o monitor, o card da home ainda segura a instância pausada, e é a
   recarga da lista que o devolve ao ar.
 
+### 2.5 Aberto — achado em campo (12/08/2026)
+
+- [ ] **D2. O gráfico da estufada amassa tudo quando a secagem passa de um dia.**
+  Visto no relatório de uma estufada de ~26h: leituras e pontos grudados,
+  ilegíveis. O produtor perguntou se não seria o caso de recortar em 24h.
+
+  *A causa não é o intervalo, é um teto.* `_larguraGraficoMobile()`
+  (`grafico_estufada_card.dart`) calcula **120px a cada 10 minutos** — densidade
+  correta — e termina em `largura.clamp(760.0, 1800.0)`. A estufada de 26h pede
+  18.840px e recebe 1.800: dez vezes mais apertada do que a própria fórmula
+  pediu. Estufada curta não encosta no teto, e por isso o defeito só aparece nas
+  longas.
+
+  *Por que não recortar em 24h.* O relatório é a peça que mostra a curva
+  inteira, e a estufada dura dias; recortar esconderia a maior parte do que
+  aconteceu para resolver um problema que é de densidade, não de intervalo.
+
+  *Correção em duas etapas:*
+
+  1. **O teto.** Levantar não basta sozinho: 7 dias na densidade atual dariam
+     ~120.000px de widget. Densidade adaptativa — 120px/10min nas curtas,
+     densidade por hora nas longas, com teto sadio.
+  2. **Zoom nativo.** O `fl_chart` 1.1.1 já traz `FlTransformationConfig` com
+     `FlScaleAxis.horizontal`: pinça para aproximar, arraste para andar. Exige
+     tirar o `_GraficoRolavelMobile` — um `SingleChildScrollView` horizontal
+     rouba o arraste da pinça —, o que **remove** código em vez de somar. Assim
+     quem escolhe a densidade é o produtor, não um número chutado aqui.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
