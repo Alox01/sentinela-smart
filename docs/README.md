@@ -64,11 +64,7 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 - **`DEMO.md`** — roteiro de demonstração.
 - **`NUVEM_POR_APARELHO.md`** — como um aparelho vira estado na nuvem.
 
-## Uma ressalva sobre datas
-
-Vários destes documentos guardam decisões **com a data e o motivo**, inclusive
-as que foram revertidas depois. Isso é de propósito: o raciocínio descartado
-explica por que o de hoje é como é, e evita refazer a discussão daqui a um mês.
+## Quando o documento e o código divergem
 
 Quando um documento contradiz o código, **o código está certo** — e o documento
 virou dívida. Corrija-o no mesmo commit.
