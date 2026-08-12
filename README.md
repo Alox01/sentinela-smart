@@ -8,7 +8,8 @@ A cura do fumo leva dias e não pode parar. A temperatura sai da faixa de
 madrugada, e quem percebe tarde tira da estufa um fumo de qualidade pior, que
 vale menos na hora de vender. Perder a estufada inteira é raro, mas acontece:
 umidade demais cozinha o fumo, e incêndio no fim do ciclo não perdoa. O sistema
-existe para que o produtor não precise dormir na estufa.
+existe para que o produtor não precise levantar de hora em hora para conferir —
+esteja ele dormindo perto da estufa ou em casa.
 
 Quem decide a curva de secagem é o produtor. O aparelho não escolhe temperatura:
 ele executa o ajuste que recebeu, e faz isso sozinho quando a rede cai.
