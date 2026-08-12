@@ -80,6 +80,11 @@ App: `flutter test` dentro de `estufa_app`.
   em documentos antigos (`v1.16.0`, `v1.18.0`, `v1.24.0`…) são da numeração de
   bancada, listada em `HISTORICO_FIRMWARE.md`, e não existem mais como alvo de
   gravação.
+- **Umidade não vira evento no relatório** (11/08/2026). Ela continua sendo
+  medida, guardada e desenhada no gráfico, que tem aba própria — mas "umidade
+  abaixo do ajuste" se repetia a estufada inteira e empurrava para fora da tela o
+  que diz alguma coisa: alarme, mudança de ajuste, queda de conexão. Numa estufa
+  de secagem, ficar muito abaixo do ajuste **é o objetivo do processo**.
 - **Umidade nunca dispara alarme.** Só temperatura e fogo. Isso vale também na
   **aparência**: no relatório da estufada a umidade sai como `registro`, em
   cinza, e não com a marca vermelha de quem acionou alarme. Ela chegou a sair

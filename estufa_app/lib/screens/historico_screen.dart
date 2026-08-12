@@ -806,7 +806,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   List<EventoCicloEntity> _aplicarFiltroEventos(
     List<EventoCicloEntity> eventos,
   ) {
-    var filtrados = eventos;
+    // Umidade fora do ajuste nao e evento de relatorio: numa estufa de secagem
+    // ficar muito abaixo e o objetivo do processo, e a linha se repetia a
+    // estufada inteira, empurrando para fora da tela o que diz alguma coisa. O
+    // app parou de gravar essas linhas em 11/08/2026 — o filtro aqui e para as
+    // estufadas que ja tinham as suas guardadas.
+    var filtrados = eventos
+        .where((e) => !e.tipo.startsWith('oscilacao_umidade'))
+        .toList();
 
     if (_inicioFiltro != null) {
       filtrados = filtrados

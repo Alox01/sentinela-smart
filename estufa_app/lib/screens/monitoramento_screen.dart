@@ -960,22 +960,20 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         alertaIncendioAtual: alertaIncendioAtual,
       );
     }
-    final eventoUmid = _detectorOscilacao.avaliarUmidade(
+    // A umidade continua sendo AVALIADA — o detector guarda o estado dela, e a
+    // folga da acomodacao alimenta o limiar do LED —, mas o evento e descartado.
+    //
+    // Ela nao vira linha no relatorio por decisao do produtor (11/08/2026): numa
+    // estufa de secagem a umidade ficar muito abaixo do ajuste e o OBJETIVO do
+    // processo, entao "umidade abaixo do ajuste" se repetia a estufada inteira,
+    // empurrando para fora da tela os eventos que dizem alguma coisa — alarme,
+    // mudanca de ajuste, queda de conexao. O comportamento da umidade continua
+    // visivel onde ele se le melhor: no proprio grafico, que tem aba propria.
+    _detectorOscilacao.avaliarUmidade(
       leitura: umidadeAtual,
       ajuste: umidadeAjusteAtual,
       nowMs: agoraOscMs,
     );
-    if (eventoUmid != null) {
-      _registrarEventoOscilacao(
-        eventoUmid,
-        temperaturaAtual: temperaturaAtual,
-        umidadeAtual: umidadeAtual,
-        temperaturaAjusteAtual: temperaturaAjusteAtual,
-        umidadeAjusteAtual: umidadeAjusteAtual,
-        avisoAtual: avisoAtual,
-        alertaIncendioAtual: alertaIncendioAtual,
-      );
-    }
   }
 
   void _registrarEventoOscilacao(
