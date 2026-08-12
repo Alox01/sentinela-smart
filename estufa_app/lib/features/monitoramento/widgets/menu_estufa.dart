@@ -138,8 +138,7 @@ class MenuEstufa extends StatelessWidget {
             // sem discussao quando a gaveta foi extraida. Nao e assunto de
             // aviso: os dois decidem QUEM COMANDA a estufa, que e do que esta
             // secao trata. E ficam juntos porque um desfaz o outro.
-            // So o compartilhamento sai no escopo do TCC. A revogacao FICA, e a
-            // primeira versao disto tirava os dois — engano meu.
+            // So o compartilhamento sai no escopo do TCC; a revogacao FICA.
             //
             // O que contradiz "so comanda quem esteve na frente do aparelho" e o
             // QR Code, que faz o acesso atravessar a cidade. A revogacao exige os

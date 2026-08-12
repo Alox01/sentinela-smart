@@ -25,9 +25,9 @@
 /// é "para comandar, é preciso ter estado na frente do aparelho"; no instante em
 /// que existe um QR que atravessa a cidade, ela deixa de valer sem exceção.
 ///
-/// **"Tirar acesso dos outros celulares" FICA**, e a primeira versão disto o
-/// tirava junto — engano. Ele exige os três botões e o PIN, ou seja, presença
-/// física: é a outra metade da mesma regra, e não a contradiz em nada. É também
+/// **"Tirar acesso dos outros celulares" FICA.** Ele exige os três botões e o
+/// PIN, ou seja, presença física: é a outra metade da mesma regra, e não a
+/// contradiz em nada. É também
 /// a resposta para "e se o senhor vender o aparelho, ou alguém que não deveria
 /// tiver acesso?" — sem ele, a pergunta ficaria sem resposta justamente na
 /// versão apresentada.
