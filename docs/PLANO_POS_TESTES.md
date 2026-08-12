@@ -1,8 +1,63 @@
 # Plano depois dos testes de campo
 
-> Escrito em 25/07/2026, atualizado em 29/07/2026. App e servidor no ar, e o
-> firmware **1.18.0 gravado** no aparelho. A ordem abaixo pressupõe que os testes de
+> Escrito em 25/07/2026, atualizado em 11/08/2026. App e servidor no ar, e o
+> firmware **1.0 gravado** no aparelho. A ordem abaixo pressupõe que os testes de
 > campo aconteçam primeiro — vários itens só fazem sentido depois deles.
+>
+> **A matriz de evidências está logo abaixo** e é o que vira a seção de
+> resultados do TCC. O resto deste documento é o histórico de como se chegou até
+> ela.
+
+## Matriz de evidências
+
+A distinção que organiza tudo: **implementado** não é **validado**. Código
+funcionando e teste automatizado provam qualidade técnica; a seção de resultados
+precisa de uso real, com data, resultado e limitação declarada.
+
+Preencher conforme testar. O que estiver em branco fica em branco — resultado
+ausente declarado vale mais que resultado inventado.
+
+| # | O que provar | Data | Resultado | Limitação declarada |
+|---|---|---|---|---|
+| 1 | **Operação local com a internet desligada** — comandar e ler com o roteador sem link | | | |
+| 2 | **Comandos acumulados e sincronização** — dar ordens offline e ver a fila esvaziar ao reconectar | | | |
+| 3 | **Acesso remoto** — comandar de fora da propriedade, pela nuvem | | | |
+| 4 | **Pareamento e revogação com dois celulares** | 05/08/2026 | **Aprovado.** O segundo celular ganhou acesso pelo QR, perdeu na revogação e recuperou com QR novo; o principal nunca perdeu | Atraso de alguns segundos até o segundo celular aceitar comando; causa não determinada entre duas hipóteses (ver seção da revogação) |
+| 5 | **Alertas com o app aberto e fechado** | 25/07/2026 | **Aprovado** — testes de notificação concluídos, acharam dois defeitos que teste automatizado não pegaria | Canais do Android congelam na criação: mudar som exige incrementar o sufixo do id |
+| 6 | **Uma estufada completa** — relatório, eventos, gráfico, PDF e CSV de uma cura inteira | | | |
+| 7 | **Registro de cada teste** com data, resultado, prints e limitações | | | |
+
+### O que já está provado por partes
+
+Não substitui os sete acima, mas conta como evidência de apoio:
+
+- **Gráfico da estufada** (05/08) — desenhava vazio para estufada encerrada há
+  mais de uma hora; corrigido e coberto por 4 testes que contam os pontos.
+- **Contagem de alarmes** (11/08) — contava leituras, não episódios; agora bate
+  com o que o produtor conta a mão na lista de eventos.
+- **Modo de configuração** (04-05/08) — três botões com retorno visual, PIN
+  exigido também para gravar, saída pelo botão.
+- **Firmware** — compilação real no CI a cada push, core esp32 3.2.0, 86% do
+  flash.
+- **Testes automatizados** — 154 no app, 213 no servidor. Provam robustez do
+  software; **não** provam utilidade da solução, que é o que os sete itens acima
+  fazem.
+
+### Como escrever cada um no TCC
+
+Três frases: **o que foi feito**, **o que aconteceu**, **o que ficou de fora**.
+A terceira é a que dá credibilidade — resultado sem limitação declarada é o que
+a banca cutuca primeiro.
+
+Duas formulações que valem copiar, porque são exatas:
+
+- **iOS:** "previsto e configurado, não validado por falta de hardware Apple".
+  Não dizer "compatível porque é Flutter": o app depende de `GoogleService-Info.plist`,
+  chave APNs e das permissões de rede local no `Info.plist` — sem estas o iOS
+  **bloqueia mDNS**, e a metade edge-first para de existir. O que já foi feito
+  está em `IOS.md`.
+- **Simulador:** "reproduz o mesmo contrato de comunicação e o comportamento
+  lógico do ESP32, não toda a física de uma estufa real".
 
 ## Por que testar antes de continuar
 
