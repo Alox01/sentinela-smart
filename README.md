@@ -1,12 +1,17 @@
 # Sentinela Smart
 
-Monitoramento e controle de estufas de secagem de fumo, com o aparelho decidindo
-sozinho e o celular acompanhando de perto ou de longe.
+Monitoramento e controle de estufas de secagem de fumo. O aparelho mede, alarma e
+obedece aos botões sem depender de rede; o celular acompanha de perto ou de
+longe.
 
 A cura do fumo leva dias e não pode parar. A temperatura sai da faixa de
-madrugada, e quem percebe tarde perde a estufada inteira — ou pior, não percebe o
-princípio de incêndio. O sistema existe para que o produtor não precise dormir na
-estufa.
+madrugada, e quem percebe tarde tira da estufa um fumo de qualidade pior, que
+vale menos na hora de vender. Perder a estufada inteira é raro, mas acontece:
+umidade demais cozinha o fumo, e incêndio no fim do ciclo não perdoa. O sistema
+existe para que o produtor não precise dormir na estufa.
+
+Quem decide a curva de secagem é o produtor. O aparelho não escolhe temperatura:
+ele executa o ajuste que recebeu, e faz isso sozinho quando a rede cai.
 
 **Trabalho de Conclusão de Curso.** O sistema roda em uma propriedade real; os
 testes de campo estão registrados em [`docs/PLANO_POS_TESTES.md`](docs/PLANO_POS_TESTES.md),

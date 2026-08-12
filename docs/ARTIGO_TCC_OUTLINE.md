@@ -28,7 +28,9 @@ inventar dados; tudo aqui tem lastro no código ou nos documentos).
 ## 1. Introdução
 
 **Cobrir:** contexto da fumicultura no Sul do Brasil; a cura/secagem em estufa
-como etapa crítica (um erro de temperatura estraga a estufada inteira);
+como etapa crítica (um erro de temperatura derruba a qualidade do fumo curado e,
+com ela, o preço de venda; perder a estufada inteira é raro, e vem de umidade
+demais cozinhando o fumo ou de incêndio no fim do ciclo);
 realidade do produtor no interior — energia e internet instáveis; o gancho de
 que soluções 100% em nuvem falham exatamente onde o produtor mais precisa.
 

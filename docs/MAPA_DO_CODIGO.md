@@ -10,8 +10,10 @@ responder.
 
 ## As três partes, em uma frase cada
 
-- **Firmware (ESP32, C++/Arduino)** — decide sozinho. Lê os sensores, aciona o
-  alarme e obedece aos botões **sem depender de rede nenhuma**.
+- **Firmware (ESP32, C++/Arduino)** — funciona sozinho. Lê os sensores, aciona o
+  alarme e obedece aos botões **sem depender de rede nenhuma**. Não decide a
+  curva de secagem: quem escolhe a temperatura é o produtor, e o aparelho executa
+  o ajuste que recebeu.
 - **App (Flutter/Dart, Android)** — espelha o que o aparelho reporta e envia
   comandos. Guarda tudo localmente para funcionar offline.
 - **Servidor (Node.js/Express + PostgreSQL)** — guarda o histórico e leva comando
