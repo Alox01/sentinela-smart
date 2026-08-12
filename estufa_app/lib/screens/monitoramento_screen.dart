@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../features/monitoramento/credenciais_de_agora.dart';
 import '../features/monitoramento/tempo_decorrido.dart';
 import '../features/monitoramento/dialogs/detalhes_conexao_dialog.dart';
 import '../features/monitoramento/dialogs/monitoramento_confirm_dialogs.dart';
@@ -114,6 +115,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
 
   Timer? _debounceTemperatura;
   Timer? _debounceUmidade;
+  // Os dados da estufa que esta tela usa. Nascem da copia que o card entregou —
+  // para a tela abrir preenchida, sem esperar o banco — e sao corrigidos pela
+  // releitura logo em seguida. O banco vence: ver `credenciais_de_agora.dart`.
+  late String _ip;
+  late String? _token;
+  late String? _idHardware;
+  late String _nome;
   late EstufaMonitor _monitor;
   ApiService get api => _monitor.api;
   final MonitoramentoRepository _monitoramentoRepository =
@@ -122,11 +130,15 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   @override
   void initState() {
     super.initState();
+    _ip = widget.ipEstufa;
+    _token = widget.tokenAcesso;
+    _idHardware = widget.idHardware;
+    _nome = widget.nomeEstufa;
     _monitor = MonitorEstufas.instance.obter(
       idEstufa: widget.idEstufa,
-      ip: widget.ipEstufa,
-      token: widget.tokenAcesso,
-      idHardware: widget.idHardware,
+      ip: _ip,
+      token: _token,
+      idHardware: _idHardware,
     );
     unawaited(_carregarCicloAtual());
     unawaited(_atualizarPendencias());
@@ -142,7 +154,39 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // relatorios, esperando. Nada nelas depende daquela tela - o endereco esta
     // aqui desde sempre -, entao nao havia motivo para so entao comecar.
     RelatorioEstufadaRepository(IsarService.instance)
-        .precarregar(widget.ipEstufa);
+        .precarregar(_ip);
+    // Por ultimo, e sem segurar nada: confere no banco se a copia que esta tela
+    // recebeu ainda vale. E o que impede a chave revogada de sobreviver aqui.
+    unawaited(_revalidarComOBanco());
+  }
+
+  /// Relê a estufa no banco e troca o monitor quando o que chegou por copia
+  /// envelheceu — chave revogada, endereco editado, aparelho reidentificado.
+  ///
+  /// Sem isto, trocar a chave gravava no banco e nao nas copias em transito: o
+  /// registro comparava a chave velha com a velha, dizia "nao mudou" e reusava o
+  /// `ApiService` morto. Todo comando virava "Chave invalida" ate reiniciar o
+  /// app, inclusive na rede local com o aparelho ao lado.
+  Future<void> _revalidarComOBanco() async {
+    final atual = await credenciaisDeAgora(
+      idEstufa: widget.idEstufa,
+      ipEmUso: _ip,
+      tokenEmUso: _token,
+      idHardwareEmUso: _idHardware,
+      repositorio: EstufasRepository(IsarService.instance),
+    );
+    if (atual == null || !mounted) return;
+
+    _monitor.desassinar(_aoMudarLeitura);
+    setState(() {
+      _ip = atual.estufa.ip;
+      _token = atual.estufa.tokenAcesso;
+      _idHardware = atual.estufa.idHardware;
+      _nome = atual.estufa.nome;
+      _monitor = atual.monitor;
+    });
+    _monitor.assinar(_aoMudarLeitura);
+    _aoMudarLeitura();
   }
 
   @override
@@ -335,8 +379,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     _ultimoRegistroHistoricoMs = agoraMs;
     unawaited(
       _monitoramentoRepository.salvarLeitura(
-        ipEstufa: widget.ipEstufa,
-        nomeEstufa: widget.nomeEstufa,
+        ipEstufa: _ip,
+        nomeEstufa: _nome,
         temperatura: temperaturaAtual,
         umidade: umidadeAtual,
         temperaturaAjuste: temperaturaAjusteAtual,
@@ -360,7 +404,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       backgroundColor: corFundo,
       endDrawer: _buildMenuEstufa(),
       appBar: MonitoramentoAppBar(
-        nomeEstufa: widget.nomeEstufa,
+        nomeEstufa: _nome,
         // O aparelho parado pesa mais que o meio de leitura: de nada adianta
         // dizer "NUVEM" em azul quando os dados na tela sao antigos.
         modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
@@ -507,10 +551,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // ja cadastrado; ver `AtualizacaoDeEstufa`.
     final mudanca = AtualizacaoDeEstufa.entre(
       id: widget.idEstufa,
-      nome: widget.nomeEstufa,
-      enderecoAtual: widget.ipEstufa,
-      chaveAtual: widget.tokenAcesso,
-      idHardwareAtual: widget.idHardware ?? api.idHardware,
+      nome: _nome,
+      enderecoAtual: _ip,
+      chaveAtual: _token,
+      idHardwareAtual: _idHardware ?? api.idHardware,
       enderecoNovo: dados.endereco,
       chaveNova: dados.chave,
       idHardwareNovo: dados.idHardware,
@@ -542,13 +586,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   /// eram o convite a trocar dois `String?` de lugar sem o compilador reclamar.
   /// O porque da divisao esta em `menu_estufa.dart`.
   Widget _buildMenuEstufa() {
-    final idHw = widget.idHardware ?? api.idHardware;
+    final idHw = _idHardware ?? api.idHardware;
     return MenuEstufa(
       dados: DadosMenuEstufa(
         idEstufa: widget.idEstufa,
-        nomeEstufa: widget.nomeEstufa,
-        ipEstufa: widget.ipEstufa,
-        tokenAcesso: widget.tokenAcesso,
+        nomeEstufa: _nome,
+        ipEstufa: _ip,
+        tokenAcesso: _token,
         idHardware: idHw,
         temperaturaAjuste: tempAjuste,
         umidadeAjuste: umidAjuste,
@@ -664,11 +708,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   /// abrir a estufa passa a CONSERTAR uma inscricao que nao aconteceu, em vez de
   /// so relatar. Ate aqui o conserto dependia de reabrir o app inteiro.
   Future<void> _garantirVigilancia() async {
-    final id = (widget.idHardware ?? api.idHardware)?.trim();
+    final id = (_idHardware ?? api.idHardware)?.trim();
     if (id == null || id.isEmpty) return;
     await PushNotificationService.instance.atualizarPreferenciasDispositivo(
       idHardware: id,
-      tokenAcesso: widget.tokenAcesso,
+      tokenAcesso: _token,
     );
     if (mounted) setState(() {});
   }
@@ -679,7 +723,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // Estufa sem id de aparelho nao esta offline: o app simplesmente nao sabe
     // de qual aparelho perguntar na nuvem, e nao pergunta. Dizer "offline"
     // manda o produtor procurar problema na rede quando falta um campo.
-    final idConhecido = (widget.idHardware ?? api.idHardware ?? '').trim();
+    final idConhecido = (_idHardware ?? api.idHardware ?? '').trim();
     if (idConhecido.isEmpty && _modoConexao != 'LOCAL') {
       return 'Aparelho não identificado';
     }
@@ -767,8 +811,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => HistoricoScreen(
-          nomeEstufa: widget.nomeEstufa,
-          ipEstufa: widget.ipEstufa,
+          nomeEstufa: _nome,
+          ipEstufa: _ip,
         ),
       ),
     );
@@ -795,7 +839,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
 
   Future<void> _carregarCicloAtual() async {
     final ciclo = await _monitoramentoRepository.buscarCicloAbertoPorIp(
-      widget.ipEstufa,
+      _ip,
     );
     if (!mounted) return;
     setState(() {
@@ -806,8 +850,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
 
   Future<void> _iniciarCiclo() async {
     final ciclo = await _monitoramentoRepository.iniciarCicloSecagem(
-      ipEstufa: widget.ipEstufa,
-      nomeEstufa: widget.nomeEstufa,
+      ipEstufa: _ip,
+      nomeEstufa: _nome,
     );
     if (!mounted) return;
     setState(() {
@@ -1027,8 +1071,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
 
     unawaited(
       _monitoramentoRepository.salvarEventoCiclo(
-        ipEstufa: widget.ipEstufa,
-        nomeEstufa: widget.nomeEstufa,
+        ipEstufa: _ip,
+        nomeEstufa: _nome,
         cicloId: ciclo.id,
         tipo: tipo,
         severidade: severidade,
@@ -1065,12 +1109,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
       estadoAparelho: _descreverEstadoAparelho(),
       versaoFirmware: _versaoFirmware,
-      idHardware: widget.idHardware ?? api.idHardware,
+      idHardware: _idHardware ?? api.idHardware,
       baseUrlAtiva: api.baseUrlAtiva,
       localBaseUrl: api.localBaseUrl,
       cloudBaseUrl: api.cloudBaseUrl,
       vigiadaPorPush: PushNotificationService.instance.vigiada(
-        (widget.idHardware ?? api.idHardware)?.trim(),
+        (_idHardware ?? api.idHardware)?.trim(),
       ),
       totalPendencias: _pendenciasSincronizacao,
       pendencias: pendencias,

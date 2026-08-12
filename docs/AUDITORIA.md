@@ -144,9 +144,9 @@ funciona:
   `CONVENCOES.md`, que agora registra também o que falta para o iOS existir de
   verdade.*
 
-### 2.4 Aberto — achado em campo (05/08/2026)
+### 2.4 Achado em campo (05/08/2026)
 
-- [ ] **D1. A interface entrega a chave por cópia, e as cópias envelhecem.**
+- [x] **D1. A interface entrega a chave por cópia, e as cópias envelhecem.**
   A tela de monitoramento recebe `tokenAcesso` de quem a abriu; o cartão da lista
   recebe da lista; a lista recebe do banco quando carregou. Trocar a chave lá
   dentro grava **no banco** e não nesses três lugares.
@@ -165,10 +165,20 @@ funciona:
   banco ao abrir**, em vez de confiar no que recebeu. Nenhum lugar da interface
   precisaria mais estar "em dia" com o banco.
 
-  *Por que não foi feito agora:* mexe no `initState` de
-  `monitoramento_screen.dart` (1.197 linhas, onde mais defeito de campo apareceu)
-  a três dias da escrita, para um sintoma que **se resolve sozinho em segundos** e
-  cujo contorno é sair e entrar. Decisão de adiar, não de ignorar.
+  *Feito.* A tela relê a estufa no banco ao abrir
+  (`credenciais_de_agora.dart`, 4 testes) e troca o monitor quando a cópia
+  envelheceu — chave revogada, endereço editado ou aparelho reidentificado. Os
+  quatro valores que vinham por cópia viraram estado da tela, alimentado pelo
+  banco; a cópia recebida só serve para o primeiro quadro, para a tela continuar
+  abrindo preenchida.
+
+  A decisão ficou numa função separada da tela de propósito: montar
+  `monitoramento_screen.dart` num teste exige Isar, preferências e rede, e o
+  defeito não precisa da tela para ser provado.
+
+  *O `aoVoltar` do `estufa_resumo_card.dart` fica.* Ele resolve outra metade: ao
+  trocar o monitor, o card da home ainda segura a instância pausada, e é a
+  recarga da lista que o devolve ao ar.
 
 ### 2.3 Baixa — higiene
 

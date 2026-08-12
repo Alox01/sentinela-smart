@@ -18,6 +18,20 @@ class EstufasRepository {
     return entities.map(ModeloEstufa.fromEntity).toList();
   }
 
+  /// A estufa como ela esta no banco AGORA.
+  ///
+  /// A interface passa a estufa de tela em tela por copia, e copia envelhece:
+  /// trocar a chave grava no banco, nao nas copias em transito. Quem vai
+  /// comandar o aparelho le daqui antes, em vez de confiar no que recebeu.
+  Future<ModeloEstufa?> buscar(int id) async {
+    final entities = await _isar.listarEstufas();
+    final entity = entities.cast<EstufaEntity?>().firstWhere(
+      (item) => item?.id == id,
+      orElse: () => null,
+    );
+    return entity == null ? null : ModeloEstufa.fromEntity(entity);
+  }
+
   Future<void> salvar({
     required String nome,
     required String ip,
