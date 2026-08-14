@@ -23,7 +23,7 @@ ausente declarado vale mais que resultado inventado.
 | 2 | **Comandos acumulados e sincronização** — dar ordens offline e ver a fila esvaziar ao reconectar | | | |
 | 3 | **Acesso remoto** — comandar de fora da propriedade, pela nuvem | | | |
 | 4 | **Pareamento e revogação com dois celulares** | 05/08/2026 | **Aprovado.** O segundo celular ganhou acesso pelo QR, perdeu na revogação e recuperou com QR novo; o principal nunca perdeu | Atraso de alguns segundos até o segundo celular aceitar comando; causa não determinada entre duas hipóteses (ver seção da revogação) |
-| 5 | **Alertas com o app aberto e fechado** | 25/07/2026 | **Aprovado** — testes de notificação concluídos, acharam dois defeitos que teste automatizado não pegaria | Canais do Android congelam na criação: mudar som exige incrementar o sufixo do id |
+| 5 | **Alertas com o app aberto e fechado** | 25/07 e 13/08/2026 | **Aprovado.** Em 13/08 achou-se em campo um aviso que não saía: estufa desligada à noite, religada fria de manhã, nenhuma notificação. Corrigido e **reverificado no aparelho** (desligar → "sem comunicação" → religar → "temperatura fora da faixa") | O aviso sai **na borda**, uma vez por episódio; ficar horas fora da faixa não repete. Canais do Android congelam na criação: mudar som exige incrementar o sufixo do id |
 | 6 | **Uma estufada completa** — relatório, eventos, gráfico, PDF e CSV de uma cura inteira | | | |
 | 7 | **Registro de cada teste** com data, resultado, prints e limitações | | | |
 
@@ -39,7 +39,17 @@ Não substitui os sete acima, mas conta como evidência de apoio:
   exigido também para gravar, saída pelo botão.
 - **Firmware** — compilação real no CI a cada push, core esp32 3.2.0, 86% do
   flash.
-- **Testes automatizados** — 154 no app, 213 no servidor. Provam robustez do
+- **Aviso que não saía depois do silêncio** (13/08) — o servidor guardava o
+  último estado de cada aparelho em memória para avisar só na subida. Quando o
+  aparelho ficava horas mudo e voltava **ainda** fora da faixa, ele comparava com
+  o que sabia de antes, concluía "já estava assim" e calava. Agora o aviso de
+  "sem comunicação" faz o servidor esquecer aquele aparelho — silêncio não deixa
+  ninguém sabendo de nada. 5 testes, e verificado no aparelho.
+- **Sirene própria para fogo** (13/08) — os canais dividiam o mesmo som, e "vá
+  ver a lenha" soava igual a "corra". Os sons passaram a ser agrupados por
+  **ação**: sirene para incêndio e >175 °F (*sair*), som antigo para desvio de
+  temperatura e sem comunicação (*ir conferir*).
+- **Testes automatizados** — 173 no app, 220 no servidor. Provam robustez do
   software; **não** provam utilidade da solução, que é o que os sete itens acima
   fazem.
 
