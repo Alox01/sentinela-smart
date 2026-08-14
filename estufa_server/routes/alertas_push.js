@@ -36,6 +36,20 @@ function criarAlertasPush({ db, push, estado }) {
     critico,
     validadeMs,
   }) {
+    // Aparelho declarado MUDO: daqui em diante o servidor nao sabe em que estado
+    // a estufa esta, entao para de fingir que sabe. Esquecer faz o retorno
+    // contar como subida nova.
+    //
+    // Sem isto, um aparelho que fica horas desligado e volta AINDA fora da faixa
+    // nao avisa ninguem: a comparacao e com o que o servidor sabia antes de ele
+    // sumir, conclui "ja estava assim" e cala. Aconteceu em campo — estufa
+    // desligada de noite, religada fria de manha, nenhum aviso.
+    //
+    // Antes do `push.habilitado`: isto e sobre o que o servidor SABE, e nao
+    // sobre conseguir avisar.
+    if (evento === 'semComunicacao' && critico === true) {
+      ultimoEstadoNotificado.delete(idHardware);
+    }
     if (!push?.habilitado || !db.listarDispositivosPush) return;
     try {
       const inscritos = (await db.listarDispositivosPush(idHardware)).filter(

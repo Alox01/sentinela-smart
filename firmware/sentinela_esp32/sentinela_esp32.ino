@@ -1228,7 +1228,13 @@ void salvarConfigSeNecessario() {
 // envio a cada volta do loop.
 bool estadoDeAlertaMudou() {
   bool fogo = alertaLuz || riscoIncendioAgora();
-  bool alarme = alarmeAtivoAgora();
+  // A CONDICAO, nao a sirene. Com `alarmeAtivoAgora()` aqui, desligar o buzzer
+  // de temperatura fazia a transicao passar despercebida: o envio imediato para
+  // a nuvem nao acontecia e o aviso esperava o ciclo de PUSH_INTERVAL_MS. E o
+  // mesmo erro ja corrigido no servidor - deixar a sirene do galpao decidir o
+  // que o celular fica sabendo. Silenciar o barulho aqui e um pedido sobre o
+  // barulho aqui.
+  bool alarme = alertaTemperatura;
 
   bool mudou = (fogo != ultimoFogoEnviado) || (alarme != ultimoAlarmeEnviado);
   ultimoFogoEnviado = fogo;
