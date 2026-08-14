@@ -313,7 +313,7 @@ void verificarSegurarBuzzer();
 void confirmarAlternanciaBuzzer(bool ligou);
 long long nowMs();
 void iniciarMdns();
-void aplicarIpFixoSeConfigurado();
+void aplicarIpFixoSeCouberNaRede();
 void verificarModoConfig();
 void entrarModoConfig();
 void handleConfigPagina();
@@ -475,7 +475,16 @@ void conectarWifi() {
   if (wifiSsid.length() == 0) return;
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
-  aplicarIpFixoSeConfigurado();
+  // Entra SEMPRE por DHCP, mesmo havendo IP fixo configurado. O fixo so e
+  // aplicado depois, e so se pertencer a faixa que o roteador entregou.
+  //
+  // Antes ele era aplicado aqui, antes de begin(), sem conferir nada - e um IP
+  // de outra rede deixava o aparelho mudo sem dar erro nenhum: ele ASSOCIA no
+  // Wi-Fi normalmente (isso e camada 2), mas fica com endereco de outra faixa,
+  // sem gateway e sem DNS validos. Nao alcanca a nuvem e ninguem o alcanca. Foi
+  // o que aconteceu ao levar o aparelho para outra rede levando junto o IP fixo
+  // da rede de origem. Entrar por DHCP primeiro custa uns segundos e garante que
+  // um numero errado nunca mais tire o aparelho do ar.
   WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
 
   Serial.print("Conectando ao Wi-Fi");
@@ -490,6 +499,7 @@ void conectarWifi() {
     Serial.print("Conectado. IP: ");
     Serial.println(WiFi.localIP());
     guardarRedeAprendida();
+    aplicarIpFixoSeCouberNaRede();
     // NTP para timestamp real (fuso nao importa, usamos epoch em ms).
     configTime(0, 0, "pool.ntp.org", "time.google.com");
   } else {
@@ -522,35 +532,57 @@ void guardarRedeAprendida() {
 // Fixa o endereco antes de conectar, quando o produtor configurou um. Se algo
 // estiver malformado, cai no DHCP: um IP invalido deixaria o aparelho invisivel
 // na rede, que e pior do que um endereco que muda.
-void aplicarIpFixoSeConfigurado() {
+// Dois enderecos estao na mesma faixa sob esta mascara?
+static bool mesmaFaixa(IPAddress a, IPAddress b, IPAddress mascara) {
+  for (int i = 0; i < 4; i++) {
+    if ((a[i] & mascara[i]) != (b[i] & mascara[i])) return false;
+  }
+  return true;
+}
+
+// Troca o endereco entregue pelo DHCP pelo IP fixo - mas SO se ele pertencer a
+// rede em que o aparelho acabou de entrar.
+//
+// Chamada depois da conexao de proposito: e o unico momento em que se sabe qual
+// e a faixa de verdade. Gateway e mascara vem medidos do proprio roteador, e nao
+// adivinhados: ha redes com gateway em .254, e chutar .1 nelas deixaria o
+// aparelho sem DNS - local funcionando, nuvem muda, nada na tela explicando.
+void aplicarIpFixoSeCouberNaRede() {
   if (ipFixo.length() == 0) return;
 
-  IPAddress ip, gateway, mascara;
+  IPAddress ip;
   if (!ip.fromString(ipFixo)) {
-    Serial.println("IP fixo invalido: usando DHCP.");
+    Serial.println("IP fixo invalido: seguindo no DHCP.");
     return;
   }
-  // Ordem de preferencia: o que o produtor informou, depois o que o ROTEADOR
-  // ensinou numa conexao DHCP anterior, e so entao o palpite. O que o roteador
-  // entregou vale mais que qualquer chute: ha redes com o gateway em .254, e
-  // adivinhar .1 nelas deixaria o aparelho sem internet - local funcionando,
-  // nuvem muda, sem nada na tela explicando. Como o IP fixo e uma reserva usada
-  // depois de o aparelho ja ter entrado na rede, o aprendido quase sempre existe.
-  if (!gateway.fromString(gatewayFixo)) {
-    if (!gateway.fromString(gatewayAprendido)) {
-      gateway = IPAddress(ip[0], ip[1], ip[2], 1);
-    }
-  }
-  if (!mascara.fromString(mascaraFixa)) {
-    if (!mascara.fromString(mascaraAprendida)) {
-      mascara = IPAddress(255, 255, 255, 0);
-    }
+
+  const IPAddress atribuido = WiFi.localIP();
+  IPAddress mascara = WiFi.subnetMask();
+  IPAddress gateway = WiFi.gatewayIP();
+  // Valores informados a mao (pela pagina do proprio aparelho) ainda valem,
+  // desde que facam sentido nesta rede.
+  IPAddress informado;
+  if (informado.fromString(mascaraFixa)) mascara = informado;
+  if (informado.fromString(gatewayFixo)
+      && mesmaFaixa(informado, atribuido, mascara)) {
+    gateway = informado;
   }
 
-  // O gateway tambem responde como DNS na esmagadora maioria das redes
-  // domesticas - e o aparelho precisa de DNS para falar com a nuvem.
+  if (!mesmaFaixa(ip, atribuido, mascara)) {
+    // O caso que ja tirou o aparelho do ar: IP fixo trazido de outra rede.
+    // Ignorar e ficar no DHCP mantem tudo funcionando; aplicar deixaria o
+    // aparelho associado e inalcancavel.
+    Serial.print("IP fixo ");
+    Serial.print(ipFixo);
+    Serial.print(" nao pertence a esta rede (");
+    Serial.print(atribuido);
+    Serial.println("): ignorado, seguindo no DHCP.");
+    return;
+  }
+
+  // O gateway tambem responde como DNS na esmagadora maioria das redes.
   if (!WiFi.config(ip, gateway, mascara, gateway)) {
-    Serial.println("Falha ao aplicar IP fixo: usando DHCP.");
+    Serial.println("Falha ao aplicar IP fixo: seguindo no DHCP.");
     return;
   }
   Serial.print("IP fixo: ");

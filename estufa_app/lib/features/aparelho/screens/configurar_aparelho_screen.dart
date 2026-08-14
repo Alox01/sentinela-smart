@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../escopo.dart';
 import '../../../services/api_service.dart';
+import '../prefixo_da_rede.dart';
 
 /// Configura a rede do aparelho pelo app, sem digitar endereco.
 ///
@@ -95,6 +96,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
   /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
   String? _prefixoDaRede;
+  /// Gateway da ultima rede em que o aparelho entrou. So vale para ela — ver
+  /// `prefixo_da_rede.dart`.
+  String? _gatewayAprendido;
   final _pin = TextEditingController();
 
   /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
@@ -254,6 +258,44 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
       if (_concluido || _chaveDoAparelho != null) return;
       unawaited(_lerNomeDoAparelho());
     });
+    _rede.addListener(_aoTrocarDeRede);
+  }
+
+  /// A faixa que o aparelho ensinou so vale se ele vai voltar para a MESMA rede.
+  ///
+  /// O `gatewayAprendido` e a ultima rede em que ele conseguiu entrar. Levar o
+  /// aparelho para outro lugar torna esse numero mentira — e foi assim que um IP
+  /// fixo da rede de origem viajou junto e deixou o aparelho mudo na rede nova.
+  bool get _prefixoAindaVale =>
+      prefixoOferecido(
+        gatewayAprendido: _gatewayAprendido,
+        ssidDoAparelho: _ssidDoAparelho,
+        ssidDigitado: _rede.text,
+      ) !=
+      null;
+
+  /// Recolhe o prefixo pre-preenchido quando o produtor digita outra rede, e o
+  /// reoferece se ele voltar para a de origem.
+  void _aoTrocarDeRede() {
+    final prefixo = _prefixoDaRede;
+    if (prefixo == null) return;
+
+    final vale = _prefixoAindaVale;
+    final texto = _ip.text.trim();
+    // So mexe no campo enquanto ele for o palpite intocado: numero completado a
+    // mao e decisao do produtor, e apagar seria desfazer o trabalho dele.
+    if (!vale && texto == prefixo) {
+      setState(_ip.clear);
+      return;
+    }
+    if (vale && texto.isEmpty) {
+      setState(() {
+        _ip.text = prefixo;
+        _ip.selection = TextSelection.collapsed(offset: _ip.text.length);
+      });
+      return;
+    }
+    setState(() {});
   }
 
   @override
@@ -385,11 +427,19 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           _nomeLocal = ApiService.completarNomeMdns(nome);
         }
         if (ssid != null && ssid.isNotEmpty) _ssidDoAparelho = ssid;
+        _gatewayAprendido = gateway;
         _prefixoDaRede = _prefixoDe(gateway);
         // Deixa o campo quase pronto: falta so o ultimo numero. O celular esta
         // na rede do aparelho agora e nao teria como descobrir a faixa da casa;
         // quem sabe e o aparelho, que ja esteve nela.
-        if (_prefixoDaRede != null && _ip.text.trim().isEmpty) {
+        //
+        // So quando a rede digitada e a mesma de onde ele aprendeu: em outra
+        // rede esse prefixo e um numero de outro lugar. Enquanto nada foi
+        // digitado o campo fica vazio, e `_aoTrocarDeRede` oferece o prefixo
+        // assim que o nome bater.
+        if (_prefixoDaRede != null &&
+            _prefixoAindaVale &&
+            _ip.text.trim().isEmpty) {
           _ip.text = _prefixoDaRede!;
           _ip.selection = TextSelection.collapsed(offset: _ip.text.length);
         }
@@ -487,13 +537,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   }
 
   /// "192.168.0.1" -> "192.168.0.". Nulo quando nao parece um IPv4.
-  static String? _prefixoDe(String? ip) {
-    if (ip == null) return null;
-    final partes = ip.split('.');
-    if (partes.length != 4) return null;
-    if (partes.any((p) => int.tryParse(p) == null)) return null;
-    return '${partes.take(3).join('.')}.';
-  }
+  static String? _prefixoDe(String? ip) => prefixoDe(ip);
 
   /// O campo pre-preenchido vale como vazio ate ganhar o ultimo numero: mandar
   /// so a faixa seria um endereco invalido, e o aparelho cairia no DHCP sem o
@@ -1329,7 +1373,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
               subtitle: const Text(
-                'Quando não dá para reservar o IP no roteador',
+                'Fixa o endereço do aparelho nesta rede',
                 style: TextStyle(color: Colors.white24, fontSize: 11),
               ),
               iconColor: Colors.white54,
@@ -1339,16 +1383,18 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    _prefixoDaRede != null
-                        ? 'Reserva, para quando o nome acima não funcionar no '
-                              'seu celular ou roteador. A faixa da sua rede já '
-                              'veio preenchida — complete só o último número, '
-                              'entre 200 e 250. Vazio deixa o roteador escolher.'
-                        : 'Reserva, para quando o nome acima não funcionar no '
-                              'seu celular ou roteador. Deixe vazio para o '
-                              'roteador escolher. Os TRÊS primeiros números têm '
-                              'de ser os da sua rede — veja no Wi-Fi do celular, '
-                              'nos detalhes da rede conectada. Se lá aparecer '
+                    _prefixoDaRede != null && _prefixoAindaVale
+                        ? 'O aparelho passa a usar este endereço sempre que '
+                              'ligar, e ele só vale nesta rede. Serve para você '
+                              'ter um endereço para digitar caso o nome acima '
+                              'não funcione. A faixa já veio preenchida — '
+                              'complete só o último número, entre 200 e 250. '
+                              'Vazio deixa o roteador escolher, que é o normal.'
+                        : 'O aparelho passa a usar este endereço sempre que '
+                              'ligar, e ele só vale nesta rede. Se for '
+                              'preencher, os TRÊS primeiros números têm de ser '
+                              'os desta rede — veja no Wi-Fi do celular, nos '
+                              'detalhes da rede conectada. Se lá aparecer '
                               '192.168.0.15, use 192.168.0.220.',
                     style: const TextStyle(color: Colors.white38, fontSize: 12),
                   ),
