@@ -10,7 +10,10 @@
 // Precisam ser identicos aos canais criados pelo app. Se divergirem, o Android
 // entrega a notificacao no canal padrao (ou descarta, dependendo da versao) e o
 // alerta perde o som de alarme sem erro nenhum aparecer.
-const CANAL_CRITICO = 'sentinela_critico_v2';
+// v3: o incendio ganhou sirene propria no app (`sirene_incendio.mp3`). Canal ja
+// criado nao se reconfigura, entao trocar o som exige trocar o ID — e o ID tem
+// de subir aqui junto, senao o push chega com canal que nao existe no aparelho.
+const CANAL_CRITICO = 'sentinela_critico_v3';
 const CANAL_ALERTAS = 'sentinela_alertas';
 // Temperatura fora da faixa toca em volume de ALARME, como o incendio, porque e
 // de madrugada que ela precisa acordar alguem - o volume de notificacao costuma

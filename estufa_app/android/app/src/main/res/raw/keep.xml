@@ -4,6 +4,10 @@
   alerta e o icone da notificacao sao referenciados por NOME, do lado Dart, entao
   o compilador nao os enxerga e os descartaria da build release - a notificacao
   sairia muda, e so em release, que e justamente onde o produtor usa.
+
+  `@raw/*` em vez de listar som por som: `raw/` so tem som de alerta, e esquecer
+  de acrescentar um nome aqui produz exatamente o defeito acima - silencioso,
+  invisivel em debug, e descoberto na madrugada em que o alarme precisava tocar.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/alarme_estufa,@drawable/*,@mipmap/ic_launcher" />
+    tools:keep="@raw/*,@drawable/*,@mipmap/ic_launcher" />

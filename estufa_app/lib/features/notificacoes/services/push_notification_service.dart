@@ -136,16 +136,25 @@ class PushNotificationService {
         vibrationPattern: Int64List.fromList([0, 800, 600, 800, 600, 800]),
       );
 
-  /// O id mudou de `sentinela_critico` para `_v2` de proposito: o Android nao
-  /// deixa alterar som nem importancia de um canal ja criado, entao quem ja
-  /// tinha o app continuaria com o bipe curto padrao. Canal novo e a unica
-  /// forma de a mudanca valer para todo mundo. **Tem que casar com o
-  /// `channelId` que o servidor envia** (`estufa_server/push.js`).
-  static const String canalCriticoId = 'sentinela_critico_v2';
+  /// O numero no fim sobe a cada mudanca de som ou importancia, e nao e
+  /// enfeite: o Android **congela a configuracao de um canal quando ele e
+  /// criado**, entao trocar o som sem trocar o ID nao muda nada em celular que
+  /// ja tem o app. Canal novo e a unica forma de a mudanca valer para todo
+  /// mundo. Foi `_v2` quando o bipe curto padrao virou som longo; e `_v3` desde
+  /// que o incendio ganhou sirene propria (`sirene_incendio.mp3`, 24 s).
+  ///
+  /// **Tem que casar com o `channelId` que o servidor envia**
+  /// (`estufa_server/push.js`) — divergir faz o Android entregar no canal padrao
+  /// e o alerta perde o som de alarme, sem erro nenhum aparecer.
+  static const String canalCriticoId = 'sentinela_critico_v3';
 
   /// Som longo e em volume de ALARME (nao de notificacao). Essa distincao e o
   /// ponto principal: o volume de notificacao costuma ficar baixo, enquanto o
   /// de alarme e o que as pessoas mantem alto justamente para acordar.
+  ///
+  /// Sirene propria, diferente da dos outros canais: fogo e a unica situacao em
+  /// que a resposta e SAIR, e nao ir conferir. De olhos fechados, as 3h da manha,
+  /// a diferenca precisa estar no som \u2014 a vibracao sozinha nao carrega isso.
   static AndroidNotificationChannel _canalCritico() =>
       AndroidNotificationChannel(
         canalCriticoId,
@@ -155,7 +164,7 @@ class PushNotificationService {
             'Reservado a inc\u00eandio.',
         importance: Importance.max,
         playSound: true,
-        sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+        sound: const RawResourceAndroidNotificationSound('sirene_incendio'),
         audioAttributesUsage: AudioAttributesUsage.alarm,
         enableVibration: true,
         vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),

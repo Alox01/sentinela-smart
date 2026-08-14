@@ -202,19 +202,22 @@ Daí a recomendação que ficou escrita na própria tela: **à noite, usar "Não
 perturbe" em vez de deixar o celular no silencioso**. É a diferença entre
 acordar e não acordar, e nenhum ajuste no app contorna isso.
 
-**Ressalva honesta:** os quatro usam a **mesma sirene** (`alarme_estufa.wav`), o
-único som longo do app. As vibrações diferem, mas pelo som eles são parecidos —
-e "vá ver a lenha" soa igual a "corra".
+**O incêndio já tem sirene própria** (`sirene_incendio.mp3`, 24 s). Era o caso
+mais urgente de separar: fogo é a única situação em que a resposta é **sair**, e
+não ir conferir — e de olhos fechados, às 3 h da manhã, essa diferença precisa
+estar no som. A vibração sozinha não carrega isso.
 
-### Som próprio por aviso (a implementar)
+**Ressalva honesta:** os outros três ainda usam `alarme_estufa.wav`. Entre eles,
+"vá ver a lenha" continua soando igual a "vá ver a lenha".
 
-Decidido em 25/07/2026, aguardando os áudios. O som atual fica com o **desvio de
-temperatura**; os outros três ganham o seu:
+### Som próprio por aviso (parcial)
+
+Decidido em 25/07/2026. O som antigo fica com o **desvio de temperatura**:
 
 | Aviso | Som |
 |---|---|
 | Temperatura fora da faixa | `alarme_estufa` (o atual) |
-| Incêndio | a definir |
+| Incêndio | **`sirene_incendio`** ✅ |
 | Temperatura muito elevada | a definir |
 | Sem comunicação | a definir |
 | Ajuste agendado | a definir (toca só se o produtor ligar o "Tocar") |
@@ -395,7 +398,7 @@ bateria e canal fora da banda (GSM/SMS); ver `VIABILIDADE_COMERCIAL.md`.
    Então o que acorda o produtor é a configuração do canal, não o
    `AndroidNotificationDetails`.
 
-   O canal `sentinela_critico_v2` usa som de 30s (`res/raw/alarme_estufa.wav`,
+   O canal `sentinela_critico_v3` usa som de 24s (`res/raw/sirene_incendio.mp3`,
    gerado por `estufa_app/tools/gerar_som_alarme.js`) com
    `audioAttributesUsage: alarm` — toca no **volume de alarme**, não no de
    notificação, que costuma ficar baixo. Mais vibração longa e `bypassDnd`.
@@ -420,7 +423,7 @@ bateria e canal fora da banda (GSM/SMS); ver `VIABILIDADE_COMERCIAL.md`.
    como despertador. Exigiria mensagem só de dados, `fullScreenIntent`, tela
    própria e serviço em primeiro plano — e no Android 14+ o recurso é restrito
    a apps de chamada e despertador, com permissão à parte. Avaliado e adiado:
-   o som de 30s em volume de alarme resolve a maior parte do problema.
+   o som longo em volume de alarme resolve a maior parte do problema.
 7. **Ajustes finos:** link para abrir a estufa certa no app, eventual exceção
    de preferência por estufa.
 
@@ -460,7 +463,7 @@ locais e a camada de push (FCM) com o app fechado — esta última **confirmada 
 campo**.
 
 Além do proposto, foram acrescentados: som em **volume de alarme** com opção de
-furar o "Não perturbe" (canal `sentinela_critico_v2`), o **watchdog de silêncio**
+furar o "Não perturbe" (canal `sentinela_critico_v3`), o **watchdog de silêncio**
 no servidor, o **silenciamento por estufa**, a **validade** dos avisos de
 comunicação e a **ponte de leitura** — todos descritos acima.
 

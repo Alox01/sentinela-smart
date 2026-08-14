@@ -53,7 +53,7 @@ describe('lerCredencial', () => {
 // mudar do outro.
 describe('ids dos canais', () => {
   it('batem com os canais criados pelo app', () => {
-    assert.equal(CANAL_CRITICO, 'sentinela_critico_v2');
+    assert.equal(CANAL_CRITICO, 'sentinela_critico_v3');
     assert.equal(CANAL_ALERTAS, 'sentinela_alertas');
   });
 });
@@ -133,7 +133,7 @@ describe('criarEnviadorPush com credencial', () => {
     assert.deepEqual(msg.tokens, ['a', 'b']);
     // Um id divergente do app nao da erro nenhum: a notificacao so perde o som
     // de alarme, calada. Por isso o canal fica travado por teste.
-    assert.equal(msg.android.notification.channelId, 'sentinela_critico_v2');
+    assert.equal(msg.android.notification.channelId, 'sentinela_critico_v3');
     assert.equal(msg.android.priority, 'high');
     assert.equal(r.enviados, 2);
   });
