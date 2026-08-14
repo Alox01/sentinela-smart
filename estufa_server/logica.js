@@ -1,7 +1,11 @@
 ﻿// --- LOGICA DE NEGOCIO E SEGURANCA ---
 
 // --- CONFIGURACOES DE TOLERANCIA ---
-const TOLERANCIA_TEMP = 5.0; // Margem de erro de 5 F (alinhada com LEDs/eventos)
+// 8 F, o MESMO valor do `margemF` do firmware. Estava em 5, e a divergencia
+// aparecia na tela: um desvio de 6 ou 7 F acendia o LED em NUVEM e nao acendia
+// em LOCAL, para a mesma estufa no mesmo instante. Quem decide se ha alarme e o
+// aparelho; este numero existe so para o veredito remoto concordar com ele.
+const TOLERANCIA_TEMP = 8.0;
 const TOLERANCIA_UMID = 2.0; // Margem de erro de 2%
 const TEMPO_SILENCIO = 10 * 60 * 1000;
 // Acomodacao apos mudar o ajuste: a estufa leva tempo para alcancar o alvo

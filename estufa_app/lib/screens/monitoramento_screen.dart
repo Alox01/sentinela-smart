@@ -657,7 +657,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         return 'alta';
       case 'purple':
         return 'baixa';
+      // 'deepOrange' e fogo com o alarme SILENCIADO - so a nuvem emite, quando
+      // rebaixa o vermelho. Faltava aqui, caia no default e devolvia 'ok': os
+      // dois LEDs apagavam justamente na situacao em que a tela mais precisa
+      // dizer alguma coisa.
       case 'red':
+      case 'deepOrange':
         // Fogo: o alarme e quem manda na tela, mas ainda vale mostrar o lado
         // em que a temperatura esta.
         return temperatura > tempAjuste ? 'alta' : 'ok';

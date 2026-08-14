@@ -23,7 +23,7 @@ test('dispara risco de incendio quando temperatura passa do limite seguro', () =
 });
 
 test('dispara alarme de processo quando temperatura foge da tolerancia', () => {
-  const resultado = analisarEstado(97, 90, 60, 60, 0, false);
+  const resultado = analisarEstado(100, 90, 60, 60, 0, false);
 
   assert.equal(resultado.alarmeAtivo, true);
   assert.equal(resultado.alertaIncendio, true);
@@ -32,9 +32,26 @@ test('dispara alarme de processo quando temperatura foge da tolerancia', () => {
   assert.match(resultado.aviso, /Temperatura Alta/i);
 });
 
+// A margem daqui tem de ser a MESMA do firmware (margemF = 8). Estava em 5, e a
+// divergencia aparecia na tela: 7 F de desvio acendia o LED em NUVEM e nao
+// acendia em LOCAL, para a mesma estufa no mesmo instante.
+test('7 F de desvio nao e alarme, como no aparelho', () => {
+  const resultado = analisarEstado(97, 90, 60, 60, 0, false);
+
+  assert.equal(resultado.alarmeAtivo, false);
+  assert.equal(resultado.corStatus, 'green');
+});
+
+test('9 F de desvio ja e alarme, como no aparelho', () => {
+  const resultado = analisarEstado(81, 90, 60, 60, 0, false);
+
+  assert.equal(resultado.alarmeAtivo, true);
+  assert.equal(resultado.corStatus, 'purple');
+});
+
 test('respeita silencio recente e desliga sirene', () => {
   const agora = Date.now();
-  const resultado = analisarEstado(97, 90, 60, 60, agora, false);
+  const resultado = analisarEstado(100, 90, 60, 60, agora, false);
 
   assert.equal(resultado.alarmeAtivo, false);
   assert.equal(resultado.alertaIncendio, false);
