@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/ciclo_secagem_entity.dart';
 import '../models/evento_ciclo_entity.dart';
 import '../models/historico_leitura_entity.dart';
+import '../features/relatorio_estufada/duracao_estufada.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
 import 'package:printing/printing.dart';
@@ -401,9 +402,13 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 );
               }
 
-              final inicio = leituras.first.timestamp;
-              final fim = leituras.last.timestamp;
-              final duracao = fim.difference(inicio);
+              final duracao = duracaoDaEstufada(
+                inicioDoCiclo: cicloSelecionado?.inicio,
+                fimDoCiclo: cicloSelecionado?.fim,
+                intervaloDasLeituras: leituras.last.timestamp.difference(
+                  leituras.first.timestamp,
+                ),
+              );
               final primeiraLeitura = leituras.first;
               final ultimaLeitura = leituras.last;
               final temperaturaAjusteInicial = primeiraLeitura.temperaturaMeta;
@@ -453,6 +458,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                       umidadeAjusteFinal: umidadeAjusteFinal,
                       totalAlarmes: totalAlarmes,
                       tituloSecaoStyle: _tituloSecaoStyle,
+                      filtroAtivo:
+                          _inicioFiltro != null || _fimFiltro != null,
                     ),
                     const SizedBox(height: 18),
 
@@ -473,6 +480,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                             graficoTemperatura: _graficoTemperatura,
                             tituloSecaoStyle: _tituloSecaoStyle,
                             onGraficoChanged: _alterarTipoGrafico,
+                            filtroAtivo:
+                                _inicioFiltro != null || _fimFiltro != null,
                           )
                         : GraficoEstufadaLoadingCard(
                             graficoTemperatura: _graficoTemperatura,

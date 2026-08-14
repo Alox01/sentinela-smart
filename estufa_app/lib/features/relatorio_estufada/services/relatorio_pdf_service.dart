@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../../../models/ciclo_secagem_entity.dart';
 import '../../../models/evento_ciclo_entity.dart';
 import '../../../models/historico_leitura_entity.dart';
+import '../duracao_estufada.dart';
 
 /// Gera o relatorio da estufada em PDF, legivel e imprimivel para o produtor:
 /// resumo, graficos de temperatura e umidade, eventos e a tabela de leituras.
@@ -23,9 +24,18 @@ class RelatorioPdfService {
     final geradoEm = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     final horaFmt = DateFormat('dd/MM HH:mm');
 
+    // `inicio` e `fim` sao o periodo das LEITURAS que entraram neste PDF, e o
+    // cabecalho mostra isso. A duracao e outra coisa: e da estufada, e vem do
+    // ciclo. Sair das leituras encurtava a secagem sempre que faltava leitura na
+    // ponta — aparelho desligado, queda de energia —, e o papel e justamente
+    // onde o numero errado ganha a discussao.
     final inicio = leituras.first.timestamp;
     final fim = leituras.last.timestamp;
-    final duracao = fim.difference(inicio);
+    final duracao = duracaoDaEstufada(
+      inicioDoCiclo: ciclo?.inicio,
+      fimDoCiclo: ciclo?.fim,
+      intervaloDasLeituras: fim.difference(inicio),
+    );
     // Mesma conta da tela: EPISODIOS de alarme, e nao leituras gravadas com a
     // sirene ligada. O PDF e o que sai da propriedade — divergir da tela aqui
     // seria dois numeros para a mesma estufada, e o impresso ganharia a

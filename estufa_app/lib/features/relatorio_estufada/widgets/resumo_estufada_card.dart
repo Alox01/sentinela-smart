@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
 class ResumoEstufadaCard extends StatelessWidget {
+  /// Quanto a ESTUFADA durou — do início do ciclo até o fim dele, ou até agora
+  /// se ainda está correndo.
+  ///
+  /// Vinha do intervalo entre a primeira e a última leitura mostrada, e com isso
+  /// errava duas vezes. Filtrando um dia, mostrava só o pedaço filtrado; e mesmo
+  /// sem filtro nenhum encurtava a estufada sempre que faltava leitura na ponta
+  /// — aparelho desligado, queda de energia, internet fora. O ciclo sabe quando
+  /// começou e quando terminou; as leituras são só o que se conseguiu gravar
+  /// nesse meio-tempo.
   final Duration duracao;
   final double temperaturaAjusteInicial;
   final double temperaturaAjusteFinal;
@@ -8,6 +17,11 @@ class ResumoEstufadaCard extends StatelessWidget {
   final double umidadeAjusteFinal;
   final int totalAlarmes;
   final TextStyle tituloSecaoStyle;
+
+  /// Com filtro, a duração é a única coisa aqui que NÃO acompanha o recorte:
+  /// filtrar muda o que se olha, não quanto tempo a estufada durou. O subtítulo
+  /// diz isso, senão o número parece teimoso.
+  final bool filtroAtivo;
 
   const ResumoEstufadaCard({
     super.key,
@@ -18,6 +32,7 @@ class ResumoEstufadaCard extends StatelessWidget {
     required this.umidadeAjusteFinal,
     required this.totalAlarmes,
     required this.tituloSecaoStyle,
+    this.filtroAtivo = false,
   });
 
   @override
@@ -44,6 +59,7 @@ class ResumoEstufadaCard extends StatelessWidget {
                 'DURA\u00C7\u00C3O',
                 _formatarDuracao(duracao),
                 Colors.white70,
+                subtitulo: filtroAtivo ? 'Estufada inteira' : null,
               ),
               const SizedBox(width: 12),
               _ResumoCard(

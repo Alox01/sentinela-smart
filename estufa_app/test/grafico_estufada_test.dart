@@ -145,4 +145,78 @@ void main() {
     expect(dados.lineBarsData.first.spots.length, 1);
     expect(dados.lineBarsData.first.spots.single.y, 118);
   });
+
+  /// Uma secagem de verdade passa de 100h, e desenhar tudo de uma vez era o que
+  /// amassava o cartão. Sem filtro o gráfico abre no último dia; com filtro,
+  /// mostra o que o produtor pediu.
+  group('a janela de 24h', () {
+    // ~4 dias, uma leitura a cada 30min: o caso que gerou a queixa.
+    final quatroDias = [
+      for (var i = 0; i < 200; i++)
+        leitura(minuto: i * 30, temperatura: 120 + (i % 15).toDouble(), umidade: 60),
+    ];
+
+    Future<LineChartData> comFiltro(WidgetTester tester, bool filtrado) async {
+      tester.view.physicalSize = const Size(1200, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: GraficoEstufadaCard(
+                leituras: quatroDias,
+                graficoTemperatura: true,
+                tituloSecaoStyle: const TextStyle(),
+                onGraficoChanged: (_) {},
+                filtroAtivo: filtrado,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return tester.widget<LineChart>(find.byType(LineChart)).data;
+    }
+
+    testWidgets('sem filtro, recorta no último dia e avisa', (tester) async {
+      final dados = await comFiltro(tester, false);
+      final desenhados = dados.lineBarsData.first.spots;
+
+      // 24h a cada 30min = 48 leituras, mais a do próprio corte.
+      expect(desenhados.length, lessThan(quatroDias.length));
+      expect(desenhados.length, closeTo(49, 2));
+
+      // O último ponto continua sendo o fim da estufada: a janela é ancorada no
+      // DADO, nunca no relógio. Ancorar em "agora" já fez relatório encerrado
+      // abrir vazio.
+      final fimDaEstufada =
+          quatroDias.last.timestamp.millisecondsSinceEpoch.toDouble();
+      expect(desenhados.last.x, fimDaEstufada);
+
+      // Recorte calado seria informação errada: quem abre concluiria que a
+      // secagem durou um dia.
+      expect(find.textContaining('últimas 24h'), findsOneWidget);
+    });
+
+    testWidgets('com filtro, mostra tudo que o produtor pediu', (tester) async {
+      final dados = await comFiltro(tester, true);
+
+      expect(dados.lineBarsData.first.spots.length, quatroDias.length);
+      expect(find.textContaining('últimas 24h'), findsNothing);
+    });
+  });
+
+  testWidgets('estufada curta não é recortada nem avisada', (tester) async {
+    // Cabe folgado em 24h: não há o que recortar, e o aviso seria mentira.
+    final dados = await desenhar(
+      tester,
+      temperatura: true,
+      leituras: estufada,
+    );
+
+    expect(dados.lineBarsData.first.spots.length, estufada.length);
+    expect(find.textContaining('últimas 24h'), findsNothing);
+  });
 }
