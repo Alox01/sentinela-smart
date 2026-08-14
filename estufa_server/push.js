@@ -31,8 +31,10 @@ const CANAL_SEM_COMUNICACAO = 'sentinela_sem_comunicacao_v1';
 
 // Temperatura acima do limite de incendio (175 F). Evento separado do sensor de
 // chama porque as causas sao independentes: o produtor pode querer desligar o
-// aviso de uma sem perder o da outra.
-const CANAL_TEMP_MUITO_ALTA = 'sentinela_temp_muito_alta_v1';
+// aviso de uma sem perder o da outra. Mas toca a MESMA sirene do incendio (v2
+// por causa disso): som diferente so vale quando leva a uma acao diferente, e os
+// dois significam "risco de fogo, va agora" para quem esta dormindo.
+const CANAL_TEMP_MUITO_ALTA = 'sentinela_temp_muito_alta_v2';
 
 // Um aviso por assunto: assim o produtor silencia o que quiser nas
 // configuracoes do Android sem levar os outros junto.

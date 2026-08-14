@@ -54,10 +54,20 @@ class PushNotificationService {
 
   /// Temperatura acima do limite de incendio (175 °F). Evento separado do sensor
   /// de chama porque as causas sao independentes - o produtor pode querer
-  /// desligar o aviso de uma sem perder o da outra. Toca como alarme, igual ao
-  /// fogo.
+  /// desligar o aviso de uma sem perder o da outra.
+  ///
+  /// **Mesma sirene do incendio**, e `_v2` por causa disso. Som diferente so vale
+  /// quando leva a uma acao diferente, e estes dois significam a mesma coisa para
+  /// quem esta dormindo: risco de fogo, va agora. Antes ele soava igual a um
+  /// desvio comum de temperatura — o produtor acordava, reconhecia o som de
+  /// sempre e voltava a dormir. Os sons ficam agrupados por ACAO: sirene do fogo
+  /// e "sair", `alarme_estufa` e "ir conferir".
+  ///
+  /// O canal continua sendo o seu: mesmo som, canais diferentes, para o produtor
+  /// silenciar um sem levar o outro e cada aviso aparecer com o nome certo nas
+  /// configuracoes do Android.
   /// **Tem que casar com `CANAL_TEMP_MUITO_ALTA` em `estufa_server/push.js`.**
-  static const String canalTempMuitoAltaId = 'sentinela_temp_muito_alta_v1';
+  static const String canalTempMuitoAltaId = 'sentinela_temp_muito_alta_v2';
 
   static AndroidNotificationChannel _canalTempMuitoAlta() =>
       AndroidNotificationChannel(
@@ -68,7 +78,7 @@ class PushNotificationService {
             'de incêndio.',
         importance: Importance.max,
         playSound: true,
-        sound: const RawResourceAndroidNotificationSound('alarme_estufa'),
+        sound: const RawResourceAndroidNotificationSound('sirene_incendio'),
         audioAttributesUsage: AudioAttributesUsage.alarm,
         enableVibration: true,
         vibrationPattern: Int64List.fromList([0, 1000, 400, 1000, 400, 1000]),

@@ -207,20 +207,27 @@ mais urgente de separar: fogo é a única situação em que a resposta é **sair
 não ir conferir — e de olhos fechados, às 3 h da manhã, essa diferença precisa
 estar no som. A vibração sozinha não carrega isso.
 
-**Ressalva honesta:** os outros três ainda usam `alarme_estufa.wav`. Entre eles,
-"vá ver a lenha" continua soando igual a "vá ver a lenha".
+**Ressalva honesta:** "sem comunicação" ainda usa `alarme_estufa.wav`, igual ao
+desvio de temperatura. Entre esses dois, o som não distingue nada — mas os dois
+pedem a mesma coisa (**ir conferir**), então a confusão custa pouco.
 
-### Som próprio por aviso (parcial)
+### Som por aviso
 
-Decidido em 25/07/2026. O som antigo fica com o **desvio de temperatura**:
+Decidido em 25/07/2026, e revisto em 13/08/2026 com o áudio em mãos.
 
-| Aviso | Som |
-|---|---|
-| Temperatura fora da faixa | `alarme_estufa` (o atual) |
-| Incêndio | **`sirene_incendio`** ✅ |
-| Temperatura muito elevada | a definir |
-| Sem comunicação | a definir |
-| Ajuste agendado | a definir (toca só se o produtor ligar o "Tocar") |
+Os sons são agrupados por **ação**, não por causa: som diferente só vale quando
+leva a uma reação diferente. Fogo e temperatura acima de 175 °F significam a
+mesma coisa para quem está dormindo — **risco de fogo, vá agora** —, e de olhos
+fechados ninguém distingue quatro sons; distingue dois. Gastar a única distinção
+que existe na fronteira "correr × conferir" é gastá-la onde ela decide algo.
+
+| Aviso | Som | O que pede |
+|---|---|---|
+| Incêndio | **`sirene_incendio`** ✅ | sair agora |
+| Temperatura muito elevada | **`sirene_incendio`** ✅ | sair agora |
+| Temperatura fora da faixa | `alarme_estufa` | ir conferir |
+| Sem comunicação | `alarme_estufa` | ir conferir |
+| Ajuste agendado | `alarme_estufa` (toca só se o produtor ligar o "Tocar") | — |
 
 **O que os arquivos precisam ter**, para não descobrir isso depois de gravar:
 
