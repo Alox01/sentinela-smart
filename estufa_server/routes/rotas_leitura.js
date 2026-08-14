@@ -115,7 +115,7 @@ function criarRotasLeitura({
       estado.limparPendentesConfirmados(idHw, req.body.config);
       // Avisa o produtor no celular quando um problema COMECA. Nao aguarda: a
       // resposta ao aparelho nao pode depender do FCM.
-      alertas.avaliarAlertas(idHw, status).catch((error) =>
+      alertas.avaliarAlertas(idHw, status, req.body.config).catch((error) =>
         log.erro('Falha ao avaliar alertas:', error.message),
       );
     }

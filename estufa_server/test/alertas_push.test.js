@@ -41,14 +41,15 @@ test('avisa quando a temperatura sai da faixa', async () => {
   assert.equal(enviados[0].evento, 'alarmeProcesso');
 });
 
-test('nao repete enquanto a condicao dura', async () => {
+test('nao repete a cada leitura', async () => {
   const { alertas, enviados } = montar();
 
   await alertas.avaliarAlertas('ESP32_BBB', foraDaFaixa);
   await alertas.avaliarAlertas('ESP32_BBB', foraDaFaixa);
   await alertas.avaliarAlertas('ESP32_BBB', foraDaFaixa);
 
-  // Um aviso por episodio: repetir a cada leitura ensina a ignorar.
+  // O aparelho reporta a cada 60s. A repeticao existe (ver os testes de
+  // intervalo), mas presa ao relogio - avisar a cada leitura ensina a ignorar.
   assert.equal(enviados.length, 1);
 });
 
@@ -92,6 +93,91 @@ test('depois do silencio, voltar fora da faixa avisa de novo', async () => {
     2,
     'a estufa voltou fora da faixa e ninguem foi avisado',
   );
+});
+
+// Avisar so na subida deixava quem nao ouviu o primeiro toque sem mais nada, e a
+// estufa passava a noite fria. Pior no fogo, onde o primeiro aviso perdido era o
+// unico que existia.
+test('temperatura fora da faixa repete a cada 30 min', async (t) => {
+  const relogio = t.mock.timers;
+  relogio.enable({ apis: ['Date'], now: 0 });
+  const { alertas, enviados } = montar();
+
+  await alertas.avaliarAlertas('ESP32_FFF', foraDaFaixa);
+  assert.equal(enviados.length, 1);
+
+  // 29 min: ainda e tempo de ir ate a estufa e o calor responder.
+  relogio.tick(29 * 60 * 1000);
+  await alertas.avaliarAlertas('ESP32_FFF', foraDaFaixa);
+  assert.equal(enviados.length, 1);
+
+  relogio.tick(2 * 60 * 1000);
+  await alertas.avaliarAlertas('ESP32_FFF', foraDaFaixa);
+  assert.equal(enviados.length, 2);
+});
+
+test('incendio repete a cada minuto', async (t) => {
+  const relogio = t.mock.timers;
+  relogio.enable({ apis: ['Date'], now: 0 });
+  const { alertas, enviados } = montar();
+  const fogo = { perigoChama: true };
+
+  await alertas.avaliarAlertas('ESP32_GGG', fogo);
+  relogio.tick(61 * 1000);
+  await alertas.avaliarAlertas('ESP32_GGG', fogo);
+  relogio.tick(61 * 1000);
+  await alertas.avaliarAlertas('ESP32_GGG', fogo);
+
+  // Sair agora nao espera meia hora.
+  assert.equal(enviados.length, 3);
+});
+
+test('silenciar no aparelho para de insistir no celular', async (t) => {
+  const relogio = t.mock.timers;
+  relogio.enable({ apis: ['Date'], now: 0 });
+  const { alertas, enviados } = montar();
+  const fogo = { perigoChama: true };
+
+  await alertas.avaliarAlertas('ESP32_HHH', fogo);
+  assert.equal(enviados.length, 1);
+
+  // Ninguem aperta silenciar sem o alarme estar tocando na frente dele.
+  relogio.tick(61 * 1000);
+  await alertas.avaliarAlertas('ESP32_HHH', fogo, { modoSilencioso: true });
+  relogio.tick(61 * 1000);
+  await alertas.avaliarAlertas('ESP32_HHH', fogo, { modoSilencioso: true });
+
+  assert.equal(enviados.length, 1);
+});
+
+test('desligar o buzzer NAO conta como visto', async (t) => {
+  const relogio = t.mock.timers;
+  relogio.enable({ apis: ['Date'], now: 0 });
+  const { alertas, enviados } = montar();
+  const fogo = { perigoChama: true };
+
+  await alertas.avaliarAlertas('ESP32_III', fogo);
+
+  // Preferencia, e pode ter sido decidida semanas atras: nao diz nada sobre
+  // ESTE alarme.
+  relogio.tick(61 * 1000);
+  await alertas.avaliarAlertas('ESP32_III', fogo, { buzzerAtivo: false });
+
+  assert.equal(enviados.length, 2);
+});
+
+test('problema resolvido zera o reconhecimento', async (t) => {
+  const relogio = t.mock.timers;
+  relogio.enable({ apis: ['Date'], now: 0 });
+  const { alertas, enviados } = montar();
+
+  await alertas.avaliarAlertas('ESP32_JJJ', foraDaFaixa);
+  alertas.reconhecer('ESP32_JJJ');
+  await alertas.avaliarAlertas('ESP32_JJJ', naFaixa);
+
+  // Episodio novo comeca limpo: ter visto o anterior nao compra silencio neste.
+  await alertas.avaliarAlertas('ESP32_JJJ', foraDaFaixa);
+  assert.equal(enviados.length, 2);
 });
 
 test('"voltou a se comunicar" nao apaga o estado', async () => {

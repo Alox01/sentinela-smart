@@ -5,10 +5,78 @@ const { ID_SIMULADOR } = require('./estado_estufa');
 // Quem decide se o celular toca. Separado das rotas de push (que so cadastram e
 // descadastram token) porque este e o outro lado do assunto: aqui e a leitura
 // que chega que vira aviso, e quem chama e a rota de leitura.
+// De quanto em quanto tempo um aviso volta a tocar enquanto o problema DURA.
+//
+// Avisar so na subida deixava um buraco caro: quem nao ouviu o primeiro toque
+// nao ouve mais nada, e a estufa passa a noite fria. Pior no fogo, onde o
+// primeiro aviso perdido e o unico que existia.
+//
+// Fogo e superaquecimento repetem de minuto em minuto porque a resposta e sair
+// agora. Temperatura fora da faixa espera 30 min: e o tempo de ir ate a estufa,
+// mexer na fornalha e o calor responder — cobrar antes disso e cobrar por algo
+// que ja esta a caminho. Mais curto que isso vira alarme de carro, e o desfecho
+// pior de todos e o produtor desligar a notificacao inteira.
+const REPETICAO_MS = {
+  incendio: 60 * 1000,
+  temperaturaMuitoAlta: 60 * 1000,
+  // Risco de fogo sem causa declarada: mesma urgencia, chave propria.
+  fogoAgregado: 60 * 1000,
+  alarmeProcesso: 30 * 60 * 1000,
+};
+
 function criarAlertasPush({ db, push, estado }) {
   // Ultimo estado notificado por aparelho, para avisar na BORDA (quando o
   // problema comeca) e nao a cada leitura enquanto ele durar.
   const ultimoEstadoNotificado = new Map();
+
+  // Quando cada aviso tocou pela ultima vez, e se o produtor ja o viu.
+  // Chave: `idHardware|evento`.
+  const repeticoes = new Map();
+
+  /// O aviso deve sair agora? Cobre a subida (problema comecando) e a
+  /// repeticao (problema durando sem ninguem dar sinal de vida).
+  ///
+  /// `reconhecido` vem de o produtor abrir o app na estufa que esta alarmando —
+  /// ver a rota `/push/reconhecer`. Nao da para saber que ele DISPENSOU a
+  /// notificacao: com o app fechado quem a desenha e o Android, e deslizar para
+  /// o lado nao avisa ninguem. Abrir o app e o sinal mais proximo de "eu vi" que
+  /// existe sem inventar certeza.
+  function deveAvisar({ idHardware, evento, ativo, subida, agoraMs }) {
+    const chave = `${idHardware}|${evento}`;
+    if (!ativo) {
+      // Problema resolvido: esquece tudo, para o proximo episodio comecar limpo
+      // e voltar a avisar mesmo que este tenha sido reconhecido.
+      repeticoes.delete(chave);
+      return false;
+    }
+    if (subida) {
+      repeticoes.set(chave, { ultimoAvisoMs: agoraMs, reconhecido: false });
+      return true;
+    }
+
+    const anterior = repeticoes.get(chave);
+    // Sem registro (servidor reiniciou no meio do episodio): trata como subida.
+    if (!anterior) {
+      repeticoes.set(chave, { ultimoAvisoMs: agoraMs, reconhecido: false });
+      return true;
+    }
+    if (anterior.reconhecido) return false;
+
+    const intervalo = REPETICAO_MS[evento];
+    if (!intervalo) return false;
+    if (agoraMs - anterior.ultimoAvisoMs < intervalo) return false;
+
+    anterior.ultimoAvisoMs = agoraMs;
+    return true;
+  }
+
+  /// O produtor abriu o app nesta estufa: para de insistir no episodio atual.
+  /// Nao apaga o estado — se o problema passar e voltar, avisa de novo.
+  function reconhecer(idHardware) {
+    for (const [chave, valor] of repeticoes) {
+      if (chave.startsWith(`${idHardware}|`)) valor.reconhecido = true;
+    }
+  }
 
   function preferenciaPermite(preferencias, chaveEvento) {
     if (!preferencias) return true; // sem preferencia salva, o padrao e avisar
@@ -129,8 +197,17 @@ function criarAlertasPush({ db, push, estado }) {
   });
 
   // Compara a leitura nova com o ultimo estado avisado e dispara so na subida.
-  async function avaliarAlertas(idHardware, status) {
+  async function avaliarAlertas(idHardware, status, config) {
     if (!idHardware || idHardware === ID_SIMULADOR) return;
+
+    // Silencio momentaneo apertado no aparelho vale como "eu vi": ninguem aperta
+    // silenciar sem o alarme estar tocando na frente dele. Para de insistir no
+    // celular pelo episodio em curso.
+    //
+    // Diferente de DESLIGAR o buzzer (`buzzerAtivo`), que e preferencia e pode
+    // ter sido decidida semanas atras — nao diz nada sobre este alarme. Um vale
+    // como reacao; o outro, nao.
+    if (config?.modoSilencioso === true) reconhecer(idHardware);
 
     const fogoSensor = status.perigoChama === true;
     const tempMuitoAlta = status.riscoIncendio === true;
@@ -161,7 +238,11 @@ function criarAlertasPush({ db, push, estado }) {
     // independentes, e o produtor pode querer desligar um sem perder o outro.
     // Cada um tem a sua propria borda, entao a temperatura subir depois de o
     // sensor ja ter disparado ainda avisa.
-    if (fogoSensor && !anterior.fogoSensor) {
+    const agoraMs = Date.now();
+    const avisar = (evento, ativo, subida) =>
+      deveAvisar({ idHardware, evento, ativo, subida, agoraMs });
+
+    if (avisar('incendio', fogoSensor, fogoSensor && !anterior.fogoSensor)) {
       await notificarEvento({
         idHardware,
         evento: 'incendio',
@@ -170,7 +251,13 @@ function criarAlertasPush({ db, push, estado }) {
         critico: true,
       });
     }
-    if (tempMuitoAlta && !anterior.tempMuitoAlta) {
+    if (
+      avisar(
+        'temperaturaMuitoAlta',
+        tempMuitoAlta,
+        tempMuitoAlta && !anterior.tempMuitoAlta,
+      )
+    ) {
       await notificarEvento({
         idHardware,
         evento: 'temperaturaMuitoAlta',
@@ -183,8 +270,16 @@ function criarAlertasPush({ db, push, estado }) {
     }
     // O aparelho pode reportar risco de fogo sem dizer qual causa (campo
     // agregado). Nesse caso o aviso sai como incendio, que e o mais grave dos
-    // dois - calar seria pior.
-    if (fogo && !anterior.fogo && !fogoSensor && !tempMuitoAlta) {
+    // dois - calar seria pior. Chave de repeticao propria (`fogoAgregado`) para
+    // nao brigar com a do sensor de chama.
+    const fogoSemCausa = fogo && !fogoSensor && !tempMuitoAlta;
+    if (
+      avisar(
+        'fogoAgregado',
+        fogoSemCausa,
+        fogoSemCausa && !anterior.fogo,
+      )
+    ) {
       await notificarEvento({
         idHardware,
         evento: 'incendio',
@@ -199,7 +294,10 @@ function criarAlertasPush({ db, push, estado }) {
     // manter um evento a parte prometeria uma distincao que o sistema nao sabe
     // fazer, e o produtor poderia desligar o aviso que de fato funciona
     // achando que este o cobria. Volta quando existir o sensor de tensao.
-    if (alarme && !anterior.alarme && !fogo) {
+    const foraDaFaixa = alarme && !fogo;
+    if (
+      avisar('alarmeProcesso', foraDaFaixa, foraDaFaixa && !anterior.alarme)
+    ) {
       await notificarEvento({
         idHardware,
         evento: 'alarmeProcesso',
@@ -210,7 +308,7 @@ function criarAlertasPush({ db, push, estado }) {
     }
   }
 
-  return { notificarEvento, avaliarAlertas, vigia };
+  return { notificarEvento, avaliarAlertas, reconhecer, vigia };
 }
 
 module.exports = {

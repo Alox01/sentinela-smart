@@ -158,6 +158,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // Por ultimo, e sem segurar nada: confere no banco se a copia que esta tela
     // recebeu ainda vale. E o que impede a chave revogada de sobreviver aqui.
     unawaited(_revalidarComOBanco());
+    // Abrir esta tela e o sinal de "eu vi" — por toque na notificacao ou por
+    // conta propria. A nuvem para de repetir o aviso do episodio em curso.
+    unawaited(api.reconhecerAlerta());
   }
 
   /// Relê a estufa no banco e troca o monitor quando o que chegou por copia

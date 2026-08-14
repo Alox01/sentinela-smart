@@ -96,6 +96,25 @@ function criarRotasPush({ db, authMiddleware, push, alertas }) {
     }
   });
 
+  // "Eu vi": para de repetir o aviso do episodio em curso nesta estufa.
+  //
+  // Chamada quando o produtor abre a tela de monitoramento daquela estufa —
+  // tocando na notificacao ou abrindo o app por conta propria. Nao da para saber
+  // que ele DISPENSOU a notificacao: com o app fechado quem a desenha e o
+  // Android, e deslizar para o lado nao avisa ninguem. Abrir o app e o sinal
+  // mais proximo de "eu vi" que existe sem inventar certeza.
+  //
+  // Nao apaga o estado do alerta: se o problema passar e voltar, avisa de novo.
+  router.post('/push/reconhecer', authMiddleware, (req, res) => {
+    const idHardware = (req.body?.idHardware || '').trim();
+    if (!idHardware) {
+      res.status(400).json({ erro: 'idHardware obrigatorio' });
+      return;
+    }
+    alertas.reconhecer(idHardware);
+    res.json({ sucesso: true });
+  });
+
   // Roda o watchdog na hora, sem esperar o ciclo. Serve para testar o aviso de
   // silencio sem precisar desligar a estufa e cronometrar 15 minutos.
   router.post('/push/verificar-silencio', authMiddleware, async (_req, res) => {

@@ -313,6 +313,34 @@ class ApiService {
   /// So faz sentido quando a leitura veio do proprio aparelho (modo LOCAL); em
   /// modo nuvem a leitura JA veio de la. Silencioso de proposito: e um esforco
   /// oportunista, e falhar nao pode atrapalhar a tela.
+  /// Diz a nuvem que o produtor esta olhando esta estufa, para ela parar de
+  /// repetir o aviso do episodio em curso.
+  ///
+  /// Nao da para saber que ele DISPENSOU a notificacao: com o app fechado quem a
+  /// desenha e o Android, e deslizar para o lado nao avisa ninguem. Abrir a tela
+  /// da estufa e o sinal mais proximo de "eu vi" que existe sem inventar
+  /// certeza. Melhor esforco: falhar aqui so custa um aviso repetido a mais.
+  Future<bool> reconhecerAlerta() async {
+    final nuvem = cloudBaseUrl;
+    final id = idHardware;
+    if (nuvem == null || nuvem.isEmpty || id == null || id.isEmpty) {
+      return false;
+    }
+
+    try {
+      final resposta = await _cliente
+          .post(
+            Uri.parse('$nuvem/push/reconhecer'),
+            headers: _headers({'Content-Type': 'application/json'}),
+            body: jsonEncode({'idHardware': id}),
+          )
+          .timeout(const Duration(seconds: 8));
+      return _respostaSucesso(resposta.statusCode);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> repassarLeituraParaNuvem(Map<String, dynamic> dados) async {
     final nuvem = cloudBaseUrl;
     final id = idHardware;
