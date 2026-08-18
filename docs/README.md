@@ -1,6 +1,6 @@
 # Índice da documentação
 
-São 27 arquivos. Este índice existe para ninguém abrir seis para achar um — e
+São 28 arquivos. Este índice existe para ninguém abrir seis para achar um — e
 para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## Comece por aqui
@@ -63,6 +63,9 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 - **`ESP32_VIRTUAL.md`** e **`TESTE_ESP32_REAL.md`** — testar com e sem aparelho.
 - **`DEMO.md`** — roteiro de demonstração.
 - **`NUVEM_POR_APARELHO.md`** — como um aparelho vira estado na nuvem.
+- **`MONTAGEM_DEFINITIVA.md`** — sair do protoboard: o que comprar, por que
+  caixa IP67 não basta sozinha, e as armadilhas de compra (TM1637 × TM1650,
+  módulo de 5 V numa GPIO de 3,3 V, o teto de 80 °C do DHT22).
 
 ## Quando o documento e o código divergem
 
