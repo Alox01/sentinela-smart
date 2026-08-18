@@ -121,13 +121,61 @@ O DS18B20 lê durante um superaquecimento de verdade em vez de cegar, e a sonda
 com cabo resolve de quebra a arquitetura: eletrônica fora da zona quente, só a
 ponta dentro da estufa.
 
-**Ele não substitui o DHT22** — não mede umidade, e a umidade é gravada,
-desenhada no gráfico e exportada no PDF e no CSV. Os dois juntos põem a medida
-que dispara alarme no sensor robusto e deixam a umidade, que por decisão de
-projeto **não** alarma, no sensor mais frágil.
+**Ele não substitui o DHT22** — não mede umidade. E, mais importante: no seu
+caso **dois sensores separados não são um remendo, são o requisito**.
 
-Alternativa numa peça só: **SHT31** (temperatura e umidade, −40 a +125 °C, I²C).
-Resolve tudo, mas não é sonda com cabo e custa mais.
+### Onde cada sensor vai, e por que isso decide a escolha
+
+Na estufa as duas medidas moram em lugares diferentes:
+
+- **Temperatura — embaixo**, onde pega o calor direto.
+- **Umidade — no meio do fumo**, colada na parede, depois do corredor entre os
+  vãos e a parede da casa de máquina.
+
+Por isso **um sensor combinado (SHT31, BME280) está errado aqui**: ele mede as
+duas coisas no mesmo ponto, e uma das duas ficaria no lugar errado por
+construção. Foi a primeira recomendação escrita neste documento, e estava errada.
+
+O lugar da umidade também favorece o DHT22: colado na parede, depois do corredor,
+é a região mais fria — bem longe dos 80 °C que são o teto dele. O teto só
+atrapalhava a medida de temperatura, que agora sai para o DS18B20.
+
+**Pino sugerido para o DS18B20: GPIO23.** Os ocupados são 4, 13, 14, 18, 19, 25,
+26, 27, 32, 33 e 35. Evitados: 21 e 22 (I²C padrão, valem como reserva) e os de
+*strapping* (0, 2, 12, 15), que atrapalham o boot. O DHT22 fica no 32, agora só
+como sensor de umidade.
+
+*Vantagem que casa com estufa:* o 1-Wire aceita **vários DS18B20 no mesmo pino**,
+cada um com endereço de fábrica. Temperatura em duas alturas, um dia, não custa
+GPIO nenhuma.
+
+### O cabo de 5 m do sensor de umidade
+
+O trajeto é por fora da estufa; só o sensor e no máximo 1 m de cabo entram.
+
+O DHT22 usa protocolo de um fio com temporização apertada, **projetado para
+20 cm**. A 5 m funciona ou não dependendo do cabo, e o sintoma é leitura inválida
+intermitente — não falha limpa. Para dar certo:
+
+- **cabo blindado** ou par trançado de rede: um par para dado + terra, outro par
+  (fios juntos) para o 3,3 V;
+- **pull-up de 2,2 kΩ** em vez de 4,7 kΩ — cabo mais longo pede pull-up mais
+  forte;
+- **capacitor de 100 nF** entre VCC e terra **junto ao sensor**, não na placa;
+- malha aterrada **só na ponta da placa**, nunca nas duas;
+- **sem emenda dentro da estufa** — emenda em ambiente quente e úmido é o ponto
+  que oxida primeiro;
+- **capinha ventilada** sobre o sensor (furada por baixo, fechada por cima):
+  colado na parede ele pega condensação escorrendo.
+
+*Por que aceitar esse risco:* **a umidade não dispara alarme neste sistema.** Uma
+leitura perdida custa um ponto no gráfico, e o firmware já descarta leitura
+inválida em vez de deixá-la virar zero. Se fosse a temperatura, o risco não valeria.
+
+A resposta tecnicamente correta para 5 m seria uma **sonda SHT20 em RS485/Modbus**
+— barramento diferencial, feito para centenas de metros. Fica registrada como o
+caminho certo caso isto vire produto: para o TCC é peça, biblioteca e protocolo
+novos para melhorar justamente a medida que menos importa.
 
 *Custo da mudança:* entram `OneWire` e `DallasTemperature`, o `lerDHT22()` se
 divide em duas leituras e o CI ganha as bibliotecas. Cada sensor precisa do seu
