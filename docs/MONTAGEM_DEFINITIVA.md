@@ -149,6 +149,34 @@ como sensor de umidade.
 cada um com endereço de fábrica. Temperatura em duas alturas, um dia, não custa
 GPIO nenhuma.
 
+### O sensor de umidade já está validado na propriedade
+
+A estufa tem um controlador comercial **Schroeder Tigger 3000** (temperatura,
+umidade, alarme, sirene e motor/abafador), e o sensor de umidade dele é um
+**AM2302 — o DHT22 com cabo**. Identificado por foto: corpo branco com grade
+quadriculada (o DHT11 é azul), aba inferior com furo de fixação e termorretrátil
+na junção do cabo.
+
+Ou seja: **o mesmo sensor que este projeto usa mede a umidade daquela estufa há
+anos, num produto comercial.** A escolha deixa de precisar de defesa teórica — e
+a discussão de SHT31 ou sonda RS485 se encerra: não seriam melhorias, seriam
+divergências do que comprovadamente funciona ali.
+
+**Comprar:** `AM2302` ou "DHT22 com cabo", de preferência com **5 m de fábrica**.
+Se vier curto, a emenda fica **fora da estufa**, na parte seca — nunca lá dentro.
+Vale levar **dois**: é a peça no ambiente agressivo, e ter sobressalente na
+gaveta é diferente de esperar entrega internacional no meio de uma estufada.
+
+**Instalação, copiada da que já existe:** tubo atravessando a parede no canto
+direito, perto da porta, na altura da verga; cabo por dentro do tubo; sensor
+pendurado por um barbante amarrado na aba de fixação, **dentro de um potinho
+cortado** para o fumo não encostar direto nele. Aquilo sobreviveu a anos naquele
+ambiente — é a prova de campo mais barata que existe.
+
+**Não dividir sinal com o Tigger.** Sinal de instrumento comercial partilhado
+perturba os dois lados, e se perderia o controle sobre a única medida que é
+nossa. Sensor próprio, no mesmo estilo de instalação.
+
 ### O cabo de 5 m do sensor de umidade
 
 O trajeto é por fora da estufa; só o sensor e no máximo 1 m de cabo entram.
