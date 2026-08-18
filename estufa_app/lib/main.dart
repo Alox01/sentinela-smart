@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'escopo.dart';
 import 'features/agendamento/services/agendamento_service.dart';
 import 'features/notificacoes/services/preferencias_notificacao_service.dart';
 import 'features/notificacoes/services/push_notification_service.dart';
@@ -84,7 +85,12 @@ class _BootstrapScreenState extends State<_BootstrapScreen>
     // Reagenda os avisos de ajuste: reiniciar o celular apaga os alarmes do
     // sistema, e nem todo fabricante entrega o BOOT_COMPLETED que o plugin
     // usa para se reerguer sozinho.
-    unawaited(AgendamentoService.instance.carregar());
+    //
+    // Fora do escopo reduzido: la o agendamento nao existe, e deixar o servico
+    // rodando fazia a build apresentada notificar sobre uma funcao que ela nao
+    // tem. Apareceu em campo — "Ajuste nao aplicado" na abertura do app, de um
+    // agendamento antigo que venceu com o aparelho desligado.
+    if (!escopoTcc) unawaited(AgendamentoService.instance.carregar());
     // O app pode ter sido aberto pela propria notificacao, com a sirene ainda
     // tocando: o ciclo de vida nao passa por "resumed" nesse caminho.
     unawaited(PushNotificationService.instance.calarAvisosSonoros());

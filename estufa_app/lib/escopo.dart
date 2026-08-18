@@ -34,9 +34,14 @@
 ///
 /// Sai também o **agendamento de ajuste** — "às 14h deixe em 120 °F" é automação
 /// de curva, e nenhum dos cinco objetivos declarados fala nisso: monitorar,
-/// controlar, sincronizar, registrar e alertar. Some o item do menu e a
-/// preferência de som do lembrete, porque um aviso que nunca toca não precisa de
-/// interruptor.
+/// controlar, sincronizar, registrar e alertar. Some o item do menu, a
+/// preferência de som do lembrete — um aviso que nunca toca não precisa de
+/// interruptor — e o **serviço inteiro no `main.dart`**.
+///
+/// O serviço ficou de fora por último, e o motivo apareceu em campo: escondido
+/// da interface mas ainda rodando, ele avisava "Ajuste não aplicado" na abertura
+/// do app, sobre um agendamento antigo. A build apresentada notificando sobre
+/// uma função que ela não tem é pior do que ter a função.
 ///
 /// Sai também **a linha de diagnóstico da revogação** — aquela com o código HTTP
 /// e a marca da chave. Ela é ferramenta de suporte, e numa apresentação vira
