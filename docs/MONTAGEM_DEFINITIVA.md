@@ -28,18 +28,58 @@ em algo que aguenta uma safra.
 
 ## Lista de compra
 
-| O que buscar | Especificação | Qtd |
+### Sensores e cabo
+
+| Item | Especificação | Qtd |
+|---|---|---|
+| **AM2302** (DHT22 com cabo) | umidade, no meio do fumo | 2 (um de reserva) |
+| **DS18B20** à prova d'água | temperatura, embaixo, no calor direto | 1 |
+| **Cabo blindado** 4 vias | ~8 m, para ter folga | 1 |
+
+O cabo blindado **não** em loja de eletrônica: cabo de alarme blindado, comprado
+por metro em loja de material elétrico, sai por uma fração e é o mesmo tipo já
+instalado na estufa hoje.
+
+### Para a placa
+
+| Item | Especificação | Qtd |
 |---|---|---|
 | Placa ilhada / perfurada (face simples) | **9 × 15 cm**, furos 2,54 mm | 1 |
 | Barra de pinos **fêmea** 2,54 mm | tira de 1×40, para cortar | 2 |
 | Borne KRE 2 vias, 5,08 mm (encaixável) | ver divisão abaixo | 12 |
-| Resistor 4,7 kΩ 1/4 W | pull-up do DHT22 | 1 |
-| Resistor 220 Ω 1/4 W | um por LED | 3 |
+| Resistor **4,7 kΩ** 1/4 W | pull-up do DS18B20 | 1 |
+| Resistor **2,2 kΩ** 1/4 W | pull-up do DHT22 — mais forte por causa dos 5 m | 1 |
+| Resistor **220 Ω** 1/4 W | um por LED | 3 |
+| Capacitor cerâmico **100 nF** | junto ao sensor de umidade, não na placa | 2 |
 | Fio rígido 22 AWG | ligações na placa | 1 rolo |
 | Cabo flexível 22 AWG, duas cores | até os componentes do painel | 1 rolo |
-| Prensa-cabo (glândula) com porca | do diâmetro do cabo usado | 2–3 |
-| Respiro de membrana para caixa | mantém o IP67 e deixa vapor sair | 1 |
-| Sílica-gel em saquinho | dentro da caixa | 2 |
+
+### Para a caixa
+
+| Item | Por quê |
+|---|---|
+| Caixa IP67 | proteção principal |
+| Prensa-cabo (glândula) com porca | 2–3, do diâmetro do cabo — a caixa só é tão vedada quanto o furo |
+| **Respiro de membrana** | contra condensação: caixa selada acumula água por dentro |
+| Sílica-gel em saquinho | 2 |
+
+### Consumíveis e ferramenta
+
+| Item | Por quê |
+|---|---|
+| Termorretrátil sortido | proteger a solda no sensor e a emenda |
+| Estanho 0,8 mm com fluxo | — |
+| Abraçadeiras de nylon | alívio de tração: o que arranca solda é puxão, não vibração |
+| Fonte 5 V / 1 A com conector | não depender de carregador de celular pendurado |
+| **Ferro de solda** 30 W, ponta fina | sem ele nada desta montagem acontece |
+
+### O que NÃO precisa comprar
+
+Botões, LEDs, buzina, display e ESP32 já existem no aparelho atual e são
+reaproveitados. O display só entra na lista se for para trocar por um de 0,56",
+que é conforto de leitura, não necessidade.
+
+### Divisão dos bornes e da barra
 
 **Os 12 bornes** viram: alimentação (2 vias), buzina (2), DHT22 (3), chama (3),
 display (4), botões (4 — três sinais e o terra comum), LEDs (4 — idem). O KRE
@@ -47,6 +87,29 @@ encaixa lateralmente, então comprar só os de 2 vias e juntar dá qualquer larg
 
 **A barra fêmea:** conte os pinos do ESP32 antes. Os comuns são 30 (15 por lado)
 ou 38 (19 por lado); duas tiras de 40 cobrem os dois casos.
+
+## Onde comprar, e em que ordem
+
+O que decide a loja é o **prazo**, não o preço: AliExpress leva de 15 a 40 dias
+mais imposto, e não serve para nada que precise estar pronto antes da banca.
+
+**Nacional, agora** — placa, bornes, barra fêmea, resistores, capacitores, fio,
+termorretrátil, estanho, AM2302 e DS18B20. É o que permite soldar.
+
+**AliExpress, sem pressa** — caixa IP67, prensa-cabos, respiro de membrana,
+display de 0,56", sobressalentes.
+
+**Loja de material elétrico da cidade** — cabo blindado e abraçadeiras.
+
+Lojas nacionais conhecidas: **Eletrogate**, **Curto Circuito**, **FilipeFlop**
+(mais cara, melhor material de apoio), **Baú da Eletrônica** e **UsinaInfo**
+(fortes em componente avulso), e **Mercado Livre** — o mais rápido, e onde a
+qualidade mais varia: conferir a reputação do vendedor.
+
+*Ao perguntar no atendimento de uma loja*, as perguntas que eles respondem melhor
+que qualquer anúncio são **estoque, comprimento de cabo disponível e prazo de
+entrega**. Atendimento tende a empurrar o que está em estoque — trocar de sensor
+por conveniência de estoque é como se perde uma escolha que já estava validada.
 
 ## Jumpers: nenhum
 
