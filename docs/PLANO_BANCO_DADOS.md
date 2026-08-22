@@ -86,6 +86,41 @@ Enquanto essa tabela nao existir, o app pode continuar controlando o ciclo
 localmente, mas o banco ainda nao tera uma entidade propria para relatorios por
 estufada.
 
+### A estufada e do celular; a leitura e da nuvem
+
+Hoje **nao existe tabela de estufadas na nuvem**. O ciclo mora so no Isar, no
+celular; a nuvem guarda leituras soltas, carimbadas por horario e por aparelho,
+sem saber a qual secagem pertencem.
+
+Tres consequencias que valem estar escritas:
+
+**Apagar uma estufada apaga so a copia local.** `apagarCiclo` remove os eventos,
+as leituras daquele intervalo e o proprio ciclo — tudo no Isar, sem nenhuma
+chamada ao servidor. As leituras correspondentes **continuam na nuvem**, orfas:
+existem no banco, e nenhuma tela consegue mostra-las, porque toda consulta de
+historico parte de um ciclo.
+
+**Isso e escolha, nao esquecimento.** Apagar no celular apaga a *minha* copia;
+apagar na nuvem apagaria a de *todo mundo* — e o acesso e compartilhavel por QR
+Code, entao outro celular pode ter a mesma estufada. Entre desperdicar ~0,7 MB
+(uma secagem de 10 dias sao ~1.440 linhas) e apagar o relatorio de outra pessoa
+por engano, o desperdicio e o erro barato. Fazer diferente exigiria responder
+"de quem e esta estufada?", e o sistema nao tem dono — tem quem tem a chave.
+
+**Desinstalar o app perde o historico.** O Isar nasce vazio, nao ha ciclo para
+selecionar, e o app nao tem como remontar um: ele nao sabe onde a secagem comecou
+nem terminou. Os dados brutos sobrevivem na nuvem ate a retencao, mas so seriam
+alcancaveis consultando o banco na mao, por `timestamp_origem_ms`.
+
+*Por que a retencao e longa (300 dias), entao?* Nao e pelas orfas. E porque **o
+ciclo vive muito tempo no celular**: abrir o relatorio de uma secagem de oito
+meses atras faz o app buscar na nuvem para preencher os buracos do periodo em que
+o app esteve fechado. A retencao acompanha a vida do ciclo, nao a das leituras.
+
+*Trabalho futuro com motivo:* persistir o ciclo na nuvem faria o relatorio
+sobreviver a troca de celular — e daria a base para responder a pergunta de
+propriedade que hoje impede o apagar distribuido.
+
 ## Eventos da estufada
 
 Eventos sao registros curtos que ajudam o produtor a entender o que aconteceu.

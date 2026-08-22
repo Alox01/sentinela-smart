@@ -139,6 +139,14 @@ class RelatorioEstufadaRepository {
     return _isar.listarEventosPorCiclo(cicloId);
   }
 
+  /// Apaga a estufada **so no celular**: eventos, leituras do intervalo e o
+  /// proprio ciclo, tudo no Isar, sem nenhuma chamada ao servidor.
+  ///
+  /// As leituras correspondentes continuam na nuvem, orfas — nenhuma tela as
+  /// alcanca, porque toda consulta de historico parte de um ciclo, e o ciclo so
+  /// existe aqui. E escolha, nao esquecimento: apagar na nuvem apagaria a copia
+  /// de **todo mundo**, e o acesso e compartilhavel por QR Code. Ver
+  /// `docs/PLANO_BANCO_DADOS.md`, secao "A estufada e do celular".
   Future<void> apagarCiclo(int cicloId) async {
     await _isar.apagarCiclo(cicloId);
     // O que estava adiantado descreve uma estufada que acabou de deixar de
