@@ -249,9 +249,21 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
         if (_aberto) ...[
           const SizedBox(height: 4),
           _LinhaDetalhe('Aparelho (id)', widget.idHardware ?? 'Não identificado'),
-          _LinhaDetalhe('Ativo', widget.baseUrlAtiva ?? '-'),
-          _LinhaDetalhe('Local', widget.localBaseUrl),
-          _LinhaDetalhe('Nuvem', widget.cloudBaseUrl ?? 'Não configurada'),
+          // Os rotulos eram "Ativo", "Local" e "Nuvem", e a leitura embaralhava:
+          // "Ativo" e "Local" apareciam como dois enderecos quase identicos,
+          // diferindo so no numero da porta, sem nada dizendo qual e qual. E o
+          // esquema ainda quebrava no caso mais comum — quando o aparelho
+          // responde pelo recuo da porta 80, o ativo nao e igual a nenhum dos
+          // dois candidatos listados.
+          //
+          // Os nomes agora dizem o papel: um e o canal EM USO, os outros dois
+          // sao os enderecos configurados.
+          _LinhaDetalhe('Em uso agora', widget.baseUrlAtiva ?? '-'),
+          _LinhaDetalhe('Endereço local', widget.localBaseUrl),
+          _LinhaDetalhe(
+            'Endereço na nuvem',
+            widget.cloudBaseUrl ?? 'Não configurada',
+          ),
           _LinhaDetalhe(
             'Avisos push',
             switch (widget.vigiadaPorPush) {
