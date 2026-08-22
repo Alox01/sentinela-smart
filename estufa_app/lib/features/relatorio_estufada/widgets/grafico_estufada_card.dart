@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/historico_leitura_entity.dart';
+import '../../monitoramento/margem_ajuste.dart';
 import '../../../widgets/grafico_steam.dart';
 
 class GraficoEstufadaCard extends StatelessWidget {
@@ -185,7 +186,7 @@ class GraficoEstufadaCard extends StatelessWidget {
 
   Color _corPontoGrafico({required double atual, required double ajuste}) {
     final diferenca = atual - ajuste;
-    const tolerancia = 5.0;
+    const tolerancia = margemAjuste;
 
     if (graficoTemperatura) {
       if (diferenca > tolerancia) return Colors.redAccent;

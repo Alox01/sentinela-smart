@@ -2,6 +2,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
+import '../features/monitoramento/margem_ajuste.dart';
+
 class GraficoSteam extends StatelessWidget {
   final List<FlSpot> pontos;
   final List<double> ajustes;
@@ -430,7 +432,7 @@ class GraficoSteam extends StatelessWidget {
     final index = _indiceOriginalExato(spot.x);
     if (index == null || index >= ajustes.length) return false;
 
-    return (pontos[index].y - ajustes[index]).abs() > 5;
+    return (pontos[index].y - ajustes[index]).abs() > margemAjuste;
   }
 
   double _limitarY(double valor) {
