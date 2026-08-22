@@ -30,7 +30,18 @@ em algo que aguenta uma safra.
 O que decide a loja é o **prazo**, não o preço: AliExpress leva de 15 a 40 dias
 mais imposto, e não serve para nada que precise estar pronto antes da banca.
 
-### Já comprado — AliExpress (21/08/2026, R$103,74)
+### Já comprado
+
+**Nacional (21/08/2026)** — é o que permite soldar:
+
+| Item | Especificação |
+|---|---|
+| **Placa ilhada** | 9 × 15 cm, 2,54 mm, fibra de vidro dupla face |
+| **Barra de pinos fêmea** | 1×40, 2,54 mm, comum/estampada |
+| **Borne KRE 2 vias** | passo 5,08 mm, 12 un |
+
+**AliExpress (21/08/2026, R$103,74)** — chega em 15 a 40 dias, é a etapa
+definitiva:
 
 | Item | Variante |
 |---|---|
@@ -41,13 +52,10 @@ mais imposto, e não serve para nada que precise estar pronto antes da banca.
 | Capacitor cerâmico **104 (100 nF)** | 100 un, 50 V |
 | Termorretrátil **4:1 com cola** | 12 mm, 1 m |
 
-### Falta — nacional, e é o que destrava a solda
+### Falta — nacional
 
 | Item | Especificação | ~R$ |
 |---|---|---|
-| **Placa ilhada** | 9 × 15 cm, 2,54 mm, **fibra de vidro** (não fenolite) | 26 |
-| **Barra de pinos fêmea** | 1×40, 2,54 mm, **comum/estampada** — nunca torneada | 20 |
-| **Borne KRE 2 vias** | passo **5,08 mm**, 12 un | 10 |
 | **Caixa IP67** | ~200 × 120 × 75 externo — **confirmar o INTERNO antes** | — |
 | **Fonte 5 V / 2 A** | com selo INMETRO, plugue brasileiro | — |
 | **Verniz de proteção** acrílico | Implastec ou equivalente **com ficha técnica** | 30–40 |
