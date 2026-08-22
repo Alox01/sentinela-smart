@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../widgets/card_sensor.dart';
 import '../../../widgets/painel_controle.dart';
+import '../margem_ajuste.dart';
 
 class LeituraAparelhoCard extends StatelessWidget {
   final double temperatura;
@@ -34,7 +35,10 @@ class LeituraAparelhoCard extends StatelessWidget {
   // Acende com 5 de diferenca do ajuste, mais a folga da acomodacao (que e
   // proporcional ao tanto que o ajuste andou), para nao confundir a estufa
   // "perseguindo" o novo ajuste com uma oscilacao de clima.
-  static double _limiarLed(double folga) => 5.0 + folga;
+  /// Margem do LED de umidade. Mesma [margemAjuste] do grafico e do aparelho: a
+  /// umidade acendia o LED com 6% de desvio enquanto o grafico desenhava o ponto
+  /// como normal — duas telas discordando sobre a mesma leitura.
+  static double _limiarLed(double folga) => margemAjuste + folga;
 
   @override
   Widget build(BuildContext context) {
