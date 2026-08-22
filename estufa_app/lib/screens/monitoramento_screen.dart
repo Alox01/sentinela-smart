@@ -822,6 +822,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           nomeEstufa: _nome,
           ipEstufa: _ip,
           idHardware: _idHardware ?? api.idHardware,
+          tokenAcesso: _token,
         ),
       ),
     );

@@ -28,11 +28,17 @@ class HistoricoScreen extends StatefulWidget {
   /// pedir o historico DESTA estufa.
   final String? idHardware;
 
+  /// A chave da estufa. `/historico` exige a chave DO APARELHO (a do TOFU), nao
+  /// a global: sem ela a nuvem responde 401 e o relatorio fica so com o que o
+  /// app gravou no celular.
+  final String? tokenAcesso;
+
   const HistoricoScreen({
     super.key,
     required this.nomeEstufa,
     required this.ipEstufa,
     this.idHardware,
+    this.tokenAcesso,
   });
 
   @override
@@ -50,11 +56,20 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   static const _pdfService = RelatorioPdfService();
   final RelatorioEstufadaRepository _relatorioRepository =
       RelatorioEstufadaRepository(IsarService.instance);
-  // COM o idHardware: sem ele, `/historico` na nuvem cai no aparelho padrao e
-  // devolve o historico do SIMULADOR. O `/status` ja tratava isso; esta rota
-  // nao, e o relatorio vinha vazio ou com dado de outra estufa.
+  // Com id E chave, e as duas por motivos diferentes.
+  //
+  // Sem o `idHardware`, `/historico` na nuvem caia no aparelho padrao e devolvia
+  // o historico do SIMULADOR. Sem o `tokenAcesso`, a nuvem responde 401 antes
+  // disso: a rota exige a chave DO APARELHO, e esta tela nascia sem nenhuma —
+  // entao o historico remoto nunca chegou, e o relatorio mostrava so o que o
+  // app tinha gravado no celular. Com o app fechado por um dia, isso e quase
+  // nada.
+  //
+  // Os dois vem por copia da tela de monitoramento, que os rele do banco ao
+  // abrir (ver `credenciais_de_agora.dart`) — entao chegam aqui frescos.
   late final ApiService _api = ApiService(
     widget.ipEstufa,
+    token: widget.tokenAcesso,
     idHardware: widget.idHardware,
   );
 
