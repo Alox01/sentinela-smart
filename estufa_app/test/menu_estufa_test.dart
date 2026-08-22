@@ -196,9 +196,8 @@ void main() {
     expect(inventario, contains('item: Tirar acesso dos outros celulares'));
     // A secao ACOES RAPIDAS inteira sai, por tres motivos diferentes:
     // agendamento contradiz o escopo (automacao de curva), reiniciar ajustes e
-    // atalho do que o + e o - ja fazem, e apagar estufadas e acao irreversivel
-    // numa demonstracao ao vivo — com a retencao automatica respondendo melhor
-    // a "como se gerencia o dado antigo".
+    // atalho do que o + e o - ja fazem, e apagar estufadas e porta duplicada —
+    // a lixeira da tela de relatorios ja faz isso, e e onde faz sentido fazer.
     expect(inventario, isNot(contains('item: Agendar ajuste')));
     expect(inventario, isNot(contains('item: Reiniciar ajustes do aparelho')));
     expect(inventario, isNot(contains('item: Apagar estufadas')));

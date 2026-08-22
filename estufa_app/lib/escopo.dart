@@ -50,10 +50,15 @@
 /// - **Reiniciar ajustes do aparelho** é atalho, não capacidade. Tudo o que ele
 ///   faz se faz com o `+` e o `−` da tela principal, então tirar não remove nada
 ///   do sistema apresentado.
-/// - **Apagar estufadas** é ação **irreversível numa demonstração ao vivo**: um
-///   toque errado apaga a estufada que está sendo mostrada. E a pergunta que ele
-///   responderia — "como se gerencia o dado antigo?" — tem resposta melhor: a
-///   retenção automática, 300 dias na nuvem e equivalente no Isar.
+/// - **Apagar estufadas** é **porta duplicada**. Apagar já existe onde deve
+///   existir: na própria tela de relatórios, no ícone de lixeira da barra. O
+///   item do menu era um segundo caminho para a mesma coisa, e uma porta a menos
+///   é um menu mais curto sem nenhuma capacidade a menos.
+///
+///   *Um argumento que NÃO vale aqui, e chegou a ser escrito:* "é ação
+///   irreversível numa demonstração ao vivo". Não vale porque a capacidade
+///   **fica** — só muda de porta. O risco de toque errado continua igual, e na
+///   tela de relatórios ele está até mais à mão.
 ///
 /// Com o agendamento já fora, a seção fica vazia; o título e o divisor saem
 /// junto.
