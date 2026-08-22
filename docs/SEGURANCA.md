@@ -82,11 +82,44 @@ so entao virar.
 obedeceu. E a que mais renderia no TCC, por ser resultado alem de seguranca, mas
 e funcionalidade nova.
 
+### Banco fechado para a API REST (RLS)
+
+O Supabase publica o schema `public` por uma **API REST propria**, que aceita a
+chave `anon`. Sem *Row Level Security*, quem tiver essa chave le e **escreve**
+nas tabelas por fora do servidor — e portanto por fora de toda a autenticacao
+deste projeto.
+
+O que doi nao e o cadastro de push. E **`comandos_pendentes` e
+`comandos_agendados`**: sao a caixa de comandos que o aparelho busca e obedece.
+Escrever ali seria comandar a estufa **sem chave, sem PIN e sem estar na frente
+do aparelho** — furando a regra central do trabalho.
+
+**RLS ligado em todas as sete tabelas, sem politica nenhuma, de proposito.**
+Ligar sem criar policy fecha a API REST por completo, e o servidor nao sente: ele
+conecta como `postgres` pelo pooler, e o superusuario ignora RLS. Politica so
+faria sentido se um dia o app falasse direto com o Supabase, o que nao acontece —
+o app so conhece o servidor.
+
+*Como apareceu:* o Advisor do Supabase apontou tres tabelas sem RLS em
+21/08/2026. As quatro do `database/schema.sql` ja estavam protegidas; as tres
+descobertas — `push_dispositivos`, `comandos_pendentes` e `comandos_agendados` —
+sao criadas em **tempo de execucao** pelo `db.js`, nasceram depois do arquivo de
+schema e por isso escaparam da revisao. As tres foram acrescentadas ao
+`schema.sql`, junto com os `alter table ... enable row level security`, para uma
+implantacao nova ja subir fechada.
+
+*Verificado antes:* nem a chave `anon` nem a URL do projeto aparecem no
+repositorio publico. Mas a chave `anon` do Supabase **e feita para ser publica**
+em uso normal — depender de ninguem te-la visto nao e protecao, e um print do
+painel bastaria.
+
 ### Repositorio e configuracao
 
 - Arquivos `.env` e credenciais locais nao devem ser versionados.
 - Segredos devem ser configurados por variaveis de ambiente no servidor.
 - Chaves reais nao devem aparecer em documentacao, testes, prints ou commits.
+- **Print do painel do Supabase tambem vaza**: a pagina de API Keys mostra a
+  chave `anon` inteira.
 
 ## Fluxo de leituras
 

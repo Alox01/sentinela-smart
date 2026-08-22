@@ -91,6 +91,48 @@ create table if not exists comandos_sync (
     check (origem in ('app', 'hardware', 'simulador', 'admin'))
 );
 
+-- ============================================================
+-- Tabelas criadas em tempo de execucao pelo servidor
+-- ============================================================
+-- Nasceram depois deste arquivo, em `estufa_server/db.js`, cada uma com o seu
+-- `create table if not exists` na primeira vez que a funcionalidade e usada.
+-- Ficam declaradas aqui tambem para este arquivo descrever o banco INTEIRO —
+-- foi por nao estarem que elas escaparam da revisao de RLS (ver o fim do
+-- arquivo). O `if not exists` mantem tudo idempotente.
+
+-- Tokens de push por aparelho, com as preferencias de aviso daquele celular.
+create table if not exists push_dispositivos (
+  token_push text not null,
+  identificador_hardware text not null,
+  plataforma text,
+  preferencias jsonb,
+  nome text,
+  updated_at timestamptz not null default now(),
+  primary key (token_push, identificador_hardware)
+);
+
+-- Caixa de comando pendente, um por aparelho: o ultimo comando vence o
+-- anterior, e o aparelho o consome na proxima busca.
+create table if not exists comandos_pendentes (
+  identificador_hardware text primary key,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+-- Ajustes marcados para uma hora futura.
+create table if not exists comandos_agendados (
+  id bigserial primary key,
+  identificador_hardware text not null,
+  aplicar_em_ms bigint not null,
+  payload jsonb not null,
+  criado_em timestamptz not null default now()
+);
+
+-- O agendador varre por vencimento a cada 30 s; sem indice isso seria uma
+-- varredura completa da tabela toda vez.
+create index if not exists comandos_agendados_aplicar_em_ms_idx
+  on comandos_agendados (aplicar_em_ms);
+
 create index if not exists idx_leituras_dispositivo_timestamp
   on leituras (dispositivo_id, timestamp_leitura desc);
 
@@ -138,3 +180,37 @@ select
 from dispositivos
 where identificador_hardware = 'ESP32_REALISTIC_V2'
 on conflict (dispositivo_id) do nothing;
+
+-- ============================================================
+-- Row Level Security
+-- ============================================================
+-- O Supabase publica o schema `public` por uma API REST que aceita a chave
+-- `anon`. Sem RLS, quem tiver essa chave le e ESCREVE nestas tabelas **por fora
+-- do servidor** — e portanto por fora de toda a autenticacao do projeto.
+--
+-- O que doi nao e o cadastro de push: e `comandos_pendentes` e
+-- `comandos_agendados`, que sao a caixa de comandos que o aparelho busca e
+-- obedece. Escrever ali seria comandar a estufa sem chave, sem PIN e sem estar
+-- na frente do aparelho — furando a regra central do trabalho.
+--
+-- **Sem politica nenhuma, de proposito.** Ligar RLS e nao criar policy fecha a
+-- API REST por completo, e o servidor nao sente: ele conecta como `postgres`
+-- pelo pooler, e o superusuario ignora RLS. Politica so faria sentido se um dia
+-- o app falasse direto com o Supabase, o que hoje nao acontece.
+--
+-- Descoberto em 21/08/2026 pelo Advisor do Supabase, apontando as tres tabelas
+-- criadas em tempo de execucao. As quatro deste arquivo ja estavam protegidas.
+
+alter table dispositivos        enable row level security;
+alter table configuracoes       enable row level security;
+alter table leituras            enable row level security;
+alter table comandos_sync       enable row level security;
+alter table push_dispositivos   enable row level security;
+alter table comandos_pendentes  enable row level security;
+alter table comandos_agendados  enable row level security;
+
+-- Conferencia: tudo tem de voltar com `rowsecurity = true`.
+--   select tablename, rowsecurity
+--   from pg_tables
+--   where schemaname = 'public'
+--   order by rowsecurity, tablename;
