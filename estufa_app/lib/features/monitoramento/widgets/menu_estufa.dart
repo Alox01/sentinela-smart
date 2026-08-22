@@ -191,14 +191,28 @@ class MenuEstufa extends StatelessWidget {
               semIdHardware: (dados.idHardware?.trim() ?? '').isEmpty,
             ),
             ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
-            const Divider(color: Colors.white12, height: 1),
-            const TituloMenu('AÇÕES RÁPIDAS'),
-            // Agendamento sai no escopo do TCC: "às 14h deixe em 120 °F" é
+            // A seção INTEIRA sai no escopo do TCC, e por três motivos
+            // diferentes — vale distinguir, porque não é a mesma razão que tirou
+            // o compartilhamento por QR Code.
+            //
+            // **Agendar ajuste** contradiz o escopo: "às 14h deixe em 120 °F" é
             // automação de curva, e nenhum dos cinco objetivos declarados fala
             // nisso — monitorar, controlar, sincronizar, registrar e alertar.
-            // Sai junto a preferência de som dele na tela de notificações; um
-            // lembrete que não existe não precisa de interruptor.
-            if (!dados.escopoReduzido)
+            //
+            // **Reiniciar ajustes** é atalho, não capacidade: tudo o que ele faz
+            // se faz com o + e o − da tela principal. Tirar não remove nada do
+            // sistema apresentado.
+            //
+            // **Apagar estufadas** é ação irreversível numa demonstração ao
+            // vivo: um toque errado apaga a estufada que está sendo mostrada. E
+            // a pergunta que ele responderia — "como se gerencia o dado antigo?"
+            // — tem resposta melhor: a retenção automática (300 dias na nuvem,
+            // equivalente no Isar) faz isso sozinha.
+            //
+            // Sem os três, a seção fica vazia; o título e o divisor saem junto.
+            if (!dados.escopoReduzido) ...[
+            const Divider(color: Colors.white12, height: 1),
+            const TituloMenu('AÇÕES RÁPIDAS'),
             ListTile(
               leading: const Icon(
                 Icons.alarm_add_outlined,
@@ -268,6 +282,7 @@ class MenuEstufa extends StatelessWidget {
                 );
               },
             ),
+            ],
           ],
         ),
       ),

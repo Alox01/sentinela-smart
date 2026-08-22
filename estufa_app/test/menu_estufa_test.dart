@@ -194,15 +194,22 @@ void main() {
 
     expect(inventario, isNot(contains('item: Compartilhar acesso')));
     expect(inventario, contains('item: Tirar acesso dos outros celulares'));
-    // Agendamento tambem sai: e automacao de curva, fora dos cinco objetivos.
+    // A secao ACOES RAPIDAS inteira sai, por tres motivos diferentes:
+    // agendamento contradiz o escopo (automacao de curva), reiniciar ajustes e
+    // atalho do que o + e o - ja fazem, e apagar estufadas e acao irreversivel
+    // numa demonstracao ao vivo — com a retencao automatica respondendo melhor
+    // a "como se gerencia o dado antigo".
     expect(inventario, isNot(contains('item: Agendar ajuste')));
-    // O resto da gaveta fica inteiro — a marca esconde dois itens, não muda a
-    // tela.
+    expect(inventario, isNot(contains('item: Reiniciar ajustes do aparelho')));
+    expect(inventario, isNot(contains('item: Apagar estufadas')));
+    // Sem itens, o titulo e o divisor da secao saem junto.
+    expect(inventario, isNot(contains('seção: AÇÕES RÁPIDAS')));
+    expect(inventario.where((l) => l.startsWith('seção: ')).length, 2);
+    // O que responde pergunta de banca fica.
     expect(inventario, contains('item: Detalhes da conexão'));
     expect(inventario, contains('item: Reconfigurar aparelho'));
     expect(inventario, contains('item: Silenciar avisos'));
-    expect(inventario, contains('item: Reiniciar ajustes do aparelho'));
-    expect(inventario.where((l) => l.startsWith('seção: ')).length, 3);
+    expect(inventario, contains('item: Tirar acesso dos outros celulares'));
   });
 
   group('as três seções', () {

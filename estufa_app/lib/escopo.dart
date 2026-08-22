@@ -43,6 +43,21 @@
 /// do app, sobre um agendamento antigo. A build apresentada notificando sobre
 /// uma função que ela não tem é pior do que ter a função.
 ///
+/// Sai a **seção AÇÕES RÁPIDAS inteira**, e aqui a razão é outra — vale
+/// distinguir, porque não é a mesma que tirou o compartilhamento por QR Code.
+/// Aquele **contradizia** a regra central; estes dois apenas não acrescentam:
+///
+/// - **Reiniciar ajustes do aparelho** é atalho, não capacidade. Tudo o que ele
+///   faz se faz com o `+` e o `−` da tela principal, então tirar não remove nada
+///   do sistema apresentado.
+/// - **Apagar estufadas** é ação **irreversível numa demonstração ao vivo**: um
+///   toque errado apaga a estufada que está sendo mostrada. E a pergunta que ele
+///   responderia — "como se gerencia o dado antigo?" — tem resposta melhor: a
+///   retenção automática, 300 dias na nuvem e equivalente no Isar.
+///
+/// Com o agendamento já fora, a seção fica vazia; o título e o divisor saem
+/// junto.
+///
 /// Sai também **a linha de diagnóstico da revogação** — aquela com o código HTTP
 /// e a marca da chave. Ela é ferramenta de suporte, e numa apresentação vira
 /// ruído técnico embaixo da única ação da tela. Quem depura usa o APK completo.
