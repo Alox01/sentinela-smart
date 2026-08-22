@@ -504,10 +504,18 @@ async function carregarUltimaLeitura(identificadorHardware = 'ESP32_REALISTIC_V2
 // o relatorio remoto preencher o historico gravado enquanto o app estava
 // fechado. Ordenado do mais antigo para o mais recente.
 async function carregarHistorico(
-  identificadorHardware = 'ESP32_REALISTIC_V2',
+  identificadorHardware,
   { inicioMs, fimMs, limite = 5000 } = {},
 ) {
   if (!pool) return [];
+  // Sem aparelho declarado nao ha historico a devolver.
+  //
+  // O padrao aqui era `ESP32_REALISTIC_V2`, o simulador — e como o app pedia
+  // /historico SEM o idHardware, o relatorio de uma estufa real vinha com os
+  // dados do simulador (ou vazio, quando ele nao estava rodando). Servir o
+  // aparelho errado calado e pior que nao servir nada: quem olha nao tem como
+  // desconfiar. Mesma regra que o /status ja seguia.
+  if (!identificadorHardware) return [];
 
   const condicoes = ['d.identificador_hardware = $1'];
   const parametros = [identificadorHardware];

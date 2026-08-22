@@ -291,7 +291,15 @@ class ApiService {
   }) async {
     final ini = inicio.millisecondsSinceEpoch;
     final f = fim.millisecondsSinceEpoch;
-    final response = await _getComFallback('/historico?inicio=$ini&fim=$f');
+    // O idHardware nao e opcional na pratica: sem ele a nuvem servia o aparelho
+    // padrao (o simulador) e o relatorio mostrava a estufada de outro. Mesma
+    // armadilha que o /status ja tratava; esta rota tinha ficado de fora.
+    final id = idHardware;
+    final porAparelho = (id == null || id.isEmpty)
+        ? ''
+        : '&idHardware=${Uri.encodeComponent(id)}';
+    final response =
+        await _getComFallback('/historico?inicio=$ini&fim=$f$porAparelho');
     if (response?.statusCode != 200) return const [];
 
     final dados = _decodificarMapa(response!.body);
@@ -300,19 +308,6 @@ class ApiService {
     return lista.whereType<Map<String, dynamic>>().toList();
   }
 
-  /// Repassa para a nuvem uma leitura obtida na rede LOCAL ("ponte").
-  ///
-  /// Existe por causa de um falso alarme real: com energia na propriedade mas
-  /// sem internet la, o aparelho nao consegue postar, e o watchdog da nuvem -
-  /// que so ve ausencia - avisa "sem comunicacao" mesmo com a estufa
-  /// funcionando e o app mostrando tudo certo em LOCAL. Se o celular tem
-  /// internet propria (4G), ele e a unica ponte disponivel: repassando a
-  /// leitura, o `ultimoContatoMs` do servidor fica fresco e o alarme falso nao
-  /// chega a nascer. De brinde, quem acompanha de longe volta a ver os dados.
-  ///
-  /// So faz sentido quando a leitura veio do proprio aparelho (modo LOCAL); em
-  /// modo nuvem a leitura JA veio de la. Silencioso de proposito: e um esforco
-  /// oportunista, e falhar nao pode atrapalhar a tela.
   /// Diz a nuvem que o produtor esta olhando esta estufa, para ela parar de
   /// repetir o aviso do episodio em curso.
   ///
@@ -341,6 +336,19 @@ class ApiService {
     }
   }
 
+  /// Repassa para a nuvem uma leitura obtida na rede LOCAL ("ponte").
+  ///
+  /// Existe por causa de um falso alarme real: com energia na propriedade mas
+  /// sem internet la, o aparelho nao consegue postar, e o watchdog da nuvem -
+  /// que so ve ausencia - avisa "sem comunicacao" mesmo com a estufa
+  /// funcionando e o app mostrando tudo certo em LOCAL. Se o celular tem
+  /// internet propria (4G), ele e a unica ponte disponivel: repassando a
+  /// leitura, o `ultimoContatoMs` do servidor fica fresco e o alarme falso nao
+  /// chega a nascer. De brinde, quem acompanha de longe volta a ver os dados.
+  ///
+  /// So faz sentido quando a leitura veio do proprio aparelho (modo LOCAL); em
+  /// modo nuvem a leitura JA veio de la. Silencioso de proposito: e um esforco
+  /// oportunista, e falhar nao pode atrapalhar a tela.
   Future<bool> repassarLeituraParaNuvem(Map<String, dynamic> dados) async {
     final nuvem = cloudBaseUrl;
     final id = idHardware;

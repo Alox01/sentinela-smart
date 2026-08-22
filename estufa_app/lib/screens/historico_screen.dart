@@ -24,10 +24,15 @@ class HistoricoScreen extends StatefulWidget {
   final String nomeEstufa;
   final String ipEstufa;
 
+  /// Identifica o aparelho na nuvem. Sem ele o relatorio remoto nao tem como
+  /// pedir o historico DESTA estufa.
+  final String? idHardware;
+
   const HistoricoScreen({
     super.key,
     required this.nomeEstufa,
     required this.ipEstufa,
+    this.idHardware,
   });
 
   @override
@@ -45,7 +50,13 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   static const _pdfService = RelatorioPdfService();
   final RelatorioEstufadaRepository _relatorioRepository =
       RelatorioEstufadaRepository(IsarService.instance);
-  late final ApiService _api = ApiService(widget.ipEstufa);
+  // COM o idHardware: sem ele, `/historico` na nuvem cai no aparelho padrao e
+  // devolve o historico do SIMULADOR. O `/status` ja tratava isso; esta rota
+  // nao, e o relatorio vinha vazio ou com dado de outra estufa.
+  late final ApiService _api = ApiService(
+    widget.ipEstufa,
+    idHardware: widget.idHardware,
+  );
 
   late Future<DadosRelatorioEstufada> _dadosFuture;
   List<HistoricoLeituraEntity> _leiturasBrutas = [];

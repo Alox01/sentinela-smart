@@ -232,6 +232,16 @@ async function getHistorico(app, query) {
   }
 }
 
+// Sem aparelho declarado, o banco nao inventa um. O padrao aqui era o
+// simulador, e como o app pedia /historico SEM idHardware, o relatorio de uma
+// estufa real vinha com os dados do simulador — ou vazio, quando ele nao estava
+// rodando. Servir o aparelho errado calado e pior que nao servir nada.
+test('carregarHistorico sem idHardware nao devolve outro aparelho', async () => {
+  const { carregarHistorico } = require('../db');
+  assert.deepEqual(await carregarHistorico(undefined, {}), []);
+  assert.deepEqual(await carregarHistorico('', {}), []);
+});
+
 test('GET /historico retorna as leituras do periodo', async () => {
   const recebido = {};
   const app = criarApp({

@@ -821,6 +821,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         builder: (context) => HistoricoScreen(
           nomeEstufa: _nome,
           ipEstufa: _ip,
+          idHardware: _idHardware ?? api.idHardware,
         ),
       ),
     );
