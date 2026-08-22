@@ -220,6 +220,11 @@ class _DetalhesTecnicos extends StatefulWidget {
 class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
   bool _aberto = false;
 
+  bool get _semCanal => widget.baseUrlAtiva == null;
+  bool get _ativoEhNuvem =>
+      widget.baseUrlAtiva != null &&
+      widget.baseUrlAtiva == widget.cloudBaseUrl;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -249,21 +254,26 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
         if (_aberto) ...[
           const SizedBox(height: 4),
           _LinhaDetalhe('Aparelho (id)', widget.idHardware ?? 'Não identificado'),
-          // Os rotulos eram "Ativo", "Local" e "Nuvem", e a leitura embaralhava:
-          // "Ativo" e "Local" apareciam como dois enderecos quase identicos,
-          // diferindo so no numero da porta, sem nada dizendo qual e qual. E o
-          // esquema ainda quebrava no caso mais comum — quando o aparelho
-          // responde pelo recuo da porta 80, o ativo nao e igual a nenhum dos
-          // dois candidatos listados.
+          // Uma linha para o canal EM USO e outra para a alternativa — nunca
+          // repetindo na segunda o que ja esta na primeira.
           //
-          // Os nomes agora dizem o papel: um e o canal EM USO, os outros dois
-          // sao os enderecos configurados.
+          // Eram tres linhas, rotuladas "Ativo", "Local" e "Nuvem", e a leitura
+          // embaralhava: "Ativo" e "Local" saiam como dois enderecos quase
+          // identicos, diferindo so no numero da porta. E o pior era o que a
+          // porta significava — **3000 e a porta do servidor local/simulador,
+          // 80 e a do aparelho de verdade** (`WebServer server(80)` no
+          // firmware). Com o ESP32 na frente, aquela linha `:3000` mostrava um
+          // endereco que nunca ia responder.
           _LinhaDetalhe('Em uso agora', widget.baseUrlAtiva ?? '-'),
-          _LinhaDetalhe('Endereço local', widget.localBaseUrl),
-          _LinhaDetalhe(
-            'Endereço na nuvem',
-            widget.cloudBaseUrl ?? 'Não configurada',
-          ),
+          // Sem canal ativo, os dois candidatos importam. Com um deles em uso,
+          // so a alternativa acrescenta — o que esta em uso ja esta acima.
+          if (_semCanal || _ativoEhNuvem)
+            _LinhaDetalhe('Endereço local', widget.localBaseUrl),
+          if (_semCanal || !_ativoEhNuvem)
+            _LinhaDetalhe(
+              'Endereço na nuvem',
+              widget.cloudBaseUrl ?? 'Não configurada',
+            ),
           _LinhaDetalhe(
             'Avisos push',
             switch (widget.vigiadaPorPush) {
