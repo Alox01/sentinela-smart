@@ -112,6 +112,45 @@ A única exceção é a **barra fêmea do ESP32**, e ela se justifica: o módulo
 precisa poder sair se queimar, é encaixe firme e ninguém mexe nele depois de
 montado. Soldar o ESP32 direto significa perder a placa junto com ele.
 
+## A conta dos bornes fecha em 12 — com terra comum
+
+Cada fio que sai da placa precisa de uma via de borne. Somando um por sinal:
+alimentação (1), display (2), DHT22 (2), sensor de chama (2), buzina (1), três
+LEDs (3), três botões (3) — dá **14 bornes**, e há 12.
+
+**O terra comum resolve, e não é economia forçada.** Os três LEDs voltam todos
+ao GND, e os três botões também; um único retorno serve aos três:
+
+| Grupo | Bornes | Vias |
+|---|---|---|
+| LEDs | 2 | alerta, umidade, controle, **GND comum** |
+| Botões | 2 | buzzer, verde, vermelho, **GND comum** |
+
+De 14 para **12** — exatamente o comprado. Barramento de terra comum no painel é
+prática corrente: o retorno não carrega informação, só corrente, e as correntes
+aqui são de miliampères.
+
+**Confira isso antes de soldar o primeiro borne.** Descoberto no meio da
+montagem, o erro obriga a dessoldar bornes já fixados — e dessoldar borne de
+placa ilhada é o que arranca ilha.
+
+## Conferir a placa antes de fechar a caixa
+
+`firmware/teste_placa/teste_placa.ino` acende um LED por vez, toca a buzina,
+conta no display e imprime botões e sensores no Serial.
+
+Ele existe porque o firmware não serve para isso: os LEDs só acendem quando a
+temperatura sai da faixa e a buzina só toca em alarme, o que é demorado de
+reproduzir na bancada. Cada sintoma tem um significado direto:
+
+| O que se vê | O que é |
+|---|---|
+| Dois LEDs acendem juntos | ponte de solda entre eles |
+| Número parado no display | CLK ou DIO sem contato |
+| Número embaralhado | CLK e DIO trocados |
+| Botão nunca sai de `solto` | o fio não chega ao GPIO, ou falta o GND comum |
+| DHT22 sempre `SEM LEITURA` | falta o pull-up de 4,7 kΩ, ou o dado não chega ao GPIO 32 |
+
 ## A caixa IP67 não resolve sozinha
 
 IP67 impede água **entrando de fora**. Numa estufa aparecem dois efeitos que a
