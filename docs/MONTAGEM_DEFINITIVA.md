@@ -66,19 +66,24 @@ definitiva:
 | Item | Observação |
 |---|---|
 | **Abraçadeiras de nylon** | alívio de tração |
-| **Cabo do sensor**, ~8 m | ver abaixo |
+| ~~Cabo do sensor~~ | **resolvido**: ja ha cabo de rede **FTP (blindado)** em casa |
 | **Broca escalonada** | precisa chegar a **13,5 mm** para o PG7 |
 
-**O cabo tem duas saídas.** Blindado é o ideal, mas **cabo de rede (CAT5/CAT6)
-serve** e costuma estar sobrando em casa: os condutores são rígidos, 24 AWG, e
-vêm em pares trançados — e é o trançado que dá a rejeição a ruído. Use **um par
-para dado + terra** (é o par junto que rejeita), e outro par com os fios unidos
-para o 3,3 V.
+**O cabo esta resolvido: e FTP.** O cabo de rede que ja havia em casa tem folha
+de aluminio e fio dreno — blindado, e melhor que o cabo de alarme que estava na
+lista. Confirmado em 26/08/2026.
 
-O que o cabo de rede não tem é malha, e a capa não é feita para umidade. No
-traçado planejado — por fora da estufa, dentro de tubo — isso pesa pouco. **Se
-tiver em casa, teste com ele primeiro**: é grátis, e se a leitura vier estável,
-resolveu.
+**A blindagem so funciona aterrada em UMA ponta — a da placa.** Na ponta do
+sensor, folha e dreno sao cortados rentes, isolados e deixados soltos. Aterrar
+nas duas pontas cria laco de terra: a malha vira caminho de corrente entre dois
+terras de potenciais diferentes e passa a **injetar** ruido em vez de barrar,
+ficando pior que cabo nenhum. O sintoma seria justamente o que se queria evitar —
+leitura instavel sem causa aparente.
+
+Use **um par trancado** para dado + terra (e o trancado que rejeita ruido) e
+**outro par, com os fios unidos**, para o 3,3 V. Sobram dois pares para o sensor
+de chama. Ao descascar, nao cortar a folha junto: rompida no meio do trecho, a
+blindagem so vale ate ali.
 
 ### Já tem, não precisa comprar
 
