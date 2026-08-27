@@ -60,6 +60,7 @@ definitiva:
 | **Fonte 5 V / 2 A** | com selo INMETRO, plugue brasileiro | — |
 | **Verniz de proteção** acrílico | Implastec ou equivalente **com ficha técnica** | 30–40 |
 | **Álcool isopropílico** | limpar o fluxo antes de envernizar | 15 |
+| **Multímetro** | qualquer um com bipe de continuidade | 25–40 |
 
 ### Falta — loja de material elétrico da cidade
 
@@ -111,6 +112,20 @@ um sensor com chave de fenda no meio da estufada.
 A única exceção é a **barra fêmea do ESP32**, e ela se justifica: o módulo
 precisa poder sair se queimar, é encaixe firme e ninguém mexe nele depois de
 montado. Soldar o ESP32 direto significa perder a placa junto com ele.
+
+## O multímetro não é para depurar, é para não queimar
+
+Ele entra na lista por um motivo só: **conferir curto entre as vias de um borne
+antes de ligar a fonte**. O borne da força carrega `VIN` e `GND` lado a lado, a
+duas colunas de distância, e um fio de estanho entre os dois transforma o
+primeiro `ligar` em fonte esquentando.
+
+**Sem ele, a regra é: nunca energize pela fonte de parede primeiro.** A primeira
+energização é **pelo USB do computador** — a porta USB tem proteção de corrente e
+desliga sozinha em vez de insistir. Se o ESP32 não aparecer no `arduino-cli
+board list`, desligue e procure o curto antes de tentar de novo.
+
+Isso não substitui a medição; só troca "queimar" por "não ligar".
 
 ## A conta dos bornes fecha em 12 — com terra comum
 
