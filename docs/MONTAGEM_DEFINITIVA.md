@@ -166,6 +166,68 @@ reproduzir na bancada. Cada sintoma tem um significado direto:
 | Botão nunca sai de `solto` | o fio não chega ao GPIO, ou falta o GND comum |
 | DHT22 sempre `SEM LEITURA` | falta o pull-up de 4,7 kΩ, ou o dado não chega ao GPIO 32 |
 
+## O que foi construído — mapa da placa
+
+Montada em 26–29/08 e 01/09/2026. Coordenadas na serigrafia da própria placa:
+letra na borda comprida, linha contada a partir da borda.
+
+**Referências fixas:** barras fêmea do ESP32 nas colunas `G` a `U`, linhas 12 (lado
+`VIN`) e 22 (lado `3V3`). Bornes nas linhas 4 e 30, colunas `A` `F` `K` `P` `U` `Z`.
+
+**Barramentos** — fio nu deitado sobre as ilhas:
+
+| Barramento | Linha | De → até | Desce até |
+|---|---|---|---|
+| Terra, borda de cima | 6 | `A` → `B₂` | `GND` da linha 12, coluna `H` |
+| Terra, borda de baixo | 28 | `A` → `Z` | `GND` da linha 22, coluna `H` |
+| 3V3, borda de baixo | 26 | `A` → `W` | `3V3` da linha 22, coluna `G` |
+
+**Borda de cima (linha 4):**
+
+| Via | Recebe |
+|---|---|
+| `A` | `VIN` (linha 12, col `G`) |
+| `C` | terra |
+| `F` | `D25` — buzina (col `N`) |
+| `H` | terra |
+| `K` | `D14` — LED de controle, via 220 Ω (col `K`) |
+| `M` | `D26` — LED de alerta, via 220 Ω (col `M`) |
+| `P` | `D27` — LED de umidade, via 220 Ω (col `L`) |
+| `R` | terra comum dos LEDs |
+| `U` | `D13` — botão do buzzer (col `I`) |
+| `W` | `D33` — botão vermelho (col `O`) |
+| `Z` | `D4` — botão verde (linha 22, col `K`) |
+| `B₂` | terra comum dos botões |
+
+**Borda de baixo (linha 30):**
+
+| Via | Recebe |
+|---|---|
+| `A` | 3V3 — display |
+| `C` | terra — display |
+| `F` | `D18` = `CLK` do display (linha 22, col `O`) |
+| `H` | `D19` = `DIO` do display (linha 22, col `P`) |
+| `K` | terra — DHT22 |
+| `M` | *livre* |
+| `P` | `D32` — dado do DHT22 (linha 12, col `P`) |
+| `R` | 3V3 — DHT22 |
+| `U` | `D35` — `DO` do sensor de chama (linha 12, col `Q`) |
+| `W` | 3V3 — sensor de chama |
+| `Z` | terra — sensor de chama |
+| `B₂` | *livre* |
+
+**As duas vias livres são o troco dos sensores de três fios**, não esquecimento: o
+DHT22 ocupa duas vias de um borne e uma do vizinho, e o de chama faz igual. Se um
+dia entrar relé, é onde ele se parafusa.
+
+**O 4,7 kΩ do DHT22** liga as vias `P` e `R` da borda de baixo direto, sem fio: elas
+já são o dado e o 3V3. Sem ele o sensor devolve leitura vazia para sempre, e o
+sintoma não denuncia a causa.
+
+**Pulos com capa, barramentos nus.** Todo sinal atravessa pelo menos um barramento
+no caminho; fio nu ali seria curto. Os barramentos correm sozinhos na sua linha e
+por isso podem ser nus.
+
 ## A caixa IP67 não resolve sozinha
 
 IP67 impede água **entrando de fora**. Numa estufa aparecem dois efeitos que a
