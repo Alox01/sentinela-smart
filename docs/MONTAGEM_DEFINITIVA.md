@@ -220,9 +220,20 @@ letra na borda comprida, linha contada a partir da borda.
 DHT22 ocupa duas vias de um borne e uma do vizinho, e o de chama faz igual. Se um
 dia entrar relé, é onde ele se parafusa.
 
-**O 4,7 kΩ do DHT22** liga as vias `P` e `R` da borda de baixo direto, sem fio: elas
+**O pull-up do DHT22** liga as vias `P` e `R` da borda de baixo direto, sem fio: elas
 já são o dado e o 3V3. Sem ele o sensor devolve leitura vazia para sempre, e o
 sintoma não denuncia a causa.
+
+**Ele tem 860 Ω, não 4,7 kΩ.** Medido em 01/09/2026, na placa montada. O valor foi
+escolhido por eliminação — três resistores iguais para os LEDs e o quarto,
+diferente, para o DHT22 — e a eliminação acertou qual e errou quanto. Os três dos
+LEDs foram medidos e são 220 Ω mesmo.
+
+860 Ω puxa mais forte que o recomendado: o sensor precisa afundar uns 3,8 mA para
+falar, contra 0,7 mA com 4,7 kΩ. Fica dentro do que esses sensores costumam
+aguentar, e **vai na direção certa para o cabo de 5 m**, que já pedia um resistor
+mais forte na etapa seguinte. Quem decide é o `teste_placa.ino`: lendo temperatura
+e umidade, fica; devolvendo `SEM LEITURA`, troca por 4,7 kΩ.
 
 **Pulos com capa, barramentos nus.** Todo sinal atravessa pelo menos um barramento
 no caminho; fio nu ali seria curto. Os barramentos correm sozinhos na sua linha e
