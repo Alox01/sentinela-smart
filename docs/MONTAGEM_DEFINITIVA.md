@@ -220,20 +220,20 @@ letra na borda comprida, linha contada a partir da borda.
 DHT22 ocupa duas vias de um borne e uma do vizinho, e o de chama faz igual. Se um
 dia entrar relé, é onde ele se parafusa.
 
-**O pull-up do DHT22** liga as vias `P` e `R` da borda de baixo direto, sem fio: elas
+**O 4,7 kΩ do DHT22** liga as vias `P` e `R` da borda de baixo direto, sem fio: elas
 já são o dado e o 3V3. Sem ele o sensor devolve leitura vazia para sempre, e o
 sintoma não denuncia a causa.
 
-**Ele tem 860 Ω, não 4,7 kΩ.** Medido em 01/09/2026, na placa montada. O valor foi
-escolhido por eliminação — três resistores iguais para os LEDs e o quarto,
-diferente, para o DHT22 — e a eliminação acertou qual e errou quanto. Os três dos
-LEDs foram medidos e são 220 Ω mesmo.
+**Medido na placa montada em 01/09/2026: 4,64 kΩ** — dentro da tolerância. Os três
+dos LEDs foram medidos no mesmo dia e dão 220 Ω. Os quatro valores tinham sido
+escolhidos por eliminação, sem ler as faixas; a medição confirmou os quatro.
 
-860 Ω puxa mais forte que o recomendado: o sensor precisa afundar uns 3,8 mA para
-falar, contra 0,7 mA com 4,7 kΩ. Fica dentro do que esses sensores costumam
-aguentar, e **vai na direção certa para o cabo de 5 m**, que já pedia um resistor
-mais forte na etapa seguinte. Quem decide é o `teste_placa.ino`: lendo temperatura
-e umidade, fica; devolvendo `SEM LEITURA`, troca por 4,7 kΩ.
+A leitura só sai certa na escala de **20 kΩ**. Na posição do bipe este multímetro
+mostra **milivolts do teste de diodo**, não ohms — ali o mesmo resistor aparece
+como `862`, que é 0,862 V; e na escala de 2 kΩ ele dá `0L` por estourar o fim de
+escala. Vale para qualquer medição futura: **`0L` numa escala de resistência quer
+dizer *maior que esta escala*, não *aberto***. Só depois de estourar a maior é que
+a ligação está aberta de verdade.
 
 **Pulos com capa, barramentos nus.** Todo sinal atravessa pelo menos um barramento
 no caminho; fio nu ali seria curto. Os barramentos correm sozinhos na sua linha e
