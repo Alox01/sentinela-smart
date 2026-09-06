@@ -64,7 +64,7 @@ definitiva:
 | Item | Especificação | ~R$ |
 |---|---|---|
 | **Chave de fenda pequena** | 2 a 2,5 mm, ou jogo de precisão — **trava os 22 parafusos hoje** | 5–25 |
-| **Caixa IP65 ou IP67** | **interno a partir de 260 × 130 × 70** — ver a seção do acionamento | — |
+| **Caixa IP65 ou IP67** | **interno a partir de 300 × 150 × 100** — ver a seção do acionamento | — |
 | **Espaçadores sextavados de nylon** | **M3 × 10 mm**, com parafusos de nylon, 4 un — suspendem a placa; a face do cobre tem biquinhos de solda e **não pode encostar em nada**. Nylon por ser isolante; nada de autoadesivo, que solta em caixa quente | 10–20 |
 | **Verniz de proteção** | Implastec ISOTEC ou equivalente **com ficha técnica** | 45–70 |
 | **Álcool isopropílico** | 99,8% — o de farmácia é 70% e leva água junto | 19 |
@@ -143,10 +143,11 @@ compra.
 | Item | Especificação |
 |---|---|
 | **Módulo relé 1 canal 5 V** | optoacoplador e **ranhuras de isolamento**, pacote de 5 |
+| **Contator** | tripolar pequeno (9 A serve de sobra), **bobina 220 V** |
 | **Fonte AC/DC interna** | **5 W** (HLK-5M05 ou equivalente), não a de 3 W — ver a conta do consumo |
 | **Fusível + porta-fusível** | **2 A retardado** — rápido queima no arranque |
 | **Tomada de embutir** | 10 A **com pino terra**; a plaqueta manda aterrar o motor |
-| **Capacitor supressor** | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve |
+| **Capacitor supressor** | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve. Vai na **bobina do contator**, protegendo o contato do relé |
 | **Resistor do supressor** | 100 Ω / 1 W |
 | **Resistor de segurança** | segura a linha do relé desligada durante o boot |
 | **Fio 1,5 mm²** | fase, neutro e terra |
@@ -327,13 +328,37 @@ contato. O contator entra de meio cavalo para cima, quando a partida vai a 15 ou
 buscador que recomendam contator para "um motor" estão certos sem a plaqueta: sem
 o número, cautela é a resposta correta. **Foi a plaqueta que mudou a resposta.**
 
-**Um relé de 1 canal chaveia direto. Não precisa de contator.** A plaqueta manda
+Ou seja: **o relé chavearia este motor direto**, sem contator. A plaqueta manda
 aterrar o motor, então o terra atravessa a caixa até o pino da tomada de saída.
 
-**A conclusão vale para este motor, não para o soquete.** Contator entra quando a
-partida passa do que o contato aguenta — de meio cavalo para cima ela bate nos 15
-ou 20 A. Equipamento de estufa se troca: se um dia a ventoinha for substituída,
-**a plaqueta nova se lê antes de ligar no mesmo relé**.
+### E mesmo assim entra contator — por desgaste, não por corrente
+
+Decidido em 06/09/2026, depois de o produtor informar que **a ventoinha liga
+várias vezes por estufada, sem padrão**.
+
+Poder chavear não é durar. Cada abertura sob carga de motor abre um arco que come
+um pouco do contato, e relé morre por **número de operações**, não por corrente.
+Estimando 20 vezes por hora numa estufada de seis dias, são ~2.900 operações; vinte
+estufadas passam de 50 mil, e relé desse tipo vive na casa das 100 mil. **Uma ou
+duas safras.**
+
+Com contator no meio, **o relé nunca chaveia o motor** — ele fecha o caminho até a
+bobina, que é carga leve e previsível. O arco do motor passa a ser aberto por
+contatos com câmara de extinção, feitos para isso, e que se contam em centenas de
+milhares de operações. Gastando um dia, contator é peça de prateleira e os contatos
+se trocam; relé soldado vai fora inteiro.
+
+O desgaste não desaparece — ele **muda de peça**, saindo de uma descartável para
+uma projetada e trocável.
+
+De brinde, é a topologia que os aparelhos comerciais usam, e defender isso numa
+banca é mais fácil que defender por que se economizou R$ 50 numa peça de desgaste.
+
+**A bobina do contator é de 220 V**, alimentada do mesmo ponto da rede. Assim o relé
+só fecha o caminho até ela e nenhuma fonte extra é necessária.
+
+**Se a ventoinha for trocada um dia, a plaqueta nova se lê antes.** O contator dá
+folga larga para um motor maior, mas folga tem limite e quem define é o número.
 
 ### As três respostas de falha, e o que elas exigem do hardware
 
@@ -359,6 +384,7 @@ Decisão do produtor, e a razão é de mercado: todo aparelho do ramo é assim, 
 caixas complicam a venda. Aceito — o que muda é o **como**.
 
 - **Divisória de plástico** colada entre o setor da rede e o da placa
+- O **contator** é a peça mais alta do conjunto e define a profundidade
 - **6 a 8 mm** de isolamento entre trilha de rede e de baixa tensão. O módulo de
   relé precisa ter **ranhuras fresadas** entre o optoacoplador e os contatos
 - **Fusível retardado de 2 A** na entrada (rápido queima no arranque, toda vez)
@@ -397,7 +423,7 @@ abaixo desse pico. Fonte no limite reinicia o ESP32 exatamente quando ele transm
 — e o defeito aparece como problema de rede, que é onde ninguém vai procurar.
 
 **Isso muda o tamanho da caixa a comprar agora:** placa de 150 × 90 mais um setor
-de rede de uns 100 × 90 e a divisória. **Interno a partir de 260 × 130 × 70 mm.**
+de rede de uns 100 × 90 e a divisória. **Interno a partir de 300 × 150 × 100 mm** — é a altura do contator que manda.
 Comprar a caixa pequena hoje e a grande depois é pagar duas vezes.
 
 ### O relé é peça de desgaste
