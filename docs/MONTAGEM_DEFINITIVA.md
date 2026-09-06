@@ -135,6 +135,28 @@ antes de furar a caixa, porque muda quantos prensa-cabos ela precisa.
 - Resistor **4,7 kΩ** extra — pull-up do sensor de chama no cabo longo
 - **AM2302 com 5 m** de fábrica, ou o curto com emenda **fora da estufa**
 
+### Para a etapa do acionamento (pós-banca)
+
+O porquê de cada um está na seção *Acionamento da ventoinha*. Aqui é só o que se
+compra.
+
+| Item | Especificação |
+|---|---|
+| **Módulo relé 1 canal 5 V** | optoacoplador e **ranhuras de isolamento**, pacote de 5 |
+| **Fonte AC/DC interna** | tipo HLK-PM01 — é ela que dá o cabo único |
+| **Fusível + porta-fusível** | **2 A retardado** — rápido queima no arranque |
+| **Tomada de embutir** | 10 A **com pino terra**; a plaqueta manda aterrar o motor |
+| **Capacitor supressor** | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve |
+| **Resistor do supressor** | 100 Ω / 1 W |
+| **Resistor de segurança** | segura a linha do relé desligada durante o boot |
+| **Fio 1,5 mm²** | fase, neutro e terra |
+| **Conectores Wago** | emendas da rede — nunca fita |
+| **Divisória** | chapa de plástico ou acrílico, separando rede de baixa tensão |
+
+Só um relé por aparelho: o aparelho chaveia a ventoinha e nada mais. O pacote de
+cinco vira **um em uso e quatro de reposição**, que é o que uma peça de desgaste
+pede.
+
 ## Jumpers: nenhum
 
 Jumper é **o mesmo contato por pressão do protoboard**, num invólucro melhor.
@@ -357,20 +379,9 @@ ao tempo em vez da temperatura.
 O módulo fica **parafusado com os fios em borne, nunca soldado** — troca em dez
 minutos com chave de fenda. O pacote de 5 vira 1 em uso e 4 de reposição.
 
-### O que comprar para esta etapa
+**O que comprar para esta etapa está na Lista de compra**, junto com todo o
+resto — lista partida em dois lugares não se leva para a loja.
 
-| Item | Especificação |
-|---|---|
-| Módulo relé 1 canal 5 V | optoacoplador e **ranhuras de isolamento**, pacote de 5 |
-| Capacitor supressor | 100 nF **classe X2, 275 VAC** |
-| Resistor do supressor | 100 Ω / 1 W |
-| Fusível + porta-fusível | **2 A retardado** |
-| Tomada de embutir | 10 A **com pino terra** |
-| Fio de rede | 1,5 mm², fase + neutro + terra |
-| Conectores Wago | para as emendas da rede |
-| Divisória | chapa de plástico ou acrílico |
-| Fonte AC/DC interna | tipo HLK-PM01 — só se quiser cabo único |
-| Resistor de segurança | para segurar a linha do relé desligada no boot |
 
 ## A caixa IP67 não resolve sozinha
 
