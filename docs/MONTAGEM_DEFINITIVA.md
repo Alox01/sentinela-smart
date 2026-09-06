@@ -56,7 +56,7 @@ definitiva:
 
 | Item | Especificação | ~R$ |
 |---|---|---|
-| **Caixa IP67** | ~200 × 120 × 75 externo — **confirmar o INTERNO antes** | — |
+| **Caixa IP65 ou IP67** | **interno a partir de 260 × 130 × 70** — ver a seção do acionamento | — |
 | **Fonte 5 V / 2 A** | com selo INMETRO, plugue brasileiro | — |
 | **Verniz de proteção** acrílico | Implastec ou equivalente **com ficha técnica** | 30–40 |
 | **Álcool isopropílico** | limpar o fluxo antes de envernizar | 15 |
@@ -238,6 +238,105 @@ a ligação está aberta de verdade.
 **Pulos com capa, barramentos nus.** Todo sinal atravessa pelo menos um barramento
 no caminho; fio nu ali seria curto. Os barramentos correm sozinhos na sua linha e
 por isso podem ser nus.
+
+## Acionamento da ventoinha — decidido, não construído
+
+**Não entra antes da banca.** Os cinco objetivos declarados são monitorar,
+controlar, sincronizar, registrar e alertar — e o "controlar" é o produtor mudar o
+ajuste, inclusive de longe. Chavear carga muda o que o aparelho declara ser.
+
+Mas as decisões foram tomadas em 06/09/2026 e ficam registradas, porque **algumas
+delas mudam compras que se fazem agora**.
+
+### O motor (medido na plaqueta)
+
+WEG, 22ABR19, item 14126484. **0,09 kW — 1/8 cv**, 3470-3510 rpm, regime S1,
+IP44, FS 1,15.
+
+| Tensão | Corrente | Partida (Ip/In 4,6) |
+|---|---|---|
+| 127 V | 1,72 A | ~7,9 A |
+| **220 V** | **0,86 A** | **~4,0 A** |
+
+**A estufa é 220 V**, então a partida é de 4 A contra os 10 A do contato do relé.
+Folga real mesmo derratando pela metade por ser carga indutiva.
+
+**Um relé de 1 canal chaveia direto. Não precisa de contator.** A plaqueta manda
+aterrar o motor, então o terra atravessa a caixa até o pino da tomada de saída.
+
+### As três respostas de falha, e o que elas exigem do hardware
+
+Respondidas pelo produtor, que é quem conhece o uso:
+
+| Situação | Decisão |
+|---|---|
+| Wi-Fi cai | não muda nada — o aparelho decide offline, como os do mercado |
+| ESP32 reinicia | ventoinha **não** fica ligada; ele volta e reavalia |
+| Aparelho trava | ventoinha **desligada**, por garantia |
+
+As duas últimas têm uma consequência que não é óbvia: **o relé precisa ficar aberto
+enquanto ninguém comanda a linha**. Nos primeiros instantes do boot os GPIOs ficam
+em alta impedância, e módulo de relé comum pode fechar nesse intervalo. Watchdog
+reiniciando passa pelo mesmo boot.
+
+**Exige um resistor segurando a linha de controle no estado desligado.** Barato, e
+tem que estar no projeto desde o começo — não é remendo posterior.
+
+### Uma caixa só
+
+Decisão do produtor, e a razão é de mercado: todo aparelho do ramo é assim, e duas
+caixas complicam a venda. Aceito — o que muda é o **como**.
+
+- **Divisória de plástico** colada entre o setor da rede e o da placa
+- **6 a 8 mm** de isolamento entre trilha de rede e de baixa tensão. O módulo de
+  relé precisa ter **ranhuras fresadas** entre o optoacoplador e os contatos
+- **Fusível retardado de 2 A** na entrada (rápido queima no arranque, toda vez)
+- **Prensa-cabo com alívio de tração** no cabo da rede
+- Fio de **1,5 mm²** e emendas em Wago
+- Para ficar com **um cabo só** saindo, o conversor de 5 V também vai para dentro
+  (tipo HLK-PM01), e aí a fonte de parede sai de cena
+
+**Isso muda o tamanho da caixa a comprar agora:** placa de 150 × 90 mais um setor
+de rede de uns 100 × 90 e a divisória. **Interno a partir de 260 × 130 × 70 mm.**
+Comprar a caixa pequena hoje e a grande depois é pagar duas vezes.
+
+### O relé é peça de desgaste
+
+Ele não morre de corrente — morre de **número de operações**, e a ventoinha liga
+sem padrão. Estimando 20 vezes por hora numa estufada de 6 dias, são ~2.900
+operações por estufada; vinte estufadas na safra passam de 50 mil. Relé desse tipo
+vive na casa das 100 mil com carga leve. **Uma ou duas safras, não cinco.**
+
+Duas formas de esticar:
+
+**Supressor RC em paralelo com o motor** — capacitor 100 nF **classe X2 275 VAC**
+em série com resistor de 100 Ω / 1 W. Absorve o arco na abertura. *Não servem os
+cerâmicos de 100 nF/50 V comprados para desacoplamento: em 220 V eles rompem, e
+cerâmico rompido fecha em curto.*
+
+**Tempo mínimo ligado e desligado, por software** — e essa vale mais que a
+primeira. Boa parte do liga-desliga sem padrão é o controle oscilando em volta do
+limiar. Um mínimo de minutos ligado e de minutos parado derruba a contagem de
+operações sem mudar como a estufa seca. É a mesma ideia da margem de 8 °F, aplicada
+ao tempo em vez da temperatura.
+
+O módulo fica **parafusado com os fios em borne, nunca soldado** — troca em dez
+minutos com chave de fenda. O pacote de 5 vira 1 em uso e 4 de reposição.
+
+### O que comprar para esta etapa
+
+| Item | Especificação |
+|---|---|
+| Módulo relé 1 canal 5 V | optoacoplador e **ranhuras de isolamento**, pacote de 5 |
+| Capacitor supressor | 100 nF **classe X2, 275 VAC** |
+| Resistor do supressor | 100 Ω / 1 W |
+| Fusível + porta-fusível | **2 A retardado** |
+| Tomada de embutir | 10 A **com pino terra** |
+| Fio de rede | 1,5 mm², fase + neutro + terra |
+| Conectores Wago | para as emendas da rede |
+| Divisória | chapa de plástico ou acrílico |
+| Fonte AC/DC interna | tipo HLK-PM01 — só se quiser cabo único |
+| Resistor de segurança | para segurar a linha do relé desligada no boot |
 
 ## A caixa IP67 não resolve sozinha
 
