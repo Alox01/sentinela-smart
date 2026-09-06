@@ -388,6 +388,103 @@ minutos com chave de fenda. O pacote de 5 vira 1 em uso e 4 de reposição.
 resto — lista partida em dois lugares não se leva para a loja.
 
 
+## Conferência da placa montada — 01/09/2026
+
+Feita com multímetro na continuidade, **ESP32 fora dos soquetes**. Com o módulo
+encaixado, os caminhos internos dele respondem no lugar da placa.
+
+| O que | Resultado |
+|---|---|
+| As duas vias de cada um dos 12 bornes | `0L` em todos — **nenhum curto** |
+| Terra × 3V3 | `0L` — o curto que mais estraga não existe |
+| Os 5 terras contra a referência | apitam |
+| Os 3 pontos de 3V3 | apitam |
+| Os 12 sinais | apitam (os 3 dos LEDs medem 220 Ω, ver abaixo) |
+| As duas descidas de terra até os pinos `GND` | apitam |
+| Resistores | 3 × 220 Ω e 1 × 4,64 kΩ |
+
+**Nenhum defeito.** As 22 ligações estão todas lá.
+
+### Três resultados que parecem defeito e não são
+
+**Os três dos LEDs não apitam.** Entre o pino e o borne há 220 Ω, e o bipe só toca
+abaixo de umas dezenas de ohms. Mede-se na escala `2k`, esperando 220. Silêncio ali
+é o certo; `0L` na escala `2k` é que seria aberto.
+
+**O borne `P` da borda de baixo não apita nem está aberto.** É o pull-up de 4,7 kΩ
+ligando as duas vias — na escala `20k` ele mostra 4,64. Isso é o pull-up
+funcionando.
+
+**Os dois barramentos de terra não apitam entre si.** Quem junta os dois é o
+ESP32, e ele está fora. Apitarem aí é que seria estranho. Cada um se prova contra o
+seu próprio pino `GND`.
+
+### E uma armadilha de ponta de prova
+
+Duas medições deram silêncio e, refeitas, apitaram. Era a ponta não pegando no
+soquete. **Silêncio numa medição de soquete é mais frequentemente a ponta que a
+placa** — é assim que se dessolda uma junta boa. Enfiar uma perna cortada de
+resistor no soquete e encostar a ponta nela resolve.
+
+## Ligar os componentes — um grupo por vez
+
+Nada foi soldado nos componentes: os 20 fios saem do mesmo cabo de rede FTP.
+
+**A convenção de cor vale para a caixa inteira:** marrom e branco-marrom são
+**sempre** terra, laranja é **sempre** alimentação, o resto é sinal. Daqui a dois
+anos, com a caixa aberta na estufa, a cor responde sem consultar documento.
+
+Um metro de cabo dá 8 condutores; cada um vira 3 pedaços de 30 cm, e os 20 saem com
+sobra — inclusive respeitando a convenção, porque marrom e branco-marrom juntos dão
+os 6 terras necessários.
+
+### Três componentes, quatro fios
+
+LEDs e botões não levam um terra cada. As **três pernas curtas dos LEDs se soldam
+num nó só**, e dele sai um único fio marrom; os **três botões unem um lado** da
+mesma forma.
+
+Não é economia de fio — é o que faz 12 bornes darem conta de 11 coisas. Com terra
+individual seriam precisos dois bornes a mais, e eles não existem.
+
+### A ordem, e o que cada grupo prova
+
+Ligar tudo de uma vez deixa cinco defeitos misturados. Um grupo por vez, com o
+`teste_placa.ino` rodando, e cada um que responde risca um pedaço da conferência:
+
+| Grupo | Fios | Prova |
+|---|---|---|
+| Só o USB | — | ESP32 vivo, Serial falando |
+| Display | 4 | bornes `A` e `F` de baixo, `D18` e `D19` |
+| LEDs | 4 | bornes `K` e `P` de cima, os três 220 Ω, o terra comum |
+| Buzina | 2 | borne `F` de cima |
+| Botões | 4 | bornes `U` e `Z` de cima |
+| DHT22 | 3 | bornes `K`, `P`, `R` de baixo, o 3V3 e o pull-up |
+| Sensor de chama | 3 | bornes `U`, `W`, `Z` de baixo |
+
+**Corte com 25 a 30 cm enquanto a caixa não chega.** Não é desperdício: é para isso
+que existe borne de parafuso — solta, corta no tamanho, aperta. Nenhuma solda.
+
+**Alimente pelo USB do computador** durante tudo isso. A fonte fica para depois de
+a polaridade estar medida.
+
+### O que denuncia erro em cada grupo
+
+| Sintoma | Onde está |
+|---|---|
+| Display com número parado | `CLK` ou `DIO` sem contato |
+| Display embaralhado | `CLK` e `DIO` trocados — dois parafusos resolvem |
+| Dois LEDs acendendo juntos | dois sinais encostados **no nó**, não na placa |
+| LED que não acende | perna longa e curta invertidas |
+| Botão sempre `APERTADO` | nos táteis de 4 pernas, foram usadas duas do mesmo par — usar as da diagonal |
+| Apertar um botão e dois mudarem | sinais encostados no nó dos botões |
+| `chama` oscilando | é o esperado **sem** o sensor: o `GPIO 35` não tem pull-up interno e flutua |
+
+Esse último merece atenção: **se o cabo do sensor de chama romper na estufa, o pino
+volta a flutuar e o aparelho pode gritar incêndio sem incêndio.** É por isso que a
+lista traz um 4,7 kΩ extra para a etapa do cabo longo — ele segura o pino em alto,
+e alto quer dizer *sem fogo*. A falha passa a ser silenciosa em vez de falsa.
+
 ## A caixa IP67 não resolve sozinha
 
 IP67 impede água **entrando de fora**. Numa estufa aparecem dois efeitos que a
