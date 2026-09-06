@@ -147,8 +147,8 @@ compra.
 | **Fonte AC/DC interna** | **5 W** (HLK-5M05 ou equivalente), não a de 3 W — ver a conta do consumo |
 | **Fusível + porta-fusível** | **2 A retardado** — rápido queima no arranque |
 | **Tomada de embutir** | 10 A **com pino terra**; a plaqueta manda aterrar o motor |
-| **Capacitor supressor** | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve. Vai na **bobina do contator**, protegendo o contato do relé |
-| **Resistor do supressor** | 100 Ω / 1 W |
+| **Capacitor supressor** *(opcional)* | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve. Vai na **bobina do contator** |
+| **Resistor do supressor** *(opcional)* | 100 Ω / 1 W — o par RC é para bobina **de 220 V CA**; diodo só serviria em bobina de corrente contínua |
 | **Resistor de segurança** | segura a linha do relé desligada durante o boot |
 | **Fio 1,5 mm²** | fase, neutro e terra |
 | **Conectores Wago** | emendas da rede — nunca fita |
@@ -432,6 +432,14 @@ Ele não morre de corrente — morre de **número de operações**, e a ventoinh
 sem padrão. Estimando 20 vezes por hora numa estufada de 6 dias, são ~2.900
 operações por estufada; vinte estufadas na safra passam de 50 mil. Relé desse tipo
 vive na casa das 100 mil com carga leve. **Uma ou duas safras, não cinco.**
+
+**Com o contator no meio, isso deixou de ser problema.** O relé passa a chavear a
+bobina — uns 0,1 A, cerca de 1% do que o contato aguenta — e relé trabalhando a um
+décimo da nominal vive cinco a dez vezes mais que o catálogo. As 100 mil operações
+viram meio milhão ou mais, o que passa de dez safras.
+
+O supressor abaixo **continua ajudando, mas virou opcional**: ele estica algo que já
+era suficiente. Não é o caso do pull-up do DHT22, que sem ele o sensor não fala.
 
 Duas formas de esticar:
 
