@@ -65,7 +65,7 @@ definitiva:
 |---|---|---|
 | **Chave de fenda pequena** | 2 a 2,5 mm, ou jogo de precisão — **trava os 22 parafusos hoje** | 5–25 |
 | **Caixa IP65 ou IP67** | **interno a partir de 260 × 130 × 70** — ver a seção do acionamento | — |
-| **Espaçadores + parafusos M3** | suspendem a placa; a face do cobre tem biquinhos de solda e **não pode encostar em nada** | 10 |
+| **Espaçadores sextavados de nylon** | **M3 × 10 mm**, com parafusos de nylon, 4 un — suspendem a placa; a face do cobre tem biquinhos de solda e **não pode encostar em nada**. Nylon por ser isolante; nada de autoadesivo, que solta em caixa quente | 10–20 |
 | **Verniz de proteção** | Implastec ISOTEC ou equivalente **com ficha técnica** | 45–70 |
 | **Álcool isopropílico** | 99,8% — o de farmácia é 70% e leva água junto | 19 |
 
@@ -319,6 +319,11 @@ Folga real mesmo derratando pela metade por ser carga indutiva.
 
 **Um relé de 1 canal chaveia direto. Não precisa de contator.** A plaqueta manda
 aterrar o motor, então o terra atravessa a caixa até o pino da tomada de saída.
+
+**A conclusão vale para este motor, não para o soquete.** Contator entra quando a
+partida passa do que o contato aguenta — de meio cavalo para cima ela bate nos 15
+ou 20 A. Equipamento de estufa se troca: se um dia a ventoinha for substituída,
+**a plaqueta nova se lê antes de ligar no mesmo relé**.
 
 ### As três respostas de falha, e o que elas exigem do hardware
 
