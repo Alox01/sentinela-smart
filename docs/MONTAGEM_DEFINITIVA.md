@@ -52,15 +52,39 @@ definitiva:
 | Capacitor cerâmico **104 (100 nF)** | 100 un, 50 V |
 | Termorretrátil **4:1 com cola** | 12 mm, 1 m |
 
-### Falta — nacional
+**Nacional (01–06/09/2026)** — comprados durante a montagem:
+
+| Item | Especificação |
+|---|---|
+| **Multímetro** | B Basto MD-180L, bipe de continuidade, bateria inclusa |
+| **Ferro de solda 60 W** | com regulagem e pontas extras — o de 30 W queimou no meio da fiação |
+
+### Falta — para fechar a montagem
 
 | Item | Especificação | ~R$ |
 |---|---|---|
+| **Chave de fenda pequena** | 2 a 2,5 mm, ou jogo de precisão — **trava os 22 parafusos hoje** | 5–25 |
 | **Caixa IP65 ou IP67** | **interno a partir de 260 × 130 × 70** — ver a seção do acionamento | — |
-| **Fonte 5 V / 2 A** | com selo INMETRO, plugue brasileiro | — |
-| **Verniz de proteção** acrílico | Implastec ou equivalente **com ficha técnica** | 30–40 |
-| **Álcool isopropílico** | limpar o fluxo antes de envernizar | 15 |
-| **Multímetro** | qualquer um com bipe de continuidade | 25–40 |
+| **Espaçadores + parafusos M3** | suspendem a placa; a face do cobre tem biquinhos de solda e **não pode encostar em nada** | 10 |
+| **Verniz de proteção** | Implastec ISOTEC ou equivalente **com ficha técnica** | 45–70 |
+| **Álcool isopropílico** | 99,8% — o de farmácia é 70% e leva água junto | 19 |
+
+### Alimentação: não comprar fonte de parede
+
+Chegou a entrar na lista uma fonte 5 V/2 A com plugue P4. **Saiu**, por dois
+motivos que se somaram.
+
+Na bancada, o **USB do computador** alimenta e ainda serve de proteção: a porta
+limita corrente e desiste diante de um curto, coisa que uma fonte de 2 A não faz.
+
+Para rodar na estufa antes da etapa do acionamento, **um carregador de celular que
+já existe em casa** resolve: corta-se um cabo USB, e os fios de 5 V e terra vão nos
+bornes `A` e `C` da borda de cima. Carregador de celular é certificado, o consumo
+do aparelho é de uns 400 mA, e o custo é zero.
+
+E na etapa do acionamento a fonte de parede **desaparece de qualquer forma**: com
+uma caixa só e um cabo só, o conversor de 5 V passa a ser um módulo interno. Uma
+fonte comprada agora seria jogada fora lá.
 
 ### Falta — loja de material elétrico da cidade
 
@@ -89,11 +113,21 @@ blindagem so vale ate ali.
 ### Já tem, não precisa comprar
 
 ESP32, display TM1637, botões, LEDs, buzina, os 4 resistores em uso (3 × 220 Ω e
-1 × 4,7 kΩ), **estanho 63/37 com fluxo** e **ferro de solda de 30 W** — este
-precisa da ponta limada e restanhada, não trocada.
+1 × 4,7 kΩ), **estanho 63/37 com fluxo** e **cabo de rede FTP**, que deu tanto os
+barramentos nus quanto os 20 fios dos componentes.
 
-Fio rígido para os pulos na placa sai das **pernas cortadas dos resistores** e de
-um pedaço de cabo de rede velho.
+**Carregador de celular** — é ele que alimenta o aparelho até a etapa do
+acionamento. Ver a seção da alimentação acima.
+
+### Pendência: o DS18B20 comprado não tem lugar no firmware
+
+Ele foi comprado em 21/08 com sonda de 5 m, e **o firmware não lê nenhum
+DS18B20** — a temperatura sai toda do DHT22, no `GPIO 32`. A placa montada também
+não tem borne para ele.
+
+Fica registrado como pergunta em aberto: ou ele assume a temperatura e o DHT22 fica
+só com a umidade — o que exige borne, GPIO e código novos —, ou ele sobra. Decidir
+antes de furar a caixa, porque muda quantos prensa-cabos ela precisa.
 
 ### Para a etapa do cabo longo (não é agora)
 
