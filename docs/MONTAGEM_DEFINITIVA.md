@@ -143,7 +143,7 @@ compra.
 | Item | Especificação |
 |---|---|
 | **Módulo relé 1 canal 5 V** | optoacoplador e **ranhuras de isolamento**, pacote de 5 |
-| **Fonte AC/DC interna** | tipo HLK-PM01 — é ela que dá o cabo único |
+| **Fonte AC/DC interna** | **5 W** (HLK-5M05 ou equivalente), não a de 3 W — ver a conta do consumo |
 | **Fusível + porta-fusível** | **2 A retardado** — rápido queima no arranque |
 | **Tomada de embutir** | 10 A **com pino terra**; a plaqueta manda aterrar o motor |
 | **Capacitor supressor** | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve |
@@ -354,8 +354,37 @@ caixas complicam a venda. Aceito — o que muda é o **como**.
 - **Fusível retardado de 2 A** na entrada (rápido queima no arranque, toda vez)
 - **Prensa-cabo com alívio de tração** no cabo da rede
 - Fio de **1,5 mm²** e emendas em Wago
-- Para ficar com **um cabo só** saindo, o conversor de 5 V também vai para dentro
-  (tipo HLK-PM01), e aí a fonte de parede sai de cena
+- Para ficar com **um cabo só** saindo, o conversor de 5 V também vai para dentro,
+  e aí a fonte de parede sai de cena
+
+### Os dois caminhos da energia, e o dimensionamento da fonte interna
+
+O cabo de 220 V entra uma vez e **se divide em dois caminhos que não se reencontram**:
+um vai ao conversor AC/DC e vira os 5 V da placa; o outro vai ao contato do relé,
+segue para a tomada e alimenta a ventoinha **ainda em 220 V**.
+
+**A ventoinha nunca vê 5 V.** O relé não converte nada — ele abre e fecha o caminho,
+como um interruptor. E tem duas metades isoladas por dentro: a bobina, que obedece
+aos 5 V, e o contato, que aguenta os 220. Entre elas passa movimento mecânico, não
+corrente. É isso que deixa o ESP32 mandar sem encostar na rede.
+
+Confusão fácil aqui seria dimensionar a fonte interna pela ventoinha. Ela consome
+**0,86 A × 220 V = 189 VA**, e nenhum módulo desses chega perto — nem precisa.
+
+O que a fonte interna alimenta é só o lado de baixa tensão:
+
+| Consumidor | Pico |
+|---|---|
+| ESP32 nos picos de transmissão Wi-Fi | 500 mA |
+| Display | 30 mA |
+| Três LEDs | 45 mA |
+| Buzina | 30 mA |
+| Bobina do relé | 70 mA |
+| **Total** | **~675 mA — uns 3,4 W** |
+
+**Por isso a fonte é de 5 W, não de 3 W.** O HLK-PM01 de 3 W entrega 600 mA e fica
+abaixo desse pico. Fonte no limite reinicia o ESP32 exatamente quando ele transmite
+— e o defeito aparece como problema de rede, que é onde ninguém vai procurar.
 
 **Isso muda o tamanho da caixa a comprar agora:** placa de 150 × 90 mais um setor
 de rede de uns 100 × 90 e a divisória. **Interno a partir de 260 × 130 × 70 mm.**
