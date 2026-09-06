@@ -314,8 +314,18 @@ IP44, FS 1,15.
 | 127 V | 1,72 A | ~7,9 A |
 | **220 V** | **0,86 A** | **~4,0 A** |
 
-**A estufa é 220 V**, então a partida é de 4 A contra os 10 A do contato do relé.
-Folga real mesmo derratando pela metade por ser carga indutiva.
+**A estufa é 220 V**, então a partida é de 4 A. Mas o "10 A" do relé não é a
+comparação certa: aquele número vale para carga resistiva, e motor não é isso.
+
+A comparação que vale é a **classificação em cavalos** que esses relés trazem para
+carga de motor, tipicamente **1/3 cv em 250 V**. O motor é de **1/8 cv** — menos da
+metade. Não cabe apertado: está dentro da faixa de motor do próprio contato.
+
+**Relé e contator são a mesma ideia em tamanhos diferentes** — bobina puxando um
+contato. O contator entra de meio cavalo para cima, quando a partida vai a 15 ou
+20 A; e mesmo lá o relé não sai de cena, ele passa a acionar o contator. Loja e
+buscador que recomendam contator para "um motor" estão certos sem a plaqueta: sem
+o número, cautela é a resposta correta. **Foi a plaqueta que mudou a resposta.**
 
 **Um relé de 1 canal chaveia direto. Não precisa de contator.** A plaqueta manda
 aterrar o motor, então o terra atravessa a caixa até o pino da tomada de saída.
