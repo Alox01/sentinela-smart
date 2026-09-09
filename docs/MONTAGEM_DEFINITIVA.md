@@ -568,9 +568,11 @@ resistor no soquete e encostar a ponta nela resolve.
 
 ## O ponto fraco da placa são as juntas de superfície
 
-Em 09/09/2026, **três fios soltaram no mesmo dia**: o que leva o 3V3 ao
-barramento, o do display e o do dado do DS18B20. Não foi azar — os três eram do
-mesmo tipo.
+Em 09/09/2026, **dois fios soltaram no mesmo dia**: o que leva o 3V3 ao
+barramento e o do display. Não foi azar — os dois eram do mesmo tipo.
+
+*(Houve um terceiro defeito no mesmo dia, mas de outra natureza — está mais
+abaixo, e não é junta de solda.)*
 
 **Junta de superfície é fio soldado por cima de uma junta que já existia**, sem
 furo segurando. Ela é fraca por dois motivos somados: o fio fica só grudado na
@@ -584,7 +586,6 @@ O que cada uma custou para achar, e o que denunciava:
 |---|---|
 | 3V3 → barramento | display apagado, umidade em 0 e temperatura inválida **ao mesmo tempo** |
 | ESP32 → display | só o display apagado |
-| `B₂` → `D23` | `DS18B20 encontrados no barramento: 0`, com o módulo alimentado e o dado em 3,3 V até o borne |
 
 **Sintomas simultâneos apontam para um ponto comum, não para três defeitos.** Foi
 o que resolveu o primeiro: display, DHT22 e DS18B20 bebem do mesmo barramento de
@@ -600,6 +601,21 @@ encontra a junta que ficou por um fio.
 
 Dez minutos, e é o que separa um aparelho que funciona na bancada de um que
 funciona numa safra.
+
+### O terceiro defeito do dia foi outro: fio frouxo em borne de parafuso
+
+O DS18B20 ficou invisível — `DS18B20 encontrados no barramento: 0` — com tudo
+apontando para o contrário: o módulo alimentado com 3,28 V e a linha de dado em
+3,27 V até o borne. Nada disso era mentira; **o fio solto estava na plaquinha
+adaptadora que veio com o sensor**, não numa junta da placa perfurada.
+
+**Fio de sonda é multifilar**, e multifilar em borne de parafuso tem um modo de
+falha próprio: os fios finos se abrem ao apertar, o parafuso prende só uma parte
+deles, e o contato existe até alguém encostar no cabo.
+
+Por isso o teste de puxão **vale também para os bornes**, e não só para as soldas —
+inclusive os das plaquinhas que vieram prontas. Puxe cada fio; saindo, torça as
+pontas do multifilar antes de reapertar, para elas entrarem como um feixe só.
 
 ## Ligar os componentes — um grupo por vez
 
