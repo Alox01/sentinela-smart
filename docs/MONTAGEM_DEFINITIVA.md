@@ -457,6 +457,48 @@ ao tempo em vez da temperatura.
 O módulo fica **parafusado com os fios em borne, nunca soldado** — troca em dez
 minutos com chave de fenda. O pacote de 5 vira 1 em uso e 4 de reposição.
 
+### O LED de controle sai, e a via dele vira a entrada do relé
+
+Decidido em 09/09/2026. O aparelho passa a ter **dois LEDs**, não três.
+
+O firmware aciona três: `LED_ALERTA` (`D26`) quando há fogo ou temperatura fora da
+faixa; `LED_UMIDADE` (`D27`) quando o display está **mostrando a umidade** — é
+legenda do visor, não aviso de umidade alta; e `LED_CONTROLE_TEMP` (`D14`), que
+liga 2 °F abaixo do alvo e desliga 2 °F acima, e vai para o app como
+`aquecedorLigado`.
+
+**O terceiro já era o relé em miniatura.** Ele existia para demonstrar o
+acionamento enquanto não havia acionamento. Com o relé, a luz perde a função.
+
+**A via `K` da borda de cima fica vazia e recebe o módulo do relé.** Consequências:
+
+- **Nenhuma mudança de placa.** Nada é dessoldado; só não se liga o LED
+- **Nenhuma mudança de código** para o comando ligar e desligar — a lógica com
+  histerese de ±2 °F já está escrita, testada e rodando. Só o nome da constante
+  fica esquisito acionando um contator
+- **A histerese de ±2 °F já é o freio do liga-desliga picotado**, antes de qualquer
+  tempo mínimo por software
+- Restam **dois LEDs, três fios**: alerta na via `M`, umidade na `P`, e um terra
+  comum na `R` juntando duas pernas curtas
+
+Dois pontos ficam para aquela etapa: o **resistor de 220 Ω** que sobrou no caminho
+(posto para o LED; módulo de relé tem o seu próprio por dentro, e se 220 Ω a mais
+incomodar o optoacoplador, troca-se por um fio) e o **resistor que segura a linha
+desligada durante o boot**, que é o que cumpre a decisão de "reiniciou, ventoinha
+parada".
+
+**Contra-argumento registrado, e recusado pelo produtor:** com o relé fechado dentro
+da caixa, o LED seria a única forma de distinguir *"o aparelho não mandou"* de *"o
+aparelho mandou e o relé não obedeceu"*. Fica anotado para quem for diagnosticar
+ventoinha parada sem ele.
+
+### A lógica é de aquecedor — confirmar antes de ligar o relé
+
+`ledControleLigado` **liga quando esfria** e desliga quando esquenta, e o firmware
+chama isso de `aquecedorLigado`. Serve como está se a ventoinha empurra o ar quente
+da fornalha. Existindo ela para **resfriar**, o sentido é o inverso e o código
+precisa saber. Decidir antes de ligar o relé na via `K`.
+
 **O que comprar para esta etapa está na Lista de compra**, junto com todo o
 resto — lista partida em dois lugares não se leva para a loja.
 
