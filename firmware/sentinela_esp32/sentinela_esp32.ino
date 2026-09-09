@@ -366,6 +366,8 @@ void setup() {
   // tambem atende HTTP.
   sensorTemp.begin();
   sensorTemp.setResolution(10);
+  Serial.print("DS18B20 encontrados no barramento: ");
+  Serial.println(sensorTemp.getDeviceCount());
 
   pinMode(SENSOR_LUZ, INPUT);
   pinMode(BOTAO_BUZZER, INPUT_PULLUP);
@@ -2017,7 +2019,12 @@ void lerSensores() {
   sensorTemp.requestTemperatures();
   float leituraTemperaturaF = sensorTemp.getTempFByIndex(0);
 
-  if (leituraTemperaturaF == DEVICE_DISCONNECTED_F) {
+  // Faixa, nao igualdade. A biblioteca devolve DEVICE_DISCONNECTED_F (-196,6)
+  // quando nao ha sensor, mas comparar float com == falha por precisao - e o
+  // erro escapou por ali uma vez, virando "-197 F" no app e disparando alarme
+  // de temperatura baixa. O DS18B20 nao mede abaixo de -67 F, entao qualquer
+  // coisa abaixo de -100 e defeito, nunca leitura.
+  if (leituraTemperaturaF < -100.0) {
     leituraOk = false;
     alertaTemperatura = false;
     // Sem temperatura nao ha o que controlar. Deixar ligado aqui manteria o
