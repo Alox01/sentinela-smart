@@ -583,6 +583,41 @@ que existe borne de parafuso — solta, corta no tamanho, aperta. Nenhuma solda.
 **Alimente pelo USB do computador** durante tudo isso. A fonte fica para depois de
 a polaridade estar medida.
 
+### Resultado — 09/09/2026
+
+Todos os seis grupos responderam, com o **firmware do aparelho** rodando, não com o
+esquete de bancada:
+
+| Grupo | Como foi provado |
+|---|---|
+| Display | mostra temperatura, e troca para umidade no botão verde |
+| Buzina | tocou no alarme de temperatura |
+| DHT22 | leitura de temperatura e umidade no lugar de `SEM LEITURA` |
+| Sensor de chama | parou de oscilar |
+| LED de umidade | acende junto com o display mostrando umidade |
+| LED de alerta | acendeu com o alvo afastado do ambiente |
+| Três botões | cada um respondeu isolado, nas duas funções que tem |
+
+**O aparelho saiu do protoboard.** A alimentação seguiu pelo USB: o borne da força
+continua vazio até haver fonte com a polaridade medida.
+
+### Como provocar cada coisa com o firmware do aparelho
+
+Sem precisar do esquete de bancada, e cada teste isolando um componente:
+
+| Passo | O que aciona | O que prova |
+|---|---|---|
+| Botão **verde** fora do ajuste | alterna o display entre temperatura e umidade | o botão verde **e** o LED de umidade |
+| Botão **vermelho** uma vez | entra no modo de ajuste | o botão vermelho |
+| **Vermelho** repetido | +1 °F no alvo; o verde passa a fazer −1 °F | os dois botões na outra função |
+| Alvo **~20 °F** longe do ambiente | dispara o alarme | LED de alerta e buzina |
+| Segurar o **botão do buzzer** 3 s | cala por 10 min | o terceiro botão |
+
+**Os 20 °F não são engano.** O alarme dispara com 8 °F de desvio, mas logo depois de
+mexer no alvo o firmware alarga a margem em até mais 8, dando folga para a estufa
+acomodar. Parando nos 8, conclui-se que o alarme está quebrado quando ele está
+apenas esperando.
+
 ### O que denuncia erro em cada grupo
 
 | Sintoma | Onde está |
