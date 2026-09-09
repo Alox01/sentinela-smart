@@ -2028,11 +2028,19 @@ void verificarTempos() {
 // tem - antes de a temperatura sequer subir.
 void verificarSensorLuz() {
   int leituraLuz = digitalRead(SENSOR_LUZ);
-  if (SENSOR_LUZ_ATIVO_LOW) {
-    alertaLuz = leituraLuz == LOW;
-  } else {
-    alertaLuz = leituraLuz == HIGH;
+  bool detectou = SENSOR_LUZ_ATIVO_LOW ? (leituraLuz == LOW) : (leituraLuz == HIGH);
+
+  // Anuncia a TRANSICAO, nao o estado. O alarme de chama toca continuo e e o
+  // som mais grave que o aparelho faz, mas ele nao deixava rastro nenhum no
+  // Serial - entao um disparo intermitente ficava sem como ser investigado.
+  // Uma linha por mudanca basta: a duvida em campo e sempre "ele disparou
+  // sozinho?", e isso responde com hora.
+  if (detectou != alertaLuz) {
+    Serial.print("Sensor de chama: ");
+    Serial.println(detectou ? "DETECTADA" : "liberado");
   }
+
+  alertaLuz = detectou;
 }
 
 // Le os dois sensores, cada um com o seu proprio destino de falha. Leitura
