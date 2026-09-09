@@ -133,6 +133,18 @@ unsigned long ultimoTempoBuzzer = 0;
 const unsigned long intervaloLeitura = 2500;
 const unsigned long tempoMostrarUmidade = 10000;
 const unsigned long tempoSairAjuste = 5000;
+
+// Segurar repete: um passo a cada 200 ms. E o mesmo intervalo do BotaoContinuo
+// do app - o produtor ja aprendeu o gesto la, e dois ritmos diferentes para a
+// mesma acao seriam duas coisas para aprender em vez de uma.
+const unsigned long INTERVALO_REPETICAO_MS = 200;
+unsigned long ultimaRepeticaoVermelho = 0;
+unsigned long ultimaRepeticaoVerde = 0;
+
+// Quanto tempo sem mexer antes de gravar. Antes a gravacao so acontecia ao sair
+// do ajuste, 5 s depois do ultimo toque, e um corte de energia nesse intervalo
+// levava o ajuste junto.
+const unsigned long ESPERA_APOS_ALTERACAO_MS = 1500;
 const unsigned long intervaloPiscaAjuste = 400;
 const unsigned long intervaloBuzzer = 1000;
 const unsigned long duracaoBuzzer = 180;
@@ -316,6 +328,7 @@ void sincronizarChaveNuvem();
 bool estadoDeAlertaMudou();
 void carregarConfigPersistida();
 void salvarConfigSeNecessario();
+bool botaoRepetindo(int pino, unsigned long &ultimaRepeticao);
 void definirTemperaturaAlvo(int novoAlvo);
 void definirUmidadeAlvo(int novoAlvo);
 void ajustarAlvo(int passo);
@@ -1264,8 +1277,11 @@ void carregarConfigPersistida() {
 // mudancas numa so evita gastar a flash a toa.
 void salvarConfigSeNecessario() {
   if (!configSuja) return;
+  // Espera o produtor parar de mexer, nao terminar de ajustar. Durante o ajuste
+  // ultimoTempoAjuste anda a cada toque e a cada repeticao, entao isto libera
+  // 1,5 s depois da ULTIMA mudanca - com o visor ainda piscando.
+  if (modoAjuste && millis() - ultimoTempoAjuste < ESPERA_APOS_ALTERACAO_MS) return;
   if (millis() - ultimoSalvamentoConfig < INTERVALO_SALVAR_CONFIG_MS) return;
-  if (modoAjuste) return;  // espera o produtor terminar de ajustar
 
   prefs.begin("sentinela", false);
   prefs.putInt("tempAlvo", temperaturaAlvoF);
@@ -1876,6 +1892,24 @@ bool botaoFoiPressionado(int pino, bool &ultimoEstado, bool &estadoEstavel,
   return pressionado;
 }
 
+// Verdadeiro a cada INTERVALO_REPETICAO_MS enquanto o botao segue apertado. O
+// primeiro passo nao sai daqui - ele ja saiu do toque, em botaoFoiPressionado -
+// entao a primeira repeticao vem 200 ms depois, e nao instantanea.
+bool botaoRepetindo(int pino, unsigned long &ultimaRepeticao) {
+  if (digitalRead(pino) != LOW) {
+    ultimaRepeticao = 0;
+    return false;
+  }
+  if (ultimaRepeticao == 0) {
+    ultimaRepeticao = millis();
+    return false;
+  }
+  if (millis() - ultimaRepeticao < INTERVALO_REPETICAO_MS) return false;
+
+  ultimaRepeticao = millis();
+  return true;
+}
+
 // Segurar SO o botao do buzzer por 3 s liga/desliga a sirene de temperatura
 // deste aparelho. Exige os outros dois soltos: com os tres apertados quem manda
 // e o modo de configuracao.
@@ -1987,6 +2021,16 @@ void verificarBotoes() {
         Serial.println("Mostrando temperatura");
       }
     }
+  }
+
+  // Segurar anda sozinho. So dentro do ajuste: fora dele o verde alterna o
+  // visor e o vermelho abre o ajuste, e repetir isso seria piscar sem sentido.
+  if (modoAjuste) {
+    if (botaoRepetindo(BOTAO_VERMELHO, ultimaRepeticaoVermelho)) ajustarAlvo(+1);
+    if (botaoRepetindo(BOTAO_VERDE, ultimaRepeticaoVerde)) ajustarAlvo(-1);
+  } else {
+    ultimaRepeticaoVermelho = 0;
+    ultimaRepeticaoVerde = 0;
   }
 }
 
