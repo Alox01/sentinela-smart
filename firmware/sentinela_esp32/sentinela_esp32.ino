@@ -134,10 +134,15 @@ const unsigned long intervaloLeitura = 2500;
 const unsigned long tempoMostrarUmidade = 10000;
 const unsigned long tempoSairAjuste = 5000;
 
-// Segurar repete: um passo a cada 200 ms. E o mesmo intervalo do BotaoContinuo
-// do app - o produtor ja aprendeu o gesto la, e dois ritmos diferentes para a
-// mesma acao seriam duas coisas para aprender em vez de uma.
-const unsigned long INTERVALO_REPETICAO_MS = 200;
+// Segurar repete. O app usa 200 ms no BotaoContinuo, e aqui os mesmos 200 ms
+// pareciam depressa demais - o motivo e o visor: ele pisca a cada
+// intervaloPiscaAjuste (400 ms), entao a 200 ms o numero mudava duas vezes por
+// lampejo e outras duas com o visor apagado. O produtor via saltos de quatro em
+// quatro, sem enxergar onde parar. No celular o numero fica aceso e o mesmo
+// ritmo se le com calma.
+//
+// Casado com o piscar: um valor por lampejo, todos visiveis.
+const unsigned long INTERVALO_REPETICAO_MS = 400;
 unsigned long ultimaRepeticaoVermelho = 0;
 unsigned long ultimaRepeticaoVerde = 0;
 
