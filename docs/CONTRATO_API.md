@@ -101,6 +101,7 @@ O protótipo ESP32 testado respondeu um JSON simples na raiz do endereço, por e
   "buzzerSilenciado": false,
   "ledControleLigado": true,
   "leituraOk": true,
+  "umidadeOk": true,
   "ip": "192.168.1.21",
   "nomeLocal": "sentinela-a1b2c3.local"
 }
@@ -118,6 +119,10 @@ Campos mínimos para leitura no app:
 Campos opcionais recomendados:
 
 - `umidadeAlvo`: number, para o app diferenciar umidade lida e ajuste de umidade. O simulador local já envia esse campo; o ESP32 atual ainda pode omitir.
+- `umidadeOk`: boolean, desde 09/09/2026. **`leituraOk` passou a valer só para a
+  temperatura.** Os dois vêm de sensores diferentes — DS18B20 para temperatura,
+  DHT22 para umidade — e falham independente. Um aparelho antigo omite o campo;
+  ausente, trate como `true`, que é o comportamento de quando havia um sensor só.
 - `tokenConfigurado`: boolean, para indicar se o aparelho exige chave de acesso.
 - `versaoFirmware`: string, para diagnóstico. **Vai nas três saídas** — `/dados`,
   `/status` e o envio para a nuvem. Faltava em `/status` até 05/08/2026, e como é

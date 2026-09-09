@@ -36,6 +36,8 @@
 #include <WiFiClientSecure.h>
 #include <time.h>
 #include <DHT.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <TM1637Display.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
@@ -81,6 +83,13 @@ const unsigned long COMANDOS_INTERVAL_MS = 20000;
 #define DHTPIN 32
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
+
+// A temperatura vem do DS18B20, nao do DHT22. A sonda dele e selada e fica
+// dentro da estufa, no meio do fumo; o DHT22 mede a umidade em outro ponto.
+// Ler as duas no mesmo sensor seria descrever um lugar so e chamar de dois.
+#define SENSOR_TEMP 23
+OneWire barramentoTemp(SENSOR_TEMP);
+DallasTemperature sensorTemp(&barramentoTemp);
 
 #define SENSOR_LUZ 35
 const bool SENSOR_LUZ_ATIVO_LOW = true;
@@ -157,7 +166,11 @@ bool tempIncendioCobertaPeloSilencio = false;
 int temperaturaF = 0;
 int umidade = 0;
 
+// Dois sensores, duas flags. Perder a umidade nao pode derrubar o alarme de
+// temperatura, que e a funcao central do aparelho - e antes, com um sensor so,
+// derrubava.
 bool leituraOk = false;
+bool umidadeOk = false;
 
 int temperaturaAlvoF = 76;
 int margemF = 8;
@@ -347,6 +360,13 @@ void setup() {
 
   dht.begin();
 
+  // 10 bits: 0,25 C de resolucao, ~187 ms de conversao. O display mostra
+  // Fahrenheit inteiro e a margem de alarme e de 8 F, entao resolucao maior so
+  // custaria tempo de laco - a 12 bits a conversao trava 750 ms, e esse laco
+  // tambem atende HTTP.
+  sensorTemp.begin();
+  sensorTemp.setResolution(10);
+
   pinMode(SENSOR_LUZ, INPUT);
   pinMode(BOTAO_BUZZER, INPUT_PULLUP);
   pinMode(BOTAO_VERDE, INPUT_PULLUP);
@@ -459,7 +479,7 @@ void loop() {
 
   if (agora - ultimoTempoLeitura >= intervaloLeitura) {
     ultimoTempoLeitura = agora;
-    lerDHT22();
+    lerSensores();
   }
 
   atualizarSaidas();
@@ -1561,7 +1581,7 @@ String avisoAtual() {
   if (alertaTemperatura) {
     return temperaturaF > temperaturaAlvoF ? "Temperatura alta" : "Temperatura baixa";
   }
-  if (!leituraOk) return "Sem leitura do sensor";
+  if (!leituraOk) return "Sem leitura de temperatura";
   return "Estável";
 }
 
@@ -1668,6 +1688,7 @@ void handleSimple() {
   doc["buzzerSilenciado"] = estaSilenciado();
   doc["ledControleLigado"] = ledControleLigado;
   doc["leituraOk"] = leituraOk;
+  doc["umidadeOk"] = umidadeOk;
   doc["ip"] = WiFi.localIP().toString();
   doc["nomeLocal"] = nomeLocal + ".local";
   doc["tokenConfigurado"] = (tokenAparelho.length() > 0);
@@ -1989,30 +2010,42 @@ void verificarSensorLuz() {
   }
 }
 
-// Le temperatura e umidade. Leitura invalida e descartada em vez de virar
-// zero: um zero falso apagaria um alarme verdadeiro.
-void lerDHT22() {
-  float leituraUmidade = dht.readHumidity();
-  float leituraTemperaturaF = dht.readTemperature(true);  // true = Fahrenheit
+// Le os dois sensores, cada um com o seu proprio destino de falha. Leitura
+// invalida e descartada em vez de virar zero: um zero falso apagaria um alarme
+// verdadeiro.
+void lerSensores() {
+  sensorTemp.requestTemperatures();
+  float leituraTemperaturaF = sensorTemp.getTempFByIndex(0);
 
-  if (isnan(leituraUmidade) || isnan(leituraTemperaturaF)) {
+  if (leituraTemperaturaF == DEVICE_DISCONNECTED_F) {
     leituraOk = false;
     alertaTemperatura = false;
-    Serial.println("Erro ao ler DHT22");
-    return;
+    // Sem temperatura nao ha o que controlar. Deixar ligado aqui manteria o
+    // rele fechado com o aparelho cego - o contrario do que se decidiu para a
+    // ventoinha, que fica parada quando algo falha.
+    ledControleLigado = false;
+    Serial.println("Erro ao ler DS18B20");
+  } else {
+    leituraOk = true;
+    temperaturaF = (int)round(leituraTemperaturaF);
+    atualizarEstadoTemperatura();
+    Serial.print("Temperatura: ");
+    Serial.print(temperaturaF);
+    Serial.println(" F");
   }
 
-  leituraOk = true;
-  umidade = (int)round(leituraUmidade);
-  temperaturaF = (int)round(leituraTemperaturaF);
-  atualizarEstadoTemperatura();
+  float leituraUmidade = dht.readHumidity();
 
-  Serial.print("Temperatura: ");
-  Serial.print(temperaturaF);
-  Serial.println(" F");
-  Serial.print("Umidade: ");
-  Serial.print(umidade);
-  Serial.println(" %");
+  if (isnan(leituraUmidade)) {
+    umidadeOk = false;
+    Serial.println("Erro ao ler umidade do DHT22");
+  } else {
+    umidadeOk = true;
+    umidade = (int)round(leituraUmidade);
+    Serial.print("Umidade: ");
+    Serial.print(umidade);
+    Serial.println(" %");
+  }
 }
 
 // Decide se a temperatura esta fora da faixa, respeitando a margem vigente.
@@ -2168,14 +2201,20 @@ void atualizarDisplay() {
     return;
   }
 
+  // Cada lado do visor responde pelo seu sensor: com a umidade fora do ar, a
+  // temperatura continua aparecendo, e vice-versa.
+  if (mostrandoUmidade) {
+    if (!umidadeOk) {
+      display.showNumberDec(0, false);
+      return;
+    }
+    display.showNumberDec(umidade, false);
+    return;
+  }
+
   if (!leituraOk) {
     display.showNumberDec(0, false);
     return;
   }
-
-  if (mostrandoUmidade) {
-    display.showNumberDec(umidade, false);
-  } else {
-    display.showNumberDec((int)round(temperaturaF), false);
-  }
+  display.showNumberDec(temperaturaF, false);
 }
