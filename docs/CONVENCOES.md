@@ -85,6 +85,13 @@ App: `flutter test` dentro de `estufa_app`.
   abaixo do ajuste" se repetia a estufada inteira e empurrava para fora da tela o
   que diz alguma coisa: alarme, mudança de ajuste, queda de conexão. Numa estufa
   de secagem, ficar muito abaixo do ajuste **é o objetivo do processo**.
+- **A umidade tem ajuste no aparelho desde 09/09/2026, e ele não aciona nada.**
+  Os botões mexem no alvo **do que o visor está mostrando** — umidade se está na
+  umidade, temperatura se está na temperatura. Antes, entrar em ajuste jogava o
+  visor de volta para a temperatura, e quem estava olhando a umidade concluía que
+  tinha errado o botão. O número continua sendo **registrado, nunca atuado**: ele é
+  a linha tracejada do gráfico de umidade e o que o app sincroniza, e nenhuma
+  decisão do aparelho olha para ele.
 - **Umidade nunca dispara alarme.** Só temperatura e fogo. Isso vale também na
   **aparência**: no relatório da estufada a umidade sai como `registro`, em
   cinza, e não com a marca vermelha de quem acionou alarme. Ela chegou a sair

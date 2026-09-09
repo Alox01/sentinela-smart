@@ -317,6 +317,8 @@ bool estadoDeAlertaMudou();
 void carregarConfigPersistida();
 void salvarConfigSeNecessario();
 void definirTemperaturaAlvo(int novoAlvo);
+void definirUmidadeAlvo(int novoAlvo);
+void ajustarAlvo(int passo);
 int margemVigente();
 void atualizarEstadoTemperatura();
 bool estaSilenciado();
@@ -1162,6 +1164,40 @@ void definirTemperaturaAlvo(int novoAlvo) {
   atualizarEstadoTemperatura();
 }
 
+// Umidade nao tem janela de acomodacao porque nao tem alarme para acomodar:
+// ela e registrada, nunca atuada. O limite de 0 a 100 existe porque o numero e
+// percentual - fora disso nao seria ajuste, seria erro guardado e sincronizado.
+void definirUmidadeAlvo(int novoAlvo) {
+  if (novoAlvo < 0) novoAlvo = 0;
+  if (novoAlvo > 100) novoAlvo = 100;
+  if (novoAlvo == umidadeAlvo) return;
+
+  umidadeAlvo = novoAlvo;
+  configSuja = true;
+}
+
+// Ajusta o alvo DO QUE O VISOR ESTA MOSTRANDO. Antes, entrar em ajuste forcava
+// o visor de volta para a temperatura: quem estava olhando a umidade e apertava
+// para ajustar era jogado para outro numero sem explicacao, e concluia que
+// tinha errado o botao. Mexer no que esta na frente dispensa dizer qual dos
+// dois o botao muda.
+void ajustarAlvo(int passo) {
+  if (mostrandoUmidade) {
+    definirUmidadeAlvo(umidadeAlvo + passo);
+    umidTimestamp = nowMs();  // ajuste fisico participa do LWW
+    Serial.print("Umidade desejada: ");
+    Serial.println(umidadeAlvo);
+  } else {
+    definirTemperaturaAlvo(temperaturaAlvoF + passo);
+    tempTimestamp = nowMs();
+    Serial.print("Temperatura desejada: ");
+    Serial.println(temperaturaAlvoF);
+  }
+  ultimoTempoAjuste = millis();
+  displayAjusteLigado = true;
+  ultimoPiscaAjuste = millis();
+}
+
 // Margem valendo agora: a normal mais a folga da acomodacao, se a janela
 // ainda estiver aberta.
 int margemVigente() {
@@ -1935,25 +1971,13 @@ void verificarBotoes() {
     if (!modoAjuste) {
       entrarModoAjuste();
     } else {
-      definirTemperaturaAlvo(temperaturaAlvoF + 1);
-      tempTimestamp = nowMs();  // ajuste fisico participa do LWW
-      ultimoTempoAjuste = millis();
-      displayAjusteLigado = true;
-      ultimoPiscaAjuste = millis();
-      Serial.print("Temperatura desejada: ");
-      Serial.println(temperaturaAlvoF);
+      ajustarAlvo(+1);
     }
   }
 
   if (botaoFoiPressionado(BOTAO_VERDE, ultimoVerde, estavelVerde, debounceVerde)) {
     if (modoAjuste) {
-      definirTemperaturaAlvo(temperaturaAlvoF - 1);
-      tempTimestamp = nowMs();
-      ultimoTempoAjuste = millis();
-      displayAjusteLigado = true;
-      ultimoPiscaAjuste = millis();
-      Serial.print("Temperatura desejada: ");
-      Serial.println(temperaturaAlvoF);
+      ajustarAlvo(-1);
     } else {
       mostrandoUmidade = !mostrandoUmidade;
       if (mostrandoUmidade) {
@@ -1970,7 +1994,6 @@ void verificarBotoes() {
 // alarme. Fecha sozinha por inatividade, em verificarTempos().
 void entrarModoAjuste() {
   modoAjuste = true;
-  mostrandoUmidade = false;
   ultimoTempoAjuste = millis();
   ultimoPiscaAjuste = millis();
   displayAjusteLigado = true;
@@ -2088,7 +2111,9 @@ void atualizarSaidas() {
   digitalWrite(LED_ALERTA, existeAlerta ? HIGH : LOW);
   digitalWrite(LED_CONTROLE_TEMP, ledControleLigado ? HIGH : LOW);
 
-  if (!modoAjuste && mostrandoUmidade) {
+  // Vale tambem durante o ajuste: piscando um numero no visor, e o LED que diz
+  // se o produtor esta mexendo na umidade ou na temperatura.
+  if (mostrandoUmidade) {
     digitalWrite(LED_UMIDADE, HIGH);
   } else {
     digitalWrite(LED_UMIDADE, LOW);
@@ -2201,7 +2226,7 @@ void atualizarDisplay() {
       displayAjusteLigado = !displayAjusteLigado;
     }
     if (displayAjusteLigado) {
-      display.showNumberDec(temperaturaAlvoF, false);
+      display.showNumberDec(mostrandoUmidade ? umidadeAlvo : temperaturaAlvoF, false);
     } else {
       display.clear();
     }
