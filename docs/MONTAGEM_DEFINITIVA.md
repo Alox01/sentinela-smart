@@ -129,11 +129,36 @@ Fica registrado como pergunta em aberto: ou ele assume a temperatura e o DHT22 f
 só com a umidade — o que exige borne, GPIO e código novos —, ou ele sobra. Decidir
 antes de furar a caixa, porque muda quantos prensa-cabos ela precisa.
 
-### Para a etapa do cabo longo (não é agora)
+### Para a etapa do cabo longo
 
-- Resistor **2,2 kΩ** — substitui o 4,7 kΩ do DHT22 quando o cabo for a 5 m
-- Resistor **4,7 kΩ** extra — pull-up do sensor de chama no cabo longo
-- **AM2302 com 5 m** de fábrica, ou o curto com emenda **fora da estufa**
+O DS18B20 **já chega com 5 m**, e o DHT22 vai para a mesma distância. Então esta
+etapa deixou de ser hipotética.
+
+**Os capacitores 104 já comprados são para isso.** Cinco metros de cabo fazem a
+alimentação balançar na ponta do sensor a cada transmissão do Wi-Fi ou toque de
+buzina, e a leitura falha sem causa aparente. Um 100 nF **entre `VCC` e `GND`,
+encostado no corpo do sensor**, segura a tensão local.
+
+| Onde | O quê |
+|---|---|
+| **DHT22** | um 104 entre `+` e `−`, colado no sensor — é o mais sensível dos três |
+| **Sensor de chama** | um 104 entre `VCC` e `GND` da plaquinha |
+| **DS18B20** | conferir antes: a plaquinha adaptadora traz dois SMD, e um deles pode já ser o capacitor |
+| **Placa** *(opcional)* | um 104 entre os dois barramentos da borda de baixo — eles ficam a 2 furos, que é o espaçamento das pernas |
+
+Sobre os pull-ups a 5 m, um por vez:
+
+- **DS18B20** — os 4,7 kΩ da plaquinha dão conta. Esse sensor trabalha a dezenas de
+  metros. **Nada a mudar.**
+- **DHT22** — a troca por **2,2 kΩ** continua prevista, mas **não se faz antes de
+  precisar**: 5 m com 4,7 kΩ costuma funcionar, e o 4,7 kΩ está soldado na placa.
+  Ligar o cabo longo primeiro; dessoldar só se a leitura falhar.
+- **Sensor de chama** — precisa do **4,7 kΩ extra**, e por outro motivo: o `GPIO 35`
+  não tem pull-up interno, e cabo rompido deixa o pino flutuando. Sem ele, um cabo
+  partido faz o aparelho gritar incêndio sem incêndio.
+
+Sobre o sensor de umidade: **AM2302 com 5 m** de fábrica, ou o curto com emenda
+**fora da estufa**.
 
 ### Para a etapa do acionamento (pós-banca)
 
