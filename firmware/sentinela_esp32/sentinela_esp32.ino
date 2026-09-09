@@ -476,16 +476,25 @@ void loop() {
   // Com os tres botoes na mao, a nuvem espera. Sao 20 s ate a proxima busca e
   // 60 ate o proximo envio - nada que se perca -, e sem isto um handshake
   // caindo no meio da contagem engolia os 3 s de quem estava segurando.
+  //
+  // O mesmo vale para quem esta ajustando o alvo, e pela mesma razao: o envio e
+  // bloqueante, e o servidor gratuito dorme - a primeira requisicao depois do
+  // ocio leva segundos. Nesse tempo o laco nao le botao nenhum, entao segurar
+  // parava de andar e o ajuste chegava a expirar sozinho, obrigando a apertar de
+  // novo. E nao ha o que enviar de qualquer forma: um alvo que ainda esta sendo
+  // movido nao e ajuste, e cada valor intermediario seria ruido na nuvem.
   if (!modoConfig && tresBotoesDesdeMs == 0) {
+    // Emergencia nao espera nem por quem esta ajustando. Quem esta com o dedo no
+    // botao ja ouviu a sirene; o aviso e para quem nao esta na estufa.
     if (estadoDeAlertaMudou()) {
       ultimoPushNuvem = millis();
       empurrarLeituraNuvem();
-    } else if (millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
+    } else if (!modoAjuste && millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
       ultimoPushNuvem = millis();
       empurrarLeituraNuvem();
     }
 
-    if (millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
+    if (!modoAjuste && millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
       ultimaBuscaComandos = millis();
       buscarComandosNuvem();
       // Pega carona no mesmo intervalo: nao ha pressa, e a funcao sai na hora
