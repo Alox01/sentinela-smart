@@ -566,6 +566,41 @@ soquete. **Silêncio numa medição de soquete é mais frequentemente a ponta qu
 placa** — é assim que se dessolda uma junta boa. Enfiar uma perna cortada de
 resistor no soquete e encostar a ponta nela resolve.
 
+## O ponto fraco da placa são as juntas de superfície
+
+Em 09/09/2026, **três fios soltaram no mesmo dia**: o que leva o 3V3 ao
+barramento, o do display e o do dado do DS18B20. Não foi azar — os três eram do
+mesmo tipo.
+
+**Junta de superfície é fio soldado por cima de uma junta que já existia**, sem
+furo segurando. Ela é fraca por dois motivos somados: o fio fica só grudado na
+superfície, sem âncora mecânica, e reaquecer estanho velho sem fluxo novo produz
+uma liga fosca e quebradiça. Nesta placa elas são a maioria — todo pulo que chega
+num pino do ESP32 ou num barramento é uma delas, porque o furo já está tomado.
+
+O que cada uma custou para achar, e o que denunciava:
+
+| Soltou | Sintoma |
+|---|---|
+| 3V3 → barramento | display apagado, umidade em 0 e temperatura inválida **ao mesmo tempo** |
+| ESP32 → display | só o display apagado |
+| `B₂` → `D23` | `DS18B20 encontrados no barramento: 0`, com o módulo alimentado e o dado em 3,3 V até o borne |
+
+**Sintomas simultâneos apontam para um ponto comum, não para três defeitos.** Foi
+o que resolveu o primeiro: display, DHT22 e DS18B20 bebem do mesmo barramento de
+3V3, e os três caírem juntos dizia onde procurar.
+
+### Teste de puxão, obrigatório antes de fechar a caixa
+
+Segure cada fio perto da junta e **puxe de leve**. O que se mexer, reaqueça com um
+toque de estanho novo — o fluxo novo é o que faz a liga pegar.
+
+Repita **depois** do teste de carregar a caixa até outro cômodo. É o transporte que
+encontra a junta que ficou por um fio.
+
+Dez minutos, e é o que separa um aparelho que funciona na bancada de um que
+funciona numa safra.
+
 ## Ligar os componentes — um grupo por vez
 
 Nada foi soldado nos componentes: os 20 fios saem do mesmo cabo de rede FTP.
