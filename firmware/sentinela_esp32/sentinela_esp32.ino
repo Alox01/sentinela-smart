@@ -77,6 +77,19 @@ const unsigned long PUSH_INTERVAL_MS = 60000;  // envia uma leitura a cada 1 min
 // de longe e a estufa obedecer. Nao diminua muito: cada busca e um handshake
 // HTTPS que segura o loop por 1-2 s, tempo que falta ao controle local.
 const unsigned long COMANDOS_INTERVAL_MS = 20000;
+
+// Prazos de toda conversa com a nuvem. Sem eles, o aperto de mao TLS herdava o
+// padrao da biblioteca - 120 s - e o laco inteiro ficava parado esse tempo com o
+// servidor gratuito acordando: sem ler botao, sem atualizar o visor, sem
+// atender o app pela rede local. Numa emergencia seria pior: a sirene tocando e
+// o botao de silencio morto por dois minutos.
+//
+// Estourar o prazo nao perde nada. O envio e a busca se repetem no proximo
+// ciclo, e a propria tentativa ja acorda o servidor - a seguinte encontra ele de
+// pe. O aparelho segue decidindo sozinho enquanto isso; e o ponto do edge-first.
+const unsigned long TIMEOUT_HANDSHAKE_S = 4;     // em SEGUNDOS: e a unidade da biblioteca
+const unsigned long TIMEOUT_CONEXAO_MS = 3000;
+const unsigned long TIMEOUT_RESPOSTA_MS = 3000;
 // =============================================================
 
 // ---- Pinos (mapa de referencia) ----
@@ -329,6 +342,7 @@ bool buzzerAlternadoNesteAperto = false;
 void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
                     JsonArray ignoradas);
 void buscarComandosNuvem();
+void prepararConexaoNuvem(WiFiClientSecure &cliente, HTTPClient &http);
 void sincronizarChaveNuvem();
 bool estadoDeAlertaMudou();
 void carregarConfigPersistida();
@@ -1334,6 +1348,20 @@ bool estadoDeAlertaMudou() {
 // vivo por aparelho para o /status remoto refletir este ESP em vez do simulador.
 // Bloqueia o loop por ~1-2 s durante o handshake HTTPS; como so roda a cada
 // PUSH_INTERVAL_MS, nao atrapalha o controle local.
+// Todo cliente da nuvem nasce aqui, para nenhum escapar sem prazo. Eram tres
+// construcoes identicas, e as tres sem timeout - consertar uma e esquecer as
+// outras seria o caminho natural sem um lugar so.
+//
+// O setTimeout do HTTPClient NAO cobre o aperto de mao TLS: ele vale para a
+// leitura da resposta. O aperto de mao tem prazo proprio, no cliente seguro, e
+// e ele que chegava aos 120 s.
+void prepararConexaoNuvem(WiFiClientSecure &cliente, HTTPClient &http) {
+  cliente.setInsecure();  // nao valida certificado (simplifica; ok para o TCC)
+  cliente.setHandshakeTimeout(TIMEOUT_HANDSHAKE_S);
+  http.setConnectTimeout(TIMEOUT_CONEXAO_MS);
+  http.setTimeout(TIMEOUT_RESPOSTA_MS);
+}
+
 void empurrarLeituraNuvem() {
   if (strlen(CLOUD_URL) == 0) return;
   if (WiFi.status() != WL_CONNECTED) return;
@@ -1388,8 +1416,8 @@ void empurrarLeituraNuvem() {
   serializeJson(doc, corpo);
 
   WiFiClientSecure cliente;
-  cliente.setInsecure();  // nao valida certificado (simplifica; ok para o TCC)
   HTTPClient http;
+  prepararConexaoNuvem(cliente, http);
   String url = String(CLOUD_URL) + "/leitura";
   if (!http.begin(cliente, url)) return;
   http.addHeader("Content-Type", "application/json");
@@ -1432,8 +1460,8 @@ void sincronizarChaveNuvem() {
   serializeJson(doc, corpo);
 
   WiFiClientSecure cliente;
-  cliente.setInsecure();
   HTTPClient http;
+  prepararConexaoNuvem(cliente, http);
   String url = String(CLOUD_URL)
                + (rotacionando ? "/aparelhos/chave/rotacionar" : "/aparelhos/chave");
   if (!http.begin(cliente, url)) return;
@@ -1484,8 +1512,8 @@ void buscarComandosNuvem() {
   if (alertaLuz || riscoIncendioAgora()) return;
 
   WiFiClientSecure cliente;
-  cliente.setInsecure();
   HTTPClient http;
+  prepararConexaoNuvem(cliente, http);
   String url = String(CLOUD_URL) + "/comandos?idHardware=" + idHardware;
   if (!http.begin(cliente, url)) return;
   if (tokenAparelho.length() > 0) {
