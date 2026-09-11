@@ -91,6 +91,13 @@ const unsigned long COMANDOS_INTERVAL_MS = 20000;
 const unsigned long TIMEOUT_HANDSHAKE_S = 4;     // em SEGUNDOS: e a unidade da biblioteca
 const unsigned long TIMEOUT_CONEXAO_MS = 3000;
 const unsigned long TIMEOUT_RESPOSTA_MS = 3000;
+
+// Quanto um alerta pode esperar o produtor terminar de ajustar. Nao e o tempo
+// normal de espera - esse e o proprio fim do ajuste, 5 s depois do ultimo
+// toque. E o teto para quando o ajuste nao termina: um botao preso ou em curto
+// seguraria o modo de ajuste aberto para sempre, e com ele o aviso de fogo.
+const unsigned long ESPERA_MAX_ALERTA_NO_AJUSTE_MS = 30000;
+unsigned long alertaRetidoDesdeMs = 0;
 // =============================================================
 
 // ---- Pinos (mapa de referencia) ----
@@ -502,9 +509,8 @@ void loop() {
   // novo. E nao ha o que enviar de qualquer forma: um alvo que ainda esta sendo
   // movido nao e ajuste, e cada valor intermediario seria ruido na nuvem.
   if (!modoConfig && tresBotoesDesdeMs == 0) {
-    // Fogo nao espera nem por quem esta ajustando - quem esta com o dedo no botao
-    // ja ouviu a sirene, e o aviso e para quem nao esta na estufa. O alarme de
-    // temperatura, sim, espera o ajuste terminar: a regra esta em
+    // Durante o ajuste, alerta nenhum sai daqui - nem fogo - ate o produtor
+    // terminar, com teto de 30 s. A regra e o motivo estao em
     // estadoDeAlertaMudou().
     if (estadoDeAlertaMudou()) {
       ultimoPushNuvem = millis();
@@ -1344,25 +1350,32 @@ bool estadoDeAlertaMudou() {
   // barulho aqui.
   bool alarme = alertaTemperatura;
 
-  // Fogo nunca espera. O alarme de temperatura espera quem esta ajustando: com o
-  // dedo no botao, o mais provavel e que o proprio ajuste tenha provocado o
-  // alarme - subir o alvo demais e a estufa ficar "fria" para ele -, e enviar
-  // ali travava o laco no meio do gesto, parando o segurar-para-subir.
-  //
-  // Esperar aqui e NAO olhar, e nao olhar e esquecer. O ultimoAlarmeEnviado so
-  // anda quando o alarme sai de verdade, entao a mudanca fica pendente e vai no
-  // primeiro laco depois do ajuste, com o alvo ja no valor final. De brinde,
-  // passar do ponto e voltar dentro do mesmo ajuste nao manda aviso nenhum ao
-  // celular: a nuvem ve o resultado, nao o caminho.
-  bool fogoMudou = fogo != ultimoFogoEnviado;
-  bool alarmeMudou = !modoAjuste && (alarme != ultimoAlarmeEnviado);
-  bool mudou = fogoMudou || alarmeMudou;
+  bool mudou = (fogo != ultimoFogoEnviado) || (alarme != ultimoAlarmeEnviado);
+  if (!mudou) {
+    alertaRetidoDesdeMs = 0;
+    return false;
+  }
 
+  // Tudo espera quem esta ajustando - desvio, os 175 F e a chama. Decisao do
+  // produtor: enviar e bloqueante, e enviar no meio do gesto travava o
+  // segurar-para-subir. Com o dedo no botao ele ja esta ali, e a SIRENE LOCAL
+  // continua tocando na hora, porque ela nao trava nada; o que espera e so o
+  // aviso para quem nao esta na estufa.
+  //
+  // Esperar e NAO consumir. Os ultimos-enviados so andam quando o alerta sai,
+  // entao ele fica pendente e vai no primeiro laco depois do ajuste, com o alvo
+  // ja no valor final. Passar do ponto e voltar dentro do mesmo ajuste nao
+  // manda nada ao celular: a nuvem ve o resultado, nao o caminho.
+  if (modoAjuste) {
+    if (alertaRetidoDesdeMs == 0) alertaRetidoDesdeMs = millis();
+    if (millis() - alertaRetidoDesdeMs < ESPERA_MAX_ALERTA_NO_AJUSTE_MS) return false;
+    Serial.println("Ajuste aberto ha tempo demais: enviando o alerta retido");
+  }
+
+  alertaRetidoDesdeMs = 0;
   ultimoFogoEnviado = fogo;
-  // Envio de fogo leva o estado inteiro, alarme de temperatura incluido - entao
-  // de carona ele tambem conta como enviado, e o fim do ajuste nao repete.
-  if (!modoAjuste || mudou) ultimoAlarmeEnviado = alarme;
-  return mudou;
+  ultimoAlarmeEnviado = alarme;
+  return true;
 }
 
 // Empurra a leitura atual para a nuvem (POST /leitura), que guarda o estado ao

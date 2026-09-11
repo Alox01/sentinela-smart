@@ -92,6 +92,15 @@ App: `flutter test` dentro de `estufa_app`.
   tinha errado o botão. O número continua sendo **registrado, nunca atuado**: ele é
   a linha tracejada do gráfico de umidade e o que o app sincroniza, e nenhuma
   decisão do aparelho olha para ele.
+- **Durante o ajuste no aparelho, nenhum aviso sai para a nuvem — nem fogo**
+  (11/09/2026, decisão do produtor). Enviar é bloqueante, e enviar no meio do
+  gesto parava o segurar-para-subir. A **sirene local toca na hora** de qualquer
+  jeito, porque ela não trava nada; o que espera é só o aviso para quem não está
+  na estufa. O alerta **não se perde**: fica pendente e sai no primeiro laço
+  depois do ajuste, com o alvo já no valor final — e passar do ponto e voltar no
+  mesmo ajuste não manda nada, porque nada mudou. **Teto de 30 s**
+  (`ESPERA_MAX_ALERTA_NO_AJUSTE_MS`): sem ele, um botão preso manteria o ajuste
+  aberto para sempre, e o aviso de fogo nunca sairia.
 - **Umidade nunca dispara alarme.** Só temperatura e fogo. Isso vale também na
   **aparência**: no relatório da estufada a umidade sai como `registro`, em
   cinza, e não com a marca vermelha de quem acionou alarme. Ela chegou a sair
