@@ -35,6 +35,7 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <time.h>
+#include <esp_system.h>
 #include <DHT.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -342,6 +343,7 @@ bool buzzerAlternadoNesteAperto = false;
 void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
                     JsonArray ignoradas);
 void buscarComandosNuvem();
+const char* motivoDoReinicio();
 void prepararConexaoNuvem(WiFiClientSecure &cliente, HTTPClient &http);
 void sincronizarChaveNuvem();
 bool estadoDeAlertaMudou();
@@ -389,6 +391,8 @@ void setup() {
   nomeLocal = nomeLocalBuf;
   Serial.print("ID do aparelho: ");
   Serial.println(idHardware);
+  Serial.print("Motivo do ultimo reinicio: ");
+  Serial.println(motivoDoReinicio());
 
   carregarConfigPersistida();
 
@@ -1362,6 +1366,28 @@ void prepararConexaoNuvem(WiFiClientSecure &cliente, HTTPClient &http) {
   http.setTimeout(TIMEOUT_RESPOSTA_MS);
 }
 
+// Por que o aparelho ligou desta vez. "O display apagou e voltou" tem duas
+// causas que parecem iguais de fora e se consertam de jeitos diferentes: o laco
+// parado esperando a rede, com o visor congelado, ou o chip reiniciando de
+// verdade. Sem esta linha nao dava para separar as duas.
+//
+// No ESP32 o botao EN costuma ser reportado como ligar na energia, e nao como
+// reset externo - por isso os dois dividem a mesma frase.
+const char* motivoDoReinicio() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:   return "ligado na energia (ou botao EN)";
+    case ESP_RST_SW:        return "reinicio pedido pelo proprio firmware";
+    case ESP_RST_PANIC:     return "TRAVOU: excecao no codigo";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT:       return "TRAVOU: cao de guarda";
+    case ESP_RST_BROWNOUT:  return "QUEDA DE TENSAO";
+    case ESP_RST_EXT:       return "reset externo";
+    case ESP_RST_DEEPSLEEP: return "saiu do sono profundo";
+    default:                return "desconhecido";
+  }
+}
+
 void empurrarLeituraNuvem() {
   if (strlen(CLOUD_URL) == 0) return;
   if (WiFi.status() != WL_CONNECTED) return;
@@ -1785,6 +1811,11 @@ void handleSimple() {
   doc["ledControleLigado"] = ledControleLigado;
   doc["leituraOk"] = leituraOk;
   doc["umidadeOk"] = umidadeOk;
+  // Os dois vao no /dados para serem lidos pelo navegador do celular, sem
+  // computador: e assim que se investiga em campo, onde nao ha Serial. Tempo
+  // ligado menor que o tempo que voce esta ali quer dizer que ele reiniciou.
+  doc["motivoReinicio"] = motivoDoReinicio();
+  doc["ligadoHaSegundos"] = millis() / 1000;
   doc["ip"] = WiFi.localIP().toString();
   doc["nomeLocal"] = nomeLocal + ".local";
   doc["tokenConfigurado"] = (tokenAparelho.length() > 0);

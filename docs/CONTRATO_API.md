@@ -102,6 +102,8 @@ O protótipo ESP32 testado respondeu um JSON simples na raiz do endereço, por e
   "ledControleLigado": true,
   "leituraOk": true,
   "umidadeOk": true,
+  "motivoReinicio": "ligado na energia (ou botao EN)",
+  "ligadoHaSegundos": 3721,
   "ip": "192.168.1.21",
   "nomeLocal": "sentinela-a1b2c3.local"
 }
@@ -123,6 +125,13 @@ Campos opcionais recomendados:
   temperatura.** Os dois vêm de sensores diferentes — DS18B20 para temperatura,
   DHT22 para umidade — e falham independente. Um aparelho antigo omite o campo;
   ausente, trate como `true`, que é o comportamento de quando havia um sensor só.
+- `motivoReinicio` e `ligadoHaSegundos`: string e número, desde 11/09/2026, **só no
+  `/dados`**. Existem para diagnóstico em campo, onde não há computador para ler o
+  Serial: abrindo o `/dados` no navegador do celular, **tempo ligado menor que o
+  tempo que você está ali quer dizer que ele reiniciou**, e o motivo diz se foi
+  queda de tensão, cão de guarda ou exceção. "O display apagou e voltou" pode ser o
+  laço parado esperando a rede ou o chip reiniciando — são problemas diferentes, e
+  estes dois campos separam um do outro.
 - `tokenConfigurado`: boolean, para indicar se o aparelho exige chave de acesso.
 - `versaoFirmware`: string, para diagnóstico. **Vai nas três saídas** — `/dados`,
   `/status` e o envio para a nuvem. Faltava em `/status` até 05/08/2026, e como é
