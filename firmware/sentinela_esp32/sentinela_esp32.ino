@@ -502,8 +502,10 @@ void loop() {
   // novo. E nao ha o que enviar de qualquer forma: um alvo que ainda esta sendo
   // movido nao e ajuste, e cada valor intermediario seria ruido na nuvem.
   if (!modoConfig && tresBotoesDesdeMs == 0) {
-    // Emergencia nao espera nem por quem esta ajustando. Quem esta com o dedo no
-    // botao ja ouviu a sirene; o aviso e para quem nao esta na estufa.
+    // Fogo nao espera nem por quem esta ajustando - quem esta com o dedo no botao
+    // ja ouviu a sirene, e o aviso e para quem nao esta na estufa. O alarme de
+    // temperatura, sim, espera o ajuste terminar: a regra esta em
+    // estadoDeAlertaMudou().
     if (estadoDeAlertaMudou()) {
       ultimoPushNuvem = millis();
       empurrarLeituraNuvem();
@@ -1342,9 +1344,24 @@ bool estadoDeAlertaMudou() {
   // barulho aqui.
   bool alarme = alertaTemperatura;
 
-  bool mudou = (fogo != ultimoFogoEnviado) || (alarme != ultimoAlarmeEnviado);
+  // Fogo nunca espera. O alarme de temperatura espera quem esta ajustando: com o
+  // dedo no botao, o mais provavel e que o proprio ajuste tenha provocado o
+  // alarme - subir o alvo demais e a estufa ficar "fria" para ele -, e enviar
+  // ali travava o laco no meio do gesto, parando o segurar-para-subir.
+  //
+  // Esperar aqui e NAO olhar, e nao olhar e esquecer. O ultimoAlarmeEnviado so
+  // anda quando o alarme sai de verdade, entao a mudanca fica pendente e vai no
+  // primeiro laco depois do ajuste, com o alvo ja no valor final. De brinde,
+  // passar do ponto e voltar dentro do mesmo ajuste nao manda aviso nenhum ao
+  // celular: a nuvem ve o resultado, nao o caminho.
+  bool fogoMudou = fogo != ultimoFogoEnviado;
+  bool alarmeMudou = !modoAjuste && (alarme != ultimoAlarmeEnviado);
+  bool mudou = fogoMudou || alarmeMudou;
+
   ultimoFogoEnviado = fogo;
-  ultimoAlarmeEnviado = alarme;
+  // Envio de fogo leva o estado inteiro, alarme de temperatura incluido - entao
+  // de carona ele tambem conta como enviado, e o fim do ajuste nao repete.
+  if (!modoAjuste || mudou) ultimoAlarmeEnviado = alarme;
   return mudou;
 }
 
