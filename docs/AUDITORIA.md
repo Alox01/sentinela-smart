@@ -218,6 +218,61 @@ funciona:
   dica de arraste **estouravam a linha em 360dp**. Em release não aparece listra
   nenhuma; o texto era cortado calado. Os dois viraram `Flexible`.
 
+### 2.6 Aberto — achado em campo (10/09/2026)
+
+- [ ] **D3. O aparelho engasga: botões sem resposta e visor apagando por alguns
+  segundos.** Relatado depois da montagem definitiva, em uso normal, *"não é no
+  momento que clico várias vezes"*. Comandos e sensores funcionam; só a resposta
+  local some e volta, e as leituras demoram a chegar ao app até um comando
+  destravar.
+
+  *A causa principal está confirmada no código.* `empurrarLeituraNuvem()`,
+  `buscarComandosNuvem()` e `sincronizarChaveNuvem()` usam `HTTPClient` síncrono
+  dentro do `loop()`. Enquanto a chamada não volta, nada mais roda: nem botões,
+  nem visor, **nem o `server.handleClient()`** — por isso o app lendo pela rede
+  local também fica sem resposta. O servidor é plano gratuito do Render.
+
+  *O pior caso era de dois minutos, e não de segundos.* Nenhuma das três chamadas
+  tinha prazo, e o aperto de mão TLS herdava o padrão do núcleo 3.2.0:
+  `sslclient->handshake_timeout = 120000`. **O `http.setTimeout()` não alcança o
+  aperto de mão** — ele vale para a leitura —, então consertar só o objeto HTTP
+  teria deixado o pior caso intacto. Um diagnóstico externo chegou a propor
+  exatamente isso.
+
+  *Mitigado* em `180cb1b`: 4 s de aperto de mão, 3 s de conexão, 3 s de resposta,
+  numa função só (`prepararConexaoNuvem`) pela qual os três clientes passam.
+  Estourar o prazo não perde nada: a chamada se repete no ciclo seguinte, e a
+  própria tentativa acorda o servidor.
+
+  *Já estava mitigado, antes:* `48d2f7d` suspende o tráfego de rotina enquanto o
+  produtor ajusta o alvo — emergência continua passando.
+
+  *O que ainda NÃO está resolvido:* com o servidor acordado, cada chamada ainda
+  leva 1 a 2 s — é o cálculo do TLS no próprio ESP32 —, a cada 20 s. **O conserto
+  estrutural é mover a rede para uma tarefa do FreeRTOS no núcleo 0**, deixando o
+  `loop()` livre no núcleo 1. O cuidado que ele exige é real: `temperaturaAlvoF`,
+  `umidadeAlvo`, os carimbos de tempo, `buzzerTemperaturaAtivo` e `configSuja`
+  passariam a ser escritos por duas tarefas, e sem mutex ou fila o sintoma troca
+  de "trava perceptível" para **corrupção de dado esporádica** — mais rara e muito
+  mais difícil de achar. **Decidido: depois da banca**, não antes.
+
+  *Dúvida em aberto que decide o próximo passo.* "O visor apaga e volta ~2 s
+  depois" não é o retrato de laço parado — com o laço parado, o TM1637 **congela no
+  último quadro**, não apaga. É o retrato de reinício. `fc40bc5` passou a imprimir
+  o motivo no boot e a expor `motivoReinicio` e `ligadoHaSegundos` no `/dados`,
+  legíveis pelo navegador do celular em campo:
+
+  | Motivo | Aponta para |
+  |---|---|
+  | `QUEDA DE TENSAO` | alimentação — cabo, fonte, pico da buzina somado ao Wi-Fi |
+  | cão de guarda ou exceção | o firmware |
+  | não reiniciou | era só o laço parado, já limitado pelos prazos |
+
+  *De passagem, o servidor já se mantém acordado:* `keep_alive.js` pinga a própria
+  URL pública a cada 10 min, abaixo dos 15 de hibernação. Se cold start continuar
+  aparecendo, a primeira suspeita é esse mecanismo não estar pegando — não a falta
+  dele.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
