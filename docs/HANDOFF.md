@@ -1,5 +1,10 @@
 # Handoff / estado do projeto
 
+> **Desatualizado desde 04/08/2026. Comece por `RETOMADA_TCC.md`**, de 11/09 —
+> ele cobre a montagem do aparelho, a troca do sensor de temperatura e as
+> mudanças de firmware de setembro, e foi escrito para ser colado num chat sem
+> acesso ao repositório. Este arquivo continua valendo como histórico.
+
 Ponto de retomada para continuar o trabalho em qualquer máquina (o histórico do
 chat fica local; este arquivo e o Git são a memória portátil do projeto).
 Atualizado em **04/08/2026**. Antes disso, em 25/07: segurança, controle remoto,
