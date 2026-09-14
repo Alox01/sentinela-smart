@@ -419,7 +419,9 @@ funciona:
   sair das leituras também (`eventos_de_alarme.dart`). A nuvem registrou o
   alarme às 14:02:06 com o buzzer desligado — a mudança do servidor já estava no
   ar. O relatório junta os eventos que o app gravou com os que as leituras
-  mostram, sem repetir o mesmo episódio (5 min de tolerância). Limite: alarme
+  mostram, sem repetir o mesmo episódio (5 min de tolerância). **Aprovado em
+  campo em 14/09:** o alarme das 14:02, com app fechado e buzzer desligado,
+  apareceu no relatório da #22. Limite: alarme
   mais curto que o intervalo entre duas leituras (uma por minuto na união com a
   nuvem) pode não aparecer.
 
