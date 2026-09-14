@@ -440,7 +440,9 @@ funciona:
   quando o evento acontece, e esses são de antes de 14/09; os novos dizem 8°F.
 
 - [x] **D8. Depois de sincronizar a fila, a tela mostra o ajuste antigo.**
-  *Conferido e feito em 14/09.* Repetido às 13:39 (ajuste 65, pedido 60 sem
+  *Conferido, feito e aprovado em campo em 14/09* (refeito com o APK novo: a
+  tela ficou no valor pedido, com o aviso, até o aparelho confirmar).
+  Repetido às 13:39 (ajuste 65, pedido 60 sem
   internet): na volta a tela foi 60 → **65** → 60 sozinha em alguns segundos.
   Então era **só visual** — o comando sempre chegou. Conserto: a leitura da
   nuvem com comando ainda na fila (`aguardandoAparelho`) deixou de confirmar o

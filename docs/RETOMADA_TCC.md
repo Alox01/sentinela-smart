@@ -290,8 +290,9 @@ pedido 60 sem internet (OFFLINE \| 1; teste de alcance local e nuvem offline;
 pendência "Alterar ajuste de temperatura para 60°F"). Na volta: NUVEM com
 "Aguardando a estufa aplicar" → LOCAL mostrando **65** → **60** sozinho em
 alguns segundos. O comando chegou; a volta para 65 era só a tela. Corrigido no
-mesmo dia (a tela segura o valor pedido com o aviso até o aparelho confirmar) —
-**refazer uma vez com o APK novo** para o registro ficar com a versão final.
+mesmo dia (a tela segura o valor pedido com o aviso até o aparelho confirmar).
+**Refeito com o APK novo em 14/09: aprovado** — na volta da internet a tela
+ficou no valor pedido com o aviso de "aguardando", sem voltar ao antigo.
 
 **Evidência nova de setembro, que pode entrar:** placa conferida com multímetro
 (01/09); todos os grupos funcionando na placa soldada (09/09); troca do sensor de
