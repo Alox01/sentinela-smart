@@ -249,7 +249,7 @@ resultado inventado.
 | 3 | Acesso remoto, de fora da propriedade | ✅ 13–14/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho (falta o print com "NUVEM" em "Detalhes da conexão") |
 | 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |
 | 5 | Alertas com o app aberto e fechado | ✅ 25/07, 13/08 e 13–14/09/2026 (sem dados, voltou, fora da faixa) |
-| 6 | Uma estufada completa: relatório, eventos, gráfico, PDF e CSV | **em aberto** |
+| 6 | Uma estufada completa: relatório, eventos, gráfico, PDF e CSV | ✅ 14/09/2026 — estufada #22 (36 h, ainda em andamento): noite inteira preenchida pela nuvem, CSV com as 208 leituras, PDF com uma por hora. Falta repetir com uma estufada **encerrada** |
 | 7 | Registro de cada teste com data, resultado, prints e limitação | **em aberto** |
 
 **Roteiro rápido para o #1 e o #2** (uns 60 segundos, com o app):

@@ -385,6 +385,38 @@ funciona:
   Conferir junto: o eixo do tempo usa o mesmo `intervaloRotuloMs` (6h), então
   numa tela de 2h pode não aparecer **nenhum horário** embaixo.
 
+- [ ] **D7. Os eventos de "ajuste alterado" só contam o que foi feito no app.**
+  Visto no relatório da estufada #22 (PDF de 14/09 10:36). Dois sintomas, uma
+  causa:
+
+  1. **Mudança feita nos botões do aparelho não vira evento.** As leituras
+     mostram o ajuste de temperatura indo de 68 para 70 em 13/09 13:11, e não há
+     linha de evento para isso.
+  2. **Mexer no app com pausas vira uma rajada.** 13/09 14:12: "alterado para
+     75°F", "76°F", "80°F", "85°F", e em 14:13 "80°F", "70°F". Às 18:43, cinco
+     linhas no mesmo minuto.
+
+  *Causa, lida no código:* o evento nasce em `_agendarEnvioTemperatura` /
+  `_agendarEnvioUmidade` (`monitoramento_screen.dart`), isto é, **quando o app
+  envia o comando** — um por pausa de 1 s do produtor. A mudança que chega pela
+  leitura (feita no aparelho, ou por outro celular) abre a acomodação do detector
+  (linha ~255) mas não registra evento. Contraria "o aparelho é a fonte da
+  verdade": o relatório conta a história do app, não a da estufa.
+
+  *Caminho para o conserto:* tirar o evento do envio do comando e derivá-lo do
+  **ajuste que o aparelho reporta**, registrando quando o valor novo **para de
+  mudar** (alguns segundos estável, e o aparelho fora de `modoAjuste`), como
+  "alterado de 70 para 85°F". Cobre as duas origens e junta a rajada numa linha.
+
+  *Junto, a verificar:* os eventos são gravados só pelo app aberto. Entre 13/09
+  14:27 e 16:42 as leituras da nuvem dizem "Temperatura baixa" (10°F abaixo) com
+  `alerta_incendio = 0` (é onde a nuvem guarda o alarme ativo), e o relatório
+  não tem "Alarme acionado". Conferir se a sirene estava silenciada nesse
+  intervalo; se não estava, o alarme não chegou à nuvem e isso é outro defeito.
+
+  *Não é defeito:* os eventos antigos dizem "por mais de 10°F". O texto é gravado
+  quando o evento acontece, e esses são de antes de 14/09; os novos dizem 8°F.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
