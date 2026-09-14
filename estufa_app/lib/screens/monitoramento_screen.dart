@@ -99,6 +99,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   double? _ultimoTempAjusteServidor;
   double? _ultimoUmidAjusteServidor;
   bool? _ultimoAlertaIncendio;
+  // Alarme do processo (condicao), separado de `sireneLigada` (barulho).
+  bool _alarmeDoProcesso = false;
   // Aparelho "sem comunicacao": no modo nuvem, quando a ultima leitura recebida
   // fica velha demais (o aparelho parou de reportar por falta de luz/internet),
   // o app mostra isso em vez de fingir que esta tudo ao vivo.
@@ -244,6 +246,19 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final novoAviso = status['aviso'] ?? '';
     final novaSireneLigada =
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
+    // O ALARME DO PROCESSO - temperatura fora da faixa ou fogo -, e nao a
+    // sirene. E ele que vira evento e vai para o historico. Com a sirene, o
+    // buzzer desligado no aparelho apagava o alarme do relatorio: em 13/09/2026
+    // foram duas horas 10 F abaixo do ajuste sem nenhum "Alarme acionado". A
+    // sirene continua mandando no que a tela mostra como tocando.
+    // `alertaTemperatura` so vem do aparelho de verdade; sem ele (simulador,
+    // firmware antigo), segue pela sirene como antes.
+    final alertaTemperaturaLido = status['alertaTemperatura'];
+    final bool novoAlarmeDoProcesso =
+        fogoDetectado ||
+        (alertaTemperaturaLido is bool
+            ? alertaTemperaturaLido
+            : novaSireneLigada == true);
     final tsLeitura = (status['timestampLeitura'] as num?)?.toInt();
     final aguardandoAparelho = dados['aguardandoAparelho'] == true;
     final ajusteTempAnterior = _ultimoTempAjusteServidor;
@@ -283,14 +298,15 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       temperaturaAjusteAtual: novoTempAjuste,
       umidadeAjusteAtual: novoUmidAjuste,
       avisoAtual: novoAviso,
-      alertaIncendioAtual: novaSireneLigada,
+      alertaIncendioAtual: novoAlarmeDoProcesso,
     );
     _processarEventosDoCiclo(
       temperaturaAtual: novaTemperatura,
       umidadeAtual: novaUmidade,
       temperaturaAjusteAtual: novoTempAjuste,
       umidadeAjusteAtual: novoUmidAjuste,
-      alertaIncendioAtual: novaSireneLigada,
+      alertaIncendioAtual: novoAlarmeDoProcesso,
+      sireneTocando: novaSireneLigada == true,
       riscoIncendioAtual: fogoDetectado,
       avisoAtual: novoAviso,
     );
@@ -317,6 +333,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       umidAjuste = _umidAjustePendente ?? novoUmidAjuste;
       avisoEmergencia = novoAviso;
       sireneLigada = _silencioPendente ? false : novaSireneLigada;
+      _alarmeDoProcesso = novoAlarmeDoProcesso;
       _corStatusAparelho = (status['corStatus'] ?? 'green').toString();
       // Guarda a ultima versao vista em vez de zerar quando a leitura nao a
       // traz: firmware nao muda sozinho, e "-" no lugar do numero conhecido
@@ -885,7 +902,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       temperaturaAjusteAtual: tempAjuste,
       umidadeAjusteAtual: umidAjuste,
       avisoAtual: avisoEmergencia,
-      alertaIncendioAtual: sireneLigada,
+      alertaIncendioAtual: _alarmeDoProcesso,
       forcar: true,
     );
   }
@@ -956,6 +973,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     required double temperaturaAjusteAtual,
     required double umidadeAjusteAtual,
     required bool alertaIncendioAtual,
+    required bool sireneTocando,
     required bool riscoIncendioAtual,
     required String avisoAtual,
   }) {
@@ -969,12 +987,17 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // Volta quando o sensor existir.
     if (alertaIncendioAtual && _ultimoAlertaIncendio != true) {
       final ehIncendio = riscoIncendioAtual;
+      // O alarme entra no relatorio mesmo sem barulho, e a linha diz isso: sem
+      // a nota, quem le o PDF acha que a sirene tocou.
+      final semSirene = sireneTocando
+          ? ''
+          : ' (sirene desligada ou silenciada no aparelho)';
       _registrarEventoCiclo(
         tipo: ehIncendio ? 'alerta_incendio' : 'alarme_processo',
         severidade: ehIncendio ? 'critico' : 'alerta',
         descricao: ehIncendio
-            ? 'Alerta de inc\u00EAndio acionado.'
-            : 'Alarme acionado: ${_formatarAvisoAlarme(avisoAtual)}.',
+            ? 'Alerta de inc\u00EAndio acionado$semSirene.'
+            : 'Alarme acionado: ${_formatarAvisoAlarme(avisoAtual)}$semSirene.',
         temperaturaAtual: temperaturaAtual,
         umidadeAtual: umidadeAtual,
         temperaturaAjusteAtual: temperaturaAjusteAtual,
@@ -1099,7 +1122,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         temperaturaAjusteAtual: temperaturaAjusteAtual ?? tempAjuste,
         umidadeAjusteAtual: umidadeAjusteAtual ?? umidAjuste,
         avisoAtual: avisoAtual ?? avisoEmergencia,
-        alertaIncendioAtual: alertaIncendioAtual ?? sireneLigada,
+        alertaIncendioAtual: alertaIncendioAtual ?? _alarmeDoProcesso,
         porEvento: true,
       );
     }
@@ -1174,7 +1197,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               tipo: 'ajuste_temperatura',
               severidade: 'info',
               descricao:
-                  'Ajuste de temperatura alterado para ${novaTemp.toStringAsFixed(0)}\u00B0F.',
+                  'Ajuste de temperatura alterado para ${novaTemp.toStringAsFixed(0)}°F.',
               valorAnterior: ajusteAnterior,
               valorAtual: novaTemp,
             );
