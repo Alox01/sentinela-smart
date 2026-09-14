@@ -85,8 +85,11 @@ esteve fechado.
 
 A lógica de segurança executada pelo controlador foi implementada e ajustada
 com base em testes de uso. O alarme de processo dispara quando a temperatura
-se afasta mais de 5 °F do ajuste — tolerância definida após validação prática,
-por representar melhor o limiar de atenção real do produtor. A umidade,
+se afasta mais de 8 °F do ajuste, para cima ou para baixo — tolerância definida
+após validação prática, por representar melhor o limiar de atenção real do
+produtor. A mesma fronteira vale para o indicador de desvio, para o gráfico e
+para os eventos do relatório, de modo que nenhuma tela chama de desvio o que o
+aparelho trata como normal. A umidade,
 embora monitorada e registrada, não aciona a sirene por decisão de projeto,
 uma vez que o acompanhamento do produtor se concentra na temperatura. Para o
 risco de incêndio, discutido na seção 2.2, o sistema adota um limite de

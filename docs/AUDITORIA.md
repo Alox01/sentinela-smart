@@ -301,7 +301,8 @@ funciona:
   exportar espera a nuvem chegar em vez de gerar o arquivo sem ela). Junto:
   tabela do PDF com uma leitura por hora (`49b799b`) — com a nuvem, a estufada
   tem uma a cada 10 min —, CSV compartilhado como o PDF, e o texto do evento de
-  desvio, que dizia "mais de 10°F" para um limite de 5°F (`b6003d6`).
+  desvio, que dizia "mais de 10°F" para um limite de 5°F (`b6003d6`). No mesmo
+  dia o limite dos eventos passou a 8, o mesmo da sirene (ver `CONVENCOES.md`).
 
   *Não mudou:* o aparelho continua mandando a cada 10 min para a nuvem. Passar
   para 1 h foi considerado e descartado: é o que alimenta o gráfico e o

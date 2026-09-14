@@ -123,7 +123,7 @@ O capítulo central. Descrever a arquitetura e cada componente.
   historiar; downsampling do gráfico para o relatório ficar legível.
 - **4.8 Sincronização resiliente:** fila offline de comandos (app) e buffer de
   leituras (aparelho/servidor); **LWW por campo**; comando antigo é ignorado.
-- **4.9 Lógica de segurança / alarmes:** tolerância de **±5 °F**; limite de
+- **4.9 Lógica de segurança / alarmes:** tolerância de **±8 °F** (a mesma no alarme, no LED, no gráfico e nos eventos); limite de
   incêndio **175 °F** (ou ajuste+5 se ajuste > 170); sensor de chama; a umidade
   **não** dispara sirene (decisão de projeto — produtor não a acompanha).
 - **4.10 Relatório da estufada:** resumo, eventos, gráfico (degraus + linha de

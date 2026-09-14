@@ -107,6 +107,17 @@ App: `flutter test` dentro de `estufa_app`.
   vermelha, no meio das linhas de "Alarme acionado", e a estufada parecia ter
   tido dezessete emergências que nunca existiram. Numa estufa de secagem a
   umidade ficar muito abaixo do ajuste é **o objetivo do processo**.
+- **Desvio é mais de 8 do ajuste, para cima e para baixo — em todo lugar**
+  (14/09/2026, decisão do produtor). °F na temperatura, % na umidade. Vale para
+  a sirene e o aviso no celular (só temperatura), o LED, o gráfico, os eventos do
+  relatório e a gravação antecipada no banco. Diferença de **8 exata ainda é
+  normal**; 9 já é desvio. Os lugares: `margemF` (firmware), `margemAjuste`
+  (app, usado também pelo `detector_oscilacao.dart`), `TOLERANCIA_TEMP` /
+  `TOLERANCIA_UMID` (`logica.js`) e `LIMITE_*` (`storage_policy.js`). Mudar um
+  sem os outros é o defeito que já aconteceu três vezes: uma tela chamando de
+  desvio o que o aparelho trata como normal. Duas coisas somam ou sobem acima
+  dos 8 de propósito: a **folga da acomodação** (até +8 por 5 min depois de mudar
+  o ajuste) e o nível **crítico** do relatório (mais de 20).
 - **O aparelho é a fonte da verdade.** O app espelha o que ele reporta, não emite
   um segundo parecer.
 - **O interruptor da sirene é sobre o ALARME**, não sobre todo som: apitos de
