@@ -338,6 +338,45 @@ funciona:
   *Falta provar em campo:* desligar o roteador com o aparelho ligado, esperar
   1 min, religar — o aparelho tem que voltar sozinho.
 
+- [ ] **D6. No gráfico do relatório, trechos inteiros ficam sem bolinha.**
+  Visto em 14/09 (print da umidade, janela das últimas 24h): a linha e o valor
+  estão lá — arrastando o dedo aparece "Leitura 69% / Ajuste 70% / 13:03" —, mas
+  telas inteiras não têm bolinha nenhuma, enquanto outras têm. Acontece na
+  temperatura e na umidade. **Não corrigido: decidido deixar para depois.**
+
+  *Causa provável, lida no código* (`grafico_steam.dart`, `_deveMostrarPonto`):
+  a bolinha só aparece em três casos — leitura **fora da margem** (mais de 8 do
+  ajuste), leitura perto do **primeiro ou do último** ponto, ou leitura perto de
+  uma **marca do eixo do tempo** (a até ¼ do intervalo entre marcas).
+
+  O intervalo entre marcas sai de `_intervaloParaDuracao()` sobre a **janela
+  inteira com as margens**: 24h de leitura + 2 × 0,55 × 2h de margem = 26,2h,
+  que cai na faixa "mais de 24h" → **marcas de 6 em 6 horas**. Então só ganham
+  bolinha as leituras a até **1h30** de cada marca: 3h com bolinha, 3h sem, em
+  ciclo. Só que desde o D2 cada tela mostra **2h** (`_horasPorTela`,
+  `grafico_estufada_card.dart`) — então há telas inteiras dentro do trecho
+  "sem", e é isso que se vê.
+
+  A regra foi escrita quando a janela era fixa em 1h (marcas de 10 em 10 min, e
+  quase toda leitura caía perto de uma). O D2 mudou a densidade da tela e a
+  janela, e a regra das bolinhas ficou medindo a coisa antiga.
+
+  *Por que parece aleatório:* as marcas contam a partir da **primeira leitura
+  da janela** (`dadosMinX`), não da hora cheia, e a janela anda com o último
+  dado. Abrir o mesmo relatório mais tarde muda quais trechos têm bolinha.
+
+  *Caminhos para o conserto (escolher na hora):*
+  1. Tirar o espaçamento das bolinhas da **densidade da tela** (2h por tela), e
+     não da duração da janela — por exemplo, uma bolinha a cada 30 min.
+  2. Bolinha em **toda leitura** que já sobreviveu ao afinamento
+     (`_afinarPontos`, 5 min ou mudança de 5), já que a 2h por tela elas ficam a
+     ~30 px uma da outra. É o mais simples; conferir se não polui.
+  3. Bolinha nas **quinas do degrau** (onde o valor muda) mais as de sempre —
+     mostra exatamente onde algo aconteceu.
+
+  Conferir junto: o eixo do tempo usa o mesmo `intervaloRotuloMs` (6h), então
+  numa tela de 2h pode não aparecer **nenhum horário** embaixo.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
