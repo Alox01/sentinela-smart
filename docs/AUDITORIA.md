@@ -256,6 +256,15 @@ funciona:
   de "trava perceptível" para **corrupção de dado esporádica** — mais rara e muito
   mais difícil de achar. **Decidido: depois da banca**, não antes.
 
+  *Situação em 14/09, com o firmware do dia:* o produtor não viu mais os
+  engasgos feios. Sobra um toque de botão perdido de vez em quando ("clico 2 a 3
+  vezes até responder"). Bate com o que resta do D3: a busca de comando na nuvem
+  a cada 20 s ainda trava o laço 1–2 s, e um toque mais curto que isso, dado
+  nesse intervalo, nunca é lido — algo como 1 toque em 10 a 20. Não é o botão.
+  Conserto pequeno possível antes do núcleo separado: guardar o toque por
+  interrupção (`attachInterrupt`) e tratá-lo quando o laço voltar. Decisão do
+  produtor: aceitável por enquanto.
+
   *Dúvida em aberto que decide o próximo passo.* "O visor apaga e volta ~2 s
   depois" não é o retrato de laço parado — com o laço parado, o TM1637 **congela no
   último quadro**, não apaga. É o retrato de reinício. `fc40bc5` passou a imprimir
