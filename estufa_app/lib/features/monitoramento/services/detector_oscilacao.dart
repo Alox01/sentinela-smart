@@ -130,7 +130,9 @@ class DetectorOscilacao {
       prefixoTipo: 'temperatura',
       nomeGrandeza: 'Temperatura',
       unidade: '°F',
-      limiteAtencaoTexto: '10°F',
+      // O limite de atencao e a `_tolerancia`, 5 F. Aqui dizia 10 F, e o
+      // relatorio saia com "por mais de 10°F (8°F de diferença)".
+      limiteAtencaoTexto: '5°F',
       limiteCriticoTexto: '20°F',
     );
   }
