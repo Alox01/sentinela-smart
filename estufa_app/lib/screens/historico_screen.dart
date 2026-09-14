@@ -79,6 +79,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   // de qual ciclo já foi buscado, para não travar a tela esperando a rede.
   List<HistoricoLeituraEntity>? _leiturasNuvem;
   int? _cicloNuvemCarregadoId;
+  // A busca da nuvem em curso, para exportar poder esperar por ela.
+  Future<void>? _cargaNuvem;
   int? _cicloNuvemEmProgresso;
   List<CicloSecagemEntity> _ciclos = [];
   // Posicao sequencial (1, 2, 3...) por ordem de inicio, desacoplada do id do
@@ -97,9 +99,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     super.initState();
     // Aproveita o relatorio que o monitoramento adiantou. Sem ele, e a carga
     // normal: nada aqui depende da precarga ter acontecido.
-    _dadosFuture =
-        _relatorioRepository.consumirPrecarga(widget.ipEstufa) ??
-        _carregarDadosRelatorio();
+    //
+    // A precarga passa POR DENTRO da carga, e nao no lugar dela. Ate 14/09/2026
+    // ela entrava no lugar, e a busca da nuvem - que so existia la dentro - nao
+    // acontecia: abrir o relatorio pelo caminho de sempre (monitoramento, depois
+    // Relatorios) dava so o que o celular gravou, desde 04/08/2026.
+    _dadosFuture = _carregarDadosRelatorio(
+      precarga: _relatorioRepository.consumirPrecarga(widget.ipEstufa),
+    );
   }
 
   @override
@@ -124,27 +131,30 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
   Future<DadosRelatorioEstufada> _carregarDadosRelatorio({
     int? cicloPreferidoId,
+    Future<DadosRelatorioEstufada>? precarga,
   }) async {
     // Reinicia o estado da busca da nuvem a cada (re)carregamento.
     _leiturasNuvem = null;
     _cicloNuvemCarregadoId = null;
     _cicloNuvemEmProgresso = null;
+    _cargaNuvem = null;
 
-    final dados = await _relatorioRepository.carregarRelatorio(
-      widget.ipEstufa,
-      cicloPreferidoId: cicloPreferidoId,
-    );
+    final dados = await (precarga ??
+        _relatorioRepository.carregarRelatorio(
+          widget.ipEstufa,
+          cicloPreferidoId: cicloPreferidoId,
+        ));
 
     final ciclo = dados.cicloSelecionado;
     if (ciclo != null) {
       // Renderiza ja com o local (instantaneo) e busca a nuvem em segundo plano.
-      unawaited(
-        _carregarHistoricoNuvem(
-          ciclo,
-          ciclo.fim ?? DateTime.now(),
-          dados.leituras,
-        ),
+      final carga = _carregarHistoricoNuvem(
+        ciclo,
+        ciclo.fim ?? DateTime.now(),
+        dados.leituras,
       );
+      _cargaNuvem = carga;
+      unawaited(carga);
     }
     return dados;
   }
@@ -767,9 +777,34 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     return '$posicao | $inicio - $fim';
   }
 
+  /// As leituras que vao para o arquivo, esperando a nuvem se ela ainda estiver
+  /// chegando. A tela abre com o que o celular gravou e completa depois; quem
+  /// exportava nesse meio-tempo levava um arquivo sem as horas em que o app
+  /// esteve fechado, e nada avisava.
+  Future<List<HistoricoLeituraEntity>> _leiturasParaExportar(
+    ScaffoldMessengerState messenger,
+  ) async {
+    final carga = _cargaNuvem;
+    if (carga != null && _cicloNuvemEmProgresso != null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Buscando as leituras da nuvem...')),
+      );
+      try {
+        await carga;
+      } catch (_) {
+        // Sem a nuvem, exporta o que o celular tem.
+      }
+      messenger.hideCurrentSnackBar();
+    }
+    final nuvemDesteCiclo =
+        _cicloNuvemCarregadoId == _cicloSelecionadoId && _leiturasNuvem != null;
+    return _aplicarFiltro(nuvemDesteCiclo ? _leiturasNuvem! : _leiturasBrutas);
+  }
+
   Future<void> _exportarPdf() async {
     final messenger = ScaffoldMessenger.of(context);
-    final leiturasFiltradas = _aplicarFiltro(_leiturasBrutas);
+    final leiturasFiltradas = await _leiturasParaExportar(messenger);
+    if (!mounted) return;
 
     if (leiturasFiltradas.isEmpty) {
       messenger.showSnackBar(
@@ -809,7 +844,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
   Future<void> _exportarCsv() async {
     final messenger = ScaffoldMessenger.of(context);
-    final leiturasFiltradas = _aplicarFiltro(_leiturasBrutas);
+    final leiturasFiltradas = await _leiturasParaExportar(messenger);
+    if (!mounted) return;
 
     if (leiturasFiltradas.isEmpty) {
       messenger.showSnackBar(
