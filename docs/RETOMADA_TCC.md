@@ -193,10 +193,38 @@ proposta. Ver seção 6.
    - **Sumiu do ar** → o conserto não pegou.
 3. **Se o visor apagar**, ler o `/dados` (seção 4) e anotar os dois campos.
 
+**Resultado (13–14/09, outra casa e faculdade):**
+
+- ✅ **Trocar o Wi-Fi do aparelho pelo app** — na outra casa (nome e senha do
+  roteador de lá) e na faculdade pelo roteador do celular (dados móveis).
+- ✅ **Atualizar a estufa** pelo "adicionar estufa", cadastrando uma que já
+  existia: o app reconheceu e atualizou em vez de duplicar.
+- ✅ **Tirar acesso.**
+- ✅ **Notificações:** "sem receber dados do aparelho", "aparelho voltou a enviar
+  dados", "temperatura fora da faixa".
+- ❌ **Wi-Fi da faculdade não conectou.** Rede aberta, vários roteadores. Causa
+  não medida. As prováveis, nesta ordem: **página de login** (o Wi-Fi livre de
+  faculdade quase sempre tem — o ESP32 não tem navegador para aceitá-la);
+  **usuário e senha** (tipo eduroam, WPA2-Enterprise, que o firmware não
+  suporta); **rede só de 5 GHz** (o ESP32 só enxerga 2,4). Vários roteadores com
+  o mesmo nome **não** atrapalham. Depois de 14/09 o aparelho diz o motivo: ver
+  `AUDITORIA.md`, D5.
+- ⚠️ **IP fixo não testado.** O campo veio vazio ao reconfigurar e ficou vazio —
+  o aparelho entrou por DHCP, que é o caminho normal. A prova de que um IP de
+  outra rede é ignorado continua pendente.
+
+**Achado no caminho (D5, corrigido em 14/09):** o aparelho, quando perdia o
+Wi-Fi por mais de 15 s — ou quando a primeira tentativa do boot falhava —,
+passava a procurar a rede **de fábrica** ("SUA_REDE_WIFI") e só voltava
+desligando e ligando. **Gravar o firmware novo.**
+
 **Depois:**
 
 4. **Deixar ligado um dia inteiro** sem mexer. Defeito intermitente só aparece
    assim.
+   - **Desligar só o roteador** (aparelho ligado), esperar 1 min, religar. O
+     aparelho tem que voltar sozinho em até ~30 s. É a prova do D5 — antes do
+     firmware de 14/09 ele não voltava.
 5. **Caminho da nuvem:** aparelho ligado, app fechado por horas, depois abrir o
    relatório. As horas em que o app esteve fechado têm que aparecer.
    **Rodado em 13–14/09 e reprovado:** o PDF saiu com uma noite vazia, e a nuvem
@@ -219,8 +247,8 @@ resultado inventado.
 | 1 | Operação local com a internet desligada | **em aberto** |
 | 2 | Comandos offline e sincronização ao reconectar | **em aberto** |
 | 3 | Acesso remoto, de fora da propriedade | **em aberto** |
-| 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026 |
-| 5 | Alertas com o app aberto e fechado | ✅ 25/07 e 13/08/2026 |
+| 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |
+| 5 | Alertas com o app aberto e fechado | ✅ 25/07, 13/08 e 13–14/09/2026 (sem dados, voltou, fora da faixa) |
 | 6 | Uma estufada completa: relatório, eventos, gráfico, PDF e CSV | **em aberto** |
 | 7 | Registro de cada teste com data, resultado, prints e limitação | **em aberto** |
 

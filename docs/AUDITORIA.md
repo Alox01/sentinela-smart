@@ -310,6 +310,34 @@ funciona:
   com folga (a cota de 500 MB está em `PLANO_BANCO_DADOS.md`). O afinamento é só
   no papel.
 
+- [x] **D5. Depois de perder o Wi-Fi, o aparelho procurava a rede de fábrica.**
+  `manterWifi()` reconectava com `WiFi.begin(WIFI_SSID, WIFI_PASS)` — as
+  constantes do topo, `"SUA_REDE_WIFI"`, que desde `ab712ff` (20/07) são só o
+  valor de fábrica. A rede configurada (`wifiSsid`/`wifiPass`, da NVS) ficou
+  esquecida nesse caminho. Resultado: **uma queda de mais de 15 s** (roteador
+  reiniciando) ou **uma primeira tentativa que não desse certo** no boot deixava
+  o aparelho procurando uma rede que não existe, e o `begin()` ainda sobrescrevia
+  a configuração da reconexão automática. Só voltava desligando e ligando.
+
+  *Por que ninguém viu:* ligar e desligar usa o caminho do boot, que lê a rede
+  certa. Os testes de queda de energia passaram por isso. Queda **só do
+  roteador**, com o aparelho ligado, nunca foi testada.
+
+  *De carona:* relógio (NTP), rede aprendida e IP fixo só eram feitos se a
+  PRIMEIRA tentativa conectasse. Quando a rede aparecia depois, o relógio nunca
+  era acertado e as leituras saíam com `millis()` no lugar da hora.
+
+  *Feito (14/09):* reconecta na rede configurada; os passos de quem entrou na
+  rede viraram `prepararRedeConectada()`, uma vez por boot, venha a conexão
+  quando vier. E o aparelho passou a **guardar o motivo** que o rádio dá para
+  cair ou não entrar, e a **mostrá-lo na página do modo de configuração** —
+  "rede não encontrada (… só de 5 GHz)", "senha recusada (ou rede que pede
+  usuário e senha)", etc. Foi o que faltou na faculdade (13/09): o Wi-Fi de lá
+  não conectou e não havia como saber por quê.
+
+  *Falta provar em campo:* desligar o roteador com o aparelho ligado, esperar
+  1 min, religar — o aparelho tem que voltar sozinho.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
