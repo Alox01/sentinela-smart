@@ -8,6 +8,7 @@ import '../../../models/ciclo_secagem_entity.dart';
 import '../../../models/evento_ciclo_entity.dart';
 import '../../../models/historico_leitura_entity.dart';
 import '../duracao_estufada.dart';
+import '../leituras_por_hora.dart';
 
 /// Gera o relatorio da estufada em PDF, legivel e imprimivel para o produtor:
 /// resumo, graficos de temperatura e umidade, eventos e a tabela de leituras.
@@ -65,8 +66,8 @@ class RelatorioPdfService {
           _tituloSecao('Eventos da estufada'),
           _tabelaEventos(eventos, horaFmt),
           pw.SizedBox(height: 18),
-          _tituloSecao('Leituras registradas'),
-          _tabelaLeituras(leituras, horaFmt),
+          _tituloSecao('Leituras registradas (uma por hora)'),
+          _tabelaLeituras(leiturasPorHora(leituras), horaFmt),
         ],
         footer: (context) => pw.Container(
           alignment: pw.Alignment.centerRight,
