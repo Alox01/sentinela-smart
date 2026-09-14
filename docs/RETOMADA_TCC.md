@@ -246,7 +246,7 @@ resultado inventado.
 |---|---|---|
 | 1 | Operação local com a internet desligada | **em aberto** |
 | 2 | Comandos offline e sincronização ao reconectar | **em aberto** |
-| 3 | Acesso remoto, de fora da propriedade | **em aberto** |
+| 3 | Acesso remoto, de fora da propriedade | ✅ 13–14/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho (falta o print com "NUVEM" em "Detalhes da conexão") |
 | 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |
 | 5 | Alertas com o app aberto e fechado | ✅ 25/07, 13/08 e 13–14/09/2026 (sem dados, voltou, fora da faixa) |
 | 6 | Uma estufada completa: relatório, eventos, gráfico, PDF e CSV | **em aberto** |
