@@ -32,7 +32,7 @@ class LeituraAparelhoCard extends StatelessWidget {
     required this.onSilenciarAlarme,
   });
 
-  // Acende com 5 de diferenca do ajuste, mais a folga da acomodacao (que e
+  // Acende com 8 de diferenca do ajuste, mais a folga da acomodacao (que e
   // proporcional ao tanto que o ajuste andou), para nao confundir a estufa
   // "perseguindo" o novo ajuste com uma oscilacao de clima.
   /// Margem do LED de umidade. Mesma [margemAjuste] do grafico e do aparelho: a

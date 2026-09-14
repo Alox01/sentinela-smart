@@ -4,27 +4,59 @@ import 'package:estufa_app/features/monitoramento/services/detector_oscilacao.da
 void main() {
   const min = 60 * 1000; // 1 minuto em ms
 
-  test('leitura dentro da tolerancia (<=5) nao gera evento', () {
+  // 8, acima e abaixo: a mesma fronteira da sirene do aparelho, do LED e do
+  // grafico. A primeira chamada sempre volta nula (so arma o relogio), entao
+  // cada caso fica parado alem dos 10 min para a prova valer.
+  test('leitura dentro da tolerancia (<=8) nao gera evento', () {
+    for (final leitura in [98.0, 82.0]) {
+      final d = DetectorOscilacao();
+      d.avaliarTemperatura(leitura: leitura, ajuste: 90, nowMs: 0);
+      expect(
+        d.avaliarTemperatura(leitura: leitura, ajuste: 90, nowMs: 11 * min),
+        isNull,
+        reason: 'diferenca de 8 ainda e normal ($leitura contra 90)',
+      );
+    }
+  });
+
+  test('9 abaixo do ajuste ja e desvio', () {
     final d = DetectorOscilacao();
-    expect(d.avaliarTemperatura(leitura: 94, ajuste: 90, nowMs: 0), isNull);
+    d.avaliarTemperatura(leitura: 81, ajuste: 90, nowMs: 0);
+    final ev = d.avaliarTemperatura(leitura: 81, ajuste: 90, nowMs: 10 * min);
+    expect(ev?.tipo, 'oscilacao_temperatura');
+    expect(ev!.descricao, contains('abaixo'));
+    expect(ev.descricao, contains('mais de 8°F'));
+  });
+
+  test('umidade usa a mesma fronteira de 8, sem alarmar', () {
+    final d = DetectorOscilacao();
+    d.avaliarUmidade(leitura: 52, ajuste: 60, nowMs: 0);
+    expect(
+      d.avaliarUmidade(leitura: 52, ajuste: 60, nowMs: 11 * min),
+      isNull,
+    );
+    d.avaliarUmidade(leitura: 51, ajuste: 60, nowMs: 12 * min);
+    final ev = d.avaliarUmidade(leitura: 51, ajuste: 60, nowMs: 22 * min);
+    expect(ev?.severidade, 'registro');
+    expect(ev!.descricao, contains('mais de 8%'));
   });
 
   test('desvio de atencao so vira evento apos persistir 10 min', () {
     final d = DetectorOscilacao();
-    // diferenca 8 (>5, atencao): primeira leitura so arma o relogio
-    expect(d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 0), isNull);
+    // diferenca 9 (>8, atencao): primeira leitura so arma o relogio
+    expect(d.avaliarTemperatura(leitura: 99, ajuste: 90, nowMs: 0), isNull);
     // ainda dentro do tempo minimo de 10 min
     expect(
-      d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 9 * min),
+      d.avaliarTemperatura(leitura: 99, ajuste: 90, nowMs: 9 * min),
       isNull,
     );
     // 10 min persistindo -> evento
-    final ev = d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 10 * min);
+    final ev = d.avaliarTemperatura(leitura: 99, ajuste: 90, nowMs: 10 * min);
     expect(ev, isNotNull);
     expect(ev!.tipo, 'oscilacao_temperatura');
     expect(ev.severidade, 'alerta');
     expect(ev.descricao, contains('acima'));
-    expect(ev.valorAtual, 98);
+    expect(ev.valorAtual, 99);
     expect(ev.valorAnterior, 90);
   });
 
@@ -72,9 +104,9 @@ void main() {
 
   test('voltar para a faixa normal gera evento de normalizacao', () {
     final d = DetectorOscilacao();
-    d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 0);
+    d.avaliarTemperatura(leitura: 99, ajuste: 90, nowMs: 0);
     d.avaliarTemperatura(
-      leitura: 98,
+      leitura: 99,
       ajuste: 90,
       nowMs: 10 * min,
     ); // entra em atencao
@@ -86,9 +118,9 @@ void main() {
 
   test('reiniciar zera a maquina de estados', () {
     final d = DetectorOscilacao();
-    d.avaliarTemperatura(leitura: 98, ajuste: 90, nowMs: 0);
+    d.avaliarTemperatura(leitura: 99, ajuste: 90, nowMs: 0);
     d.avaliarTemperatura(
-      leitura: 98,
+      leitura: 99,
       ajuste: 90,
       nowMs: 10 * min,
     ); // em atencao
@@ -226,7 +258,7 @@ void main() {
     expect(d.folgaTemperatura(t0 + 4 * 60 * 1000), 8);
     expect(d.folgaTemperatura(t0 + 6 * 60 * 1000), 0);
 
-    // Diferenca 11, dentro da tolerancia (5) somada a folga (8).
+    // Diferenca 11, dentro da tolerancia (8) somada a folga (8).
     final evento = d.avaliarTemperatura(
       leitura: 121,
       ajuste: 132,

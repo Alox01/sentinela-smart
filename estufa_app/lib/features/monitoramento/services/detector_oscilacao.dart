@@ -1,3 +1,5 @@
+import '../margem_ajuste.dart';
+
 /// Evento de oscilacao detectado (a leitura ficou fora do ajuste por tempo
 /// suficiente). O widget e quem registra o evento/leitura de fato.
 class EventoOscilacao {
@@ -48,7 +50,10 @@ class DetectorOscilacao {
   // que isso. Tem que bater com o firmware e o simulador, senao o app acusa
   // oscilacao enquanto o aparelho ainda esta perdoando o desvio.
   static const int _tempoAcomodacaoAjusteMs = 5 * 60 * 1000;
-  static const double _tolerancia = 5;
+  // A mesma fronteira do LED, do grafico e da sirene do aparelho. Estava em 5,
+  // e o relatorio registrava como desvio uma diferenca de 6 ou 7 que o aparelho,
+  // o LED e o grafico tratavam como normal.
+  static const double _tolerancia = margemAjuste;
   // Teto da folga: um salto enorme de ajuste nao pode cegar o alerta por
   // completo. Tem que bater com o firmware e o simulador.
   static const double _folgaAcomodacaoMaxima = 8;
@@ -130,9 +135,9 @@ class DetectorOscilacao {
       prefixoTipo: 'temperatura',
       nomeGrandeza: 'Temperatura',
       unidade: '°F',
-      // O limite de atencao e a `_tolerancia`, 5 F. Aqui dizia 10 F, e o
-      // relatorio saia com "por mais de 10°F (8°F de diferença)".
-      limiteAtencaoTexto: '5°F',
+      // O limite de atencao e a `_tolerancia`. Aqui ja disse 10 F com o limite
+      // em 5, e o relatorio saia com "por mais de 10°F (8°F de diferença)".
+      limiteAtencaoTexto: '8°F',
       limiteCriticoTexto: '20°F',
     );
   }
@@ -150,7 +155,7 @@ class DetectorOscilacao {
       prefixoTipo: 'umidade',
       nomeGrandeza: 'Umidade',
       unidade: '%',
-      limiteAtencaoTexto: '5%',
+      limiteAtencaoTexto: '8%',
       limiteCriticoTexto: '20%',
       podeAlarmar: false,
     );

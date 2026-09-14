@@ -8,5 +8,7 @@
 /// como se fosse problema, sendo que a sirene nunca tocou e nunca tocaria. O
 /// grafico acusava o que o aparelho considerava normal.
 ///
-/// Vale para temperatura e umidade, acima e abaixo do ajuste.
+/// Vale para temperatura e umidade, acima e abaixo do ajuste — no LED, no
+/// grafico e nos eventos do relatorio (`detector_oscilacao.dart`). A umidade
+/// usa a mesma fronteira, mas nunca toca alarme.
 const double margemAjuste = 8;
