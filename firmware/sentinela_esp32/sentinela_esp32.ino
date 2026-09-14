@@ -253,6 +253,14 @@ long long buzzerTimestamp = 0;
 
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
+// O que se faz UMA vez por boot ao entrar na rede (relogio, rede aprendida, IP
+// fixo). Antes so acontecia se a PRIMEIRA tentativa desse certo; quando a rede
+// so aparecia depois, o relogio nunca era acertado.
+bool redePreparada = false;
+// Por que a ultima tentativa de Wi-Fi falhou, dito pelo proprio radio. Escrito
+// pela tarefa de eventos do Wi-Fi, lido pelo laco e pela pagina de configuracao:
+// sem isto, "nao conectou" nao tinha causa nenhuma a mostrar.
+volatile uint8_t motivoFalhaWifi = 0;
 unsigned long ultimoPushNuvem = 0;
 // Ultimo estado de emergencia ja enviado, para detectar a borda e empurrar na
 // hora em que algo comeca (ou termina), em vez de esperar o ciclo de 1 min.
@@ -376,6 +384,9 @@ void handleConfigPagina();
 void handleConfigSalvar();
 void guardarRedeAprendida();
 void handleConfigIdentidade();
+void prepararRedeConectada();
+void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
+const char* textoMotivoFalhaWifi(uint8_t motivo);
 
 // ============================================================
 //  SETUP
@@ -432,6 +443,7 @@ void setup() {
   display.setBrightness(7);
   display.clear();
 
+  WiFi.onEvent(aoPerderWifi, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   conectarWifi();
 
   // Coleta os cabecalhos de autenticacao (o WebServer so guarda os listados).
@@ -573,14 +585,64 @@ void conectarWifi() {
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Conectado. IP: ");
-    Serial.println(WiFi.localIP());
-    guardarRedeAprendida();
-    aplicarIpFixoSeCouberNaRede();
-    // NTP para timestamp real (fuso nao importa, usamos epoch em ms).
-    configTime(0, 0, "pool.ntp.org", "time.google.com");
+    prepararRedeConectada();
   } else {
-    Serial.println("Sem Wi-Fi - operando em modo local standalone.");
+    Serial.print("Sem Wi-Fi - operando em modo local standalone. Motivo: ");
+    Serial.println(textoMotivoFalhaWifi(motivoFalhaWifi));
+  }
+}
+
+// Passos de quem acabou de entrar na rede. Uma vez por boot: o relogio segue
+// sincronizando sozinho depois de configurado, e o IP fixo aplicado vale para
+// as reconexoes seguintes.
+void prepararRedeConectada() {
+  if (redePreparada) return;
+  redePreparada = true;
+  motivoFalhaWifi = 0;
+  Serial.print("Conectado. IP: ");
+  Serial.println(WiFi.localIP());
+  guardarRedeAprendida();
+  aplicarIpFixoSeCouberNaRede();
+  // NTP para timestamp real (fuso nao importa, usamos epoch em ms).
+  configTime(0, 0, "pool.ntp.org", "time.google.com");
+}
+
+// Guarda o motivo que o radio deu para cair ou nao entrar.
+void aoPerderWifi(arduino_event_id_t, arduino_event_info_t info) {
+  const uint8_t motivo = info.wifi_sta_disconnected.reason;
+  // Saida pedida pelo proprio aparelho (entrar no modo de configuracao, um
+  // begin() novo): nao e causa de nada, e apagaria o motivo verdadeiro antes de
+  // a pagina de configuracao mostra-lo.
+  if (motivo == WIFI_REASON_ASSOC_LEAVE) return;
+  motivoFalhaWifi = motivo;
+}
+
+// O codigo do radio em portugues, do jeito que o produtor consegue agir.
+const char* textoMotivoFalhaWifi(uint8_t motivo) {
+  switch (motivo) {
+    case 0:
+      return "nenhuma falha registrada";
+    case WIFI_REASON_NO_AP_FOUND:
+    case WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY:
+    case WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD:
+    case WIFI_REASON_NO_AP_FOUND_IN_RSSI_THRESHOLD:
+      // O ESP32 so enxerga 2,4 GHz: rede so em 5 GHz some para ele.
+      return "rede nao encontrada (nome errado, longe demais, ou rede so de 5 GHz)";
+    case WIFI_REASON_AUTH_FAIL:
+    case WIFI_REASON_AUTH_EXPIRE:
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:
+    case WIFI_REASON_MIC_FAILURE:
+      // Rede com usuario E senha (as de faculdade, tipo eduroam) cai aqui.
+      return "senha recusada (ou rede que pede usuario e senha)";
+    case WIFI_REASON_ASSOC_FAIL:
+    case WIFI_REASON_ASSOC_TOOMANY:
+    case WIFI_REASON_CONNECTION_FAIL:
+      return "o roteador recusou a entrada (cheio ou bloqueando aparelhos)";
+    case WIFI_REASON_BEACON_TIMEOUT:
+      return "sinal perdido (longe do roteador)";
+    default:
+      return "outro motivo (codigo do radio)";
   }
 }
 
@@ -673,6 +735,7 @@ void manterWifi() {
   if (modoConfig) return;
   if (wifiSsid.length() == 0) return;
   if (WiFi.status() == WL_CONNECTED) {
+    prepararRedeConectada();
     iniciarMdns();
     return;
   }
@@ -683,7 +746,15 @@ void manterWifi() {
   }
   if (millis() - ultimaTentativaWifi < intervaloReconexaoWifi) return;
   ultimaTentativaWifi = millis();
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  // A rede CONFIGURADA. Ate 14/09/2026 aqui estavam WIFI_SSID e WIFI_PASS - o
+  // valor de fabrica, "SUA_REDE_WIFI" -, esquecidos quando o Wi-Fi passou a ser
+  // configuravel (20/07). Qualquer queda de mais de 15 s, ou uma primeira
+  // tentativa que nao desse certo, deixava o aparelho procurando uma rede que
+  // nao existe ate alguem desligar e ligar de novo.
+  Serial.print("Wi-Fi fora do ar (");
+  Serial.print(textoMotivoFalhaWifi(motivoFalhaWifi));
+  Serial.println("): tentando de novo.");
+  WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
 }
 
 // Publica um nome estavel na rede local sem depender do IP entregue pelo
@@ -907,6 +978,8 @@ void handleConfigPagina() {
       "padding:12px;margin-bottom:8px}.nome b{font-size:17px;color:#7bd88f;"
       "word-break:break-all}.nome span{font-size:12px;color:#888}"
       "details{margin-top:14px}summary{color:#bbb;font-size:14px;cursor:pointer}"
+      "p.falha{background:#2a1c1c;border:1px solid #b23b3b;border-radius:8px;"
+      "padding:10px;font-size:13px;color:#f0b4b4}"
       "</style></head><body><h1>Configurar aparelho</h1>"
       // O nome vem primeiro e destacado: e o dado que o produtor precisa levar
       // para o app, e ate agora so aparecia no Monitor Serial - ou seja, so
@@ -914,8 +987,21 @@ void handleConfigPagina() {
       "<div class=\"nome\"><span>Cadastre este endere&ccedil;o no app:</span>"
       "<br><b>");
   html += escaparHtml(nomeLocal + ".local");
+  html += F("</b></div>");
+  // Por que a rede anterior nao funcionou, se nao funcionou. E aqui que o
+  // produtor chega depois de "nao conectou", e ate agora a pagina nao dizia nada.
+  if (motivoFalhaWifi != 0) {
+    html += F("<p class=\"falha\">&Uacute;ltima tentativa na rede <b>");
+    html += escaparHtml(wifiSsid);
+    html += F("</b>: ");
+    html += textoMotivoFalhaWifi(motivoFalhaWifi);
+    html += F(" (c&oacute;digo ");
+    html += String(motivoFalhaWifi);
+    html += F(").<br>Wi-Fi com p&aacute;gina de login ou com usu&aacute;rio "
+              "e senha (comum em faculdade) n&atilde;o serve para o aparelho: use "
+              "o roteador da propriedade ou o do celular.</p>");
+  }
   html += F(
-      "</b></div>"
       "<form method=\"POST\" action=\"/salvar\">"
       // O mesmo numero que o app pede. Vem primeiro porque sem ele nada do
       // resto e gravado, e descobrir isso depois de preencher tudo seria pior.
