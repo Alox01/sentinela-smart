@@ -8,6 +8,7 @@ import '../models/evento_ciclo_entity.dart';
 import '../models/historico_leitura_entity.dart';
 import '../features/relatorio_estufada/duracao_estufada.dart';
 import '../features/relatorio_estufada/eventos_de_ajuste.dart';
+import '../features/relatorio_estufada/eventos_de_alarme.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
 import 'package:printing/printing.dart';
@@ -923,6 +924,11 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     // (`eventos_de_ajuste.dart`, D7): os guardados so conheciam o que o app
     // mandou, uma linha por pausa. As estufadas antigas ganham a versao nova
     // sem mexer no banco.
+    //
+    // E os alarmes que so as leituras viram — com o app fechado nao ha evento
+    // guardado (`eventos_de_alarme.dart`). Os que o app gravou ficam, e o
+    // derivado do mesmo episodio nao se repete.
+    final leiturasDoPeriodo = _aplicarFiltro(_leiturasCompletasAtuais);
     var filtrados = [
       for (final e in eventos)
         if (!e.tipo.startsWith('oscilacao_umidade') &&
@@ -930,9 +936,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             e.tipo != 'ajuste_umidade')
           e,
       ...eventosDeAjuste(
-        _aplicarFiltro(_leiturasCompletasAtuais),
+        leiturasDoPeriodo,
         cicloId: _cicloSelecionadoId ?? 0,
         temAjuste: (l) => _semAjusteDaNuvem[l] != true,
+      ),
+      ...eventosDeAlarme(
+        leiturasDoPeriodo,
+        existentes: eventos,
+        cicloId: _cicloSelecionadoId ?? 0,
       ),
     ]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 

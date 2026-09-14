@@ -412,9 +412,16 @@ funciona:
   tinha desligado o buzzer no aparelho, e o app e a nuvem gravavam o alarme pela
   **sirene**. Os dois passaram a gravar pela **condição** (`alertaTemperatura` ou
   fogo), como o push já fazia, e a linha do evento diz "(sirene desligada ou
-  silenciada no aparelho)". Alarme com o app **fechado** continua sem linha de
-  evento — os eventos são do app —, mas agora aparece na coluna "Alarme" das
-  leituras, que vêm da nuvem.
+  silenciada no aparelho)".
+
+  *Alarme com o app fechado* (visto no mesmo dia: buzzer desligado, app
+  fechado, a notificação chegou e o relatório seguiu em "3 alarmes"): passou a
+  sair das leituras também (`eventos_de_alarme.dart`). A nuvem registrou o
+  alarme às 14:02:06 com o buzzer desligado — a mudança do servidor já estava no
+  ar. O relatório junta os eventos que o app gravou com os que as leituras
+  mostram, sem repetir o mesmo episódio (5 min de tolerância). Limite: alarme
+  mais curto que o intervalo entre duas leituras (uma por minuto na união com a
+  nuvem) pode não aparecer.
 
   *O diagnóstico original, como estava:*
   Visto no relatório da estufada #22 (PDF de 14/09 10:36). Dois sintomas, uma
