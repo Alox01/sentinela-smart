@@ -297,6 +297,27 @@ estufa, um carregador de celular com cabo USB cortado.
   - Fonte interna de **5 W** (não 3 W), fusível **2 A retardado**, tomada com terra
   - Em qualquer falha — boot, travamento, reinício — **a ventoinha fica desligada**
 - Verniz e caixa definitiva
+- **Gravar o firmware sem cabo (OTA)** — conversado em 14/09/2026, adiado por
+  decisão do produtor. Hoje cada gravação exige abrir a caixa, ligar o cabo e
+  segurar o BOOT.
+  - **Caminho escolhido:** enviar o `.bin` pela **página do modo de configuração**
+    (três botões + PIN do visor), do PC ou do celular. Gera-se o arquivo em
+    Sketch → "Exportar binário compilado". Mantém a regra de segurança do
+    projeto: só troca o firmware quem está na frente do aparelho.
+  - **Descartado para a versão entregue:** o envio direto do Arduino IDE pela
+    rede de casa (`ArduinoOTA`). Mais cômodo, mas protegido só por uma senha
+    compilada no firmware — contradiz "só comanda quem esteve na frente do
+    aparelho". Serve, no máximo, ligado temporariamente na bancada.
+  - **Cabe como está:** firmware em 87%, e o esquema de partições padrão já tem as
+    duas áreas de aplicativo (1,25 MB cada) que a troca pelo ar exige.
+  - **Cuidados:** durante a gravação (~30 s) o laço para — alarme e visor
+    inclusive —, e o aparelho reinicia no fim. Gravação interrompida no meio
+    mantém o firmware antigo. Firmware novo que trave no boot ainda pede o cabo:
+    ele continua sendo o plano B.
+- **Capacitor de 10 µF entre EN e GND** (eletrolítico: perna **+** no EN, **−** no
+  GND). Tira a necessidade de segurar o BOOT ao gravar pelo cabo — defeito
+  conhecido do circuito de reinício automático das DevKit. Centavos; entra na
+  próxima compra.
 
 ---
 
