@@ -385,7 +385,29 @@ funciona:
   Conferir junto: o eixo do tempo usa o mesmo `intervaloRotuloMs` (6h), então
   numa tela de 2h pode não aparecer **nenhum horário** embaixo.
 
-- [ ] **D7. Os eventos de "ajuste alterado" só contam o que foi feito no app.**
+- [x] **D7. Os eventos de "ajuste alterado" só contam o que foi feito no app.**
+  *Feito em 14/09, logo depois de achado:* o evento sai das **leituras**
+  (`eventos_de_ajuste.dart`), que carregam o ajuste reportado pelo aparelho — a
+  nuvem grava uma leitura sempre que ele muda. Uma linha por mudança, "alterado
+  de X para Y", juntando o que acontece a menos de 5 min; ir e voltar ao mesmo
+  valor não vira linha. O app parou de gravar o evento ao mandar o comando, e as
+  estufadas antigas ganham a versão nova sem mexer no banco (os guardados são
+  trocados na hora de mostrar). Rodado sobre o CSV real da #22: 13 linhas, onde o
+  PDF tinha umas 30, e a mudança das 13:11 feita nos botões apareceu.
+
+  *Achado no caminho:* o **CSV e o PDF exportavam a lista afinada do gráfico** —
+  o CSV da #22 não tinha a leitura das 23:21 de 12/09, justo a que trazia o
+  ajuste novo. Passaram a exportar a lista inteira.
+
+  *O alarme com a sirene desligada* (a dúvida abaixo): era isso — o produtor
+  tinha desligado o buzzer no aparelho, e o app e a nuvem gravavam o alarme pela
+  **sirene**. Os dois passaram a gravar pela **condição** (`alertaTemperatura` ou
+  fogo), como o push já fazia, e a linha do evento diz "(sirene desligada ou
+  silenciada no aparelho)". Alarme com o app **fechado** continua sem linha de
+  evento — os eventos são do app —, mas agora aparece na coluna "Alarme" das
+  leituras, que vêm da nuvem.
+
+  *O diagnóstico original, como estava:*
   Visto no relatório da estufada #22 (PDF de 14/09 10:36). Dois sintomas, uma
   causa:
 

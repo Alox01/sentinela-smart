@@ -7,6 +7,7 @@ import '../models/ciclo_secagem_entity.dart';
 import '../models/evento_ciclo_entity.dart';
 import '../models/historico_leitura_entity.dart';
 import '../features/relatorio_estufada/duracao_estufada.dart';
+import '../features/relatorio_estufada/eventos_de_ajuste.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
 import 'package:printing/printing.dart';
@@ -82,6 +83,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   int? _cicloNuvemCarregadoId;
   // A busca da nuvem em curso, para exportar poder esperar por ela.
   Future<void>? _cargaNuvem;
+  // A uniao com a nuvem SEM afinar, e as leituras do celular do ciclo: fonte
+  // dos eventos de ajuste (ver `_leiturasCompletasAtuais`).
+  List<HistoricoLeituraEntity>? _leiturasCompletasNuvem;
+  List<HistoricoLeituraEntity> _leiturasLocais = [];
   int? _cicloNuvemEmProgresso;
   List<CicloSecagemEntity> _ciclos = [];
   // Posicao sequencial (1, 2, 3...) por ordem de inicio, desacoplada do id do
@@ -136,6 +141,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   }) async {
     // Reinicia o estado da busca da nuvem a cada (re)carregamento.
     _leiturasNuvem = null;
+    _leiturasCompletasNuvem = null;
     _cicloNuvemCarregadoId = null;
     _cicloNuvemEmProgresso = null;
     _cargaNuvem = null;
@@ -180,8 +186,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       _cicloNuvemEmProgresso = null;
       return;
     }
+    final unidas = _unirHistoricos(locais, nuvem);
     setState(() {
-      _leiturasNuvem = _mesclarHistoricos(locais, nuvem);
+      _leiturasCompletasNuvem = unidas;
+      _leiturasNuvem = _afinarPontos(unidas);
       _cicloNuvemCarregadoId = ciclo.id;
       _cicloNuvemEmProgresso = null;
     });
@@ -190,7 +198,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   HistoricoLeituraEntity _leituraDaNuvem(Map<String, dynamic> m) {
     final temperatura = (m['temperaturaAtual'] as num?)?.toDouble() ?? 0;
     final umidade = (m['umidadeAtual'] as num?)?.toDouble() ?? 0;
-    return HistoricoLeituraEntity()
+    final leitura = HistoricoLeituraEntity()
       ..ipEstufa = widget.ipEstufa
       ..nomeEstufa = widget.nomeEstufa
       ..timestamp = DateTime.fromMillisecondsSinceEpoch(
@@ -205,7 +213,26 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       ..umidadeMeta = (m['umidadeMeta'] as num?)?.toDouble() ?? umidade
       ..aviso = (m['aviso'] as String?) ?? ''
       ..alertaIncendio = m['alertaIncendio'] == true;
+    if (m['temperaturaMeta'] == null || m['umidadeMeta'] == null) {
+      _semAjusteDaNuvem[leitura] = true;
+    }
+    return leitura;
   }
+
+  // Leituras da nuvem que vieram SEM o ajuste (e o receberam igual a propria
+  // leitura, logo acima). Servem ao grafico, mas nao aos eventos de ajuste: la
+  // cada ponto pareceria uma mudanca.
+  final Expando<bool> _semAjusteDaNuvem = Expando<bool>();
+
+  /// As leituras mais completas que a tela tem agora para o ciclo: a uniao com
+  /// a nuvem se ja chegou, senao as do celular. Sem afinar — e daqui que saem os
+  /// eventos de ajuste, e o afinamento do grafico poderia pular justo a leitura
+  /// em que o ajuste mudou.
+  List<HistoricoLeituraEntity> get _leiturasCompletasAtuais =>
+      (_cicloNuvemCarregadoId == _cicloSelecionadoId &&
+          _leiturasCompletasNuvem != null)
+      ? _leiturasCompletasNuvem!
+      : _leiturasLocais;
 
   // Espacamento minimo entre pontos do grafico e o quanto o valor precisa mudar
   // para um ponto ser mantido mesmo perto do anterior.
@@ -213,9 +240,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   static const double _mudancaRelevanteGrafico = 5;
 
   // Une historico local e da nuvem, deduplicando por minuto (o local, gravado
-  // com o ajuste real visto pelo app, vence em caso de empate), e afina os
-  // pontos para o grafico nao ficar denso com fontes de cadencia diferente.
-  List<HistoricoLeituraEntity> _mesclarHistoricos(
+  // com o ajuste real visto pelo app, vence em caso de empate). O grafico recebe
+  // isto afinado (`_afinarPontos`), para nao ficar denso com fontes de cadencia
+  // diferente; os eventos de ajuste recebem inteiro.
+  List<HistoricoLeituraEntity> _unirHistoricos(
     List<HistoricoLeituraEntity> local,
     List<HistoricoLeituraEntity> nuvem,
   ) {
@@ -224,9 +252,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       final chave = leitura.timestamp.millisecondsSinceEpoch ~/ 60000;
       porMinuto[chave] = leitura;
     }
-    final ordenadas = porMinuto.values.toList()
+    return porMinuto.values.toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    return _afinarPontos(ordenadas);
   }
 
   // Mantem o primeiro e o ultimo ponto e, no meio, so mantem um ponto se ja
@@ -387,6 +414,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
               _ciclos = dados.ciclos;
               _recalcularPosicoes();
               _eventos = dados.eventos;
+              _leiturasLocais = dados.leituras;
               final cicloSelecionado = dados.cicloSelecionado;
               _cicloSelecionadoId = cicloSelecionado?.id;
               // Usa o histórico mesclado com a nuvem quando já disponível para este
@@ -797,9 +825,11 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       }
       messenger.hideCurrentSnackBar();
     }
-    final nuvemDesteCiclo =
-        _cicloNuvemCarregadoId == _cicloSelecionadoId && _leiturasNuvem != null;
-    return _aplicarFiltro(nuvemDesteCiclo ? _leiturasNuvem! : _leiturasBrutas);
+    // Inteiras, e nao as afinadas do grafico. O afinamento (5 min ou mudanca de
+    // 5) existe para o desenho nao embolar; no arquivo ele sumia com leitura de
+    // verdade — em 14/09 o CSV saiu sem a leitura das 23:21 de 12/09, a que
+    // trazia o ajuste novo. A tabela do PDF ja escolhe as suas (uma por hora).
+    return _aplicarFiltro(_leiturasCompletasAtuais);
   }
 
   Future<void> _exportarPdf() async {
@@ -888,9 +918,23 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     // estufada inteira, empurrando para fora da tela o que diz alguma coisa. O
     // app parou de gravar essas linhas em 11/08/2026 — o filtro aqui e para as
     // estufadas que ja tinham as suas guardadas.
-    var filtrados = eventos
-        .where((e) => !e.tipo.startsWith('oscilacao_umidade'))
-        .toList();
+    //
+    // Os de "ajuste alterado" guardados sao trocados pelos tirados das leituras
+    // (`eventos_de_ajuste.dart`, D7): os guardados so conheciam o que o app
+    // mandou, uma linha por pausa. As estufadas antigas ganham a versao nova
+    // sem mexer no banco.
+    var filtrados = [
+      for (final e in eventos)
+        if (!e.tipo.startsWith('oscilacao_umidade') &&
+            e.tipo != 'ajuste_temperatura' &&
+            e.tipo != 'ajuste_umidade')
+          e,
+      ...eventosDeAjuste(
+        _aplicarFiltro(_leiturasCompletasAtuais),
+        cicloId: _cicloSelecionadoId ?? 0,
+        temAjuste: (l) => _semAjusteDaNuvem[l] != true,
+      ),
+    ]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     if (_inicioFiltro != null) {
       filtrados = filtrados

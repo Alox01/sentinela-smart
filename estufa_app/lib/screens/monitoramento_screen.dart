@@ -292,6 +292,14 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         ajusteTempAnterior >= 140 &&
         novoTempAjuste < 100;
 
+    // O aparelho confirmou um ajuste novo (venha de onde vier): grava a leitura
+    // na hora, sem esperar os 10 min. E dela que o relatorio tira o evento de
+    // "ajuste alterado" quando a nuvem nao esta disponivel.
+    final ajusteMudou =
+        (ajusteTempAnterior != null &&
+            (novoTempAjuste - ajusteTempAnterior).abs() > 0.5) ||
+        (ajusteUmidAnterior != null &&
+            (novoUmidAjuste - ajusteUmidAnterior).abs() > 0.5);
     _registrarHistoricoSeNecessario(
       temperaturaAtual: novaTemperatura,
       umidadeAtual: novaUmidade,
@@ -299,6 +307,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       umidadeAjusteAtual: novoUmidAjuste,
       avisoAtual: novoAviso,
       alertaIncendioAtual: novoAlarmeDoProcesso,
+      porEvento: ajusteMudou,
     );
     _processarEventosDoCiclo(
       temperaturaAtual: novaTemperatura,
@@ -1192,16 +1201,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           'temperaturaMeta': novaTemp,
           'tempTimestamp': DateTime.now().millisecondsSinceEpoch,
         }).then((sucesso) {
-          if (novaTemp != ajusteAnterior) {
-            _registrarEventoCiclo(
-              tipo: 'ajuste_temperatura',
-              severidade: 'info',
-              descricao:
-                  'Ajuste de temperatura alterado para ${novaTemp.toStringAsFixed(0)}°F.',
-              valorAnterior: ajusteAnterior,
-              valorAtual: novaTemp,
-            );
-          }
+          // Sem evento aqui: o "ajuste alterado" do relatorio sai das leituras
+          // (`eventos_de_ajuste.dart`), que tambem veem a mudanca feita no
+          // aparelho. Daqui saia uma linha por pausa do produtor.
           if (!mounted || !sucesso || _tempAjustePendente != novaTemp) return;
           setState(() {
             _tempAjustePendente = null;
@@ -1219,16 +1221,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
           'umidadeMeta': novaUmid,
           'umidTimestamp': DateTime.now().millisecondsSinceEpoch,
         }).then((sucesso) {
-          if (novaUmid != ajusteAnterior) {
-            _registrarEventoCiclo(
-              tipo: 'ajuste_umidade',
-              severidade: 'info',
-              descricao:
-                  'Ajuste de umidade alterado para ${novaUmid.toStringAsFixed(0)}%.',
-              valorAnterior: ajusteAnterior,
-              valorAtual: novaUmid,
-            );
-          }
+          // Sem evento aqui: ver `_agendarEnvioTemperatura`.
           if (!mounted || !sucesso || _umidAjustePendente != novaUmid) return;
           setState(() {
             _umidAjustePendente = null;
