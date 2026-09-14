@@ -39,6 +39,7 @@ const pool = Pool && connectionString
     })
   : null;
 const {
+  alarmeDoProcesso,
   criarRegistroLeitura,
   deveSalvarLeitura,
   statusParaLeituraPersistida,
@@ -291,7 +292,7 @@ async function salvarLeitura(dispositivoId, status) {
       status.umidadeAtual,
       status.temperaturaMeta ?? null,
       status.umidadeMeta ?? null,
-      status.alarmeAtivo ?? status.alertaIncendio ?? false,
+      alarmeDoProcesso(status),
       status.aviso || '',
       status.corStatus || 'green',
       status.faseAtual || '',

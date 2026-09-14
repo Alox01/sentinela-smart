@@ -32,8 +32,23 @@ function assinaturaAjuste(config = {}) {
   ].join('|');
 }
 
-function alarmeAtivo(status = {}) {
-  return Boolean(status.alarmeAtivo ?? status.alertaIncendio);
+// O ALARME DO PROCESSO - temperatura fora da faixa ou fogo -, e nao "a sirene
+// esta tocando". E o que vai para a coluna de alarme do banco e o que antecipa a
+// gravacao. Com `alarmeAtivo`, desligar o buzzer no aparelho apagava o alarme do
+// historico: em 13/09/2026 a estufa passou duas horas 10 F abaixo do ajuste e o
+// banco guardou tudo como sem alarme. Mesma regra que o push ja segue
+// (`alertas_push.js`): o barulho na estufa e um canal, o registro e outro.
+//
+// `alertaTemperatura` so vem do aparelho de verdade; o simulador e firmware
+// antigo seguem pelo `alarmeAtivo`, como antes.
+function alarmeDoProcesso(status = {}) {
+  if (typeof status.alertaTemperatura !== 'boolean') {
+    return Boolean(status.alarmeAtivo ?? status.alertaIncendio);
+  }
+  return status.alertaTemperatura
+    || status.alertaIncendio === true
+    || status.perigoChama === true
+    || status.riscoIncendio === true;
 }
 
 function desvioRelevante(status = {}, config = {}) {
@@ -56,7 +71,7 @@ function deveSalvarLeitura({ ultimaLeitura, status, config, agoraMs, intervaloMs
     return { salvar: true, motivo: 'intervalo' };
   }
 
-  const alarmeAtual = alarmeAtivo(status);
+  const alarmeAtual = alarmeDoProcesso(status);
   if (alarmeAtual !== ultimaLeitura.alarmeAtivo) {
     return { salvar: true, motivo: 'mudanca_alarme' };
   }
@@ -77,7 +92,7 @@ function deveSalvarLeitura({ ultimaLeitura, status, config, agoraMs, intervaloMs
 function criarRegistroLeitura(status, config, agoraMs) {
   return {
     agoraMs,
-    alarmeAtivo: alarmeAtivo(status),
+    alarmeAtivo: alarmeDoProcesso(status),
     assinaturaAjuste: assinaturaAjuste(config),
     desvioRelevante: desvioRelevante(status, config),
   };
@@ -85,6 +100,7 @@ function criarRegistroLeitura(status, config, agoraMs) {
 
 module.exports = {
   INTERVALO_PADRAO_MS,
+  alarmeDoProcesso,
   criarRegistroLeitura,
   deveSalvarLeitura,
   statusParaLeituraPersistida,

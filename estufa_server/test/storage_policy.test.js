@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  alarmeDoProcesso,
   criarRegistroLeitura,
   deveSalvarLeitura,
   statusParaLeituraPersistida,
@@ -128,4 +129,33 @@ test('normaliza valores antes de salvar no banco', () => {
   assert.equal(leitura.temperaturaAtual, 999);
   assert.equal(leitura.umidadeAtual, 100);
   assert.equal(leitura.sinalWifi, 0);
+});
+
+// 13/09/2026: buzzer desligado no aparelho, estufa 10 F abaixo do ajuste por duas
+// horas, e o banco guardou tudo como sem alarme. A sirene e um canal; o registro
+// e outro.
+test('sirene desligada nao apaga o alarme do registro', () => {
+  const semSirene = { alarmeAtivo: false, alertaTemperatura: true, alertaIncendio: false };
+  assert.equal(alarmeDoProcesso(semSirene), true);
+
+  const ultimaLeitura = criarRegistroLeitura(statusBase, configBase, 0);
+  const decisao = deveSalvarLeitura({
+    ultimaLeitura,
+    status: { ...statusBase, ...semSirene },
+    config: configBase,
+    agoraMs: 60 * 1000,
+  });
+  assert.equal(decisao.motivo, 'mudanca_alarme');
+});
+
+test('fogo conta como alarme mesmo com a sirene silenciada', () => {
+  assert.equal(
+    alarmeDoProcesso({ alarmeAtivo: false, alertaTemperatura: false, perigoChama: true }),
+    true,
+  );
+});
+
+test('sem alertaTemperatura (simulador, firmware antigo), segue pela sirene', () => {
+  assert.equal(alarmeDoProcesso({ alarmeAtivo: true }), true);
+  assert.equal(alarmeDoProcesso({ alarmeAtivo: false }), false);
 });
