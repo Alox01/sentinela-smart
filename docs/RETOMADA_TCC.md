@@ -233,8 +233,23 @@ desligando e ligando. **Gravar o firmware novo.**
    falhava.
 6. **Teste de transporte:** carregar a caixa até outro cômodo, pôr na mesa,
    conferir se tudo responde. Encontra a junta frouxa antes da banca.
-7. **Trocar o sensor de luz pelo de chama.** Testar com isqueiro a 20 cm (tem
-   que dar "detectada") e com uma lâmpada acesa perto (tem que **ignorar**).
+7. ~~**Trocar o sensor de luz pelo de chama.**~~ **Feito em 14/09, funciona**,
+   com os limites do sensor, que vão para o texto como limitação:
+   - **Alcance de ~30 cm com chama de isqueiro.** O módulo é um fotodiodo de
+     infravermelho com comparador; o alcance cresce com o tamanho do fogo (um
+     fogo real, bem maior que a chama do isqueiro, é visto de mais longe) e com
+     o potenciômetro do módulo — que também aumenta o disparo por luz ambiente.
+   - **Luz do dia dispara; lanterna de LED não.** O sol tem muito infravermelho,
+     o LED quase nenhum. Lâmpada incandescente ou halógena também dispararia.
+   - **Na estufa:** ela é fechada e escura, então o sol só entra com a porta
+     aberta; o cuidado é o sensor **não enxergar a fornalha nem a porta** —
+     apontado para a área do fumo, de preferência com um tubo em volta para
+     estreitar o campo de visão.
+   - **Segunda camada:** o incêndio por temperatura (acima de 175°F, ou ajuste +
+     5) cobre o fogo que o sensor não enxerga. O sensor é a detecção rápida; a
+     temperatura, a garantia.
+   - **Trabalho futuro:** detector industrial UV/IR, feito para não confundir
+     fogo com sol.
 
 ### B. Matriz de evidências — o que vira a seção de resultados
 
