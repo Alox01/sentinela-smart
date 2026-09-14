@@ -285,6 +285,14 @@ estufa.
 tela mostrou por um tempo o ajuste antigo (60), sem aviso de que havia comando a
 caminho, e só mostrou 70 depois de outro comando.
 
+*14/09/2026, 13:39 — o mesmo teste, repetido para conferir o D8.* Ajuste 65,
+pedido 60 sem internet (OFFLINE \| 1; teste de alcance local e nuvem offline;
+pendência "Alterar ajuste de temperatura para 60°F"). Na volta: NUVEM com
+"Aguardando a estufa aplicar" → LOCAL mostrando **65** → **60** sozinho em
+alguns segundos. O comando chegou; a volta para 65 era só a tela. Corrigido no
+mesmo dia (a tela segura o valor pedido com o aviso até o aparelho confirmar) —
+**refazer uma vez com o APK novo** para o registro ficar com a versão final.
+
 **Evidência nova de setembro, que pode entrar:** placa conferida com multímetro
 (01/09); todos os grupos funcionando na placa soldada (09/09); troca do sensor de
 temperatura (09/09).

@@ -439,7 +439,17 @@ funciona:
   *Não é defeito:* os eventos antigos dizem "por mais de 10°F". O texto é gravado
   quando o evento acontece, e esses são de antes de 14/09; os novos dizem 8°F.
 
-- [ ] **D8. Depois de sincronizar a fila, a tela mostra o ajuste antigo.**
+- [x] **D8. Depois de sincronizar a fila, a tela mostra o ajuste antigo.**
+  *Conferido e feito em 14/09.* Repetido às 13:39 (ajuste 65, pedido 60 sem
+  internet): na volta a tela foi 60 → **65** → 60 sozinha em alguns segundos.
+  Então era **só visual** — o comando sempre chegou. Conserto: a leitura da
+  nuvem com comando ainda na fila (`aguardandoAparelho`) deixou de confirmar o
+  valor pendente — só o aparelho confirma —, e depois de enviar a fila a tela
+  segura o valor pedido com o aviso "Aguardando a estufa aplicar" em qualquer
+  modo, até o aparelho reportá-lo ou vencer o prazo de 90 s (para um comando
+  recusado não prender a tela). O caminho (1), mandar a fila direto ao aparelho
+  quando ele está na rede local, ficou para depois: com o aviso, a espera de até
+  20 s deixou de parecer defeito.
   Visto no teste de 14/09 (registro em `RETOMADA_TCC.md`). Comando de 70°F
   pedido offline; ao religar o Wi-Fi o app entrou primeiro em NUVEM, mandou a
   fila por lá ("Aguardando a estufa aplicar", mostrando 70) e em seguida passou

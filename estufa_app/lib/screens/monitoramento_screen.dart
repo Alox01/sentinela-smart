@@ -110,6 +110,12 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // Comando aceito pela nuvem mas ainda nao obedecido pelo aparelho. O valor na
   // tela ja e o novo, entao sem este aviso o produtor acha que a estufa mudou.
   bool _aguardandoAparelho = false;
+  // Quando a fila de comandos feitos sem internet foi enviada, enquanto o
+  // aparelho ainda nao confirmou o que ela levava. Nulo = nada a caminho.
+  int? _filaSincronizadaEmMs;
+  // O aparelho busca comando na nuvem a cada 20 s; 90 s cobre uma busca
+  // perdida e ainda nao deixa a tela presa num valor recusado.
+  static const int _prazoConfirmacaoFilaMs = 90 * 1000;
   DetectorOscilacao get _detectorOscilacao => _monitor.detectorOscilacao;
   final RastreadorConexao _rastreadorConexao = RastreadorConexao();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -321,13 +327,38 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
 
     setState(() {
-      if (_tempAjustePendente != null &&
-          _tempAjustePendente == novoTempAjuste) {
-        _tempAjustePendente = null;
+      // So o APARELHO confirma um ajuste pendente. A leitura da nuvem com
+      // comando ainda na fila do servidor (`aguardandoAparelho`) traz o ajuste
+      // PEDIDO, e confirmar por ela apagava o pendente cedo demais: na volta da
+      // internet o app passava para LOCAL, lia o valor antigo que o aparelho
+      // ainda tinha e mostrava o ajuste voltando para tras por alguns segundos
+      // (D8, teste de 14/09).
+      if (!aguardandoAparelho) {
+        if (_tempAjustePendente != null &&
+            _tempAjustePendente == novoTempAjuste) {
+          _tempAjustePendente = null;
+        }
+        if (_umidAjustePendente != null &&
+            _umidAjustePendente == novoUmidAjuste) {
+          _umidAjustePendente = null;
+        }
       }
-      if (_umidAjustePendente != null &&
-          _umidAjustePendente == novoUmidAjuste) {
-        _umidAjustePendente = null;
+      // A fila ja saiu e o aparelho confirmou tudo, ou o prazo venceu: sai do
+      // "aguardando". O prazo existe para um comando que o aparelho recusou
+      // (outro ajuste mais novo, feito nos botoes) nao deixar a tela mostrando
+      // para sempre um valor que nao vai chegar.
+      final filaEnviadaEm = _filaSincronizadaEmMs;
+      if (filaEnviadaEm != null) {
+        final nadaPendente =
+            _tempAjustePendente == null && _umidAjustePendente == null;
+        final venceu =
+            DateTime.now().millisecondsSinceEpoch - filaEnviadaEm >
+            _prazoConfirmacaoFilaMs;
+        if (nadaPendente || venceu) {
+          _filaSincronizadaEmMs = null;
+          _tempAjustePendente = null;
+          _umidAjustePendente = null;
+        }
       }
       // O aparelho confirmou que calou: a leitura volta a mandar. Fogo nao e
       // mais excecao - desde o firmware 1.14.0 ele tambem obedece ao silencio
@@ -468,7 +499,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                   // na bateria/gerador", que nao existe. Quem cobre queda de luz
                   // e o banner de sem comunicacao, pela ausencia de leituras.
                   if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
-                  if (_aguardandoAparelho) _buildBannerAguardandoAparelho(),
+                  if (_aguardandoAparelho || _filaSincronizadaEmMs != null)
+                    _buildBannerAguardandoAparelho(),
                   LeituraAparelhoCard(
                     temperatura: temperatura,
                     umidade: umidade,
@@ -862,7 +894,17 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       _sincronizandoPendencias = true;
     });
     try {
-      await api.sincronizarComandosPendentes();
+      final enviados = await api.sincronizarComandosPendentes();
+      // A fila saiu, mas pode ter saido pela NUVEM - e o aparelho so busca
+      // comando la a cada 20 s. Ate ele confirmar, a tela segura o valor pedido
+      // e mostra o "aguardando", em qualquer modo (D8).
+      if (enviados > 0 &&
+          mounted &&
+          (_tempAjustePendente != null || _umidAjustePendente != null)) {
+        setState(() {
+          _filaSincronizadaEmMs = DateTime.now().millisecondsSinceEpoch;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
