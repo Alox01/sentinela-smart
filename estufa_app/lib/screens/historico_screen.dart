@@ -9,6 +9,7 @@ import '../models/historico_leitura_entity.dart';
 import '../features/relatorio_estufada/duracao_estufada.dart';
 import '../features/relatorio_estufada/eventos_de_ajuste.dart';
 import '../features/relatorio_estufada/eventos_de_alarme.dart';
+import '../features/relatorio_estufada/leitura_valida.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
 import 'package:printing/printing.dart';
@@ -159,7 +160,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       final carga = _carregarHistoricoNuvem(
         ciclo,
         ciclo.fim ?? DateTime.now(),
-        dados.leituras,
+        dados.leituras.where(leituraValida).toList(),
       );
       _cargaNuvem = carga;
       unawaited(carga);
@@ -249,7 +250,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     List<HistoricoLeituraEntity> nuvem,
   ) {
     final porMinuto = <int, HistoricoLeituraEntity>{};
-    for (final leitura in [...nuvem, ...local]) {
+    for (final leitura in [...nuvem, ...local].where(leituraValida)) {
       final chave = leitura.timestamp.millisecondsSinceEpoch ~/ 60000;
       porMinuto[chave] = leitura;
     }
@@ -415,7 +416,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
               _ciclos = dados.ciclos;
               _recalcularPosicoes();
               _eventos = dados.eventos;
-              _leiturasLocais = dados.leituras;
+              // Sem as leituras zeradas que o app gravava antes de ter leitura
+              // de verdade (`leitura_valida.dart`).
+              _leiturasLocais = dados.leituras.where(leituraValida).toList();
               final cicloSelecionado = dados.cicloSelecionado;
               _cicloSelecionadoId = cicloSelecionado?.id;
               // Usa o histórico mesclado com a nuvem quando já disponível para este
@@ -424,7 +427,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                   (_cicloNuvemCarregadoId == cicloSelecionado?.id &&
                       _leiturasNuvem != null)
                   ? _leiturasNuvem!
-                  : dados.leituras;
+                  : _leiturasLocais;
               final leituras = _aplicarFiltro(_leiturasBrutas);
 
               if (_leiturasBrutas.isEmpty) {

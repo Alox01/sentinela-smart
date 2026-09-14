@@ -496,6 +496,19 @@ funciona:
   pendente até o **aparelho** reportá-lo, com o mesmo aviso de "aguardando" em
   LOCAL.
 
+- [x] **D9. Encerrar a estufada gravava uma leitura zerada.** Visto no PDF da
+  #22 encerrada (14/09 14:09): temperatura final **0°F**, umidade final **0%**,
+  e três eventos inventados no fim — "ajuste alterado de 70 para 0°F", "de 65
+  para 0%" e "Alarme normalizado" (o alarme ainda estava ligado). O CSV mostrava
+  a linha: tudo zero, aviso vazio.
+
+  *Causa:* ao encerrar, o evento de fim grava uma leitura com os valores da
+  tela, e a tela ainda estava com os zeros de partida — nenhuma leitura do
+  aparelho tinha chegado a ela. *Feito:* o app só grava leitura depois de
+  receber uma de verdade (`_temLeituraReal`), e o relatório ignora as zeradas que
+  já estão no banco do celular (`leitura_valida.dart`) — a #22 sai certa sem
+  refazer nada.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com

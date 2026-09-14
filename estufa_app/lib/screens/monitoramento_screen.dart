@@ -101,6 +101,9 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   bool? _ultimoAlertaIncendio;
   // Alarme do processo (condicao), separado de `sireneLigada` (barulho).
   bool _alarmeDoProcesso = false;
+  // Ja chegou ao menos uma leitura do aparelho nesta tela? Antes disso os
+  // valores acima sao os zeros de partida, e nao podem ir para o historico.
+  bool _temLeituraReal = false;
   // Aparelho "sem comunicacao": no modo nuvem, quando a ultima leitura recebida
   // fica velha demais (o aparelho parou de reportar por falta de luz/internet),
   // o app mostra isso em vez de fingir que esta tudo ao vivo.
@@ -233,6 +236,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     }
     if (!mounted) return;
     _registrarRetornoConexaoSeNecessario();
+    _temLeituraReal = true;
 
     final status = dados['status'] ?? {};
     final config = dados['config'] ?? {};
@@ -423,6 +427,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     bool porEvento = false,
   }) {
     if (_cicloAtual == null) return;
+    // Sem leitura do aparelho ainda, os valores da tela sao os zeros de
+    // partida. Gravar isso inventava uma leitura de 0°F / 0% — em 14/09/2026 o
+    // fim da estufada #22 gravou uma, e o relatorio saiu com temperatura final
+    // 0 e "ajuste alterado de 70 para 0°F".
+    if (!_temLeituraReal) return;
 
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
     // forcar: sempre grava (ex: inicio da estufada). porEvento: grava so se
