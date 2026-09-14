@@ -385,6 +385,7 @@ void handleConfigSalvar();
 void guardarRedeAprendida();
 void handleConfigIdentidade();
 void prepararRedeConectada();
+void marcarChaveRegistrada();
 void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
 
@@ -1570,6 +1571,29 @@ void empurrarLeituraNuvem() {
   Serial.print("Push nuvem -> HTTP ");
   Serial.println(codigo);
   http.end();
+
+  // A nuvem so aceita esta leitura se ja conhecer a chave que foi junto (ou se
+  // ela for a universal). Aceitou uma chave propria: o registro ou a troca que
+  // sincronizarChaveNuvem() tentava ja valeu la. Sem isto, uma troca cuja
+  // resposta se perdeu no caminho (a nuvem gravou, o aparelho estourou o prazo)
+  // ficava tentando de novo a cada 20 s com a chave ANTIGA - que a nuvem ja
+  // tinha descartado - e levando 401 para sempre, com uma chamada HTTPS
+  // bloqueante a mais em cada ciclo. Visto no Serial em 14/09/2026.
+  const bool faltavaConfirmar = !chaveRegistradaNaNuvem || chaveAnterior.length() > 0;
+  if (codigo == 200 && faltavaConfirmar && tokenAparelho != DEVICE_TOKEN) {
+    Serial.println("A nuvem ja aceita a chave deste aparelho: registro concluido.");
+    marcarChaveRegistrada();
+  }
+}
+
+// A nuvem conhece a chave atual: para de tentar registrar ou trocar.
+void marcarChaveRegistrada() {
+  chaveRegistradaNaNuvem = true;
+  chaveAnterior = "";
+  prefs.begin("sentinela", false);
+  prefs.putBool("chaveReg", true);
+  prefs.remove("chaveAnt");
+  prefs.end();
 }
 
 // Conta a propria chave para a nuvem, para ela deixar de depender da chave
@@ -1618,12 +1642,7 @@ void sincronizarChaveNuvem() {
   Serial.println(codigo);
 
   if (codigo == 200) {
-    chaveRegistradaNaNuvem = true;
-    chaveAnterior = "";
-    prefs.begin("sentinela", false);
-    prefs.putBool("chaveReg", true);
-    prefs.remove("chaveAnt");
-    prefs.end();
+    marcarChaveRegistrada();
     Serial.println("Chave registrada na nuvem.");
     return;
   }
