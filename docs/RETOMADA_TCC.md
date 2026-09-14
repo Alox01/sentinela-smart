@@ -222,9 +222,8 @@ desligando e ligando. **Gravar o firmware novo.**
 
 4. **Deixar ligado um dia inteiro** sem mexer. Defeito intermitente só aparece
    assim.
-   - **Desligar só o roteador** (aparelho ligado), esperar 1 min, religar. O
-     aparelho tem que voltar sozinho em até ~30 s. É a prova do D5 — antes do
-     firmware de 14/09 ele não voltava.
+   - ~~**Desligar só o roteador** (aparelho ligado), esperar 1 min, religar.~~
+     **Feito em 14/09: voltou sozinho** (D5 provado).
 5. **Caminho da nuvem:** aparelho ligado, app fechado por horas, depois abrir o
    relatório. As horas em que o app esteve fechado têm que aparecer.
    **Rodado em 13–14/09 e reprovado:** o PDF saiu com uma noite vazia, e a nuvem
@@ -244,7 +243,7 @@ resultado inventado.
 
 | # | O que provar | Situação |
 |---|---|---|
-| 1 | Operação local com a internet desligada | ✅ relatado pelo produtor em 14/09/2026 — aparelho funcionando sem internet (falta a foto e a data exata do teste) |
+| 1 | Operação local com a internet desligada | ✅ 14/09/2026 — roteador desligado: aparelho seguiu lendo (Serial com 58°F / 73–74% e o motivo da queda) e voltou sozinho ao religar; o app reconectou sem intervenção. Prints do Serial com o produtor |
 | 2 | Comandos offline e sincronização ao reconectar | ✅ 14/09/2026 11:00–11:04 — ver o registro abaixo (com a limitação D8) |
 | 3 | Acesso remoto, de fora da propriedade | ✅ 13–14/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho (falta o print com "NUVEM" em "Detalhes da conexão") |
 | 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |

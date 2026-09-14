@@ -344,8 +344,17 @@ funciona:
   usuário e senha)", etc. Foi o que faltou na faculdade (13/09): o Wi-Fi de lá
   não conectou e não havia como saber por quê.
 
-  *Falta provar em campo:* desligar o roteador com o aparelho ligado, esperar
-  1 min, religar — o aparelho tem que voltar sozinho.
+  *Provado em campo em 14/09:* roteador desligado com o aparelho ligado. O
+  aparelho seguiu lendo e mostrando no visor, o Serial deu o motivo na ordem
+  certa — "sinal perdido (longe do roteador)" na queda, "rede não encontrada"
+  com o roteador fora — e, religado o roteador, o aparelho voltou sozinho e o
+  app reconectou sem ninguém mexer.
+
+  *Ruído conhecido, inofensivo:* `E (…) wifi:sta is connecting, return error`
+  a cada tentativa. É o `WiFi.begin()` do `manterWifi()` chegando enquanto a
+  reconexão automática do próprio driver já está em curso; o driver responde
+  "já estou conectando" e segue. Limpeza possível: só chamar `begin()` quando o
+  driver não estiver tentando. Sem pressa.
 
 - [x] **D6. No gráfico do relatório, trechos inteiros ficam sem bolinha.**
   Visto em 14/09 (print da umidade, janela das últimas 24h): a linha e o valor
