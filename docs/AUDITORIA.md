@@ -507,7 +507,8 @@ funciona:
   aparelho tinha chegado a ela. *Feito:* o app só grava leitura depois de
   receber uma de verdade (`_temLeituraReal`), e o relatório ignora as zeradas que
   já estão no banco do celular (`leitura_valida.dart`) — a #22 sai certa sem
-  refazer nada.
+  refazer nada. **Aprovado em 14/09:** o PDF da #22 gerado às 14:30 saiu com
+  70°F / 65% finais e sem os eventos inventados; o CSV, sem a linha zerada.
 
 ### 2.3 Baixa — higiene
 
