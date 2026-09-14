@@ -285,10 +285,19 @@ class ApiService {
   // Busca o historico persistido na nuvem/servidor para o periodo. Serve para
   // preencher, no relatorio, os trechos gravados enquanto o app estava fechado
   // (o registro local so acontece com a tela de monitoramento aberta).
+  //
+  // Vai direto na nuvem, e nao pela conexao ativa. O historico so existe la: o
+  // aparelho nao tem `/historico`. Pela conexao ativa, com o celular no Wi-Fi da
+  // estufa o pedido ia para o aparelho, voltava 404, e o relatorio saia so com o
+  // que o app gravou no celular — em 13/09/2026 um PDF de 34 h mostrou uma
+  // noite inteira vazia, com as 6 leituras por hora guardadas na nuvem.
   Future<List<Map<String, dynamic>>> buscarHistorico({
     required DateTime inicio,
     required DateTime fim,
   }) async {
+    final nuvem = cloudBaseUrl;
+    if (nuvem == null || nuvem.isEmpty) return const [];
+
     final ini = inicio.millisecondsSinceEpoch;
     final f = fim.millisecondsSinceEpoch;
     // O idHardware nao e opcional na pratica: sem ele a nuvem servia o aparelho
@@ -298,11 +307,23 @@ class ApiService {
     final porAparelho = (id == null || id.isEmpty)
         ? ''
         : '&idHardware=${Uri.encodeComponent(id)}';
-    final response =
-        await _getComFallback('/historico?inicio=$ini&fim=$f$porAparelho');
-    if (response?.statusCode != 200) return const [];
 
-    final dados = _decodificarMapa(response!.body);
+    final http.Response response;
+    try {
+      // Roda em segundo plano, sem prender a tela: da para esperar a nuvem
+      // acordar do plano gratuito, que o prazo curto das leituras nao cobre.
+      response = await _cliente
+          .get(
+            Uri.parse('$nuvem/historico?inicio=$ini&fim=$f$porAparelho'),
+            headers: _headers(),
+          )
+          .timeout(const Duration(seconds: 60));
+    } catch (_) {
+      return const [];
+    }
+    if (response.statusCode != 200) return const [];
+
+    final dados = _decodificarMapa(response.body);
     final lista = dados?['leituras'];
     if (lista is! List) return const [];
     return lista.whereType<Map<String, dynamic>>().toList();
