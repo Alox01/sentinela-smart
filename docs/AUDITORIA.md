@@ -273,6 +273,42 @@ funciona:
   aparecendo, a primeira suspeita é esse mecanismo não estar pegando — não a falta
   dele.
 
+### 2.7 Achado em campo (14/09/2026)
+
+- [x] **D4. O relatório nunca trouxe o histórico da nuvem.** O PDF da estufada de
+  12/09 22:30 a 14/09 08:11 (teste na outra casa) tinha leituras só nos horários
+  de evento, e um buraco de 23:19 a 13:11 do dia seguinte. **A nuvem estava
+  completa:** 232 leituras do `ESP32_215788` nessa janela, 6 por hora, a noite
+  inteira, 231 delas com o relógio do aparelho certo. O defeito era do app, e
+  eram dois, um escondendo o outro:
+
+  1. **A precarga pulava a busca da nuvem.** Desde `b979f3a` (04/08) a tela de
+     relatórios usa o relatório que o monitoramento adiantou — e a busca da
+     nuvem só existia dentro da carga normal, que a precarga substituía. Pelo
+     caminho de sempre (monitoramento, depois Relatórios, em até 3 min) a nuvem
+     nem era chamada. Os consertos de 21/08 (`482aa20`, `45521a8`: id e chave do
+     aparelho no pedido) estavam certos, mas num caminho que quase nunca rodava.
+  2. **Com o celular no Wi-Fi da estufa, o pedido ia para o aparelho.**
+     `buscarHistorico` usava a conexão ativa; em modo LOCAL ela é o ESP32, que
+     não tem `/historico`: 404, lista vazia, **sem aviso nenhum**.
+
+  *Por que ninguém viu antes:* os dois caem no mesmo lugar — o relatório com o
+  que o celular gravou — e isso parece "o app ficou fechado". Só um teste longo,
+  com o app fechado a noite toda, mostrou o tamanho do buraco.
+
+  *Feito* em `87ec65f` (vai direto na nuvem; teste que reproduz o 404 do
+  aparelho) e no commit seguinte da tela (a precarga passa por dentro da carga, e
+  exportar espera a nuvem chegar em vez de gerar o arquivo sem ela). Junto:
+  tabela do PDF com uma leitura por hora (`49b799b`) — com a nuvem, a estufada
+  tem uma a cada 10 min —, CSV compartilhado como o PDF, e o texto do evento de
+  desvio, que dizia "mais de 10°F" para um limite de 5°F (`b6003d6`).
+
+  *Não mudou:* o aparelho continua mandando a cada 10 min para a nuvem. Passar
+  para 1 h foi considerado e descartado: é o que alimenta o gráfico e o
+  acompanhamento de longe, e com a deduplicação na ingestão o banco guarda isso
+  com folga (a cota de 500 MB está em `PLANO_BANCO_DADOS.md`). O afinamento é só
+  no papel.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com

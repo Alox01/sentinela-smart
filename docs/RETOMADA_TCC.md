@@ -199,6 +199,11 @@ proposta. Ver seção 6.
    assim.
 5. **Caminho da nuvem:** aparelho ligado, app fechado por horas, depois abrir o
    relatório. As horas em que o app esteve fechado têm que aparecer.
+   **Rodado em 13–14/09 e reprovado:** o PDF saiu com uma noite vazia, e a nuvem
+   tinha as 6 leituras por hora. Eram dois defeitos no app (`AUDITORIA.md`, D4),
+   corrigidos em 14/09. **Refazer com o APK novo** — o de 21/08 tem os dois — e,
+   de preferência, gerar o PDF de dentro do Wi-Fi da estufa, que era o caso que
+   falhava.
 6. **Teste de transporte:** carregar a caixa até outro cômodo, pôr na mesa,
    conferir se tudo responde. Encontra a junta frouxa antes da banca.
 7. **Trocar o sensor de luz pelo de chama.** Testar com isqueiro a 20 cm (tem
