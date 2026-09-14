@@ -26,7 +26,7 @@ test('converte leitura do simulador para formato simples do ESP32', () => {
     umidade: 64.8,
     temperaturaAlvoF: 96,
     umidadeAlvo: 65,
-    margemF: 5,
+    margemF: 8,
     alertaTemperatura: true,
     alertaLuz: false,
     mostrandoUmidade: false,

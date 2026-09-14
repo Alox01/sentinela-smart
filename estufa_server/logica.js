@@ -6,7 +6,10 @@
 // em LOCAL, para a mesma estufa no mesmo instante. Quem decide se ha alarme e o
 // aparelho; este numero existe so para o veredito remoto concordar com ele.
 const TOLERANCIA_TEMP = 8.0;
-const TOLERANCIA_UMID = 2.0; // Margem de erro de 2%
+// A umidade so escreve o aviso ("Umidade alta/baixa"), nunca toca sirene. Os
+// mesmos 8 da temperatura: com 2, a nuvem avisava de umidade fora do ajuste
+// enquanto o LED do app e o relatorio diziam que estava tudo normal.
+const TOLERANCIA_UMID = 8.0;
 const TEMPO_SILENCIO = 10 * 60 * 1000;
 // Acomodacao apos mudar o ajuste: a estufa leva tempo para alcancar o alvo
 // novo, e alarmar nesse caminho seria acusar um problema que o proprio produtor

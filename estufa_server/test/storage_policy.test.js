@@ -89,13 +89,32 @@ test('salva quando entra em desvio relevante', () => {
   const ultimaLeitura = criarRegistroLeitura(statusBase, configBase, 0);
   const decisao = deveSalvarLeitura({
     ultimaLeitura,
-    status: { ...statusBase, umidadeAtual: 64 },
+    status: { ...statusBase, umidadeAtual: 61 },
     config: configBase,
     agoraMs: 60 * 1000,
   });
 
   assert.equal(decisao.salvar, true);
   assert.equal(decisao.motivo, 'desvio_relevante');
+});
+
+// 8 ainda e normal, acima e abaixo: a mesma fronteira da sirene do aparelho.
+test('diferenca de 8 nao e desvio relevante', () => {
+  const ultimaLeitura = criarRegistroLeitura(statusBase, configBase, 0);
+  for (const status of [
+    { ...statusBase, temperaturaAtual: 108 },
+    { ...statusBase, temperaturaAtual: 92 },
+    { ...statusBase, umidadeAtual: 62 },
+    { ...statusBase, umidadeAtual: 78 },
+  ]) {
+    const decisao = deveSalvarLeitura({
+      ultimaLeitura,
+      status,
+      config: configBase,
+      agoraMs: 60 * 1000,
+    });
+    assert.equal(decisao.salvar, false, JSON.stringify(status));
+  }
 });
 
 test('normaliza valores antes de salvar no banco', () => {

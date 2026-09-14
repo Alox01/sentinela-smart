@@ -1,6 +1,9 @@
 const INTERVALO_PADRAO_MS = 10 * 60 * 1000;
-const LIMITE_TEMPERATURA_F = 5;
-const LIMITE_UMIDADE_PERCENTUAL = 5;
+// Desvio que antecipa a gravacao: acima de 8, a mesma fronteira da sirene do
+// aparelho, do LED e dos eventos do app. Estava em 5 (e com >=), e o banco
+// guardava como desvio uma diferenca que o resto do sistema chamava de normal.
+const LIMITE_TEMPERATURA_F = 8;
+const LIMITE_UMIDADE_PERCENTUAL = 8;
 
 function numeroSeguro(valor, padrao = 0) {
   const numero = Number(valor);
@@ -40,8 +43,8 @@ function desvioRelevante(status = {}, config = {}) {
   const umidadeAjuste = numeroSeguro(config.umidadeMeta, umidade);
 
   return (
-    Math.abs(temperatura - temperaturaAjuste) >= LIMITE_TEMPERATURA_F
-    || Math.abs(umidade - umidadeAjuste) >= LIMITE_UMIDADE_PERCENTUAL
+    Math.abs(temperatura - temperaturaAjuste) > LIMITE_TEMPERATURA_F
+    || Math.abs(umidade - umidadeAjuste) > LIMITE_UMIDADE_PERCENTUAL
   );
 }
 
