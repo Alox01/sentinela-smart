@@ -10,6 +10,7 @@ import '../features/relatorio_estufada/duracao_estufada.dart';
 import '../features/relatorio_estufada/services/relatorio_estufada_repository.dart';
 import '../features/relatorio_estufada/widgets/grafico_estufada_card.dart';
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../features/relatorio_estufada/services/relatorio_csv_service.dart';
 import '../features/relatorio_estufada/services/relatorio_pdf_service.dart';
@@ -861,10 +862,15 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     );
 
     try {
+      // Compartilha, como o PDF: o arquivo sai do celular pelo que o produtor
+      // escolher (WhatsApp, e-mail, Drive, "Salvar em"). So gravar deixava o
+      // CSV numa pasta que ele nao consegue abrir.
       final destino = await exportCsvFile(fileName: fileName, csvContent: csv);
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('CSV exportado: $destino')),
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(destino, mimeType: 'text/csv')],
+          title: '$fileName.csv',
+        ),
       );
     } catch (e) {
       if (!mounted) return;

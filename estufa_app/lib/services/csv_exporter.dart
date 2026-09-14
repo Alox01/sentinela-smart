@@ -1,6 +1,6 @@
 import 'csv_exporter_io.dart';
 
-/// Grava o CSV do relatorio e devolve o caminho.
+/// Grava o CSV do relatorio e devolve o caminho, para ser compartilhado.
 ///
 /// Ate 04/08/2026 isto era um export condicional com tres implementacoes
 /// (`_io`, `_web`, `_stub`), porque o app tambem rodava no navegador. Com a web
