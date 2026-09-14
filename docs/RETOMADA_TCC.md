@@ -244,7 +244,7 @@ resultado inventado.
 
 | # | O que provar | Situação |
 |---|---|---|
-| 1 | Operação local com a internet desligada | **em aberto** |
+| 1 | Operação local com a internet desligada | ✅ relatado pelo produtor em 14/09/2026 — aparelho funcionando sem internet (falta a foto e a data exata do teste) |
 | 2 | Comandos offline e sincronização ao reconectar | **em aberto** |
 | 3 | Acesso remoto, de fora da propriedade | ✅ 13–14/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho (falta o print com "NUVEM" em "Detalhes da conexão") |
 | 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |
