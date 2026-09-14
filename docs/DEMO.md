@@ -75,6 +75,12 @@ chave cadastrada em cada estufa.
 
 ## Cenário 4 — Histórico na nuvem + buffer offline de leituras
 
+> ⚠️ **Só com o ESP32 virtual** (`esp32_virtual.js`, no PC). O controlador real
+> **não** guarda leituras sem internet: com ele, o período da queda fica sem
+> leituras na nuvem (limitação declarada no artigo, seção 4.5). Com o aparelho
+> real, **não** usar a fala-chave abaixo — mostre em vez disso o Cenário 3 (fila
+> de comandos), que vale para os dois.
+
 - Com o aparelho em modo push, as leituras chegam ao Supabase. Mostre no
   **Supabase → Table editor → `leituras`** as linhas aparecendo (fonte
   `hardware`).
