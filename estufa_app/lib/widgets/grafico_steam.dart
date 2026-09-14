@@ -15,6 +15,12 @@ class GraficoSteam extends StatelessWidget {
   final double intervaloY;
   final List<int> rotulosY;
 
+  /// Teto do espacamento entre horarios do eixo. Quem sabe a densidade na tela
+  /// e quem monta o grafico: no celular sao 2h por tela, e o espacamento tirado
+  /// so da duracao dava marcas de 6 em 6 horas - telas inteiras sem horario.
+  /// Nulo = so pela duracao, para quando a janela inteira cabe numa tela so.
+  final Duration? intervaloRotuloMaximo;
+
   const GraficoSteam({
     super.key,
     required this.pontos,
@@ -26,11 +32,13 @@ class GraficoSteam extends StatelessWidget {
     this.maxY = 205,
     this.intervaloY = 35,
     this.rotulosY = const [60, 95, 130, 165, 200],
+    this.intervaloRotuloMaximo,
   });
 
   @override
   Widget build(BuildContext context) {
     final escala = _calcularEscala();
+    final comBolinha = _indicesComBolinha();
     final pontosDesenho = _montarSerie(escala, (i) => pontos[i].y);
     final pontosAjusteDesenho =
         (ajustes.length == pontos.length && pontos.isNotEmpty)
@@ -232,7 +240,10 @@ class GraficoSteam extends StatelessWidget {
             color: corAtual,
             dotData: FlDotData(
               show: true,
-              checkToShowDot: (spot, _) => _deveMostrarPonto(spot, escala),
+              checkToShowDot: (spot, _) {
+                final indice = _indiceOriginalExato(spot.x);
+                return indice != null && comBolinha.contains(indice);
+              },
               getDotPainter: (spot, percent, barData, index) {
                 final indiceOriginal = _indiceOriginalMaisProximo(spot.x);
                 final corNoPonto = indiceOriginal < coresHistoricas.length
@@ -311,8 +322,10 @@ class GraficoSteam extends StatelessWidget {
     // o resultado do filtro, nao a estufada inteira.
     final minXBase = pontos.first.x;
     final maxXBase = pontos.last.x;
-    final intervaloRotuloMs = _intervaloParaDuracao(
-      (maxXBase - minXBase).abs(),
+    // A margem das pontas acompanha o teto: sem ele, 24h de leitura davam 1h06
+    // de vazio em cada ponta - mais da metade de uma tela do celular.
+    final intervaloRotuloMs = _limitarIntervalo(
+      _intervaloParaDuracao((maxXBase - minXBase).abs()),
     );
     final margemX = intervaloRotuloMs * 0.55;
     final minX = minXBase - margemX;
@@ -334,7 +347,7 @@ class GraficoSteam extends StatelessWidget {
     return _EscalaGrafico(
       minX: minX,
       maxX: maxX,
-      intervaloRotuloMs: _intervaloParaDuracao(duracaoMs),
+      intervaloRotuloMs: _limitarIntervalo(_intervaloParaDuracao(duracaoMs)),
       primeiroPontoX: primeiroVisivelX,
       ultimoPontoX: ultimoVisivelX,
       dadosMinX: minXBase,
@@ -404,35 +417,40 @@ class GraficoSteam extends StatelessWidget {
     return const Duration(hours: 6).inMilliseconds.toDouble();
   }
 
-  bool _deveMostrarPonto(FlSpot spot, _EscalaGrafico escala) {
-    if (spot.x < escala.dadosMinX || spot.x > escala.dadosMaxX) {
-      return false;
-    }
-
-    if (_estaForaDaTolerancia(spot)) {
-      return true;
-    }
-
-    final distanciaInicio = (spot.x - escala.primeiroPontoX).abs();
-    final distanciaFim = (spot.x - escala.ultimoPontoX).abs();
-    final tolerancia = escala.intervaloRotuloMs / 4;
-
-    if (distanciaInicio <= tolerancia || distanciaFim <= tolerancia) {
-      return true;
-    }
-
-    final deslocamento = (spot.x - escala.dadosMinX) % escala.intervaloRotuloMs;
-    final distanciaIntervalo = deslocamento < escala.intervaloRotuloMs / 2
-        ? deslocamento
-        : escala.intervaloRotuloMs - deslocamento;
-    return distanciaIntervalo <= tolerancia;
+  double _limitarIntervalo(double intervaloMs) {
+    final teto = intervaloRotuloMaximo?.inMilliseconds.toDouble();
+    return (teto == null || intervaloMs <= teto) ? intervaloMs : teto;
   }
 
-  bool _estaForaDaTolerancia(FlSpot spot) {
-    final index = _indiceOriginalExato(spot.x);
-    if (index == null || index >= ajustes.length) return false;
+  /// Quais leituras ganham bolinha: a primeira de cada HORA do relogio, toda
+  /// leitura em desvio, e a ultima (decisao do produtor, 14/09/2026).
+  ///
+  /// E a mesma regra da tabela do PDF (`leituras_por_hora.dart`): cada bolinha
+  /// fora de desvio e uma linha de la, e quem compara os dois ve os mesmos
+  /// horarios. Independe dos horarios do eixo, que mudam com a duracao.
+  ///
+  /// A regra antiga pedia a leitura "perto de uma marca do eixo", com marcas
+  /// de 6 em 6 horas e 2h por tela: tres horas com bolinha, tres sem, e telas
+  /// inteiras vazias (`AUDITORIA.md`, D6).
+  Set<int> _indicesComBolinha() {
+    final indices = <int>{};
+    if (pontos.isEmpty) return indices;
 
-    return (pontos[index].y - ajustes[index]).abs() > margemAjuste;
+    DateTime? horaAnterior;
+    for (var i = 0; i < pontos.length; i++) {
+      final t = DateTime.fromMillisecondsSinceEpoch(pontos[i].x.toInt());
+      final hora = DateTime(t.year, t.month, t.day, t.hour);
+      if (hora != horaAnterior) indices.add(i);
+      horaAnterior = hora;
+      if (_foraDaMargem(i)) indices.add(i);
+    }
+    indices.add(pontos.length - 1);
+    return indices;
+  }
+
+  bool _foraDaMargem(int indice) {
+    if (indice >= ajustes.length) return false;
+    return (pontos[indice].y - ajustes[indice]).abs() > margemAjuste;
   }
 
   double _limitarY(double valor) {

@@ -338,11 +338,19 @@ funciona:
   *Falta provar em campo:* desligar o roteador com o aparelho ligado, esperar
   1 min, religar — o aparelho tem que voltar sozinho.
 
-- [ ] **D6. No gráfico do relatório, trechos inteiros ficam sem bolinha.**
+- [x] **D6. No gráfico do relatório, trechos inteiros ficam sem bolinha.**
   Visto em 14/09 (print da umidade, janela das últimas 24h): a linha e o valor
   estão lá — arrastando o dedo aparece "Leitura 69% / Ajuste 70% / 13:03" —, mas
   telas inteiras não têm bolinha nenhuma, enquanto outras têm. Acontece na
-  temperatura e na umidade. **Não corrigido: decidido deixar para depois.**
+  temperatura e na umidade.
+
+  *Feito no mesmo dia, com a regra que o produtor escolheu:* bolinha na
+  **primeira leitura de cada hora** (a mesma regra da tabela do PDF), em **toda
+  leitura em desvio** e na última. No celular os horários do eixo passaram a ser
+  **no máximo de hora em hora** (`intervaloRotuloMaximo`), e a margem vazia das
+  pontas encolheu junto (era 1h06 de cada lado). Tela larga segue pela duração,
+  porque mostra a janela inteira de uma vez. Dois testes em
+  `grafico_estufada_test.dart`. O diagnóstico fica abaixo, como estava.
 
   *Causa provável, lida no código* (`grafico_steam.dart`, `_deveMostrarPonto`):
   a bolinha só aparece em três casos — leitura **fora da margem** (mais de 8 do

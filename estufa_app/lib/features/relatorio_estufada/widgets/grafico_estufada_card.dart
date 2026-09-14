@@ -140,6 +140,12 @@ class GraficoEstufadaCard extends StatelessWidget {
               maxY: maxYGrafico,
               intervaloY: intervaloYGrafico,
               rotulosY: rotulosYGrafico,
+              // Celular: 2h por tela, entao horario no maximo de hora em hora.
+              // Tela larga mostra a janela inteira de uma vez, e hora em hora
+              // la seriam 24 horarios espremidos.
+              intervaloRotuloMaximo: telaEstreita
+                  ? const Duration(hours: 1)
+                  : null,
             ),
           );
 

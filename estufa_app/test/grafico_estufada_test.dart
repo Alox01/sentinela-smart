@@ -3,6 +3,7 @@ import 'package:estufa_app/models/historico_leitura_entity.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 /// O gráfico da estufada desenha mesmo as linhas e os pontos?
 ///
@@ -51,11 +52,12 @@ void main() {
     WidgetTester tester, {
     required bool temperatura,
     required List<HistoricoLeituraEntity> leituras,
+    double largura = 1200,
   }) async {
     // Larga o bastante para não cair no caminho rolável do celular estreito, que
     // embrulha o gráfico em outro widget — o desenho é o mesmo, e aqui o alvo é
     // o conteúdo, não o embrulho.
-    tester.view.physicalSize = const Size(1200, 1400);
+    tester.view.physicalSize = Size(largura, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -77,6 +79,64 @@ void main() {
 
     return tester.widget<LineChart>(find.byType(LineChart)).data;
   }
+
+  /// D6: no celular, telas inteiras do gráfico ficavam sem bolinha — a regra
+  /// pedia leitura perto de marcas de 6 em 6 horas, e cada tela mostra 2h.
+  testWidgets('no celular, bolinha de hora em hora e em todo desvio', (
+    tester,
+  ) async {
+    // Três horas, uma leitura a cada 10 min, no ajuste — menos às 10:20, que
+    // passa 10 acima (fora da margem de 8).
+    final leituras = [
+      for (var i = 0; i < 18; i++)
+        leitura(
+          minuto: i * 10,
+          temperatura: i == 8 ? 140 : 130,
+          umidade: 60,
+        ),
+    ];
+
+    final dados = await desenhar(
+      tester,
+      temperatura: true,
+      leituras: leituras,
+      largura: 400,
+    );
+
+    final linha = dados.lineBarsData.first;
+    final comBolinha = [
+      for (final spot in linha.spots)
+        if (linha.dotData.checkToShowDot(spot, linha))
+          DateFormat(
+            'HH:mm',
+          ).format(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt())),
+    ];
+
+    expect(comBolinha, ['09:00', '10:00', '10:20', '11:00', '11:50']);
+  });
+
+  testWidgets('no celular, um dia inteiro tem horario de hora em hora', (
+    tester,
+  ) async {
+    // O caso do print de 14/09: 24h, 2h por tela. Pela duracao sairiam marcas
+    // de 6 em 6 horas, e telas inteiras sem horario embaixo.
+    final dia = [
+      for (var i = 0; i <= 144; i++)
+        leitura(minuto: i * 10, temperatura: 130, umidade: 60),
+    ];
+
+    final dados = await desenhar(
+      tester,
+      temperatura: true,
+      leituras: dia,
+      largura: 400,
+    );
+
+    expect(
+      dados.titlesData.bottomTitles.sideTitles.interval,
+      const Duration(hours: 1).inMilliseconds,
+    );
+  });
 
   testWidgets('a linha da temperatura recebe um ponto por leitura', (
     tester,
