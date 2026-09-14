@@ -245,7 +245,7 @@ resultado inventado.
 | # | O que provar | Situação |
 |---|---|---|
 | 1 | Operação local com a internet desligada | ✅ relatado pelo produtor em 14/09/2026 — aparelho funcionando sem internet (falta a foto e a data exata do teste) |
-| 2 | Comandos offline e sincronização ao reconectar | **em aberto** |
+| 2 | Comandos offline e sincronização ao reconectar | ✅ 14/09/2026 11:00–11:04 — ver o registro abaixo (com a limitação D8) |
 | 3 | Acesso remoto, de fora da propriedade | ✅ 13–14/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho (falta o print com "NUVEM" em "Detalhes da conexão") |
 | 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |
 | 5 | Alertas com o app aberto e fechado | ✅ 25/07, 13/08 e 13–14/09/2026 (sem dados, voltou, fora da faixa) |
@@ -257,6 +257,33 @@ Menu → "Detalhes da conexão" → confirmar modo **LOCAL** e **Pendências: 0*
 desligar o Wi-Fi e os dados do celular → mudar o ajuste → **Pendências: 1** →
 religar o Wi-Fi → tocar em **Sincronizar** → **Pendências: 0** → conferir no visor
 que o ajuste mudou. Print de cada passo.
+
+**Registro de testes com imagem (item #7)** — as imagens ficam com o produtor, e
+não no repositório (ele é público). Aqui fica o que cada uma prova:
+
+*14/09/2026, 11:00–11:04 — comandos local, offline e sincronização (#2).*
+Aparelho com o firmware de 14/09, APK da apresentação, celular no Wi-Fi da
+estufa.
+
+| Hora | Imagem | O que mostra |
+|---|---|---|
+| 11:00 | print "Detalhes da conexão" | LOCAL, aparelho reportando pela rede local, firmware 1.0, pendências 0, local e nuvem online |
+| 11:00 | print do monitoramento | leitura 58°F / 69%, ajuste 66 — diferença de 8 exatos e **nenhum** indicador aceso: a regra "8 ainda é normal" no aparelho real |
+| 11:01:01 | foto do visor | **66** |
+| 11:01 | print "Comando aplicado" | ajuste mudado para 60 pela rede local |
+| 11:01:33 | foto do visor | **60** — o comando local chegou em segundos |
+| 11:02 | print do celular | Wi-Fi e dados desligados ("Sem serviço"); app em **OFFLINE** com os últimos valores |
+| 11:02:09 | foto do visor | 58 (a temperatura), aparelho seguindo sozinho |
+| 11:03 | print "Sem conexão agora. Comando salvo para sincronizar depois." | ajuste 70 pedido offline; selo **OFFLINE \| 1** |
+| 11:03 | print "Detalhes da conexão" | OFFLINE, aparelho não alcançado, **pendências 1**: "Alterar ajuste de temperatura para 70°F" |
+| 11:03 | print do monitoramento | Wi-Fi religado; app em NUVEM, "Ajuste enviado. Aguardando a estufa aplicar" |
+| 11:03:47 | banco da nuvem | o aparelho passa a reportar ajuste **70** |
+| 11:04 | print "Detalhes da conexão" | LOCAL, **pendências 0** |
+| 11:04:12 | foto do visor | **70** — o comando pedido sem internet chegou ao aparelho |
+
+*Limitação vista no mesmo teste (D8 na `AUDITORIA.md`):* ao voltar para LOCAL a
+tela mostrou por um tempo o ajuste antigo (60), sem aviso de que havia comando a
+caminho, e só mostrou 70 depois de outro comando.
 
 **Evidência nova de setembro, que pode entrar:** placa conferida com multímetro
 (01/09); todos os grupos funcionando na placa soldada (09/09); troca do sensor de

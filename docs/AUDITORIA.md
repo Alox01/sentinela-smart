@@ -439,6 +439,33 @@ funciona:
   *Não é defeito:* os eventos antigos dizem "por mais de 10°F". O texto é gravado
   quando o evento acontece, e esses são de antes de 14/09; os novos dizem 8°F.
 
+- [ ] **D8. Depois de sincronizar a fila, a tela mostra o ajuste antigo.**
+  Visto no teste de 14/09 (registro em `RETOMADA_TCC.md`). Comando de 70°F
+  pedido offline; ao religar o Wi-Fi o app entrou primeiro em NUVEM, mandou a
+  fila por lá ("Aguardando a estufa aplicar", mostrando 70) e em seguida passou
+  para LOCAL — mostrando **60**, o valor que o aparelho ainda tinha, sem aviso
+  nenhum de comando a caminho. O produtor só viu 70 depois de mandar outro
+  comando. O aparelho aplicou: a nuvem registra ajuste 70 às 11:03:47, e a foto
+  do visor às 11:04:12 mostra 70.
+
+  *Causa provável, lida no código:* a fila vai pela conexão ativa, e na volta
+  do Wi-Fi a ativa era a nuvem; o aparelho só busca comando na nuvem a cada
+  20 s (`COMANDOS_INTERVAL_MS`). No meio-tempo o app virou LOCAL e passou a
+  mostrar o que o aparelho diz — verdade naquele instante, mas o aviso de
+  "aguardando" só existe no modo nuvem (`aguardandoAparelho` vem do servidor), e
+  o valor pendente já tinha sido apagado quando a leitura da nuvem o confirmou.
+
+  *A conferir antes de consertar:* se a tela se corrige **sozinha** em até
+  ~30 s (então é só o aviso que falta) ou se fica presa no 60 (então há outro
+  defeito — a leitura local devia mostrar 70 no máximo 3 s depois do aparelho
+  aplicar). Roteiro: repetir o teste e, ao voltar, **não tocar em nada** por
+  1 min, olhando tela e visor.
+
+  *Caminhos:* (1) ao sincronizar, se o aparelho responde na rede local, mandar
+  a fila direto para ele — chega na hora; (2) guardar o valor sincronizado como
+  pendente até o **aparelho** reportá-lo, com o mesmo aviso de "aguardando" em
+  LOCAL.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
