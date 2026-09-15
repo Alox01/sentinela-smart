@@ -243,12 +243,18 @@ O autor tem o PDF completo (`fielding_dissertation.pdf`, baixado em 15/09).
   contexto guardado no servidor; o estado fica no cliente. Ganhos: visibilidade,
   **confiabilidade (facilita a recuperação de falhas parciais, p. 79)** e
   escalabilidade. Custo: dados repetidos em cada requisição.
-- Referência:
+- Referência, no modelo de tese do manual da faculdade (item 2.1.15.14), com
+  o endereço oficial (162 folhas numeradas, conferido no PDF):
   > FIELDING, Roy Thomas. **Architectural styles and the design of
-  > network-based software architectures**. 2000. Tese (Doutorado em
-  > Information and Computer Science) – University of California, Irvine, 2000.
+  > network-based software architectures**. 2000. 162 f. Tese (Doutorado) -
+  > Information and Computer Science, University of California, Irvine, 2000.
   > Disponível em: https://ics.uci.edu/~fielding/pubs/dissertation/top.htm.
   > Acesso em: 15 set. 2026.
+- Em inglês e em PDF, pode: o manual não proíbe e dá exemplo de e-book em PDF.
+  Título na referência fica no original; no texto, citação **indireta** em
+  português (sem marca). Citação direta traduzida levaria "tradução nossa".
+- O livro de Sistemas Distribuídos da Minha Biblioteca **não trata de REST**
+  (conferido pelo autor em 15/09) — o Fielding fica sozinho na 2.6.
 
 **Google — Firebase Cloud Messaging.** Documentação oficial; a página se chama
 "Firebase Cloud Messaging" e o descreve como solução de mensagens entre
