@@ -259,12 +259,13 @@ O autor tem o PDF completo (`fielding_dissertation.pdf`, baixado em 15/09).
 **Google — Firebase Cloud Messaging.** Documentação oficial; a página se chama
 "Firebase Cloud Messaging" e o descreve como solução de mensagens entre
 plataformas para enviar mensagens de forma confiável.
-  > GOOGLE. **Firebase Cloud Messaging**. Firebase documentation. [s.d.].
+  > GOOGLE. **Firebase Cloud Messaging**. Firebase documentation. [s.d.]a.
   > Disponível em: https://firebase.google.com/docs/cloud-messaging. Acesso em:
-  > 14 set. 2026.
+  > 15 set. 2026.
 
-Com duas referências GOOGLE sem data, diferenciar por letra no texto e na lista:
-Flutter = **[s.d.]a**, Firebase = **[s.d.]b**.
+Com duas referências GOOGLE sem data, diferenciar por letra no texto e na lista,
+na ordem alfabética dos títulos: **Firebase = [s.d.]a**, **Flutter = [s.d.]b**
+(a citação do Flutter na 2.4.1 passa a ser "(GOOGLE, [s.d.]b)").
 
 **Texto sugerido para a 2.6** (com a página e o argumento da confiabilidade):
 > A comunicação entre o aplicativo, o controlador e a nuvem segue o estilo
