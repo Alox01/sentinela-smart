@@ -333,7 +333,40 @@ depois de ler o trecho.
 
 ---
 
-## 5. CONCLUSÃO, RESUMO E ABSTRACT — reescrever até 30/10
+## 5. CONCLUSÃO — versão provisória (15/09/2026)
+
+Para a entrega de 16/09, no lugar do texto-modelo. Dois parágrafos, só com o
+que a seção 4 comprova. Em outubro, ampliar (retomar cada objetivo com mais
+detalhe e fechar com o ganho para o produtor).
+
+> Conclui-se que a construção de uma camada de software híbrida, orientada pela
+> Computação de Borda e por sincronização baseada em carimbos de tempo, atende
+> ao problema formulado na introdução: manter o monitoramento e o controle da
+> estufa mesmo em cenários de conectividade instável. Os objetivos específicos
+> foram atingidos e verificados em testes com o controlador físico: a
+> arquitetura híbrida alternou automaticamente entre rede local, nuvem e modo
+> offline; a API em nuvem manteve o histórico da estufada, entregou os comandos
+> feitos a distância e avisou o produtor quando o controlador deixou de se
+> comunicar; o aplicativo preservou em fila os comandos feitos sem conexão e
+> gerou o relatório do ciclo de secagem; e a sincronização por carimbos de tempo
+> aplicou o ajuste pendente na reconexão, sem sobrescrever alterações mais
+> recentes. Para o produtor, isso significa acompanhar e ajustar a cura sem que
+> a instabilidade da rede interrompa o acompanhamento ou comprometa o registro
+> do processo.
+>
+> Os resultados, porém, vêm de testes em bancada, e não de uma estufa em
+> operação durante a safra, o que permanece como a principal verificação a ser
+> feita. Como estudos futuros, identificam-se o envio da fila de comandos
+> diretamente ao controlador quando ele estiver na rede local, reduzindo a
+> espera da consulta pela nuvem; a validação da versão para iOS; a definição de
+> uma política de retenção dos dados no banco em nuvem; e, em conjunto com o
+> projeto complementar, o armazenamento das leituras no próprio controlador
+> durante a falta de internet, de modo a fechar a lacuna que hoje permanece no
+> histórico.
+
+---
+
+## 5b. RESUMO E ABSTRACT — escrever até 30/10
 
 O texto antigo destas seções foi retirado deste arquivo de propósito: ele dizia
 que o push não estava implementado e que o hardware era futuro. Pelo
