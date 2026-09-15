@@ -366,6 +366,25 @@ detalhe e fechar com o ganho para o produtor).
 
 ---
 
+## 5a. Checklist até 30/10 (versão definitiva)
+
+- **Resumo (até 300 palavras), palavras-chave, Abstract e keywords** — hoje
+  ainda estão com o texto-modelo.
+- **Ampliar a conclusão provisória**: retomar os quatro objetivos com os números
+  dos resultados (39 h 39 min, 265 leituras, comando aplicado às 11:03:47).
+- **Páginas:** o manual limita a **15**; em 15/09 o artigo já estava em 15 sem
+  nenhuma figura. A cobrança é só na entrega de outubro (informação do
+  professor), então as figuras entram agora no tamanho legível e o corte fica
+  para lá. Para cortar: figuras de 6–7 cm de altura, bordas dos prints
+  recortadas, e perguntar ao professor se cada seção precisa mesmo começar em
+  página nova (as meias páginas em branco custam ~2 páginas).
+- **Uso de IA:** confirmar com o professor se deve ser declarado na metodologia;
+  as duas versões de frase estão combinadas com o autor, fora do repositório.
+- **Figuras:** título em cima, "Fonte: O Autor, 2026." embaixo, corpo 10,
+  centralizado, e a chamada "(Figura N)" no texto.
+
+---
+
 ## 5b. RESUMO E ABSTRACT — escrever até 30/10
 
 O texto antigo destas seções foi retirado deste arquivo de propósito: ele dizia
