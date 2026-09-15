@@ -25,6 +25,49 @@ por:
 
 > um dispositivo controlador externo, desenvolvido em projeto complementar,
 
+### 1b. Objetivos e estrutura (15/09/2026)
+
+Pedido pelo modelo do professor (slide 11): objetivo geral, objetivos
+específicos e, no fim, a estrutura do artigo. Cada objetivo específico tem um
+resultado na seção 4 que responde a ele.
+
+**Substituir o 3º parágrafo** ("Para solucionar esse problema, este trabalho
+propõe..."):
+
+> Para solucionar esse problema, este trabalho tem como objetivo geral
+> desenvolver a camada de software de uma plataforma IoT híbrida — o aplicativo
+> móvel e a API em nuvem — para o monitoramento e o controle de estufas de
+> secagem de fumo, capaz de manter o acompanhamento da temperatura e da
+> umidade, o histórico operacional e os alertas de segurança mesmo em
+> propriedades rurais com conectividade instável. Para atingi-lo, foram
+> definidos os seguintes objetivos específicos:
+>
+> a) definir uma arquitetura de software híbrida, que priorize a comunicação
+> pela rede local e utilize a nuvem como suporte complementar;
+>
+> b) desenvolver uma API em nuvem para a persistência do histórico, a entrega
+> de comandos feitos a distância e o envio de alertas ao celular;
+>
+> c) implementar um aplicativo móvel com alternância automática entre rede
+> local, nuvem e modo offline, fila de comandos pendentes e relatórios por
+> ciclo de secagem;
+>
+> d) validar a sincronização por carimbos de tempo e o funcionamento do
+> conjunto com o controlador físico da estufa em cenários de queda de conexão.
+
+**O 4º parágrafo** ("Para isso, a arquitetura considerada...") fica como está.
+
+**Acrescentar no fim da Introdução, depois do 4º parágrafo:**
+
+> Além desta introdução, o artigo está organizado em mais quatro seções. A
+> seção 2 apresenta o referencial teórico, com os conceitos de Internet das
+> Coisas, cura do tabaco, Computação de Borda, desenvolvimento multiplataforma,
+> sincronização de dados e comunicação por API REST e notificações push. A
+> seção 3 descreve a metodologia, os materiais e os métodos utilizados. A seção
+> 4 apresenta e discute os resultados obtidos nos testes de validação e as
+> limitações identificadas. Por fim, a seção 5 traz a conclusão e os possíveis
+> trabalhos futuros.
+
 ---
 
 ## 2. METODOLOGIA — trocar dois trechos
