@@ -228,6 +228,61 @@ com o controlador físico"*:
 
 ---
 
+## 4b. Referências conferidas (15/09/2026)
+
+Cada uma foi aberta e conferida na fonte. **Só citar o que foi lido** — é o que
+sustenta a citação na banca.
+
+**Fielding (2000) — REST.** Tese de doutorado, pública no site da universidade.
+O autor tem o PDF completo (`fielding_dissertation.pdf`, baixado em 15/09).
+- Onde está: capítulo 5, **seção 5.1.2 Client-Server (p. 78)** e **5.1.3
+  Stateless (p. 78–79)**.
+- 5.1.2: separa a interface (cliente) dos dados (servidor); a interface fica
+  portável entre plataformas e cada lado evolui sem depender do outro.
+- 5.1.3: cada requisição leva **toda a informação necessária** e não usa
+  contexto guardado no servidor; o estado fica no cliente. Ganhos: visibilidade,
+  **confiabilidade (facilita a recuperação de falhas parciais, p. 79)** e
+  escalabilidade. Custo: dados repetidos em cada requisição.
+- Referência:
+  > FIELDING, Roy Thomas. **Architectural styles and the design of
+  > network-based software architectures**. 2000. Tese (Doutorado em
+  > Information and Computer Science) – University of California, Irvine, 2000.
+  > Disponível em: https://ics.uci.edu/~fielding/pubs/dissertation/top.htm.
+  > Acesso em: 15 set. 2026.
+
+**Google — Firebase Cloud Messaging.** Documentação oficial; a página se chama
+"Firebase Cloud Messaging" e o descreve como solução de mensagens entre
+plataformas para enviar mensagens de forma confiável.
+  > GOOGLE. **Firebase Cloud Messaging**. Firebase documentation. [s.d.].
+  > Disponível em: https://firebase.google.com/docs/cloud-messaging. Acesso em:
+  > 14 set. 2026.
+
+Com duas referências GOOGLE sem data, diferenciar por letra no texto e na lista:
+Flutter = **[s.d.]a**, Firebase = **[s.d.]b**.
+
+**Texto sugerido para a 2.6** (com a página e o argumento da confiabilidade):
+> A comunicação entre o aplicativo, o controlador e a nuvem segue o estilo
+> arquitetural REST (Representational State Transfer), em que cada informação
+> do sistema é tratada como um recurso acessado por requisições HTTP
+> independentes entre si, sem que o servidor precise guardar o estado da
+> conversa com o cliente (FIELDING, 2000, p. 78). Segundo o mesmo autor, essa
+> ausência de estado no servidor também facilita a recuperação após falhas
+> parciais (FIELDING, 2000, p. 79), característica relevante para um sistema que
+> opera com conexão intermitente. É também o que permite ao aplicativo alternar
+> entre o controlador na rede local e a API em nuvem sem mudar a forma de se
+> comunicar.
+
+**Monteiro, Mengato Junior e Lima (2020) — Sistemas distribuídos.** Está na
+Minha Biblioteca da faculdade (ISBN 9786556901978; Porto Alegre: SAGAH). Serve
+melhor para a **seção 2.5** (sincronização) do que para o REST: tem capítulos de
+**sincronização de relógios (p. 165)**, **modelos de consistência (p. 195)**,
+**gestão da replicação (p. 211)** e **tolerância a falhas (p. 225)**. Só citar
+depois de ler o trecho.
+  > MONTEIRO, Eduarda Rodrigues; MENGATO JUNIOR, Ronaldo Cesar; LIMA, Bruno
+  > Santos de. **Sistemas distribuídos**. Porto Alegre: SAGAH, 2020.
+
+---
+
 ## 5. CONCLUSÃO, RESUMO E ABSTRACT — reescrever até 30/10
 
 O texto antigo destas seções foi retirado deste arquivo de propósito: ele dizia
