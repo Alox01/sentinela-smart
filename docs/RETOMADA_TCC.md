@@ -326,6 +326,22 @@ como estão, e **atualizadas na entrega de outubro**.
 - Verniz **Implastec ISOTEC** + álcool isopropílico **99,8%** (não o de farmácia) —
   **por último**, com a placa testada
 
+**Para o acionamento da ventoinha (o relé já chegou em 08/09):**
+- **Transistor NPN** BC337, 2N2222 ou S8050 (2 ou 3 unidades) — ou um MOSFET
+  2N7000 / BS170, que dispensa o resistor de base. O módulo de relé comprado tem
+  **só 3 pinos** (sem o jumper JD-VCC), então a lógica dele é de 5 V e os 3,3 V
+  do ESP32 não desligam a entrada com folga. O transistor resolve isso e dá o
+  comportamento à prova de falha: GPIO em 3,3 V liga o relé; GPIO em 0 V, solto
+  ou durante o boot, o relé fica desligado.
+- O resistor de base de **1 kΩ** já está com o produtor (sobra da protoboard).
+- **Pino do ESP32: GPIO 16 ou 17** — livres e sem pulso no boot. **Não usar o
+  GPIO 14** (o do LED de controle removido): ele solta um pulso ao ligar, o que
+  acionaria a ventoinha a cada reinício.
+- Ligação: GPIO → 1 kΩ → base; emissor → GND (comum com o ESP32); coletor → IN
+  do módulo; VCC do módulo → 5 V (VIN na bancada, fonte interna na caixa); GND
+  → GND. Contatos **COM** e **NO**, acionando a bobina do contator, nunca o
+  motor direto.
+
 **Para os cabos longos dos sensores:**
 - Resistor **2,2 kΩ** — só se o DHT22 falhar a 5 m; não trocar antes
 - Resistor **4,7 kΩ** extra — pull-up do sensor de chama. **Obrigatório:** sem ele,
