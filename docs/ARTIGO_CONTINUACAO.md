@@ -366,7 +366,52 @@ detalhe e fechar com o ganho para o produtor).
 
 ---
 
-## 5a. Checklist até 30/10 (versão definitiva)
+## 5a. Checklist do professor (vale para a entrega de 30/10)
+
+Documento "CHECKLIST 1.1 – ARTIGO CIENTÍFICO", que o orientador mandou seguir.
+A entrega de 16/09 foi parcial (texto + figuras); tudo abaixo é para outubro.
+**Orientador: Bruno Ricardo Resende** — o nome que aparece no checklist
+(TORMA) é do professor de TCC, não do orientador deste trabalho.
+
+**O que muda o planejamento:**
+
+- **20 a 25 páginas** (e não as 8–15 do manual). Em 16/09 o artigo tinha 15 sem
+  figuras. **Precisa crescer.**
+- **Falta a seção "Desenvolvimento"** (item 11 do checklist), hoje inexistente —
+  o artigo pula da metodologia para os resultados. Deve explicar como o sistema
+  foi construído, "como um tutorial", permitindo replicação, com **DER, diagrama
+  de casos de uso, telas do sistema e trechos de código**. Material pronto em
+  `DIAGRAMAS.md` (DER, arquitetura, sequência da sincronização, modelo do banco
+  local). É o que leva o texto às 20–25 páginas.
+- **Falta o tópico 3.3 "Comentários sobre o uso de IA no trabalho"** — o
+  professor **exige** a declaração; não é opcional.
+
+**Correções pontuais pendentes:**
+
+- **Nenhum parágrafo dos Tópicos Fundamentais pode ficar sem citação.** Estavam
+  sem, em 15/09: o último da 2.3, os dois da 2.4.1, o último da 2.5 e o segundo
+  da 2.6. Saída mais limpa: juntar cada um ao parágrafo anterior, que já tem
+  citação, ou levar o conteúdo para o Desenvolvimento.
+- **Ao menos dois autores por tópico**: a 2.4 tem só Ronchi (a 2.4.1 tem Google).
+- **Referências:** título das obras **em negrito** (nenhuma está); autor repetido
+  (GOOGLE, duas vezes) vira `_____.` na segunda entrada; meses abreviados em três
+  letras com ponto, exceto abril e maio (já está assim).
+- **3.1** precisa de um parágrafo por tipo de pesquisa (natureza, abordagem,
+  objetivos, procedimentos): hoje são três, falta separar "aplicada" de
+  "qualitativa".
+- **Palavras estrangeiras em itálico** (*framework*, *webviews*, *timestamps*,
+  *push*, *last write wins*).
+- **Considerações Finais (13) e Conclusão (14)** aparecem como itens distintos no
+  checklist; hoje há só a Conclusão. Perguntar ao orientador se quer as duas.
+- **Figuras:** o exemplo do checklist numera "Figura 01"; o manual usa "Figura
+  1". Confirmar qual seguir.
+- **Liberado pelo checklist (item 16):** seções **não** precisam começar em página
+  nova, e não deve haver excesso de linhas em branco — as meias páginas em branco
+  podem sair.
+- **Depende de outra pessoa:** revisão do Abstract por quem saiba inglês (item 5);
+  revisão geral e verificação em software antiplágio (item 19).
+
+## 5a-bis. Outros itens já combinados para 30/10
 
 - **Resumo (até 300 palavras), palavras-chave, Abstract e keywords** — hoje
   ainda estão com o texto-modelo.
