@@ -260,11 +260,11 @@ resultado inventado.
 |---|---|---|
 | 1 | Operação local com a internet desligada | ✅ 14/09/2026 — roteador desligado: aparelho seguiu lendo (Serial com 58°F / 73–74% e o motivo da queda) e voltou sozinho ao religar; o app reconectou sem intervenção. Prints do Serial com o produtor |
 | 2 | Comandos offline e sincronização ao reconectar | ✅ 14/09/2026 11:00–11:04 — ver o registro abaixo (com a limitação D8) |
-| 3 | Acesso remoto, de fora da propriedade | ✅ 13–14/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho (falta o print com "NUVEM" em "Detalhes da conexão") |
+| 3 | Acesso remoto, de fora da propriedade | ✅ 13–15/09/2026 — app em modo nuvem pelos dados móveis, celular fora da rede do aparelho; print de "Detalhes da conexão" em NUVEM tirado em 15/09 13:05 |
 | 4 | Pareamento e revogação com dois celulares | ✅ 05/08/2026; revogação de novo em 13–14/09 |
 | 5 | Alertas com o app aberto e fechado | ✅ 25/07, 13/08 e 13–14/09/2026 (sem dados, voltou, fora da faixa) |
 | 6 | Uma estufada completa: relatório, eventos, gráfico, PDF e CSV | ✅ 14/09/2026 — estufada #22 **encerrada** (39:39 h, 12/09 22:30 → 14/09 14:09): noite inteira preenchida pela nuvem, CSV com as 265 leituras, PDF com uma por hora, 4 alarmes (inclusive um com o app fechado e a sirene desligada), eventos de ajuste de todas as origens, temperatura e umidade finais certas. PDF gerado às 14:30 |
-| 7 | Registro de cada teste com data, resultado, prints e limitação | **em aberto** |
+| 7 | Registro de cada teste com data, resultado, prints e limitação | ✅ 14 e 15/09/2026 — registros abaixo |
 
 **Roteiro rápido para o #1 e o #2** (uns 60 segundos, com o app):
 Menu → "Detalhes da conexão" → confirmar modo **LOCAL** e **Pendências: 0** →
@@ -307,6 +307,26 @@ alguns segundos. O comando chegou; a volta para 65 era só a tela. Corrigido no
 mesmo dia (a tela segura o valor pedido com o aviso até o aparelho confirmar).
 **Refeito com o APK novo em 14/09: aprovado** — na volta da internet a tela
 ficou no valor pedido com o aviso de "aguardando", sem voltar ao antigo.
+
+*15/09/2026, 13:05–13:18 e 20:12–20:14 — rodada completa para as figuras do
+artigo* (estufada 2, iniciada em 14/09 14:09):
+
+| Hora | Imagem | O que mostrou |
+|---|---|---|
+| 13:05 | prints home + monitoramento + detalhes | celular só em 4G: ponto azul, **NUVEM**, "Reportando (via nuvem)", local offline, nuvem online, pendências 0; ajuste 60°F / 70% |
+| 13:06–13:07 | prints monitoramento | pela nuvem: temperatura 60→70 ("Aguardando a estufa aplicar") e umidade 70→60 ("Comando aplicado.") |
+| 13:07 | prints home + monitoramento + detalhes | dados desligados: **OFFLINE** nas duas estufas; o monitoramento abriu com **0°F / 0% e ajustes 0** (D10 na `AUDITORIA.md`) |
+| 13:08 | prints home + monitoramento + detalhes | Wi-Fi da casa: ponto verde, **LOCAL**, ajuste **70 / 60** — o que foi pedido pela nuvem já estava no aparelho |
+| 13:12 | prints monitoramento + detalhes | sem conexão: temperatura 70→65 (OFFLINE \| 1) e umidade 60→65 (OFFLINE \| 2), "Últimas pendências" com as duas; Wi-Fi religado: NUVEM aguardando → **LOCAL 65 / 65, pendências 0** |
+| 13:13–13:14 | prints do relatório | eventos 13:06, 13:07, 13:12 e 13:12 registrados; gráfico de temperatura e de umidade |
+| 13:15–13:16 | push + home + monitoramento + eventos | chama: push "Risco de incêndio", card com alerta, faixa "SENSOR DE CHAMA ATIVADO" em LOCAL; eventos "Alerta de incêndio acionado" 13:15 e "Alarme normalizado" 13:16; alarmes 3 → 4 |
+| 13:18 | print monitoramento | umidade 81% com ajuste 65: indicador "Alta" aceso, **sem alarme** (correto: umidade não dispara alarme) |
+| 20:12 / 20:14 | pushes | "Estufa sem comunicação" (5 min sem dados) e "Estufa voltou a se comunicar" |
+| — | 6 fotos do visor | valores 60, 64, 65, 66 e 70 durante os testes |
+
+Resultado: híbrido, nuvem, fila offline com dois comandos, alerta de chama e
+alertas de comunicação aprovados. Falhas vistas: D10 (tela zerada ao abrir sem
+conexão) e D11 (eventos de dias diferentes sem data).
 
 **Evidência nova de setembro, que pode entrar:** placa conferida com multímetro
 (01/09); todos os grupos funcionando na placa soldada (09/09); troca do sensor de

@@ -519,6 +519,24 @@ funciona:
   refazer nada. **Aprovado em 14/09:** o PDF da #22 gerado às 14:30 saiu com
   70°F / 65% finais e sem os eventos inventados; o CSV, sem a linha zerada.
 
+- [ ] **D10. Abrir o monitoramento sem conexão mostra 0°F / 0% e ajustes 0.**
+  Visto em 15/09 13:07: celular sem Wi-Fi e sem dados, card da home em OFFLINE,
+  e a tela da estufa abriu com tudo zerado. Não grava nada (o D9 barra), mas
+  **os botões + e − ficam ativos**: um toque em + pediria ajuste de 1°F, que
+  entraria na fila e seria aplicado pelo aparelho na volta da internet.
+
+  *Causa:* a tela parte de zero e só troca ao receber a primeira leitura
+  (`_temLeituraReal`); sem conexão, ela nunca chega. Quando a tela já estava
+  aberta antes de cair (13:12), os valores ficaram certos.
+  *Correção proposta:* desativar o `PainelControle` enquanto
+  `!_temLeituraReal` e mostrar "—" no lugar dos zeros; melhor ainda, abrir com a
+  última leitura salva no celular, marcada como antiga.
+
+- [ ] **D11. Eventos de dias diferentes aparecem só com a hora.** Na estufada 2
+  (14/09 14:09 → 15/09) a lista mostra 19:02, 19:11, 08:00, 13:06… — parece fora
+  de ordem, mas é a virada do dia. *Correção proposta:* mostrar a data
+  (dd/mm) quando a estufada passa de um dia, ou um separador por dia.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
