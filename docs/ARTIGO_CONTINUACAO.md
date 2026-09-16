@@ -385,7 +385,71 @@ detalhe e fechar com o ganho para o produtor).
 
 ---
 
-## 5b. RESUMO E ABSTRACT — escrever até 30/10
+## 5b. RESUMO, PALAVRAS-CHAVE, ABSTRACT E KEYWORDS (15/09/2026)
+
+246 palavras, dentro das 300 do manual. Parágrafo único, terceira pessoa, sem
+citações e sem abreviações, na ordem do slide 8 (introdução, objetivo, método,
+resultados, conclusão). Substitui o texto-modelo em azul.
+
+> **RESUMO:** A instabilidade da conexão à internet no meio rural limita a
+> adoção de soluções de Internet das Coisas que dependem exclusivamente de
+> processamento em nuvem, situação crítica nas estufas de secagem de fumo, em
+> que o controle contínuo de temperatura e umidade determina a qualidade da
+> produção e a prevenção de incêndios. Este trabalho teve como objetivo
+> desenvolver a camada de software de uma plataforma IoT híbrida, composta por
+> um aplicativo móvel e por uma API em nuvem, capaz de manter o monitoramento,
+> o histórico e os alertas mesmo com conectividade instável. O aplicativo foi
+> desenvolvido com o framework Flutter e banco de dados local, e a API em
+> Node.js com o framework Express, hospedada em nuvem, com banco de dados
+> PostgreSQL gerenciado e envio de notificações push. A comunicação prioriza a
+> rede local e utiliza a nuvem como suporte complementar, e a sincronização
+> emprega carimbos de tempo com resolução por última escrita vence, aplicada por
+> campo de configuração. A validação ocorreu primeiro com um simulador e, na
+> etapa final, com o controlador físico da estufa, desenvolvido em projeto
+> complementar, por meio de uma matriz de cenários registrada com data, capturas
+> de tela e fotografias. Os resultados mostraram a alternância automática entre
+> rede local, nuvem e modo offline, a entrega de comandos feitos sem internet
+> após a reconexão, o registro de uma estufada de 39 horas e 39 minutos com
+> relatório exportado em PDF e CSV, e a chegada de notificações com o aplicativo
+> fechado. Conclui-se que a arquitetura híbrida mantém o acompanhamento e o
+> controle da estufa independentemente da disponibilidade de internet, restando
+> como verificação futura o uso em uma estufa durante a safra.
+>
+> **PALAVRAS-CHAVE:** Internet das Coisas; Computação de Borda; sincronização de
+> dados; estufas de secagem de fumo.
+>
+> **ABSTRACT:** Unstable internet connectivity in rural areas limits the
+> adoption of Internet of Things solutions that rely exclusively on cloud
+> processing, a critical situation in tobacco curing barns, where continuous
+> temperature and humidity control determines production quality and fire
+> prevention. This work aimed to develop the software layer of a hybrid IoT
+> platform, composed of a mobile application and a cloud API, able to keep
+> monitoring, history and alerts working even under unstable connectivity. The
+> application was developed with the Flutter framework and a local database, and
+> the API in Node.js with the Express framework, hosted in the cloud, with a
+> managed PostgreSQL database and push notification delivery. Communication
+> prioritizes the local network and uses the cloud as complementary support, and
+> synchronization relies on timestamps with last-write-wins conflict resolution,
+> applied per configuration field. Validation was carried out first with a
+> simulator and, in the final stage, with the greenhouse physical controller,
+> developed in a complementary project, through a matrix of scenarios recorded
+> with date, screenshots and photographs. The results showed automatic switching
+> between local network, cloud and offline mode, the delivery of commands issued
+> without internet after reconnection, the record of a 39-hour and 39-minute
+> curing cycle with a report exported in PDF and CSV, and the arrival of
+> notifications with the application closed. It is concluded that the hybrid
+> architecture keeps greenhouse monitoring and control working regardless of
+> internet availability, leaving as future verification its use in a barn during
+> the harvest season.
+>
+> **KEYWORDS:** Internet of Things; Edge Computing; data synchronization;
+> tobacco curing barns.
+
+**Ao colar:** manter os rótulos (RESUMO:, PALAVRAS-CHAVE:, ABSTRACT:,
+KEYWORDS:) em negrito, como no modelo, e o texto em formatação normal — tirar o
+azul e o itálico do texto-modelo. O slide 7 pede palavras-chave separadas por
+ponto e vírgula; o modelo do `.docx` diz vírgula. Na dúvida, seguir o
+orientador.
 
 O texto antigo destas seções foi retirado deste arquivo de propósito: ele dizia
 que o push não estava implementado e que o hardware era futuro. Pelo
