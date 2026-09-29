@@ -339,20 +339,29 @@ como estão, e **atualizadas na entrega de outubro**.
 
 **Para fechar o aparelho:**
 - Chave de fenda pequena ou jogo de precisão (se ainda não tiver)
-- Caixa IP65 ou IP67 com **medida interna mínima de 300 × 150 × 100 mm** — o
-  tamanho foi decidido pensando no relé e no contator que entram depois
+- Caixa IP65 ou IP67. A medida pensada para o relé e o contator era **300 × 150
+  × 100 mm** internos, mas o que vale é a área: uma caixa de **270 × 190 × 125
+  mm** (externos) foi aprovada em 29/09 — perde no comprimento e ganha em
+  largura e profundidade, e a profundidade é o que o contator pede. Preferir as
+  que já vêm com **pinos de fixação no fundo**, para prender o trilho e os
+  espaçadores sem furar e sem perder a vedação
 - 4 espaçadores sextavados de **nylon M3 × 10 mm**, com parafusos
 - Abraçadeiras de nylon; broca escalonada até 13,5 mm (para os prensa-cabos)
 - Verniz **Implastec ISOTEC** + álcool isopropílico **99,8%** (não o de farmácia) —
   **por último**, com a placa testada
 
 **Para o acionamento da ventoinha (o relé já chegou em 08/09):**
-- **Transistor NPN** BC337, 2N2222 ou S8050 (2 ou 3 unidades) — ou um MOSFET
+- **Transistor NPN BC547** (levar 3 a 5 — são centavos e queimam fácil com a
+  pinagem trocada). Também servem BC337, 2N2222 ou S8050, ou um MOSFET
   2N7000 / BS170, que dispensa o resistor de base. O módulo de relé comprado tem
   **só 3 pinos** (sem o jumper JD-VCC), então a lógica dele é de 5 V e os 3,3 V
   do ESP32 não desligam a entrada com folga. O transistor resolve isso e dá o
   comportamento à prova de falha: GPIO em 3,3 V liga o relé; GPIO em 0 V, solto
   ou durante o boot, o relé fica desligado.
+- **Contator Soprano CS(T)-12 10**, 12 A, bobina **220 Vca**, 1 NA auxiliar
+  (13–14) — conferido em 29/09. É tripolar: o motor monofásico usa **dois
+  polos**, 1/L1–2/T1 e 3/L2–4/T2. O 13–14 não entra no acionamento; fica de
+  reserva para, um dia, o ESP32 confirmar que o contator fechou.
 - O resistor de base de **1 kΩ** já está com o produtor (sobra da protoboard).
 - **Pino do ESP32: GPIO 16 ou 17** — livres e sem pulso no boot. **Não usar o
   GPIO 14** (o do LED de controle removido): ele solta um pulso ao ligar, o que
@@ -361,6 +370,16 @@ como estão, e **atualizadas na entrega de outubro**.
   do módulo; VCC do módulo → 5 V (VIN na bancada, fonte interna na caixa); GND
   → GND. Contatos **COM** e **NO**, acionando a bobina do contator, nunca o
   motor direto.
+
+**Para a parte de 220 V dentro da caixa (definido em 29/09):**
+- **Porta-fusível de painel 5 × 20 mm** (rosca) e **fusível de 2 A**, de
+  preferência retardado (T2A); rápido serve, porque a caixa consome menos de
+  0,2 A. Ele protege a fiação e a fonte, **não o motor**. Montar na parede da
+  caixa, com a tampa para fora, e cobrir os terminais de trás com termorretrátil
+- **Fonte 220 V → 5 V** de ~5 W (carregador de celular com o cabo cortado, ou
+  uma fonte de painel tipo HLK-PM01)
+- **Cabo flexível 0,75 mm²** (preto, azul e verde-amarelo), bornes **WAGO 221**,
+  **trilho DIN** de ~15 cm para o contator e espaguete termorretrátil sortido
 
 **Para os cabos longos dos sensores:**
 - Resistor **2,2 kΩ** — só se o DHT22 falhar a 5 m; não trocar antes
