@@ -2392,10 +2392,11 @@ void atualizarEstadoTemperatura() {
 // histerese e ja zerado quando o DS18B20 falha. Aqui so entram as regras que o
 // LED nao precisava ter - o prazo minimo entre trocas e a pressa para desligar.
 void aplicarVentoinha() {
-  // A ventoinha sopra ar DENTRO da fornalha para o fogo pegar mais forte. Com
-  // chama detectada fora da hora, ou com a estufa no limite de fogo, insistir
-  // nisso seria assoprar o incendio. O alarme ja avisa; aqui o aparelho tira o
-  // ar que alimenta a chama.
+  // A ventoinha sopra ar DENTRO da fornalha para o fogo pegar mais forte. O
+  // sensor de chama fica FORA do forno, na cabine: fogo dentro do forno e o
+  // normal, e o sensor acusar quer dizer que o fogo saiu de onde devia estar -
+  // empurrado pela propria ventoinha. Parar tira a forca que espalha a chama. O
+  // limite de temperatura de incendio entra pelo mesmo motivo.
   bool fogo = (alertaLuz || riscoIncendioAgora());
   bool desejado = ledControleLigado && !fogo;
   if (desejado == ventoinhaLigada) return;
