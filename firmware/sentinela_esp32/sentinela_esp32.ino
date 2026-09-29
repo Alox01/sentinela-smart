@@ -2392,12 +2392,18 @@ void atualizarEstadoTemperatura() {
 // histerese e ja zerado quando o DS18B20 falha. Aqui so entram as regras que o
 // LED nao precisava ter - o prazo minimo entre trocas e a pressa para desligar.
 void aplicarVentoinha() {
-  bool desejado = ledControleLigado;
+  // A ventoinha sopra ar DENTRO da fornalha para o fogo pegar mais forte. Com
+  // chama detectada fora da hora, ou com a estufa no limite de fogo, insistir
+  // nisso seria assoprar o incendio. O alarme ja avisa; aqui o aparelho tira o
+  // ar que alimenta a chama.
+  bool fogo = (alertaLuz || riscoIncendioAgora());
+  bool desejado = ledControleLigado && !fogo;
   if (desejado == ventoinhaLigada) return;
 
-  // Parar por falta de leitura nao espera prazo nenhum: sem temperatura o
-  // aparelho esta cego, e ventoinha parada e o estado seguro combinado.
-  bool desligarPorFalha = (!desejado && !leituraOk);
+  // Parar por falta de leitura ou por fogo nao espera prazo nenhum: sem
+  // temperatura o aparelho esta cego, e ventoinha parada e o estado seguro
+  // combinado.
+  bool desligarPorFalha = (!desejado && (!leituraOk || fogo));
   unsigned long agora = millis();
   if (!desligarPorFalha && ultimaTrocaVentoinhaMs != 0 &&
       agora - ultimaTrocaVentoinhaMs < TEMPO_MINIMO_VENTOINHA_MS) {
@@ -2408,10 +2414,10 @@ void aplicarVentoinha() {
   ultimaTrocaVentoinhaMs = agora;
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
   Serial.print("Ventoinha ");
-  Serial.println(ventoinhaLigada
-                     ? "LIGADA"
-                     : (desligarPorFalha ? "DESLIGADA (sem leitura)"
-                                         : "DESLIGADA"));
+  Serial.println(ventoinhaLigada ? "LIGADA"
+                 : fogo          ? "DESLIGADA (fogo)"
+                 : !leituraOk    ? "DESLIGADA (sem leitura)"
+                                 : "DESLIGADA");
 }
 
 // Traduz o estado em LEDs e buzzer. Unico lugar que decide se a sirene toca, e

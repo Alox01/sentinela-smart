@@ -387,8 +387,10 @@ estufa, um carregador de celular com cabo USB cortado.
     `ledControleLigado` que já acendia o LED de controle (histerese de 2 °F, e
     zerado quando o DS18B20 falha); **30 s no mínimo entre trocas**, prazo que
     desligar por falha de sensor ignora; `ventiladorLigado` passou a reportar o
-    estado real, e o servidor já tinha a coluna. Compilado: 87% do flash, 15% da
-    RAM. **Nada mudou no app nem no servidor.**
+    estado real, e o servidor já tinha a coluna. **Chama detectada ou risco de
+    incêndio desligam a ventoinha na hora**, sem esperar os 30 s — ela sopra ar
+    no fogo, então insistir seria atiçar o incêndio. Compilado: 87% do flash,
+    15% da RAM. **Nada mudou no app nem no servidor.**
   - **Ligação:** GPIO 16 → 1 kΩ → base do BC547; emissor → GND; coletor → IN do
     módulo; VCC do módulo → 5 V (VIN) e GND → GND. Como o módulo dispara em nível
     baixo e o NPN inverte, **GPIO em HIGH liga a ventoinha**. Contatos COM e NO
@@ -495,10 +497,11 @@ Saudável: ~87% do flash. Salto grande = alguma biblioteca entrou sem querer.
 - **A sirene também deveria esperar o fim do ajuste?** Hoje ela toca na hora; só o
   aviso para o celular espera. Fazer a sirene esperar é decisão maior, porque ela
   é o sinal de segurança principal.
-- **A ventoinha empurra o ar quente da fornalha, ou existe para resfriar?**
-  Respondido em 29/09/2026 pela especificação do acionamento: liga quando a
-  temperatura **cai** — a ventoinha empurra o ar quente da fornalha, e é a lógica
-  que o firmware já tinha. **Conferir uma vez com o produtor antes de energizar o
-  motor**: invertido, a estufa esfriaria quando precisasse aquecer.
+- ~~**A ventoinha empurra o ar quente da fornalha, ou existe para resfriar?**~~
+  Respondido pelo produtor em 29/09/2026: ela **sopra ar dentro da fornalha para
+  o fogo pegar mais forte**. Liga quando a temperatura cai, que é a lógica que o
+  firmware já tinha. Daí veio a regra de que **fogo desliga a ventoinha**: com
+  chama detectada ou com a estufa no limite de incêndio, soprar seria alimentar
+  o fogo.
 - **Três commits antigos têm a linha `Co-Authored-By`.** Decisão do produtor e do
   orientador sobre o que fazer com eles.
