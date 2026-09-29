@@ -124,6 +124,23 @@ const bool SENSOR_LUZ_ATIVO_LOW = true;
 #define LED_CONTROLE_TEMP 14
 #define BUZZER 25
 
+// Saida da ventoinha da fornalha. O GPIO nao fala com o rele direto: 3,3 V nao
+// apagam o optoacoplador do modulo, que e alimentado em 5 V e dispara em nivel
+// baixo - o rele ficava colado para sempre. Entre os dois ha um NPN (BC547) com
+// 1 k na base, que inverte o sinal: GPIO em HIGH satura o transistor, puxa o IN
+// do modulo para o GND e fecha o contato. Por isso HIGH = ventoinha ligada.
+// O 16 nao e pino de boot nem de flash, e no reset ele nasce baixo: a ventoinha
+// nunca parte sozinha.
+#define RELE_VENTOINHA 16
+
+// Quanto tempo a ventoinha precisa ficar em um estado antes de trocar. Protege
+// a bobina do contator e o motor de 1/8 cv contra liga-desliga seguido, que os
+// 2 F de histerese sozinhos nao impedem quando a temperatura fica na fronteira.
+// Desligar por falha de sensor ignora esse prazo: seguranca nao espera.
+const unsigned long TEMPO_MINIMO_VENTOINHA_MS = 30000;
+bool ventoinhaLigada = false;
+unsigned long ultimaTrocaVentoinhaMs = 0;
+
 #define DISPLAY_CLK 18
 #define DISPLAY_DIO 19
 TM1637Display display(DISPLAY_CLK, DISPLAY_DIO);
@@ -388,6 +405,7 @@ void prepararRedeConectada();
 void marcarChaveRegistrada();
 void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
+void aplicarVentoinha();
 
 // ============================================================
 //  SETUP
@@ -396,6 +414,12 @@ const char* textoMotivoFalhaWifi(uint8_t motivo);
 // partir do chip, config gravada, sensores e saidas, rede, e so entao as rotas
 // HTTP. O controle local ja funciona antes da rede - e o ponto do edge-first.
 void setup() {
+  // Antes de qualquer outra coisa: a ventoinha move um motor de 220 V, e o
+  // caminho ate aqui (Serial, MAC, config, sensores) leva mais de um segundo.
+  // Deixar o pino solto nesse intervalo e deixar o contator no chute.
+  pinMode(RELE_VENTOINHA, OUTPUT);
+  digitalWrite(RELE_VENTOINHA, LOW);
+
   Serial.begin(115200);
   delay(1000);
 
@@ -1534,7 +1558,7 @@ void empurrarLeituraNuvem() {
   doc["perigoChama"] = alertaLuz;
   doc["riscoIncendio"] = riscoIncendioAgora();
   doc["aquecedorLigado"] = ledControleLigado;
-  doc["ventiladorLigado"] = false;
+  doc["ventiladorLigado"] = ventoinhaLigada;
   doc["umidificadorLigado"] = false;
   doc["faseAtual"] = fasePorAlvo(temperaturaAlvoF);
   doc["aviso"] = avisoAtual();
@@ -1893,7 +1917,7 @@ void handleStatus() {
   status["perigoChama"] = alertaLuz;
   status["riscoIncendio"] = riscoIncendioAgora();
   status["aquecedorLigado"] = ledControleLigado;
-  status["ventiladorLigado"] = false;  // sem rele de ventilador
+  status["ventiladorLigado"] = ventoinhaLigada;
   status["umidificadorLigado"] = false;
   status["faseAtual"] = fasePorAlvo(temperaturaAlvoF);
   status["aviso"] = avisoAtual();
@@ -2363,6 +2387,33 @@ void atualizarEstadoTemperatura() {
   }
 }
 
+// Leva ao rele a mesma decisao que acende o LED de controle: quem manda e
+// `ledControleLigado`, calculado em atualizarEstadoTemperatura() com os 2 F de
+// histerese e ja zerado quando o DS18B20 falha. Aqui so entram as regras que o
+// LED nao precisava ter - o prazo minimo entre trocas e a pressa para desligar.
+void aplicarVentoinha() {
+  bool desejado = ledControleLigado;
+  if (desejado == ventoinhaLigada) return;
+
+  // Parar por falta de leitura nao espera prazo nenhum: sem temperatura o
+  // aparelho esta cego, e ventoinha parada e o estado seguro combinado.
+  bool desligarPorFalha = (!desejado && !leituraOk);
+  unsigned long agora = millis();
+  if (!desligarPorFalha && ultimaTrocaVentoinhaMs != 0 &&
+      agora - ultimaTrocaVentoinhaMs < TEMPO_MINIMO_VENTOINHA_MS) {
+    return;
+  }
+
+  ventoinhaLigada = desejado;
+  ultimaTrocaVentoinhaMs = agora;
+  digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
+  Serial.print("Ventoinha ");
+  Serial.println(ventoinhaLigada
+                     ? "LIGADA"
+                     : (desligarPorFalha ? "DESLIGADA (sem leitura)"
+                                         : "DESLIGADA"));
+}
+
 // Traduz o estado em LEDs e buzzer. Unico lugar que decide se a sirene toca, e
 // onde fogo se distingue de temperatura: continuo contra intermitente.
 void atualizarSaidas() {
@@ -2370,6 +2421,7 @@ void atualizarSaidas() {
 
   digitalWrite(LED_ALERTA, existeAlerta ? HIGH : LOW);
   digitalWrite(LED_CONTROLE_TEMP, ledControleLigado ? HIGH : LOW);
+  aplicarVentoinha();
 
   // Vale tambem durante o ajuste: piscando um numero no visor, e o LED que diz
   // se o produtor esta mexendo na umidade ou na temperatura.
