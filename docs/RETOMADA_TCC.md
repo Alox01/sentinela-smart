@@ -373,7 +373,7 @@ estufa, um carregador de celular com cabo USB cortado.
 ### D. Depois da banca
 
 - **Rede no núcleo separado** (o conserto estrutural da seção 4)
-- **Acionamento da ventoinha** — tudo decidido, nada construído:
+- **Acionamento da ventoinha** — firmware pronto em 29/09/2026 (falta montar):
   - Motor medido na plaqueta: **WEG 1/8 cv, 220 V, 0,86 A**
   - Relé de 1 canal com optoacoplador **acionando um contator** (bobina 220 V). O
     relé daria conta sozinho; o contator entra porque a ventoinha liga muitas
@@ -382,6 +382,21 @@ estufa, um carregador de celular com cabo USB cortado.
     mercado: todo aparelho do ramo é assim)
   - Fonte interna de **5 W** (não 3 W), fusível **2 A retardado**, tomada com terra
   - Em qualquer falha — boot, travamento, reinício — **a ventoinha fica desligada**
+  - **Feito no firmware (29/09):** saída no **GPIO 16** (`RELE_VENTOINHA`),
+    `OUTPUT` e `LOW` na primeira linha do `setup()`; o relé segue o mesmo
+    `ledControleLigado` que já acendia o LED de controle (histerese de 2 °F, e
+    zerado quando o DS18B20 falha); **30 s no mínimo entre trocas**, prazo que
+    desligar por falha de sensor ignora; `ventiladorLigado` passou a reportar o
+    estado real, e o servidor já tinha a coluna. Compilado: 87% do flash, 15% da
+    RAM. **Nada mudou no app nem no servidor.**
+  - **Ligação:** GPIO 16 → 1 kΩ → base do BC547; emissor → GND; coletor → IN do
+    módulo; VCC do módulo → 5 V (VIN) e GND → GND. Como o módulo dispara em nível
+    baixo e o NPN inverte, **GPIO em HIGH liga a ventoinha**. Contatos COM e NO
+    na bobina do contator (Soprano CS 12, 220 V), e o motor passa pelos contatos
+    de força. A chave Manual/Automático fica em paralelo com o NO, fora do
+    firmware.
+  - **Falta:** montar, testar na bancada sem os 220 V (ouvindo o clique do relé),
+    depois com o contator, e por último com o motor.
 - Verniz e caixa definitiva
 - **Gravar o firmware sem cabo (OTA)** — conversado em 14/09/2026, adiado por
   decisão do produtor. Hoje cada gravação exige abrir a caixa, ligar o cabo e
@@ -480,9 +495,10 @@ Saudável: ~87% do flash. Salto grande = alguma biblioteca entrou sem querer.
 - **A sirene também deveria esperar o fim do ajuste?** Hoje ela toca na hora; só o
   aviso para o celular espera. Fazer a sirene esperar é decisão maior, porque ela
   é o sinal de segurança principal.
-- **A ventoinha empurra o ar quente da fornalha, ou existe para resfriar?** O
-  firmware liga o comando quando a temperatura **cai** — lógica de aquecedor. Se a
-  ventoinha for para resfriar, o sentido é o inverso. **Decidir antes de ligar o
-  relé.**
+- **A ventoinha empurra o ar quente da fornalha, ou existe para resfriar?**
+  Respondido em 29/09/2026 pela especificação do acionamento: liga quando a
+  temperatura **cai** — a ventoinha empurra o ar quente da fornalha, e é a lógica
+  que o firmware já tinha. **Conferir uma vez com o produtor antes de energizar o
+  motor**: invertido, a estufa esfriaria quando precisasse aquecer.
 - **Três commits antigos têm a linha `Co-Authored-By`.** Decisão do produtor e do
   orientador sobre o que fazer com eles.
