@@ -500,8 +500,11 @@ Saudável: ~87% do flash. Salto grande = alguma biblioteca entrou sem querer.
 - ~~**A ventoinha empurra o ar quente da fornalha, ou existe para resfriar?**~~
   Respondido pelo produtor em 29/09/2026: ela **sopra ar dentro da fornalha para
   o fogo pegar mais forte**. Liga quando a temperatura cai, que é a lógica que o
-  firmware já tinha. Daí veio a regra de que **fogo desliga a ventoinha**: com
-  chama detectada ou com a estufa no limite de incêndio, soprar seria alimentar
-  o fogo.
+  firmware já tinha. Daí veio a regra de que **fogo desliga a ventoinha**. O
+  sensor de chama fica **fora do forno, na cabine**: fogo dentro do forno é o
+  normal, e o sensor acusar significa que o fogo **saiu de onde devia estar** —
+  com a ventoinha empurrando ar para dentro da fornalha, ou seja, empurrando
+  chama e brasa para fora. Parar tira a força que espalha o fogo. Vale também
+  para o limite de temperatura de incêndio.
 - **Três commits antigos têm a linha `Co-Authored-By`.** Decisão do produtor e do
   orientador sobre o que fazer com eles.
