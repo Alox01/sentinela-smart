@@ -403,6 +403,24 @@ reiniciando passa pelo mesmo boot.
 **Exige um resistor segurando a linha de controle no estado desligado.** Barato, e
 tem que estar no projeto desde o começo — não é remendo posterior.
 
+### Onde a caixa fica, e por que isso importa (09/10/2026)
+
+A caixa **não fica dentro da estufa nem perto da fornalha**: ela é montada do lado
+de fora, longe do forno, e no máximo fica morna. Só os **sensores** é que
+trabalham no calor — a cabine chega a 80–85 °C, e a estufa, no fim da cura,
+passa dos 70 °C.
+
+Isso decide uma lista de coisas que, antes de saber, a gente tratou como
+problema:
+
+- cola quente, acrílico e epóxi servem na caixa; é no sensor que a escolha de
+  material pesa
+- fonte de parede comum dentro da caixa é aceitável — o que encurta a vida dela
+  é calor, e aqui não há
+- o LM393 do sensor de chama (limite de 85 °C) é o componente em risco, não a
+  placa. Daí a regra: **o "olho" do sensor no calor, a eletrônica dele na caixa**,
+  como já se faz com a sonda do DS18B20
+
 ### Uma caixa só
 
 Decisão do produtor, e a razão é de mercado: todo aparelho do ramo é assim, e duas
