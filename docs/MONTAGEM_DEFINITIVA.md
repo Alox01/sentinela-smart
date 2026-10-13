@@ -302,6 +302,12 @@ letra na borda comprida, linha contada a partir da borda.
 DHT22 ocupa duas vias de um borne e uma do vizinho, e o de chama faz igual. Se um
 dia entrar relé, é onde ele se parafusa.
 
+> **Correção medida em 13/10/2026:** as duas **não estão mais livres**. Com o
+> ESP32 fora da barra, a via `M` tem continuidade com o barramento de **3V3** e a
+> `B₂` com o **`D23`**. Quando o relé da ventoinha entrou, portanto, os três fios
+> dele (`IN`, `VCC` e `GND`) foram **soldados direto na placa**, sem borne. Para
+> torná-lo desconectável no futuro, soldar um KRE de 2 vias numa área livre.
+
 **O 4,7 kΩ do DHT22** liga as vias `P` e `R` da borda de baixo direto, sem fio: elas
 já são o dado e o 3V3. Sem ele o sensor devolve leitura vazia para sempre, e o
 sintoma não denuncia a causa.
