@@ -36,6 +36,7 @@
 #include <WiFiClientSecure.h>
 #include <time.h>
 #include <esp_system.h>
+#include <Update.h>
 #include <DHT.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -140,6 +141,20 @@ const bool SENSOR_LUZ_ATIVO_LOW = true;
 const unsigned long TEMPO_MINIMO_VENTOINHA_MS = 30000;
 bool ventoinhaLigada = false;
 unsigned long ultimaTrocaVentoinhaMs = 0;
+
+// Comando manual da ventoinha, pelo botao do buzzer. Enquanto ele vale, o
+// termostato nao mexe mais nela: fica como o produtor deixou, ate ele apertar de
+// novo. Nao sobrevive a um reinicio - religar o aparelho devolve o automatico.
+// Fogo e falha de sensor passam por cima do manual, sempre.
+bool ventoinhaManual = false;
+bool ventoinhaManualLigada = false;
+
+// Os dois pontos do visor piscam enquanto a ventoinha esta DESLIGADA pela mao do
+// produtor. E o unico aviso de que ela nao vai ligar sozinha - sem ele, a estufa
+// esfriaria e todo mundo acharia que o aparelho quebrou.
+const unsigned long INTERVALO_PISCA_PONTOS_MS = 600;
+unsigned long ultimoPiscaPontos = 0;
+bool pontosAcesos = false;
 
 #define DISPLAY_CLK 18
 #define DISPLAY_DIO 19
@@ -406,6 +421,10 @@ void marcarChaveRegistrada();
 void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
 void aplicarVentoinha();
+uint8_t pontosDoVisor();
+void handleAtualizarUpload();
+void handleAtualizarFim();
+bool pinDoVisorConfere();
 
 // ============================================================
 //  SETUP
@@ -481,6 +500,9 @@ void setup() {
   server.on("/sincronizar", HTTP_POST, handleSincronizar);
   server.on("/salvar", HTTP_POST, handleConfigSalvar);
   server.on("/config/identidade", HTTP_GET, handleConfigIdentidade);
+  // Gravacao sem cabo: o upload roda no terceiro parametro, e o primeiro so
+  // e chamado quando o arquivo inteiro chegou.
+  server.on("/atualizar", HTTP_POST, handleAtualizarFim, handleAtualizarUpload);
   server.onNotFound([]() {
     // No ponto de acesso, qualquer endereco cai no formulario: o produtor nao
     // precisa acertar a URL, basta abrir o navegador.
@@ -1080,11 +1102,84 @@ void handleConfigPagina() {
   html += F(
       "\"></details>"
       "<button type=\"submit\">Salvar e reiniciar</button></form>"
+      // Gravar firmware sem cabo. Fica aqui, dentro do modo de configuracao,
+      // porque entrar nele exige segurar os tres botoes: so troca o firmware
+      // quem esta na frente do aparelho. O PIN do visor fecha o resto.
+      "<details><summary>Atualizar o firmware (avan&ccedil;ado)</summary>"
+      "<p class=\"aviso\">Envie o arquivo <b>.bin</b> gerado no Arduino por "
+      "\"Sketch &rarr; Exportar bin&aacute;rio compilado\". N&atilde;o desligue "
+      "o aparelho durante o envio; ele reinicia sozinho no fim.</p>"
+      "<form method=\"POST\" action=\"/atualizar\" "
+      "enctype=\"multipart/form-data\">"
+      "<label>PIN do visor</label>"
+      "<input name=\"pin\" inputmode=\"numeric\" maxlength=\"4\" required>"
+      "<label>Arquivo .bin</label>"
+      "<input type=\"file\" name=\"firmware\" accept=\".bin\" required>"
+      "<button type=\"submit\">Enviar firmware</button></form></details>"
       "<p class=\"aviso\">O aparelho reinicia e volta ao normal. "
       "O alarme continua funcionando durante a configura&ccedil;&atilde;o.</p>"
       "</body></html>");
 
   server.send(200, "text/html; charset=utf-8", html);
+}
+
+// ---- Gravacao do firmware sem cabo ----
+//
+// Recebe o .bin pela pagina do modo de configuracao e grava na particao OTA. A
+// seguranca e a mesma do resto dessa pagina, e por isso ela vive aqui: entrar no
+// modo exige segurar os tres botoes do aparelho, e o PIN do visor confirma.
+//
+// O PIN so pode ser conferido DEPOIS do upload - os campos do formulario chegam
+// junto com o arquivo, e recusar no meio deixaria a particao pela metade. Por
+// isso grava-se primeiro e so se finaliza (`Update.end`) com o PIN certo; com o
+// PIN errado, `Update.abort()` descarta tudo e o aparelho continua no firmware
+// antigo.
+void handleAtualizarUpload() {
+  if (!modoConfig) return;
+
+  HTTPUpload& envio = server.upload();
+  if (envio.status == UPLOAD_FILE_START) {
+    ultimaAtividadeConfig = millis();
+    Serial.print("Atualizacao: recebendo ");
+    Serial.println(envio.filename);
+    // UPDATE_SIZE_UNKNOWN: o tamanho so se conhece ao fim do envio.
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN)) Update.printError(Serial);
+  } else if (envio.status == UPLOAD_FILE_WRITE) {
+    // Mantem o modo de configuracao vivo: um envio lento passaria dos 5 min de
+    // inatividade e o aparelho reiniciaria no meio da gravacao.
+    ultimaAtividadeConfig = millis();
+    if (Update.write(envio.buf, envio.currentSize) != envio.currentSize) {
+      Update.printError(Serial);
+    }
+  }
+}
+
+void handleAtualizarFim() {
+  if (!modoConfig) {
+    Update.abort();
+    server.send(403, "application/json",
+                "{\"erro\":\"fora do modo de configuracao\"}");
+    return;
+  }
+  if (!pinDoVisorConfere()) {  // ja respondeu ao cliente
+    Update.abort();
+    Serial.println("Atualizacao recusada: PIN invalido");
+    return;
+  }
+  if (!Update.end(true)) {
+    Update.printError(Serial);
+    server.send(500, "text/html; charset=utf-8",
+                "<meta charset=\"utf-8\"><h2>Falhou</h2>"
+                "<p>O arquivo n&atilde;o serviu. O aparelho continua com o "
+                "firmware antigo. Tente de novo com o .bin certo.</p>");
+    return;
+  }
+  Serial.println("Atualizacao gravada. Reiniciando.");
+  server.send(200, "text/html; charset=utf-8",
+              "<meta charset=\"utf-8\"><h2>Atualizado</h2>"
+              "<p>O aparelho est&aacute; reiniciando com o firmware novo.</p>");
+  delay(300);
+  ESP.restart();
 }
 
 /// Confere o PIN do visor. Devolve false JA TENDO RESPONDIDO ao cliente.
@@ -2237,6 +2332,17 @@ void verificarBotoes() {
       modoSilenciosoTimestamp = nowMs();
       Serial.println("Buzzer silenciado por 10 min");
     }
+
+    // O mesmo toque manda na ventoinha: liga se o comando atual a quer parada,
+    // para se a quer girando. A partir daqui o termostato nao mexe mais nela.
+    // Olha o COMANDO, nao o estado do rele: com fogo, o rele esta desligado mas
+    // o comando pode ser "ligada", e apertar deve virar "desligada".
+    const bool comandoAtual =
+        ventoinhaManual ? ventoinhaManualLigada : ledControleLigado;
+    ventoinhaManual = true;
+    ventoinhaManualLigada = !comandoAtual;
+    Serial.print("Ventoinha no manual: ");
+    Serial.println(ventoinhaManualLigada ? "LIGAR" : "PARAR");
   }
 
   if (botaoFoiPressionado(BOTAO_VERMELHO, ultimoVermelho, estavelVermelho, debounceVermelho)) {
@@ -2404,15 +2510,18 @@ void aplicarVentoinha() {
   // empurrado pela propria ventoinha. Parar tira a forca que espalha a chama. O
   // limite de temperatura de incendio entra pelo mesmo motivo.
   bool fogo = (alertaLuz || riscoIncendioAgora());
-  bool desejado = ledControleLigado && !fogo;
+  // O manual vence o termostato, mas nao vence o fogo.
+  bool comando = ventoinhaManual ? ventoinhaManualLigada : ledControleLigado;
+  bool desejado = comando && !fogo;
   if (desejado == ventoinhaLigada) return;
 
-  // Parar por falta de leitura ou por fogo nao espera prazo nenhum: sem
-  // temperatura o aparelho esta cego, e ventoinha parada e o estado seguro
-  // combinado.
-  bool desligarPorFalha = (!desejado && (!leituraOk || fogo));
+  // Parar nao espera prazo nenhum quando a razao e seguranca (fogo, sensor
+  // cego) ou quando foi o produtor que mandou parar: ele esta na frente do
+  // aparelho, e meio minuto de ventoinha girando depois do toque pareceria
+  // defeito.
+  bool paradaImediata = (!desejado && (!leituraOk || fogo || ventoinhaManual));
   unsigned long agora = millis();
-  if (!desligarPorFalha && ultimaTrocaVentoinhaMs != 0 &&
+  if (!paradaImediata && ultimaTrocaVentoinhaMs != 0 &&
       agora - ultimaTrocaVentoinhaMs < TEMPO_MINIMO_VENTOINHA_MS) {
     return;
   }
@@ -2421,10 +2530,11 @@ void aplicarVentoinha() {
   ultimaTrocaVentoinhaMs = agora;
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
   Serial.print("Ventoinha ");
-  Serial.println(ventoinhaLigada ? "LIGADA"
-                 : fogo          ? "DESLIGADA (fogo)"
-                 : !leituraOk    ? "DESLIGADA (sem leitura)"
-                                 : "DESLIGADA");
+  Serial.println(ventoinhaLigada  ? (ventoinhaManual ? "LIGADA (manual)" : "LIGADA")
+                 : fogo           ? "DESLIGADA (fogo)"
+                 : !leituraOk     ? "DESLIGADA (sem leitura)"
+                 : ventoinhaManual ? "DESLIGADA (manual)"
+                                   : "DESLIGADA");
 }
 
 // Traduz o estado em LEDs e buzzer. Unico lugar que decide se a sirene toca, e
@@ -2525,6 +2635,21 @@ void controlarBuzzerIntermitente() {
   }
 }
 
+// Os dois pontos do meio do visor, piscando, dizem "a ventoinha esta desligada
+// pela mao do produtor". Em automatico, ou com ela ligada no manual, ficam
+// apagados - assim o piscar quer dizer uma coisa so.
+uint8_t pontosDoVisor() {
+  if (!ventoinhaManual || ventoinhaManualLigada) {
+    pontosAcesos = false;
+    return 0;
+  }
+  if (millis() - ultimoPiscaPontos >= INTERVALO_PISCA_PONTOS_MS) {
+    ultimoPiscaPontos = millis();
+    pontosAcesos = !pontosAcesos;
+  }
+  return pontosAcesos ? 0b01000000 : 0;
+}
+
 // Escreve no visor de 4 digitos: temperatura no uso normal, alvo no modo de
 // ajuste, PIN no modo de configuracao.
 void atualizarDisplay() {
@@ -2560,18 +2685,20 @@ void atualizarDisplay() {
 
   // Cada lado do visor responde pelo seu sensor: com a umidade fora do ar, a
   // temperatura continua aparecendo, e vice-versa.
+  const uint8_t pontos = pontosDoVisor();
+
   if (mostrandoUmidade) {
     if (!umidadeOk) {
-      display.showNumberDec(0, false);
+      display.showNumberDecEx(0, pontos, false);
       return;
     }
-    display.showNumberDec(umidade, false);
+    display.showNumberDecEx(umidade, pontos, false);
     return;
   }
 
   if (!leituraOk) {
-    display.showNumberDec(0, false);
+    display.showNumberDecEx(0, pontos, false);
     return;
   }
-  display.showNumberDec(temperaturaF, false);
+  display.showNumberDecEx(temperaturaF, pontos, false);
 }
