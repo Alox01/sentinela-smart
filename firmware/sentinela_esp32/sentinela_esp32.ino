@@ -139,6 +139,10 @@ const bool SENSOR_LUZ_ATIVO_LOW = true;
 // 2 F de histerese sozinhos nao impedem quando a temperatura fica na fronteira.
 // Desligar por falha de sensor ignora esse prazo: seguranca nao espera.
 const unsigned long TEMPO_MINIMO_VENTOINHA_MS = 30000;
+// Quanto a temperatura precisa afastar do ajuste para a ventoinha entrar e para
+// ela sair. Ver atualizarEstadoTemperatura() para o porque de serem diferentes.
+const int VENTOINHA_LIGA_ABAIXO_F = 2;
+const int VENTOINHA_DESLIGA_ACIMA_F = 1;
 bool ventoinhaLigada = false;
 unsigned long ultimaTrocaVentoinhaMs = 0;
 
@@ -2491,10 +2495,15 @@ void atualizarEstadoTemperatura() {
     alertaTemperatura = false;
   }
 
-  if (temperaturaF <= temperaturaAlvoF - 2) {
+  // Histerese da ventoinha, assimetrica de proposito: ela so entra quando a
+  // estufa ja perdeu 2 F, e sai assim que passa 1 F do ajuste. Esfriar e lento
+  // (depende do fogo pegar), esquentar demais e rapido - entao o lado de cima
+  // corta mais cedo. A faixa morta de 3 F ainda evita o liga-desliga seguido,
+  // junto com o prazo minimo de 30 s.
+  if (temperaturaF <= temperaturaAlvoF - VENTOINHA_LIGA_ABAIXO_F) {
     ledControleLigado = true;
   }
-  if (temperaturaF >= temperaturaAlvoF + 2) {
+  if (temperaturaF >= temperaturaAlvoF + VENTOINHA_DESLIGA_ACIMA_F) {
     ledControleLigado = false;
   }
 }

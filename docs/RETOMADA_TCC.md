@@ -403,7 +403,8 @@ estufa, um carregador de celular com cabo USB cortado.
   - Em qualquer falha — boot, travamento, reinício — **a ventoinha fica desligada**
   - **Feito no firmware (29/09):** saída no **GPIO 16** (`RELE_VENTOINHA`),
     `OUTPUT` e `LOW` na primeira linha do `setup()`; o relé segue o mesmo
-    `ledControleLigado` que já acendia o LED de controle (histerese de 2 °F, e
+    `ledControleLigado` que já acendia o LED de controle (liga 2 °F abaixo do
+    ajuste, desliga 1 °F acima, e
     zerado quando o DS18B20 falha); **30 s no mínimo entre trocas**, prazo que
     desligar por falha de sensor ignora; `ventiladorLigado` passou a reportar o
     estado real, e o servidor já tinha a coluna. **Chama detectada ou risco de
