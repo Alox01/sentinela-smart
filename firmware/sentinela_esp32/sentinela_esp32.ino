@@ -322,6 +322,11 @@ String tokenAparelho;
 String chaveAnterior;
 bool chaveRegistradaNaNuvem = false;
 
+// Diario das ultimas linhas, lido em /log quando nao ha cabo. Ver registrar().
+const int LOG_LINHAS = 24;
+String diario[LOG_LINHAS];
+int diarioProx = 0;
+
 // IP fixo (opcional). Vazio = DHCP, que e o normal. Existe porque em muita
 // propriedade o roteador e do provedor e o produtor nao tem acesso para fazer
 // reserva de DHCP - sem isto, so restaria reconferir o IP a cada queda de luz.
@@ -426,6 +431,8 @@ void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
 void aplicarVentoinha();
 uint8_t pontosDoVisor();
+void registrar(const String& linha);
+void handleLog();
 void handleAtualizarUpload();
 void handleAtualizarFim();
 bool pinDoVisorConfere();
@@ -501,6 +508,7 @@ void setup() {
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/", HTTP_GET, handleSimple);
   server.on("/dados", HTTP_GET, handleSimple);
+  server.on("/log", HTTP_GET, handleLog);
   server.on("/sincronizar", HTTP_POST, handleSincronizar);
   server.on("/salvar", HTTP_POST, handleConfigSalvar);
   server.on("/config/identidade", HTTP_GET, handleConfigIdentidade);
@@ -1691,8 +1699,7 @@ void empurrarLeituraNuvem() {
     http.addHeader("X-Device-Token", tokenAparelho);
   }
   int codigo = http.POST(corpo);
-  Serial.print("Push nuvem -> HTTP ");
-  Serial.println(codigo);
+  registrar("Push nuvem -> HTTP " + String(codigo));
   http.end();
 
   // A nuvem so aceita esta leitura se ja conhecer a chave que foi junto (ou se
@@ -1704,7 +1711,7 @@ void empurrarLeituraNuvem() {
   // bloqueante a mais em cada ciclo. Visto no Serial em 14/09/2026.
   const bool faltavaConfirmar = !chaveRegistradaNaNuvem || chaveAnterior.length() > 0;
   if (codigo == 200 && faltavaConfirmar && tokenAparelho != DEVICE_TOKEN) {
-    Serial.println("A nuvem ja aceita a chave deste aparelho: registro concluido.");
+    registrar(F("A nuvem ja aceita a chave deste aparelho."));
     marcarChaveRegistrada();
   }
 
@@ -1717,12 +1724,40 @@ void empurrarLeituraNuvem() {
   // sincronizarChaveNuvem() desiste sozinha, entao isto nao vira laco.
   if (codigo == 401 && chaveRegistradaNaNuvem && chaveAnterior.length() == 0 &&
       tokenAparelho != DEVICE_TOKEN) {
-    Serial.println("A nuvem recusou a chave: vou tentar registrar de novo.");
+    registrar(F("A nuvem recusou a chave: vou registrar de novo."));
     chaveRegistradaNaNuvem = false;
     prefs.begin("sentinela", false);
     prefs.putBool("chaveReg", false);
     prefs.end();
   }
+}
+
+// ---- Diario curto na memoria ----
+//
+// Com o aparelho fechado na caixa nao ha Monitor Serial, e e justamente em campo
+// que se precisa saber o que aconteceu. Guarda as ultimas linhas e serve em
+// /log, pelo navegador do celular. Fica so na RAM: reiniciou, perdeu - o que
+// importa aqui e o passado recente, nao o historico.
+void registrar(const String& linha) {
+  Serial.println(linha);
+  diario[diarioProx] = String(millis() / 1000) + "s  " + linha;
+  diarioProx = (diarioProx + 1) % LOG_LINHAS;
+}
+
+void handleLog() {
+  String saida;
+  saida.reserve(LOG_LINHAS * 56);
+  // Comeca na posicao seguinte a ultima escrita: assim sai da mais antiga para a
+  // mais nova, que e como se le um diario.
+  for (int i = 0; i < LOG_LINHAS; i++) {
+    const String& linha = diario[(diarioProx + i) % LOG_LINHAS];
+    if (linha.length() > 0) {
+      saida += linha;
+      saida += '\n';
+    }
+  }
+  if (saida.length() == 0) saida = F("(sem registros ainda)\n");
+  server.send(200, "text/plain; charset=utf-8", saida);
 }
 
 // A nuvem conhece a chave atual: para de tentar registrar ou trocar.
@@ -1777,12 +1812,11 @@ void sincronizarChaveNuvem() {
   int codigo = http.POST(corpo);
   http.end();
 
-  Serial.print("Chave -> nuvem HTTP ");
-  Serial.println(codigo);
+  registrar("Chave -> nuvem HTTP " + String(codigo));
 
   if (codigo == 200) {
     marcarChaveRegistrada();
-    Serial.println("Chave registrada na nuvem.");
+    registrar(F("Chave registrada na nuvem."));
     return;
   }
 
@@ -1795,7 +1829,7 @@ void sincronizarChaveNuvem() {
     prefs.begin("sentinela", false);
     prefs.putBool("chaveReg", true);
     prefs.end();
-    Serial.println("A nuvem ja tem outra chave para este aparelho.");
+    registrar(F("A nuvem ja tem outra chave para este aparelho."));
   }
 }
 
@@ -2361,8 +2395,8 @@ void verificarBotoes() {
         ventoinhaManual ? ventoinhaManualLigada : ledControleLigado;
     ventoinhaManual = true;
     ventoinhaManualLigada = !comandoAtual;
-    Serial.print("Ventoinha no manual: ");
-    Serial.println(ventoinhaManualLigada ? "LIGAR" : "PARAR");
+    registrar(ventoinhaManualLigada ? F("Ventoinha no manual: LIGAR")
+                                    : F("Ventoinha no manual: PARAR"));
   }
 
   if (botaoFoiPressionado(BOTAO_VERMELHO, ultimoVermelho, estavelVermelho, debounceVermelho)) {
@@ -2554,12 +2588,12 @@ void aplicarVentoinha() {
   ventoinhaLigada = desejado;
   ultimaTrocaVentoinhaMs = agora;
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
-  Serial.print("Ventoinha ");
-  Serial.println(ventoinhaLigada  ? (ventoinhaManual ? "LIGADA (manual)" : "LIGADA")
-                 : fogo           ? "DESLIGADA (fogo)"
-                 : !leituraOk     ? "DESLIGADA (sem leitura)"
-                 : ventoinhaManual ? "DESLIGADA (manual)"
-                                   : "DESLIGADA");
+  registrar(String("Ventoinha ") +
+            (ventoinhaLigada   ? (ventoinhaManual ? "LIGADA (manual)" : "LIGADA")
+             : fogo            ? "DESLIGADA (fogo)"
+             : !leituraOk      ? "DESLIGADA (sem leitura)"
+             : ventoinhaManual ? "DESLIGADA (manual)"
+                               : "DESLIGADA"));
 }
 
 // Traduz o estado em LEDs e buzzer. Unico lugar que decide se a sirene toca, e
