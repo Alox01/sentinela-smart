@@ -72,6 +72,17 @@ App: `flutter test` dentro de `estufa_app`.
 
 ## Domínio (erros que parecem bug e não são)
 
+- **`Push nuvem -> HTTP 401` pode ser o banco pausado, não chave errada**
+  (14/10/2026). O Supabase do plano gratuito **pausa o projeto** depois de dias
+  sem atividade. Com o banco fora, a consulta da chave do aparelho volta vazia,
+  a nuvem cai na comparação com a chave universal — que o aparelho não manda,
+  ele manda a dele — e responde **401**, exatamente como se a chave estivesse
+  errada. Antes de mexer em chave, abra o painel do Supabase e veja se o projeto
+  está **pausado**; se estiver, "Resume project" resolve e os dados voltam
+  inteiros. **Risco de banca:** confirmar o painel na véspera, e deixar o
+  aparelho ligado reportando nos dias anteriores, porque é o tráfego dele que
+  evita a pausa.
+
 - **Temperatura em Fahrenheit de propósito.** O produtor pensa em °F; converter
   para Celsius "para ficar certo" quebra a leitura dele.
 - **Número de versão do firmware não sobe sozinho.** Reiniciou em `1.0` em
