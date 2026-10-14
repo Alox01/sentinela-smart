@@ -1967,7 +1967,13 @@ void handleSimple() {
   doc["mostrandoUmidade"] = mostrandoUmidade;
   doc["modoAjuste"] = modoAjuste;
   doc["buzzerSilenciado"] = estaSilenciado();
+  // A DECISAO do controle de temperatura. O nome vem de quando ela so acendia um
+  // LED; esse LED nao existe mais no aparelho, e hoje quem obedece a ela e o
+  // rele da ventoinha.
   doc["ledControleLigado"] = ledControleLigado;
+  // O estado REAL do rele, que e o que se quer ver em campo. Difere da linha
+  // acima quando o prazo de 30 s ainda nao venceu, ou quando ha fogo.
+  doc["ventoinhaLigada"] = ventoinhaLigada;
   doc["leituraOk"] = leituraOk;
   doc["umidadeOk"] = umidadeOk;
   // Os dois vao no /dados para serem lidos pelo navegador do celular, sem
