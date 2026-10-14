@@ -416,12 +416,24 @@ estufa, um carregador de celular com cabo USB cortado.
     na bobina do contator (Soprano CS 12, 220 V), e o motor passa pelos contatos
     de força. A chave Manual/Automático fica em paralelo com o NO, fora do
     firmware.
+  - **Comando manual pelo botão (14/10/2026):** o toque no botão do buzzer, além
+    de silenciar, **liga e desliga a ventoinha**, e ela fica como o produtor
+    deixou — o termostato não a move mais até ele apertar de novo. Os **dois
+    pontos do visor piscam** enquanto ela está desligada pelo botão, que é o
+    único aviso de que ela não vai ligar sozinha. Parar por botão não espera os
+    30 s. Fogo e sensor cego continuam por cima de tudo. O manual **não
+    sobrevive a um reinício**: religar devolve o automático.
   - **Falta:** montar, testar na bancada sem os 220 V (ouvindo o clique do relé),
     depois com o contator, e por último com o motor.
 - Verniz e caixa definitiva
-- **Gravar o firmware sem cabo (OTA)** — conversado em 14/09/2026, adiado por
-  decisão do produtor. Hoje cada gravação exige abrir a caixa, ligar o cabo e
-  segurar o BOOT.
+- ~~**Gravar o firmware sem cabo (OTA)**~~ — **feito em 14/10/2026.** A página do
+  modo de configuração passou a aceitar o envio de um `.bin` ("Sketch → Exportar
+  binário compilado"), com o PIN do visor. A segurança é a mesma do resto da
+  página: entrar no modo exige segurar os três botões, ou seja, estar na frente
+  do aparelho. O PIN só pode ser conferido depois do envio, então o firmware é
+  gravado na partição e **só finalizado com o PIN certo**; errado, descarta e o
+  aparelho continua no antigo. Compilado: 87% do flash.
+  *Antes:* cada gravação exigia abrir a caixa, ligar o cabo e segurar o BOOT.
   - **Caminho escolhido:** enviar o `.bin` pela **página do modo de configuração**
     (três botões + PIN do visor), do PC ou do celular. Gera-se o arquivo em
     Sketch → "Exportar binário compilado". Mantém a regra de segurança do
