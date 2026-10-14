@@ -1707,6 +1707,22 @@ void empurrarLeituraNuvem() {
     Serial.println("A nuvem ja aceita a chave deste aparelho: registro concluido.");
     marcarChaveRegistrada();
   }
+
+  // 401 com o registro dado como concluido: a nuvem nao conhece mais esta chave.
+  // Acontece quando a chave e gerada de novo aqui, quando a flash e apagada
+  // inteira na gravacao, ou quando um registro ficou pela metade - e, ate agora,
+  // o aparelho repetia o 401 para sempre, uma chamada HTTPS desperdicada por
+  // ciclo, sem nunca tentar se apresentar de novo. Reabre a tentativa de
+  // registro: se a nuvem tiver mesmo outra chave, ela responde 409 e
+  // sincronizarChaveNuvem() desiste sozinha, entao isto nao vira laco.
+  if (codigo == 401 && chaveRegistradaNaNuvem && chaveAnterior.length() == 0 &&
+      tokenAparelho != DEVICE_TOKEN) {
+    Serial.println("A nuvem recusou a chave: vou tentar registrar de novo.");
+    chaveRegistradaNaNuvem = false;
+    prefs.begin("sentinela", false);
+    prefs.putBool("chaveReg", false);
+    prefs.end();
+  }
 }
 
 // A nuvem conhece a chave atual: para de tentar registrar ou trocar.
