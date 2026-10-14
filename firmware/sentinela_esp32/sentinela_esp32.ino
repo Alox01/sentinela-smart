@@ -146,16 +146,16 @@ const int VENTOINHA_DESLIGA_ACIMA_F = 1;
 bool ventoinhaLigada = false;
 unsigned long ultimaTrocaVentoinhaMs = 0;
 
-// Comando manual da ventoinha, pelo botao do buzzer. Enquanto ele vale, o
-// termostato nao mexe mais nela: fica como o produtor deixou, ate ele apertar de
-// novo. Nao sobrevive a um reinicio - religar o aparelho devolve o automatico.
-// Fogo e falha de sensor passam por cima do manual, sempre.
-bool ventoinhaManual = false;
-bool ventoinhaManualLigada = false;
+// Ventoinha travada desligada pelo botao do buzzer. Serve para o produtor parar
+// so a ventoinha enquanto poe lenha ou mexe na fornalha, sem desligar o
+// aparelho. E so isso: travar e destravar. NAO existe "ligada na mao" - apertar
+// de novo devolve o comando ao ajuste, e e ele que decide se ela gira agora.
+// Nao sobrevive a um reinicio: religar o aparelho destrava.
+bool ventoinhaBloqueada = false;
 
-// Os dois pontos do visor piscam enquanto a ventoinha esta DESLIGADA pela mao do
-// produtor. E o unico aviso de que ela nao vai ligar sozinha - sem ele, a estufa
-// esfriaria e todo mundo acharia que o aparelho quebrou.
+// Os dois pontos do visor piscam enquanto ela esta travada. E o unico aviso de
+// que ela nao vai ligar sozinha - sem ele, a estufa esfriaria e todo mundo
+// acharia que o aparelho quebrou.
 const unsigned long INTERVALO_PISCA_PONTOS_MS = 600;
 unsigned long ultimoPiscaPontos = 0;
 bool pontosAcesos = false;
@@ -2123,6 +2123,7 @@ void handleSimple() {
   // O estado REAL do rele, que e o que se quer ver em campo. Difere da linha
   // acima quando o prazo de 30 s ainda nao venceu, ou quando ha fogo.
   doc["ventoinhaLigada"] = ventoinhaLigada;
+  doc["ventoinhaBloqueada"] = ventoinhaBloqueada;
   doc["leituraOk"] = leituraOk;
   doc["umidadeOk"] = umidadeOk;
   // Os dois vao no /dados para serem lidos pelo navegador do celular, sem
@@ -2387,16 +2388,12 @@ void verificarBotoes() {
       Serial.println("Buzzer silenciado por 10 min");
     }
 
-    // O mesmo toque manda na ventoinha: liga se o comando atual a quer parada,
-    // para se a quer girando. A partir daqui o termostato nao mexe mais nela.
-    // Olha o COMANDO, nao o estado do rele: com fogo, o rele esta desligado mas
-    // o comando pode ser "ligada", e apertar deve virar "desligada".
-    const bool comandoAtual =
-        ventoinhaManual ? ventoinhaManualLigada : ledControleLigado;
-    ventoinhaManual = true;
-    ventoinhaManualLigada = !comandoAtual;
-    registrar(ventoinhaManualLigada ? F("Ventoinha no manual: LIGAR")
-                                    : F("Ventoinha no manual: PARAR"));
+    // O mesmo toque trava e destrava a ventoinha. Travada, ela fica parada
+    // aconteca o que acontecer com a temperatura; destravada, o ajuste volta a
+    // mandar - e pode religa-la na hora, se a estufa estiver fria.
+    ventoinhaBloqueada = !ventoinhaBloqueada;
+    registrar(ventoinhaBloqueada ? F("Ventoinha travada desligada no botao")
+                                 : F("Ventoinha destravada: o ajuste manda"));
   }
 
   if (botaoFoiPressionado(BOTAO_VERMELHO, ultimoVermelho, estavelVermelho, debounceVermelho)) {
@@ -2569,9 +2566,9 @@ void aplicarVentoinha() {
   // empurrado pela propria ventoinha. Parar tira a forca que espalha a chama. O
   // limite de temperatura de incendio entra pelo mesmo motivo.
   bool fogo = (alertaLuz || riscoIncendioAgora());
-  // O manual vence o termostato, mas nao vence o fogo.
-  bool comando = ventoinhaManual ? ventoinhaManualLigada : ledControleLigado;
-  bool desejado = comando && !fogo;
+  // Quem manda e o ajuste. O botao so pode PARAR; para fazer girar, destrava e
+  // deixa o termostato decidir.
+  bool desejado = ledControleLigado && !ventoinhaBloqueada && !fogo;
   if (desejado == ventoinhaLigada) return;
 
   // PARAR nunca espera. Passou do ajuste, ou ha fogo, ou o sensor cegou, ou o
@@ -2590,11 +2587,11 @@ void aplicarVentoinha() {
   ultimaTrocaVentoinhaMs = agora;
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
   registrar(String("Ventoinha ") +
-            (ventoinhaLigada   ? (ventoinhaManual ? "LIGADA (manual)" : "LIGADA")
-             : fogo            ? "DESLIGADA (fogo)"
-             : !leituraOk      ? "DESLIGADA (sem leitura)"
-             : ventoinhaManual ? "DESLIGADA (manual)"
-                               : "DESLIGADA"));
+            (ventoinhaLigada     ? "LIGADA"
+             : fogo              ? "DESLIGADA (fogo)"
+             : !leituraOk        ? "DESLIGADA (sem leitura)"
+             : ventoinhaBloqueada ? "DESLIGADA (travada no botao)"
+                                  : "DESLIGADA"));
 }
 
 // Traduz o estado em LEDs e buzzer. Unico lugar que decide se a sirene toca, e
@@ -2695,11 +2692,11 @@ void controlarBuzzerIntermitente() {
   }
 }
 
-// Os dois pontos do meio do visor, piscando, dizem "a ventoinha esta desligada
-// pela mao do produtor". Em automatico, ou com ela ligada no manual, ficam
-// apagados - assim o piscar quer dizer uma coisa so.
+// Os dois pontos do meio do visor, piscando, dizem "a ventoinha esta travada
+// desligada pelo botao". Em automatico ficam apagados, mesmo com ela parada pelo
+// ajuste - assim o piscar quer dizer uma coisa so.
 uint8_t pontosDoVisor() {
-  if (!ventoinhaManual || ventoinhaManualLigada) {
+  if (!ventoinhaBloqueada) {
     pontosAcesos = false;
     return 0;
   }

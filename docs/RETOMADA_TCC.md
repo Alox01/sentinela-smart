@@ -417,13 +417,16 @@ estufa, um carregador de celular com cabo USB cortado.
     na bobina do contator (Soprano CS 12, 220 V), e o motor passa pelos contatos
     de força. A chave Manual/Automático fica em paralelo com o NO, fora do
     firmware.
-  - **Comando manual pelo botão (14/10/2026):** o toque no botão do buzzer, além
-    de silenciar, **liga e desliga a ventoinha**, e ela fica como o produtor
-    deixou — o termostato não a move mais até ele apertar de novo. Os **dois
-    pontos do visor piscam** enquanto ela está desligada pelo botão, que é o
-    único aviso de que ela não vai ligar sozinha. Parar por botão não espera os
-    30 s. Fogo e sensor cego continuam por cima de tudo. O manual **não
-    sobrevive a um reinício**: religar devolve o automático.
+  - **Travar a ventoinha pelo botão (14/10/2026):** o toque no botão do buzzer,
+    além de silenciar, **trava a ventoinha desligada** — é o que o produtor usa
+    para pôr lenha ou mexer na fornalha sem desligar o aparelho. Apertar de novo
+    **destrava e devolve o comando ao ajuste**, que pode religá-la na hora se a
+    estufa estiver fria. Não existe "ligada na mão": ligar é sempre decisão do
+    termostato. Os **dois pontos do visor piscam** enquanto ela está travada —
+    sem esse aviso, a estufa esfriaria e todos achariam que o aparelho quebrou.
+    **Parar é sempre imediato**, por qualquer motivo; o prazo de 30 s ficou só
+    para ligar. Fogo e sensor cego continuam por cima de tudo. A trava **não
+    sobrevive a um reinício**.
   - **Falta:** montar, testar na bancada sem os 220 V (ouvindo o clique do relé),
     depois com o contator, e por último com o motor.
 - Verniz e caixa definitiva
