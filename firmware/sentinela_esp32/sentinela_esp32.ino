@@ -2574,11 +2574,12 @@ void aplicarVentoinha() {
   bool desejado = comando && !fogo;
   if (desejado == ventoinhaLigada) return;
 
-  // Parar nao espera prazo nenhum quando a razao e seguranca (fogo, sensor
-  // cego) ou quando foi o produtor que mandou parar: ele esta na frente do
-  // aparelho, e meio minuto de ventoinha girando depois do toque pareceria
-  // defeito.
-  bool paradaImediata = (!desejado && (!leituraOk || fogo || ventoinhaManual));
+  // PARAR nunca espera. Passou do ajuste, ou ha fogo, ou o sensor cegou, ou o
+  // produtor mandou: a ventoinha sai na hora. Ela atica o fogo, entao insistir
+  // por mais meio minuto empurra a estufa justamente para onde nao se quer.
+  // O prazo minimo fica so para LIGAR, e isso ja basta para o contator nao
+  // bater seguido: entre duas partidas passam sempre 30 s.
+  bool paradaImediata = !desejado;
   unsigned long agora = millis();
   if (!paradaImediata && ultimaTrocaVentoinhaMs != 0 &&
       agora - ultimaTrocaVentoinhaMs < TEMPO_MINIMO_VENTOINHA_MS) {
