@@ -509,6 +509,7 @@ separado, bateria com sensor de tensão, caixa definitiva IP65.
 | `docs/AUDITORIA.md` | **fila de trabalho** — item D3 é o engasgo |
 | `docs/PLANO_POS_TESTES.md` | a matriz de evidências completa |
 | `docs/MONTAGEM_DEFINITIVA.md` | o aparelho: mapa da placa, conferência, compras, acionamento |
+| `docs/MAPA_DE_MONTAGEM.pdf` | as quatro folhas de bancada: elétrica, placa, protoboard, tabela |
 | `docs/ARTIGO_TCC_OUTLINE.md` | esqueleto do artigo, com fontes |
 | `docs/ARTIGO_CONTINUACAO.md` | texto pronto de Resultados, Conclusão, Resumo |
 | `docs/DEMO.md` | roteiro da demonstração |

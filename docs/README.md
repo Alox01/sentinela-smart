@@ -66,6 +66,11 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 - **`MONTAGEM_DEFINITIVA.md`** — sair do protoboard: o que comprar, por que
   caixa IP67 não basta sozinha, e as armadilhas de compra (TM1637 × TM1650,
   módulo de 5 V numa GPIO de 3,3 V, o teto de 80 °C do DHT22).
+- **`MAPA_DE_MONTAGEM.pdf`** — as quatro folhas para levar junto da bancada:
+  a parte elétrica inteira numa figura (com foto das peças deste aparelho), a
+  placa perfurada via por via, a mesma montagem em protoboard e a tabela de
+  ligações. Desenhado por `mapa/montar_pdf.py`, que o refaz do zero — mexer no
+  PDF é mexer no script, nunca no arquivo gerado.
 
 ## Quando o documento e o código divergem
 
