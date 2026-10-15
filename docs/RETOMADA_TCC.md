@@ -514,7 +514,7 @@ separado, bateria com sensor de tensão, caixa definitiva IP65.
 | `docs/DEMO.md` | roteiro da demonstração |
 | `docs/CONTRATO_API.md` | o que o aparelho publica em `/dados` e `/status` |
 | `firmware/sentinela_esp32/` | o firmware |
-| `firmware/teste_placa/` | esquete de teste de bancada |
+| ~~`firmware/teste_placa/`~~ | esquete de teste de bancada, removido em 15/10/2026 — está no commit `909c5a2` |
 
 **Compilar o firmware** (o `arduino-cli` vem dentro da IDE do Arduino, não está no
 PATH):

@@ -233,8 +233,14 @@ placa ilhada é o que arranca ilha.
 
 ## Conferir a placa antes de fechar a caixa
 
-`firmware/teste_placa/teste_placa.ino` acende um LED por vez, toca a buzina,
-conta no display e imprime botões e sensores no Serial.
+O esquete de bancada acende um LED por vez, toca a buzina, conta no display e
+imprime botões e sensores no Serial.
+
+> **Ele não está mais na árvore do repositório.** Serviu para conferir a placa
+> antes de fechar a caixa, e com a caixa fechada virou peso morto. Continua no
+> histórico, que é onde esse tipo de coisa deve morar — para montar outra placa,
+> traga de volta com
+> `git show 909c5a2:firmware/teste_placa/teste_placa.ino > teste_placa.ino`.
 
 Ele existe porque o firmware não serve para isso: os LEDs só acendem quando a
 temperatura sai da faixa e a buzina só toca em alarme, o que é demorado de
@@ -683,7 +689,8 @@ individual seriam precisos dois bornes a mais, e eles não existem.
 ### A ordem, e o que cada grupo prova
 
 Ligar tudo de uma vez deixa cinco defeitos misturados. Um grupo por vez, com o
-`teste_placa.ino` rodando, e cada um que responde risca um pedaço da conferência:
+esquete de bancada rodando (acima está como recuperá-lo), e cada um que responde
+risca um pedaço da conferência:
 
 | Grupo | Fios | Prova |
 |---|---|---|
