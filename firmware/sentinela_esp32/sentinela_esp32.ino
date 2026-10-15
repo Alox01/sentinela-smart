@@ -243,6 +243,12 @@ int umidade = 0;
 // Dois sensores, duas flags. Perder a umidade nao pode derrubar o alarme de
 // temperatura, que e a funcao central do aparelho - e antes, com um sensor so,
 // derrubava.
+// Conversao do DS18B20 em andamento: pedida em lerSensores(), recolhida em
+// colherTemperaturaSePronta(). A 10 bits ela leva ~190 ms; 220 da folga.
+const unsigned long ESPERA_CONVERSAO_MS = 220;
+unsigned long conversaoPedidaEmMs = 0;
+bool conversaoPendente = false;
+
 bool leituraOk = false;
 bool umidadeOk = false;
 
@@ -430,6 +436,7 @@ void marcarChaveRegistrada();
 void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
 void aplicarVentoinha();
+void colherTemperaturaSePronta();
 uint8_t pontosDoVisor();
 void registrar(const String& linha);
 void handleLog();
@@ -477,6 +484,9 @@ void setup() {
   // tambem atende HTTP.
   sensorTemp.begin();
   sensorTemp.setResolution(10);
+  // A biblioteca, por padrao, segura requestTemperatures() ate a conversao
+  // terminar. Aqui quem espera e o laco, sem travar.
+  sensorTemp.setWaitForConversion(false);
   Serial.print("DS18B20 encontrados no barramento: ");
   Serial.println(sensorTemp.getDeviceCount());
 
@@ -609,6 +619,7 @@ void loop() {
     ultimoTempoLeitura = agora;
     lerSensores();
   }
+  colherTemperaturaSePronta();
 
   atualizarSaidas();
   atualizarDisplay();
@@ -2486,7 +2497,36 @@ void verificarSensorLuz() {
 // invalida e descartada em vez de virar zero: um zero falso apagaria um alarme
 // verdadeiro.
 void lerSensores() {
+  // So PEDE a conversao do DS18B20 e segue. Ela leva ~190 ms a 10 bits, e
+  // esperar aqui era tempo em que o laco nao lia botao, nao mexia no rele e nao
+  // atualizava o visor - a cada 2,5 s. Quem recolhe o valor e
+  // colherTemperaturaSePronta(), chamada a cada volta do laco.
   sensorTemp.requestTemperatures();
+  conversaoPedidaEmMs = millis();
+  conversaoPendente = true;
+
+  float leituraUmidade = dht.readHumidity();
+
+  if (isnan(leituraUmidade)) {
+    umidadeOk = false;
+    Serial.println("Erro ao ler umidade do DHT22");
+  } else {
+    umidadeOk = true;
+    umidade = (int)round(leituraUmidade);
+    Serial.print("Umidade: ");
+    Serial.print(umidade);
+    Serial.println(" %");
+  }
+}
+
+// Recolhe a temperatura quando a conversao pedida em lerSensores() ja terminou.
+// Separada de proposito: e chamada a cada volta do laco e sai na hora enquanto
+// nao ha nada pronto, entao o custo de olhar e quase nada.
+void colherTemperaturaSePronta() {
+  if (!conversaoPendente) return;
+  if (millis() - conversaoPedidaEmMs < ESPERA_CONVERSAO_MS) return;
+  conversaoPendente = false;
+
   float leituraTemperaturaF = sensorTemp.getTempFByIndex(0);
 
   // Faixa, nao igualdade. A biblioteca devolve DEVICE_DISCONNECTED_F (-196,6)
@@ -2501,28 +2541,16 @@ void lerSensores() {
     // rele fechado com o aparelho cego - o contrario do que se decidiu para a
     // ventoinha, que fica parada quando algo falha.
     ledControleLigado = false;
-    Serial.println("Erro ao ler DS18B20");
-  } else {
-    leituraOk = true;
-    temperaturaF = (int)round(leituraTemperaturaF);
-    atualizarEstadoTemperatura();
-    Serial.print("Temperatura: ");
-    Serial.print(temperaturaF);
-    Serial.println(" F");
+    registrar(F("Erro ao ler DS18B20"));
+    return;
   }
 
-  float leituraUmidade = dht.readHumidity();
-
-  if (isnan(leituraUmidade)) {
-    umidadeOk = false;
-    Serial.println("Erro ao ler umidade do DHT22");
-  } else {
-    umidadeOk = true;
-    umidade = (int)round(leituraUmidade);
-    Serial.print("Umidade: ");
-    Serial.print(umidade);
-    Serial.println(" %");
-  }
+  leituraOk = true;
+  temperaturaF = (int)round(leituraTemperaturaF);
+  atualizarEstadoTemperatura();
+  Serial.print("Temperatura: ");
+  Serial.print(temperaturaF);
+  Serial.println(" F");
 }
 
 // Decide se a temperatura esta fora da faixa, respeitando a margem vigente.
@@ -2707,6 +2735,40 @@ uint8_t pontosDoVisor() {
   return pontosAcesos ? 0b01000000 : 0;
 }
 
+// O visor so e reescrito quando o que ele mostra muda. Antes, cada volta do laco
+// mandava os quatro digitos de novo pelo protocolo do TM1637, que e bit a bit -
+// trabalho repetido centenas de vezes por segundo para desenhar o mesmo numero.
+enum ModoVisor { VISOR_NADA, VISOR_NUMERO, VISOR_LIMPO, VISOR_TRACOS };
+ModoVisor visorModo = VISOR_NADA;
+int visorValor = 0;
+uint8_t visorPontos = 0;
+bool visorZeros = false;
+
+void escreverNumero(int valor, uint8_t pontos, bool zerosEsquerda) {
+  if (visorModo == VISOR_NUMERO && visorValor == valor &&
+      visorPontos == pontos && visorZeros == zerosEsquerda) {
+    return;
+  }
+  display.showNumberDecEx(valor, pontos, zerosEsquerda);
+  visorModo = VISOR_NUMERO;
+  visorValor = valor;
+  visorPontos = pontos;
+  visorZeros = zerosEsquerda;
+}
+
+void limparVisor() {
+  if (visorModo == VISOR_LIMPO) return;
+  display.clear();
+  visorModo = VISOR_LIMPO;
+}
+
+void escreverTracos() {
+  if (visorModo == VISOR_TRACOS) return;
+  const uint8_t tracos[] = {0x40, 0x40, 0x40, 0x40};  // - - - -
+  display.setSegments(tracos);
+  visorModo = VISOR_TRACOS;
+}
+
 // Escreve no visor de 4 digitos: temperatura no uso normal, alvo no modo de
 // ajuste, PIN no modo de configuracao.
 void atualizarDisplay() {
@@ -2719,10 +2781,9 @@ void atualizarDisplay() {
     // excesso de erros: um estado visivelmente diferente, que diz "saia e entre
     // de novo no modo de configuracao".
     if (pinConfig >= 0) {
-      display.showNumberDec(pinConfig, true);  // true = zeros a esquerda
+      escreverNumero(pinConfig, 0, true);  // true = zeros a esquerda
     } else {
-      const uint8_t tracos[] = {0x40, 0x40, 0x40, 0x40};  // - - - -
-      display.setSegments(tracos);
+      escreverTracos();
     }
     return;
   }
@@ -2733,9 +2794,9 @@ void atualizarDisplay() {
       displayAjusteLigado = !displayAjusteLigado;
     }
     if (displayAjusteLigado) {
-      display.showNumberDec(mostrandoUmidade ? umidadeAlvo : temperaturaAlvoF, false);
+      escreverNumero(mostrandoUmidade ? umidadeAlvo : temperaturaAlvoF, 0, false);
     } else {
-      display.clear();
+      limparVisor();
     }
     return;
   }
@@ -2745,17 +2806,8 @@ void atualizarDisplay() {
   const uint8_t pontos = pontosDoVisor();
 
   if (mostrandoUmidade) {
-    if (!umidadeOk) {
-      display.showNumberDecEx(0, pontos, false);
-      return;
-    }
-    display.showNumberDecEx(umidade, pontos, false);
+    escreverNumero(umidadeOk ? umidade : 0, pontos, false);
     return;
   }
-
-  if (!leituraOk) {
-    display.showNumberDecEx(0, pontos, false);
-    return;
-  }
-  display.showNumberDecEx(temperaturaF, pontos, false);
+  escreverNumero(leituraOk ? temperaturaF : 0, pontos, false);
 }
