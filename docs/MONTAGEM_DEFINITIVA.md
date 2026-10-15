@@ -172,8 +172,8 @@ compra.
 | **Fonte AC/DC interna** | **5 W** (HLK-5M05 ou equivalente), não a de 3 W — ver a conta do consumo |
 | **Fusível + porta-fusível** | **2 A retardado** — rápido queima no arranque |
 | **Tomada de embutir** | 10 A **com pino terra**; a plaqueta manda aterrar o motor |
-| **Capacitor supressor** *(opcional)* | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve. Vai na **bobina do contator** |
-| **Resistor do supressor** *(opcional)* | 100 Ω / 1 W — o par RC é para bobina **de 220 V CA**; diodo só serviria em bobina de corrente contínua |
+| **Capacitor supressor** *(necessário — ver D12)* | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve. Vai na **bobina do contator**, terminais A1/A2 |
+| **Resistor do supressor** *(necessário — ver D12)* | 100 Ω / 1 W — o par RC é para bobina **de 220 V CA**; diodo só serviria em bobina de corrente contínua |
 | **Resistor de segurança** | segura a linha do relé desligada durante o boot |
 | **Fio 1,5 mm²** | fase, neutro e terra |
 | **Conectores Wago** | emendas da rede — nunca fita |
@@ -491,15 +491,29 @@ bobina — uns 0,1 A, cerca de 1% do que o contato aguenta — e relé trabalhan
 décimo da nominal vive cinco a dez vezes mais que o catálogo. As 100 mil operações
 viram meio milhão ou mais, o que passa de dez safras.
 
-O supressor abaixo **continua ajudando, mas virou opcional**: ele estica algo que já
-era suficiente. Não é o caso do pull-up do DHT22, que sem ele o sensor não fala.
+O supressor abaixo **tinha virado opcional, e deixou de ser** — por um motivo que
+não é a vida do contato. **Em 15/10/2026, com a caixa montada, o visor apagava no
+instante em que o contator chaveava** (D12 da auditoria). A bobina, ao desligar,
+devolve um pico de centenas de volts, e esse pico atravessa os centímetros que
+separam os cabos de 220 V dos quatro fios de dados do visor. O firmware passou a
+reescrever o visor sozinho, então hoje se vê uma piscada em vez de uma tela preta
+— mas **o distúrbio continua ali, e quem o elimina é o supressor**.
 
-Duas formas de esticar:
+São dois lugares, com finalidades diferentes, e vale não confundir:
 
-**Supressor RC em paralelo com o motor** — capacitor 100 nF **classe X2 275 VAC**
-em série com resistor de 100 Ω / 1 W. Absorve o arco na abertura. *Não servem os
-cerâmicos de 100 nF/50 V comprados para desacoplamento: em 220 V eles rompem, e
-cerâmico rompido fecha em curto.*
+**Na bobina do contator, nos terminais A1/A2 — este é o que importa.** É o que o
+relé abre, e é de onde nasce o pico que derruba o visor. Capacitor 100 nF **classe
+X2 275 VAC** em série com resistor de 100 Ω / 1 W, ou um varistor de 275 V no lugar
+do par. *Não servem os cerâmicos de 100 nF/50 V comprados para desacoplamento: em
+220 V eles rompem, e cerâmico rompido fecha em curto.*
+
+**Em paralelo com o motor** — mesmo par RC. Absorve o arco na abertura dos
+contatos de força e estica a vida deles. Continua sendo o opcional que era.
+
+Junto com o supressor, duas medidas de arranjo que não custam nada: **afastar os
+quatro fios do visor** dos cabos de 220 V, cruzando em ângulo reto em vez de correr
+lado a lado, e, se o distúrbio for de alimentação e não de ruído, **um capacitor de
+100 µF na entrada de 5 V da placa**. Como distinguir os dois está no D12.
 
 **Tempo mínimo ligado e desligado, por software** — e essa vale mais que a
 primeira. Boa parte do liga-desliga sem padrão é o controle oscilando em volta do

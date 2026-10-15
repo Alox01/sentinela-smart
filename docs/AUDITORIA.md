@@ -599,13 +599,44 @@ funciona:
   centenas — o ganho do cache fica de pé. A reescrita manda também o comando de
   brilho, que é o que reacende o display se ele perdeu essa parte.
 
-  *Conserto de hardware que falta:* o supressor na bobina do contator (RC ou
-  varistor) ataca a causa em vez do sintoma. Está na lista de compras.
+  *O conserto de hardware que falta está no D13, e é ele que ataca a causa.*
 
   *De passagem,* `aplicarVentoinha()` passou a registrar no `/log` quando segura
   uma partida pelo prazo mínimo de 30 s. Era um `return` silencioso, e "o ajuste
   pede e ela não liga" tem quatro causas com o mesmo sintoma — prazo, trava no
   botão, fogo e falha de leitura. Agora o diário distingue.
+
+- [ ] **D13. IMPORTANTE, PENDENTE — falta o supressor na bobina do contator.**
+  O conserto do D12 fez o aparelho se recuperar do distúrbio; **não o eliminou.**
+  Em 15/10/2026, com o aparelho montado, o visor dá uma piscada visível a cada
+  vez que o contator liga ou desliga. A piscada é o firmware reescrevendo a tela
+  que acabou de ser derrubada — o pico da bobina continua saindo, a cada
+  chaveamento, dentro de uma caixa fechada onde os cabos de 220 V passam a
+  centímetros dos fios de dados.
+
+  *Por que isto não pode ficar como está.* Hoje o estrago visível é cosmético.
+  O que incomoda é o que não se vê: o mesmo pico atravessa o barramento OneWire
+  do DS18B20, e leitura corrompida ali **para a ventoinha** (`leituraOk` falso
+  zera `ledControleLigado`, de propósito). Pior caso conhecido do mesmo
+  distúrbio: afundar os 5 V e reiniciar o ESP32 no meio de uma estufada.
+
+  *O que fazer, em ordem:*
+  1. **Supressor nos terminais A1/A2 da bobina** — 100 nF classe X2 275 VAC em
+     série com 100 Ω / 1 W, ou varistor de 275 V. É o que mata o pico na origem,
+     e resolve a maior parte sozinho. Detalhes e o que NÃO serve estão em
+     `docs/MONTAGEM_DEFINITIVA.md`.
+  2. **Afastar os quatro fios do visor** dos cabos de 220 V; onde cruzarem, que
+     cruzem em ângulo reto, não lado a lado.
+  3. **Capacitor de 100 µF na entrada de 5 V da placa**, se o caso for
+     afundamento de tensão e não ruído.
+
+  *Como distinguir ruído de afundamento, em campo:* se piscam só os dígitos, é
+  ruído nos fios de dados — chato e inofensivo. Se os LEDs dão um tremido junto,
+  ou se `/dados` mostra `ligadoHaSegundos` zerando ou `motivoReinicio` igual a
+  `QUEDA DE TENSAO`, é a alimentação, e aí o item 3 entra junto.
+
+  *Combinado com o produtor:* fica para a próxima vez que a caixa for aberta, e
+  é a primeira coisa a fazer quando ela abrir.
 
 ### 2.3 Baixa — higiene
 
