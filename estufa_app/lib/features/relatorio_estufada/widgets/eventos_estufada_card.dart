@@ -79,9 +79,7 @@ class _ListaEventos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lista = Column(
-      children: [for (final evento in eventos) _EventoLinha(evento: evento)],
-    );
+    final lista = Column(children: _linhasComViradaDeDia(eventos));
 
     if (!comRolagem) return lista;
 
@@ -90,6 +88,62 @@ class _ListaEventos extends StatelessWidget {
       child: Scrollbar(
         thumbVisibility: true,
         child: SingleChildScrollView(child: lista),
+      ),
+    );
+  }
+}
+
+/// Intercala uma faixa com a data a cada virada de dia.
+///
+/// A lista mostrava só a hora, e uma estufada que passa da meia-noite saía
+/// assim: 19:02, 19:11, 08:00, 13:06. Parece fora de ordem — e a estufada de
+/// 14/09 virou justamente uma dúvida de "por que os eventos estão embaralhados?",
+/// quando a ordem estava certa e o que faltava era o dia.
+///
+/// A faixa só aparece quando a lista atravessa mais de um dia. Numa estufada que
+/// começa e termina no mesmo dia ela seria repetição: a data já está no cabeçalho
+/// da estufada selecionada.
+List<Widget> _linhasComViradaDeDia(List<EventoCicloEntity> eventos) {
+  final dias = eventos.map((e) => DateUtils.dateOnly(e.timestamp)).toSet();
+  final atravessaDias = dias.length > 1;
+
+  final linhas = <Widget>[];
+  DateTime? diaAnterior;
+  for (final evento in eventos) {
+    final dia = DateUtils.dateOnly(evento.timestamp);
+    if (atravessaDias && dia != diaAnterior) {
+      linhas.add(_FaixaDoDia(dia: dia, primeira: diaAnterior == null));
+      diaAnterior = dia;
+    }
+    linhas.add(_EventoLinha(evento: evento));
+  }
+  return linhas;
+}
+
+class _FaixaDoDia extends StatelessWidget {
+  final DateTime dia;
+  final bool primeira;
+
+  const _FaixaDoDia({required this.dia, required this.primeira});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(top: primeira ? 0 : 6, bottom: 8),
+      child: Row(
+        children: [
+          Text(
+            DateFormat('dd/MM').format(dia),
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Expanded(child: Divider(color: Colors.white12, height: 1)),
+        ],
       ),
     );
   }

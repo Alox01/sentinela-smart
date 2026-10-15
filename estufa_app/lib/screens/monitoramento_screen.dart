@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../features/monitoramento/credenciais_de_agora.dart';
 import '../features/monitoramento/tempo_decorrido.dart';
@@ -104,6 +105,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // Ja chegou ao menos uma leitura do aparelho nesta tela? Antes disso os
   // valores acima sao os zeros de partida, e nao podem ir para o historico.
   bool _temLeituraReal = false;
+  // Quando a tela abre sem conexao, os numeros vem da ultima leitura GRAVADA.
+  // Guarda de quando ela e, para a tela dizer isso em vez de passar um retrato
+  // velho por ao vivo. Nulo = o que esta na tela e ao vivo (ou nao ha nada).
+  DateTime? _leituraGuardadaDe;
   // Aparelho "sem comunicacao": no modo nuvem, quando a ultima leitura recebida
   // fica velha demais (o aparelho parou de reportar por falta de luz/internet),
   // o app mostra isso em vez de fingir que esta tudo ao vivo.
@@ -153,6 +158,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
     unawaited(_carregarCicloAtual());
     unawaited(_atualizarPendencias());
+    unawaited(_mostrarUltimaLeituraGuardada());
     // O estado de silenciamento por estufa alimenta o interruptor do menu.
     unawaited(SilenciamentoEstufas.instance.carregar());
     unawaited(_garantirVigilancia());
@@ -172,6 +178,35 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // Abrir esta tela e o sinal de "eu vi" — por toque na notificacao ou por
     // conta propria. A nuvem para de repetir o aviso do episodio em curso.
     unawaited(api.reconhecerAlerta());
+  }
+
+  /// Preenche a tela com a ultima leitura gravada no celular, enquanto nao
+  /// houver leitura ao vivo.
+  ///
+  /// Abrir a estufa sem conexao mostrava 0 degF, 0% e ajuste 0 — numeros que o
+  /// app nunca leu de aparelho nenhum, com a mesma cara dos numeros de verdade.
+  /// Pior: os botoes + e - trabalhavam sobre esse zero, e o pedido entrava na
+  /// fila para ser aplicado na volta da internet. Ajustar sem internet continua
+  /// valendo (e proposital, e o produtor usa); ajustar a partir de um numero
+  /// inventado, nao.
+  ///
+  /// Sai na frente de qualquer leitura ao vivo: `_temLeituraReal` so e falso
+  /// enquanto nada chegou, e a verificacao acontece de novo depois do await —
+  /// uma leitura de verdade pode ter chegado durante a consulta ao banco, e ela
+  /// manda.
+  Future<void> _mostrarUltimaLeituraGuardada() async {
+    if (_temLeituraReal) return;
+    final historico = await IsarService.instance.listarHistoricoPorIp(_ip);
+    if (!mounted || _temLeituraReal || historico.isEmpty) return;
+
+    final ultima = historico.last;
+    setState(() {
+      temperatura = ultima.temperatura;
+      umidade = ultima.umidade;
+      tempAjuste = ultima.temperaturaMeta;
+      umidAjuste = ultima.umidadeMeta;
+      _leituraGuardadaDe = ultima.timestamp;
+    });
   }
 
   /// Relê a estufa no banco e troca o monitor quando o que chegou por copia
@@ -237,6 +272,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     if (!mounted) return;
     _registrarRetornoConexaoSeNecessario();
     _temLeituraReal = true;
+    _leituraGuardadaDe = null;
 
     final status = dados['status'] ?? {};
     final config = dados['config'] ?? {};
@@ -507,6 +543,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                   // aviso nunca aparecia. O texto ainda prometia "o sistema esta
                   // na bateria/gerador", que nao existe. Quem cobre queda de luz
                   // e o banner de sem comunicacao, pela ausencia de leituras.
+                  if (_leituraGuardadaDe != null)
+                    _buildBannerLeituraGuardada(_leituraGuardadaDe!),
                   if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
                   if (_aguardandoAparelho || _filaSincronizadaEmMs != null)
                     _buildBannerAguardandoAparelho(),
@@ -524,6 +562,11 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                   PainelControle(
                     tempAjuste: tempAjuste,
                     umidAjuste: umidAjuste,
+                    // Sem leitura ao vivo e sem leitura gravada, o app nao sabe
+                    // em que ajuste a estufa esta: os botoes ficam parados em
+                    // vez de mandar um valor tirado do zero da tela.
+                    baseConhecida:
+                        _temLeituraReal || _leituraGuardadaDe != null,
                     onMudarTemperatura: (novaTemp) {
                       final ajusteAnterior = tempAjuste;
                       // Abre a acomodacao ja no toque, para o LED nao piscar antes
@@ -709,6 +752,39 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
               texto,
               style: const TextStyle(
                 color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Cinza, nao vermelho nem ambar: nao e falha nem espera. E um retrato, e o
+  // unico defeito possivel aqui seria o produtor achar que esta vendo o agora.
+  // Por isso o banner diz a hora da leitura, e nao so "sem conexao".
+  Widget _buildBannerLeituraGuardada(DateTime quando) {
+    final formato = DateFormat('dd/MM HH:mm');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.history_rounded, color: Colors.white54, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Sem conexão agora. Estes números são da última leitura '
+              'guardada, de ${formato.format(quando)}.',
+              style: const TextStyle(
+                color: Colors.white70,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),

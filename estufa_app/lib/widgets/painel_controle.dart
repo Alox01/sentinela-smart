@@ -12,12 +12,23 @@ class PainelControle extends StatelessWidget {
   final double tempAjuste;
   final double umidAjuste;
 
+  /// Falso enquanto o app nao sabe em que ajuste a estufa esta: nunca leu este
+  /// aparelho, e nao ha leitura guardada de sessao nenhuma.
+  ///
+  /// Nesse estado os botoes mostravam 0 e aceitavam toque. Um toque em + nao
+  /// pedia "um grau acima do que esta la": pedia ajuste de 1 degF, a partir do
+  /// zero de partida da tela - e o pedido ia para a fila e era aplicado na volta
+  /// da internet. Ajustar sem conexao continua valendo e e proposital; o que
+  /// nao pode e ajustar a partir de um numero que o app inventou.
+  final bool baseConhecida;
+
   const PainelControle({
     super.key,
     required this.onMudarTemperatura,
     required this.onMudarUmidade,
     required this.tempAjuste,
     required this.umidAjuste,
+    this.baseConhecida = true,
   });
 
   @override
@@ -49,6 +60,17 @@ class PainelControle extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          if (!baseConhecida)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Sem leitura deste aparelho ainda: o ajuste aparece quando '
+                'ele responder.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ),
 
           IntrinsicHeight(
             child: Row(
@@ -133,9 +155,11 @@ class PainelControle extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              valor.toStringAsFixed(0),
-              style: const TextStyle(
-                color: Colors.white,
+              // Traco, nao zero: zero e um ajuste possivel de umidade, e como
+              // temperatura era um numero que o produtor podia acreditar.
+              baseConhecida ? valor.toStringAsFixed(0) : '--',
+              style: TextStyle(
+                color: baseConhecida ? Colors.white : Colors.white24,
                 fontSize: 34,
                 fontWeight: FontWeight.w300,
               ),
@@ -147,9 +171,17 @@ class PainelControle extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              BotaoContinuo(icon: Icons.remove, onAction: onMenos),
+              BotaoContinuo(
+                icon: Icons.remove,
+                onAction: onMenos,
+                habilitado: baseConhecida,
+              ),
               const SizedBox(width: 8),
-              BotaoContinuo(icon: Icons.add, onAction: onMais),
+              BotaoContinuo(
+                icon: Icons.add,
+                onAction: onMais,
+                habilitado: baseConhecida,
+              ),
             ],
           ),
         ],
@@ -222,10 +254,12 @@ class LedItem extends StatelessWidget {
 class BotaoContinuo extends StatefulWidget {
   final IconData icon;
   final VoidCallback onAction;
+  final bool habilitado;
   const BotaoContinuo({
     super.key,
     required this.icon,
     required this.onAction,
+    this.habilitado = true,
   });
   @override
   State<BotaoContinuo> createState() => _BotaoContinuoState();
@@ -236,6 +270,7 @@ class _BotaoContinuoState extends State<BotaoContinuo> {
   bool _isPressed = false;
 
   void _iniciarLoop() {
+    if (!widget.habilitado) return;
     setState(() => _isPressed = true);
     widget.onAction();
     _timer = Timer.periodic(const Duration(milliseconds: 200), (t) {
@@ -277,7 +312,11 @@ class _BotaoContinuoState extends State<BotaoContinuo> {
                 ),
             ],
           ),
-          child: Icon(widget.icon, color: Colors.white, size: 24),
+          child: Icon(
+            widget.icon,
+            color: widget.habilitado ? Colors.white : Colors.white24,
+            size: 24,
+          ),
         ),
       ),
     );

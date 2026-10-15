@@ -559,11 +559,19 @@ funciona:
   refazer nada. **Aprovado em 14/09:** o PDF da #22 gerado às 14:30 saiu com
   70°F / 65% finais e sem os eventos inventados; o CSV, sem a linha zerada.
 
-- [ ] **D10. Abrir o monitoramento sem conexão mostra 0°F / 0% e ajustes 0.**
+- [x] **D10. Abrir o monitoramento sem conexão mostra 0°F / 0% e ajustes 0.**
   Visto em 15/09 13:07: celular sem Wi-Fi e sem dados, card da home em OFFLINE,
   e a tela da estufa abriu com tudo zerado. Não grava nada (o D9 barra), mas
   **os botões + e − ficam ativos**: um toque em + pediria ajuste de 1°F, que
   entraria na fila e seria aplicado pelo aparelho na volta da internet.
+
+  *Consertado em 15/10/2026.* A tela passou a abrir com a **última leitura
+  gravada no celular**, com um aviso cinza dizendo de quando ela é — o retrato
+  velho deixou de se passar pelo agora. E os botões param quando não há base
+  conhecida: sem leitura ao vivo e sem leitura guardada, o valor aparece como
+  dois traços e o toque não manda nada. Ajustar sem internet continua valendo, que é
+  proposital e o produtor usa; o que não pode é ajustar a partir de um número
+  que o app inventou.
 
   *Causa:* a tela parte de zero e só troca ao receber a primeira leitura
   (`_temLeituraReal`); sem conexão, ela nunca chega. Quando a tela já estava
@@ -572,10 +580,13 @@ funciona:
   `!_temLeituraReal` e mostrar "—" no lugar dos zeros; melhor ainda, abrir com a
   última leitura salva no celular, marcada como antiga.
 
-- [ ] **D11. Eventos de dias diferentes aparecem só com a hora.** Na estufada 2
+- [x] **D11. Eventos de dias diferentes aparecem só com a hora.** Na estufada 2
   (14/09 14:09 → 15/09) a lista mostra 19:02, 19:11, 08:00, 13:06… — parece fora
-  de ordem, mas é a virada do dia. *Correção proposta:* mostrar a data
-  (dd/mm) quando a estufada passa de um dia, ou um separador por dia.
+  de ordem, mas é a virada do dia.
+
+  *Consertado em 15/10/2026* com a segunda opção: uma faixa discreta com a data
+  a cada virada de dia, e só quando a lista atravessa mais de um dia — numa
+  estufada de um dia só a data já está no cabeçalho da estufada selecionada.
 
 ### 2.8 Achado em campo (15/10/2026)
 
