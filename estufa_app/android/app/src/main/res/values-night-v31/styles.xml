@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O mesmo de values-v31, para o aparelho em modo escuro. Existe separado
+     porque o qualificador de noite tem precedencia sobre o de versao: sem este
+     arquivo, um aparelho Android 12+ no escuro voltaria a usar values-night e
+     ficaria sem a cor da tela de abertura. -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+</resources>

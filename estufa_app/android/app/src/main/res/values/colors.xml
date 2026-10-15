@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Verde quase preto do fundo da marca. Serve ao icone adaptativo e a tela
+         de abertura, para o app nao piscar branco antes de desenhar a primeira
+         tela - que e escura. -->
+    <color name="ic_launcher_background">#04150F</color>
+</resources>

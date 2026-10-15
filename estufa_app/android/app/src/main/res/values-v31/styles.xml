@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 em diante nao usa mais a tela de abertura desenhada a mao: o
+     sistema monta a sua, com o icone do app sobre uma cor. Sem isto a cor seria
+     a do tema do aparelho - branca na maioria -, e o app abriria com um flash
+     claro apesar de todo o resto estar escuro. -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+</resources>
