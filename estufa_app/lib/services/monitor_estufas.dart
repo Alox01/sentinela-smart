@@ -59,6 +59,15 @@ class EstufaMonitor extends ChangeNotifier {
   bool _buscando = false;
   bool _pausado = false;
   int _ultimoRepasseMs = 0;
+  int _falhasSeguidas = 0;
+
+  /// Quantas leituras seguidas precisam falhar para o selo dizer OFFLINE.
+  ///
+  /// Uma leitura perdida nao e queda: e um pacote que se perdeu, um nome que
+  /// demorou a resolver, o Wi-Fi do celular trocando de canal. Com a tela lendo
+  /// a cada 3 s, cada tropeço desses virava um piscar de OFFLINE no selo. Duas
+  /// seguidas - 6 s sem resposta nenhuma - ja e outra coisa.
+  static const int _falhasParaOffline = 2;
 
   EstufaMonitor({
     required this.api,
@@ -125,14 +134,30 @@ class EstufaMonitor extends ChangeNotifier {
     }
 
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
+    _falhasSeguidas = dados == null ? _falhasSeguidas + 1 : 0;
+    // O selo publicado aqui e o unico: card da home e tela de monitoramento
+    // leem este mesmo valor. Antes cada um perguntava ao ApiService na hora em
+    // que desenhava, e as duas perguntas caiam em momentos diferentes - dai o
+    // card dizer NUVEM e a tela da mesma estufa dizer LOCAL.
     _ultima = LeituraAoVivo(
       dados: dados,
-      modoConexao: api.modoConexao,
+      modoConexao: _seloDaConexao(dados),
       recebidaEmMs: agoraMs,
     );
     notifyListeners();
 
     if (dados != null) _repassarParaNuvemSeNecessario(dados, agoraMs);
+  }
+
+  /// O que mostrar no selo de conexao.
+  ///
+  /// Enquanto a leitura chega, e a conexao que a trouxe. Quando ela falha, o
+  /// selo anterior fica de pe pela primeira vez - e so na segunda falha seguida
+  /// o app assume que perdeu o aparelho.
+  String _seloDaConexao(Map<String, dynamic>? dados) {
+    if (dados != null) return api.modoConexao;
+    if (_falhasSeguidas >= _falhasParaOffline) return 'OFFLINE';
+    return _ultima?.modoConexao ?? 'CONECTANDO';
   }
 
   /// Leitura obtida em LOCAL vira telemetria na nuvem, para o watchdog nao

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:estufa_app/services/api_service.dart';
 import 'package:estufa_app/services/monitor_estufas.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 // Busca controlada pelo teste: nenhuma rede envolvida.
 class BuscaFalsa {
@@ -36,12 +38,31 @@ EstufaMonitor criarMonitor(
   // Intervalo longo de proposito: os testes disparam as buscas na mao, para a
   // contagem de chamadas nao depender de quando o timer resolve bater.
   Duration intervalo = const Duration(minutes: 5),
+  ApiService? api,
 }) {
   return EstufaMonitor(
-    api: ApiService('192.168.0.10'),
+    api: api ?? ApiService('192.168.0.10'),
     buscar: busca.buscar,
     intervalo: intervalo,
   );
+}
+
+/// Um `ApiService` que ja resolveu a conexao local, para o selo publicado pelo
+/// monitor ser LOCAL e nao o OFFLINE de quem nunca falou com ninguem.
+Future<ApiService> apiEmLocal() async {
+  final api = ApiService(
+    '192.168.0.10',
+    idHardware: 'ESP32_ABC',
+    cliente: MockClient(
+      (_) async => http.Response(
+        '{"status":{"idHardware":"ESP32_ABC"}}',
+        200,
+        headers: {'content-type': 'application/json'},
+      ),
+    ),
+  );
+  await api.resolverConexao();
+  return api;
 }
 
 void main() {
@@ -213,5 +234,87 @@ void main() {
     expect(monitor.ativo, isFalse);
 
     monitor.dispose();
+  });
+
+  group('o selo de conexao nao pisca', () {
+    // Relatado em campo em 15/10/2026: "fica alternando a cada x segundos entre
+    // offline, nuvem e local". Com a tela lendo a cada 3 s, cada leitura perdida
+    // - um pacote que se perdeu, o nome mDNS demorando, o Wi-Fi do celular
+    // trocando de canal - virava um piscar no selo.
+
+    test('uma leitura perdida segura o selo anterior', () async {
+      final busca = BuscaFalsa();
+      final monitor = criarMonitor(busca, api: await apiEmLocal());
+      void ouvinte() {}
+      monitor.assinar(ouvinte);
+
+      busca.responder();
+      await Future<void>.delayed(Duration.zero);
+      expect(monitor.ultima!.modoConexao, 'LOCAL');
+
+      unawaited(monitor.atualizarAgora());
+      busca.responderFalha();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(monitor.ultima!.temDados, isFalse);
+      expect(
+        monitor.ultima!.modoConexao,
+        'LOCAL',
+        reason: 'uma leitura perdida nao e queda',
+      );
+
+      monitor.desassinar(ouvinte);
+      monitor.dispose();
+    });
+
+    test('duas seguidas ja sao OFFLINE', () async {
+      final busca = BuscaFalsa();
+      final monitor = criarMonitor(busca, api: await apiEmLocal());
+      void ouvinte() {}
+      monitor.assinar(ouvinte);
+
+      busca.responder();
+      await Future<void>.delayed(Duration.zero);
+
+      for (var i = 0; i < 2; i++) {
+        unawaited(monitor.atualizarAgora());
+        busca.responderFalha();
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      expect(monitor.ultima!.modoConexao, 'OFFLINE');
+
+      monitor.desassinar(ouvinte);
+      monitor.dispose();
+    });
+
+    test('a leitura que volta zera a contagem', () async {
+      final busca = BuscaFalsa();
+      final monitor = criarMonitor(busca, api: await apiEmLocal());
+      void ouvinte() {}
+      monitor.assinar(ouvinte);
+
+      busca.responder();
+      await Future<void>.delayed(Duration.zero);
+
+      unawaited(monitor.atualizarAgora());
+      busca.responderFalha();
+      await Future<void>.delayed(Duration.zero);
+
+      unawaited(monitor.atualizarAgora());
+      busca.responder();
+      await Future<void>.delayed(Duration.zero);
+
+      // Esta e a terceira falha da sessao. Se a contagem nao tivesse zerado na
+      // leitura que voltou, ela ja estaria dizendo OFFLINE.
+      unawaited(monitor.atualizarAgora());
+      busca.responderFalha();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(monitor.ultima!.modoConexao, 'LOCAL');
+
+      monitor.desassinar(ouvinte);
+      monitor.dispose();
+    });
   });
 }

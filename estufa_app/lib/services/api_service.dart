@@ -582,9 +582,11 @@ class ApiService {
     if (ativa == null) return null;
 
     try {
-      return await _cliente
+      final resposta = await _cliente
           .get(Uri.parse('$ativa$path'), headers: _headers())
           .timeout(_timeoutGet(ativa));
+      _renovarResolucaoLocal(ativa);
+      return resposta;
     } catch (_) {
       // Sem zerar `_baseUrlAtiva` aqui. Zerar desarmava justamente a protecao de
       // _falhasLocaisParaDesistir: ela segura a conexao local depois de UMA
@@ -613,9 +615,11 @@ class ApiService {
     if (ativa == null) return null;
 
     try {
-      return await _cliente
+      final resposta = await _cliente
           .post(Uri.parse('$ativa$path'), headers: headers, body: body)
           .timeout(_timeoutPost(ativa));
+      _renovarResolucaoLocal(ativa);
+      return resposta;
     } catch (_) {
       // Mesma razao do _getComFallback: zerar a base desarma a protecao contra
       // uma falha isolada.
@@ -630,6 +634,27 @@ class ApiService {
         return null;
       }
     }
+  }
+
+  /// Uma leitura que chegou pela conexao local vale mais do que qualquer sonda:
+  /// ela PROVA que o caminho esta de pe. Renovando a resolucao a cada resposta,
+  /// a sondagem periodica some enquanto esta tudo funcionando.
+  ///
+  /// Era dai que vinha o selo trocando sozinho a cada poucos segundos. A
+  /// resolucao valia 8 s, a tela le a cada 3 s, entao a cada duas ou tres
+  /// leituras o app parava e sondava tudo de novo - e sonda e uma conexao nova,
+  /// que falha por mil motivos passageiros (o nome mDNS e o campeao). Uma falha
+  /// dessas, com a leitura chegando normalmente, bastava para o selo pular para
+  /// NUVEM ou OFFLINE e voltar no ciclo seguinte.
+  ///
+  /// So vale para a conexao local. Na nuvem a resolucao continua expirando de
+  /// propósito: e justamente expirando que ela volta a sondar o local e
+  /// descobre que o aparelho esta ao alcance de novo.
+  void _renovarResolucaoLocal(String base) {
+    if (_ehNuvem(base)) return;
+    _ultimaResolucao = DateTime.now();
+    _falhasLocaisSeguidas = 0;
+    _ultimaConexaoBoa[localBaseUrl] = _ResolucaoConexao(base, _ultimaResolucao);
   }
 
   /// Resolve a conexao exatamente como as leituras fazem, mas sem encostar no

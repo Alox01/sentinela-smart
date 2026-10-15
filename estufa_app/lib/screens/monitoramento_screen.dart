@@ -258,11 +258,15 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   }
 
   Future<void> atualizarTela() async {
-    final dados = _monitor.ultima?.dados;
+    final leitura = _monitor.ultima;
+    final dados = leitura?.dados;
     if (dados == null) {
       if (mounted) {
         setState(() {
-          _modoConexao = 'OFFLINE';
+          // O selo vem do monitor, que segura o anterior quando uma unica
+          // leitura se perde. Aqui era 'OFFLINE' na hora, entao um tropeço de
+          // rede piscava OFFLINE na tela a cada 3 s.
+          _modoConexao = leitura?.modoConexao ?? 'CONECTANDO';
         });
         _registrarQuedaConexaoSeNecessario();
         await _atualizarPendencias();
@@ -434,12 +438,13 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       // recebida ja significa que o aparelho esta vivo agora.
       _aguardandoAparelho = aguardandoAparelho;
       _ultimaLeituraMs = tsLeitura;
+      final selo = leitura?.modoConexao ?? api.modoConexao;
       _semComunicacaoAparelho =
-          api.modoConexao == 'NUVEM' &&
+          selo == 'NUVEM' &&
           tsLeitura != null &&
           (DateTime.now().millisecondsSinceEpoch - tsLeitura) >
               _limiarSemComunicacaoMs;
-      _modoConexao = api.modoConexao;
+      _modoConexao = selo;
       _ultimoTempAjusteServidor = novoTempAjuste;
       _ultimoUmidAjusteServidor = novoUmidAjuste;
     });
