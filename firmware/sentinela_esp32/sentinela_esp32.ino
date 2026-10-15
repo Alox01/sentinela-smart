@@ -1175,7 +1175,11 @@ void handleConfigPagina() {
       "<label>PIN do visor</label>"
       "<input name=\"pin\" inputmode=\"numeric\" maxlength=\"4\" required>"
       "<label>Arquivo .bin</label>"
-      "<input type=\"file\" name=\"firmware\" accept=\".bin\" required>"
+      // Sem filtro de tipo de proposito. O seletor do Android traduz o
+      // accept para um tipo MIME, nao acha nenhum dono para .bin e mostra a
+      // pasta vazia - o arquivo esta la e nao da para escolher. Quem erra o
+      // arquivo nao quebra nada: o cabecalho e conferido na gravacao.
+      "<input type=\"file\" name=\"firmware\" required>"
       "<button type=\"submit\">Enviar firmware</button></form></details>"
       "<p class=\"aviso\">O aparelho reinicia e volta ao normal. "
       "O alarme continua funcionando durante a configura&ccedil;&atilde;o.</p>"
