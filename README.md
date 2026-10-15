@@ -188,8 +188,8 @@ guarda dado de pessoa nenhuma.**
 ## 8. Testes
 
 ```bash
-cd estufa_server && npm test        # 213 testes
-cd estufa_app && flutter test       # 153 testes
+cd estufa_server && npm test        # 234 testes (em 15/10/2026)
+cd estufa_app && flutter test       # 208 testes (em 15/10/2026)
 ```
 
 A cada push, o CI roda os dois conjuntos, a análise estática do app e uma

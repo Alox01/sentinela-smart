@@ -18,7 +18,11 @@ O ESP32 opera normalmente na rede Wi-Fi da propriedade. O servidor em nuvem pode
 
 - As rotas protegidas exigem a chave configurada em `ESTUFA_API_TOKEN`.
 - A comparacao da chave usa `crypto.timingSafeEqual`.
-- Em producao, o servidor recusa uma chave ausente ou fraca. O modo sem chave exige habilitacao explicita para desenvolvimento.
+- Em producao, o servidor recusa uma chave ausente, previsivel ou com menos de
+  16 caracteres. O recomendado e gerar 32 bytes aleatorios. O modo sem chave
+  exige habilitacao explicita para desenvolvimento.
+- Cada resposta recebe `X-Request-Id`; falhas registram metodo, rota, status e
+  duracao sem registrar corpo, chave ou dados da estufa.
 - O servidor limita cada origem a 180 requisicoes por minuto.
 - O corpo JSON e limitado a 64 KB.
 - O Helmet adiciona cabecalhos HTTP de seguranca e o cabecalho `X-Powered-By` fica desabilitado.
@@ -34,6 +38,8 @@ O ESP32 opera normalmente na rede Wi-Fi da propriedade. O servidor em nuvem pode
   sem validar e registra um aviso no log.
 - Para ativar a validacao completa: painel do Supabase → Settings → Database →
   SSL → baixar o certificado e colar o PEM na variavel `DB_SSL_CA` do Render.
+- Em producao, use `DB_SSL_REQUIRE_VALIDATION=true`. Nesse modo o servidor
+  falha fechado e se recusa a iniciar quando o CA estiver ausente.
 - `DB_SSL=false` desliga o TLS e deve ser usado apenas em ambiente controlado.
 
 ### Aplicativo
@@ -145,6 +151,10 @@ Se o banco estiver indisponivel, somente as amostras selecionadas para persisten
 Uma estufada de 10 dias, com uma leitura por minuto, produziria cerca de 14.400 registros comuns. Com amostragem a cada 10 minutos, o volume cai para aproximadamente 1.440 registros, alem dos eventos importantes. A tela continua atualizada porque o estado ao vivo nao depende do intervalo de gravacao historica.
 
 ## Riscos restantes
+
+Auditoria das dependencias Node em 15/10/2026: `npm audit` sem vulnerabilidades
+conhecidas. Esse resultado e uma fotografia da data e deve ser refeito antes de
+cada entrega.
 
 - HTTP local nao cifra o trafego dentro da rede Wi-Fi. Uma rede comprometida ainda pode observar o trafego.
 - Uma chave compartilhada entre varios aparelhos aumenta o impacto de um vazamento. O ideal futuro e uma chave por aparelho.

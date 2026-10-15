@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/pending_sync_command_entity.dart';
@@ -7,10 +8,11 @@ import '../../../services/api_service.dart';
 
 Future<void> mostrarDetalhesConexaoDialog({
   required BuildContext context,
-  required String modoConexao,
+  required String Function() modoConexaoAtual,
   // Estado do aparelho (esta reportando ou nao), separado do alcance dos
   // servidores: a nuvem pode estar de pe e o aparelho, mudo.
-  required String estadoAparelho,
+  required String Function() estadoAparelhoAtual,
+  required Listenable atualizacoesConexao,
   // Versao do firmware relatada pelo aparelho. Fica visivel, e nao nos detalhes
   // tecnicos, porque a pergunta "qual versao esta naquele ESP?" so aparece
   // quando ja se esta em campo - e ate aqui a unica resposta era ir ate la com
@@ -34,6 +36,7 @@ Future<void> mostrarDetalhesConexaoDialog({
   // O ultimo teste ja feito nesta estufa (nulo na primeira vez) e como refazer.
   // Reabrir o dialogo mostra o que ja se sabe em vez de sondar tudo de novo.
   required ResultadoAlcance? alcanceConhecido,
+  required ValueListenable<ResultadoAlcance?> alcanceAtual,
   required Future<List<ApiConnectionProbe>> Function() testarAlcance,
   required bool sincronizandoPendencias,
   required VoidCallback onLimparFila,
@@ -77,8 +80,18 @@ Future<void> mostrarDetalhesConexaoDialog({
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _LinhaDetalhe('Modo atual', modoConexao),
-                        _LinhaDetalhe('Aparelho', estadoAparelho),
+                        AnimatedBuilder(
+                          animation: atualizacoesConexao,
+                          builder: (context, _) => Column(
+                            children: [
+                              _LinhaDetalhe(
+                                'Conexão usada agora',
+                                modoConexaoAtual(),
+                              ),
+                              _LinhaDetalhe('Aparelho', estadoAparelhoAtual()),
+                            ],
+                          ),
+                        ),
                         _LinhaDetalhe(
                           'Firmware',
                           versaoFirmware ?? 'Desconhecida',
@@ -92,7 +105,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                         _LinhaDetalhe('Pend\u00EAncias', '$totalPendencias'),
                         const SizedBox(height: 14),
                         const Text(
-                          'TESTE DE ALCANCE',
+                          'CAMINHOS DISPONÍVEIS',
                           style: TextStyle(
                             color: Colors.white54,
                             fontSize: 11,
@@ -103,6 +116,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                         const SizedBox(height: 8),
                         _TesteDeAlcance(
                           alcanceConhecido: alcanceConhecido,
+                          alcanceAtual: alcanceAtual,
                           testar: testarAlcance,
                         ),
                         // Enderecos ficam fechados: para o produtor sao ruido -
@@ -222,8 +236,7 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
 
   bool get _semCanal => widget.baseUrlAtiva == null;
   bool get _ativoEhNuvem =>
-      widget.baseUrlAtiva != null &&
-      widget.baseUrlAtiva == widget.cloudBaseUrl;
+      widget.baseUrlAtiva != null && widget.baseUrlAtiva == widget.cloudBaseUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +266,10 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
         ),
         if (_aberto) ...[
           const SizedBox(height: 4),
-          _LinhaDetalhe('Aparelho (id)', widget.idHardware ?? 'Não identificado'),
+          _LinhaDetalhe(
+            'Aparelho (id)',
+            widget.idHardware ?? 'Não identificado',
+          ),
           // Uma linha para o canal EM USO e outra para a alternativa — nunca
           // repetindo na segunda o que ja esta na primeira.
           //
@@ -274,14 +290,11 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
               'Endereço na nuvem',
               widget.cloudBaseUrl ?? 'Não configurada',
             ),
-          _LinhaDetalhe(
-            'Avisos push',
-            switch (widget.vigiadaPorPush) {
-              true => 'Este celular inscrito',
-              false => 'NÃO inscrito',
-              null => 'Conferindo',
-            },
-          ),
+          _LinhaDetalhe('Avisos push', switch (widget.vigiadaPorPush) {
+            true => 'Este celular inscrito',
+            false => 'NÃO inscrito',
+            null => 'Conferindo',
+          }),
         ],
       ],
     );
@@ -310,6 +323,7 @@ class _LinhaDetalhe extends StatelessWidget {
               style: const TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
             child: SelectableText(
               valor,
@@ -322,14 +336,18 @@ class _LinhaDetalhe extends StatelessWidget {
   }
 }
 
-/// Secao do teste de alcance: mostra o ultimo resultado conhecido de imediato e
-/// deixa refazer sob demanda. Sondar a nuvem pode levar mais de 10 s, entao
-/// refazer tudo a cada abertura do dialogo so servia para fazer esperar.
+/// Mostra o ultimo resultado enquanto faz uma verificacao nova ao abrir. Isso
+/// evita que um cache de ate dois minutos contradiga o selo atual da tela.
 class _TesteDeAlcance extends StatefulWidget {
   final ResultadoAlcance? alcanceConhecido;
+  final ValueListenable<ResultadoAlcance?> alcanceAtual;
   final Future<List<ApiConnectionProbe>> Function() testar;
 
-  const _TesteDeAlcance({required this.alcanceConhecido, required this.testar});
+  const _TesteDeAlcance({
+    required this.alcanceConhecido,
+    required this.alcanceAtual,
+    required this.testar,
+  });
 
   @override
   State<_TesteDeAlcance> createState() => _TesteDeAlcanceState();
@@ -345,8 +363,25 @@ class _TesteDeAlcanceState extends State<_TesteDeAlcance> {
     super.initState();
     _probes = widget.alcanceConhecido?.probes ?? const [];
     _quando = widget.alcanceConhecido?.quando;
-    // Sem nada conhecido, testa sozinho: e a primeira vez nesta estufa.
-    if (_probes.isEmpty) _testar();
+    widget.alcanceAtual.addListener(_receberEstadoCompartilhado);
+    // O resultado anterior evita uma tela vazia, mas nunca e tratado como
+    // atual: abrir os detalhes sempre confirma os dois caminhos novamente.
+    _testar();
+  }
+
+  @override
+  void dispose() {
+    widget.alcanceAtual.removeListener(_receberEstadoCompartilhado);
+    super.dispose();
+  }
+
+  void _receberEstadoCompartilhado() {
+    final alcance = widget.alcanceAtual.value;
+    if (!mounted || alcance == null) return;
+    setState(() {
+      _probes = alcance.probes;
+      _quando = alcance.quando;
+    });
   }
 
   Future<void> _testar() async {
@@ -395,7 +430,11 @@ class _TesteDeAlcanceState extends State<_TesteDeAlcance> {
           children: [
             Expanded(
               child: Text(
-                _quando == null ? '' : 'Verificado ${_desde(_quando!)}.',
+                _testando
+                    ? 'Verificando outras conexões...'
+                    : _quando == null
+                    ? ''
+                    : 'Verificado ${_desde(_quando!)}.',
                 style: const TextStyle(color: Colors.white38, fontSize: 11),
               ),
             ),
@@ -434,6 +473,11 @@ class _ProbeConexao extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cor = probe.online ? Colors.greenAccent : Colors.redAccent;
+    final nomeExibido = switch (probe.nome) {
+      'Local' => 'Aparelho local',
+      'Nuvem' => 'Servidor na nuvem',
+      _ => probe.nome,
+    };
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -446,7 +490,7 @@ class _ProbeConexao extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${probe.nome}: ${probe.online ? 'online' : 'offline'}',
+              '$nomeExibido: ${probe.online ? 'disponível' : 'indisponível'}',
               style: TextStyle(color: cor, fontSize: 12),
             ),
           ),

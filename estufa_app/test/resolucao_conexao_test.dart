@@ -31,11 +31,8 @@ void main() {
 
   const corpo = '{"status":{"idHardware":"ESP32_ABC","temperaturaAtual":130}}';
 
-  http.Response ok() => http.Response(
-    corpo,
-    200,
-    headers: {'content-type': 'application/json'},
-  );
+  http.Response ok() =>
+      http.Response(corpo, 200, headers: {'content-type': 'application/json'});
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -72,7 +69,8 @@ void main() {
     expect(
       cronometro.elapsed,
       lessThan(const Duration(seconds: 2)),
-      reason: 'esperou o nome mDNS desistir em vez de sair com o IP que já '
+      reason:
+          'esperou o nome mDNS desistir em vez de sair com o IP que já '
           'tinha respondido',
     );
   });
@@ -157,8 +155,51 @@ void main() {
     expect(
       pedidos,
       1,
-      reason: 'tentou a rota raiz num endereço que nem respondeu, dobrando a '
+      reason:
+          'tentou a rota raiz num endereço que nem respondeu, dobrando a '
           'espera',
+    );
+  });
+
+  test('leitura real recente prevalece sobre falha isolada da sonda', () async {
+    var getsLocais = 0;
+    final cliente = MockClient((requisicao) async {
+      if (requisicao.method == 'POST') {
+        return http.Response('{}', 200);
+      }
+      if (requisicao.url.host == 'nuvem.exemplo') return ok();
+
+      getsLocais++;
+      if (getsLocais == 1) return ok();
+      throw http.ClientException('falha passageira da sonda');
+    });
+
+    final api = ApiService(
+      '192.168.0.93:3000',
+      cloudUrl: 'https://nuvem.exemplo',
+      token: 'chave',
+      idHardware: 'ESP32_ABC',
+      cliente: cliente,
+    );
+
+    await api.resolverConexao();
+    expect(
+      await api.enviarSincronizacao({
+        'temperaturaAjuste': 25,
+      }, enfileirarSeOffline: false),
+      isTrue,
+    );
+    expect(api.alcanceAtual.value?.probes, hasLength(1));
+    expect(api.alcanceAtual.value?.probes.single.nome, 'Local');
+    expect(api.alcanceAtual.value?.probes.single.online, isTrue);
+
+    final alcance = await api.verificarConexoes(forcar: true);
+    expect(
+      alcance.firstWhere((probe) => probe.nome == 'Local').online,
+      isTrue,
+      reason:
+          'um comando local acabou de responder e prova que o caminho esta '
+          'disponivel, mesmo se uma nova sonda isolada falhar',
     );
   });
 }

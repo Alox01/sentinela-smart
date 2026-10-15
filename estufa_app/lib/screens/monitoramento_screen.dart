@@ -170,8 +170,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // e ate agora elas comecavam quando o produtor ja estava olhando a tela de
     // relatorios, esperando. Nada nelas depende daquela tela - o endereco esta
     // aqui desde sempre -, entao nao havia motivo para so entao comecar.
-    RelatorioEstufadaRepository(IsarService.instance)
-        .precarregar(_ip);
+    RelatorioEstufadaRepository(IsarService.instance).precarregar(_ip);
     // Por ultimo, e sem segurar nada: confere no banco se a copia que esta tela
     // recebeu ainda vale. E o que impede a chave revogada de sobreviver aqui.
     unawaited(_revalidarComOBanco());
@@ -659,9 +658,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     UsoDaConfiguracao uso = UsoDaConfiguracao.atualizacao,
   }) async {
     final dados = await Navigator.of(context).push<DadosAparelhoConfigurado>(
-      MaterialPageRoute(
-        builder: (_) => ConfigurarAparelhoScreen(uso: uso),
-      ),
+      MaterialPageRoute(builder: (_) => ConfigurarAparelhoScreen(uso: uso)),
     );
     if (dados == null || !mounted) return;
 
@@ -722,9 +719,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       acoes: AcoesMenuEstufa(
         aoAbrirDetalhesConexao: () => unawaited(_mostrarDetalhesConexao()),
         aoConfigurarAparelho: () => unawaited(_reconfigurarAparelho()),
-        aoTirarAcessoDosOutros: () => unawaited(
-          _reconfigurarAparelho(uso: UsoDaConfiguracao.revogacao),
-        ),
+        aoTirarAcessoDosOutros: () =>
+            unawaited(_reconfigurarAparelho(uso: UsoDaConfiguracao.revogacao)),
         aoReiniciarAjustes: () => unawaited(_prepararNovaEstufada()),
       ),
     );
@@ -873,8 +869,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     if (mounted) setState(() {});
   }
 
-
-
   String _descreverEstadoAparelho() {
     // Estufa sem id de aparelho nao esta offline: o app simplesmente nao sabe
     // de qual aparelho perguntar na nuvem, e nao pergunta. Dizer "offline"
@@ -896,7 +890,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       _ => 'Reportando (via nuvem)',
     };
   }
-
 
   // Puxar a tela para baixo, no topo, atualiza a leitura na hora e sincroniza
   // os ajustes que ficaram pendentes - o mesmo que o item do menu fazia, mas
@@ -1006,9 +999,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   }
 
   Future<void> _carregarCicloAtual() async {
-    final ciclo = await _monitoramentoRepository.buscarCicloAbertoPorIp(
-      _ip,
-    );
+    final ciclo = await _monitoramentoRepository.buscarCicloAbertoPorIp(_ip);
     if (!mounted) return;
     setState(() {
       _cicloAtual = ciclo;
@@ -1280,8 +1271,10 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       context: context,
       // Mesmo rotulo do indicador na AppBar, para o menu nao dizer "NUVEM"
       // enquanto a tela avisa que o aparelho esta mudo.
-      modoConexao: _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
-      estadoAparelho: _descreverEstadoAparelho(),
+      modoConexaoAtual: () =>
+          _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
+      estadoAparelhoAtual: _descreverEstadoAparelho,
+      atualizacoesConexao: _monitor,
       versaoFirmware: _versaoFirmware,
       idHardware: _idHardware ?? api.idHardware,
       baseUrlAtiva: api.baseUrlAtiva,
@@ -1293,6 +1286,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       totalPendencias: _pendenciasSincronizacao,
       pendencias: pendencias,
       alcanceConhecido: api.ultimoAlcance,
+      alcanceAtual: api.alcanceAtual,
       testarAlcance: () => api.verificarConexoes(forcar: true),
       sincronizandoPendencias: _sincronizandoPendencias,
       onLimparFila: () => unawaited(_confirmarLimpezaPendencias()),

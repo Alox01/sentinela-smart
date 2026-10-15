@@ -9,4 +9,6 @@ services:
       PORT: "3000"
       ESTUFA_API_TOKEN: "${ESTUFA_API_TOKEN:-}"
       DATABASE_URL: "${DATABASE_URL:-}"
+      DB_SSL_CA: "${DB_SSL_CA:-}"
+      DB_SSL_REQUIRE_VALIDATION: "${DB_SSL_REQUIRE_VALIDATION:-false}"
     restart: unless-stopped

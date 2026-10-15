@@ -20,14 +20,14 @@ docker compose up --build
 Com chave de acesso:
 
 ```powershell
-$env:ESTUFA_API_TOKEN="123456"
+$env:ESTUFA_API_TOKEN="teste-local-forte-aleatorio"
 docker compose up --build
 ```
 
 Com banco e chave:
 
 ```powershell
-$env:ESTUFA_API_TOKEN="123456"
+$env:ESTUFA_API_TOKEN="teste-local-forte-aleatorio"
 $env:DATABASE_URL="postgresql://usuario:senha@host:5432/postgres"
 docker compose up --build
 ```

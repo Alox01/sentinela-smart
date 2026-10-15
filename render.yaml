@@ -21,6 +21,12 @@ services:
       # nao a "Direct connection" (IPv6, que o Render nao alcanca).
       - key: DATABASE_URL
         sync: false
+      # Producao falha fechada: configure tambem o PEM do Supabase. Sem ele o
+      # servidor se recusa a conectar em vez de aceitar certificado nao validado.
+      - key: DB_SSL_CA
+        sync: false
+      - key: DB_SSL_REQUIRE_VALIDATION
+        value: "true"
       # Mesma chave de acesso usada no app e no ESP32 virtual.
       - key: ESTUFA_API_TOKEN
         sync: false

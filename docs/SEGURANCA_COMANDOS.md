@@ -14,7 +14,7 @@ de alarme.
   configurado.
 - `POST /debug/botao-fisico` também exige token quando configurado.
 
-O servidor **exige um `ESTUFA_API_TOKEN` forte** (>= 8 caracteres, não trivial —
+O servidor **exige um `ESTUFA_API_TOKEN` forte** (>= 16 caracteres, não trivial —
 a checagem está em `token_policy.js`) para iniciar. Sem um token válido, ele
 **recusa o boot**, evitando que a API suba aberta por engano. Para testes locais
 sem token, defina explicitamente `PERMITIR_SEM_TOKEN=true` — aí o servidor sobe
@@ -42,7 +42,7 @@ para facilitar a futura integração com o ESP32.
 No servidor:
 
 ```powershell
-$env:ESTUFA_API_TOKEN="minha-chave-de-teste"
+$env:ESTUFA_API_TOKEN="minha-chave-de-teste-forte"
 node server.js
 ```
 
@@ -54,7 +54,7 @@ automaticamente `estufa_server/.env` quando esse arquivo existir.
 No aplicativo Flutter:
 
 ```powershell
-flutter run -d chrome --dart-define=ESTUFA_API_TOKEN=minha-chave-de-teste
+flutter run -d chrome --dart-define=ESTUFA_API_TOKEN=minha-chave-de-teste-forte
 ```
 
 Ou cadastre a estufa no app e preencha o campo

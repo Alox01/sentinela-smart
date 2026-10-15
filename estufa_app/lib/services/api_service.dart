@@ -19,8 +19,10 @@ enum ApiCommandFailure {
 /// Como terminou a tentativa de subir a chave da estufa para a nuvem.
 enum ResultadoChaveNuvem {
   registrada,
+
   /// A nuvem tem outra chave para este aparelho: a do app esta velha.
   chaveDivergente,
+
   /// Nem a chave do app nem a global foram aceitas.
   naoAutorizado,
   semNuvem,
@@ -67,6 +69,7 @@ class ApiService {
   String? idHardware;
 
   String? _baseUrlAtiva;
+
   /// Base montada a partir do IP que o aparelho reportou, quando conhecido.
   String? _enderecoReportado;
   // Uma sonda local que falha nao derruba a conexao local. A resolucao do nome
@@ -81,6 +84,15 @@ class ApiService {
   bool _ipReportadoCarregado = false;
   ApiCommandFailure _ultimaFalhaComando = ApiCommandFailure.none;
   ResultadoAlcance? _ultimoAlcance;
+  final ValueNotifier<ResultadoAlcance?> _alcanceAtual = ValueNotifier(null);
+  String? _ultimaBaseQueRespondeu;
+  DateTime? _ultimaRespostaBoaEm;
+
+  // Uma leitura/comando real recente e uma evidencia mais forte do que uma
+  // sonda isolada. A sonda abre outra conexao e pode falhar por mDNS, economia
+  // de bateria ou troca momentanea de rede mesmo enquanto a tela continua
+  // recebendo dados pelo caminho ja estabelecido.
+  static const Duration _validadeEvidenciaReal = Duration(seconds: 15);
 
   /// Quem fala HTTP. Existe como campo, e nao como `http.get` solto, para o
   /// teste poder responder no lugar da rede.
@@ -99,12 +111,12 @@ class ApiService {
     http.Client? cliente,
   }) : _cliente = cliente ?? http.Client(),
        ipOriginal = ip,
-      localBaseUrl = _normalizarBaseUrl(ip),
-      localPort80FallbackUrl = _normalizarFallbackPorta80(ip),
-      cloudBaseUrl = _normalizarCloudUrl(cloudUrl ?? _cloudPadrao),
-      authToken = _normalizarToken(
-        token ?? (_tokenPadrao.isNotEmpty ? _tokenPadrao : _tokenLegado),
-      ) {
+       localBaseUrl = _normalizarBaseUrl(ip),
+       localPort80FallbackUrl = _normalizarFallbackPorta80(ip),
+       cloudBaseUrl = _normalizarCloudUrl(cloudUrl ?? _cloudPadrao),
+       authToken = _normalizarToken(
+         token ?? (_tokenPadrao.isNotEmpty ? _tokenPadrao : _tokenLegado),
+       ) {
     final lembrada = _ultimaConexaoBoa[localBaseUrl];
     if (lembrada != null &&
         DateTime.now().difference(lembrada.quando) <
@@ -491,6 +503,10 @@ class ApiService {
   /// Nulo enquanto ninguem tiver testado nesta estufa.
   ResultadoAlcance? get ultimoAlcance => _ultimoAlcance;
 
+  /// Fonte unica observavel usada pela tela e pelo dialogo de diagnostico.
+  /// Uma resposta real ou uma nova sonda atualiza todos os consumidores.
+  ValueListenable<ResultadoAlcance?> get alcanceAtual => _alcanceAtual;
+
   /// Sonda os enderecos. Como o ApiService e compartilhado pelas telas, o
   /// resultado sobrevive a fechar e reabrir o dialogo: sem [forcar], reabrir
   /// mostra na hora o que ja se sabe, em vez de sondar tudo de novo (a sonda da
@@ -507,7 +523,9 @@ class ApiService {
     }
 
     final probes = await _sondarConexoes();
-    _ultimoAlcance = ResultadoAlcance(probes: probes, quando: DateTime.now());
+    _definirUltimoAlcance(
+      ResultadoAlcance(probes: probes, quando: DateTime.now()),
+    );
     return probes;
   }
 
@@ -532,7 +550,7 @@ class ApiService {
       }
     }
 
-    return [
+    final probes = [
       if (locais.isNotEmpty)
         ApiConnectionProbe(
           // A porta que respondeu fica no baseUrl, fora do rotulo: para quem
@@ -547,6 +565,28 @@ class ApiService {
           nome: 'Nuvem',
           online: online[base] == true,
         ),
+    ];
+
+    return _reconciliarComRespostaReal(probes);
+  }
+
+  List<ApiConnectionProbe> _reconciliarComRespostaReal(
+    List<ApiConnectionProbe> probes,
+  ) {
+    final base = _ultimaBaseQueRespondeu;
+    final quando = _ultimaRespostaBoaEm;
+    if (base == null ||
+        quando == null ||
+        DateTime.now().difference(quando) > _validadeEvidenciaReal) {
+      return probes;
+    }
+
+    final nomeComprovado = _ehNuvem(base) ? 'Nuvem' : 'Local';
+    return [
+      for (final probe in probes)
+        probe.nome == nomeComprovado && !probe.online
+            ? ApiConnectionProbe(baseUrl: base, nome: probe.nome, online: true)
+            : probe,
     ];
   }
 
@@ -586,6 +626,7 @@ class ApiService {
           .get(Uri.parse('$ativa$path'), headers: _headers())
           .timeout(_timeoutGet(ativa));
       _renovarResolucaoLocal(ativa);
+      _registrarRespostaReal(ativa, resposta);
       return resposta;
     } catch (_) {
       // Sem zerar `_baseUrlAtiva` aqui. Zerar desarmava justamente a protecao de
@@ -597,9 +638,12 @@ class ApiService {
       if (fallback == null) return null;
 
       try {
-        return await _cliente
+        final resposta = await _cliente
             .get(Uri.parse('$fallback$path'), headers: _headers())
             .timeout(_timeoutGet(fallback));
+        _renovarResolucaoLocal(fallback);
+        _registrarRespostaReal(fallback, resposta);
+        return resposta;
       } catch (_) {
         return null;
       }
@@ -619,6 +663,7 @@ class ApiService {
           .post(Uri.parse('$ativa$path'), headers: headers, body: body)
           .timeout(_timeoutPost(ativa));
       _renovarResolucaoLocal(ativa);
+      _registrarRespostaReal(ativa, resposta);
       return resposta;
     } catch (_) {
       // Mesma razao do _getComFallback: zerar a base desarma a protecao contra
@@ -627,9 +672,12 @@ class ApiService {
       if (fallback == null) return null;
 
       try {
-        return await _cliente
+        final resposta = await _cliente
             .post(Uri.parse('$fallback$path'), headers: headers, body: body)
             .timeout(_timeoutPost(fallback));
+        _renovarResolucaoLocal(fallback);
+        _registrarRespostaReal(fallback, resposta);
+        return resposta;
       } catch (_) {
         return null;
       }
@@ -655,6 +703,49 @@ class ApiService {
     _ultimaResolucao = DateTime.now();
     _falhasLocaisSeguidas = 0;
     _ultimaConexaoBoa[localBaseUrl] = _ResolucaoConexao(base, _ultimaResolucao);
+  }
+
+  void _registrarRespostaReal(String base, http.Response resposta) {
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) return;
+    _ultimaBaseQueRespondeu = base;
+    _ultimaRespostaBoaEm = DateTime.now();
+
+    // Mesmo antes da primeira sonda, a operacao real ja permite mostrar o
+    // caminho comprovado. O outro caminho aparece quando sua sonda terminar;
+    // assim a janela nao fica vazia dizendo apenas "Verificando" enquanto a
+    // propria tela, logo atras, recebe dados normalmente.
+    final anterior = _ultimoAlcance;
+    if (anterior == null) {
+      _definirUltimoAlcance(
+        ResultadoAlcance(
+          probes: [
+            ApiConnectionProbe(
+              baseUrl: base,
+              nome: _ehNuvem(base) ? 'Nuvem' : 'Local',
+              online: true,
+            ),
+          ],
+          quando: _ultimaRespostaBoaEm!,
+        ),
+      );
+      return;
+    }
+
+    // Se ja existe um diagnostico, atualiza imediatamente a linha comprovada.
+    // Assim, todas as telas que reutilizam este ApiService partem do mesmo
+    // estado e nunca exibem "Local: indisponivel" ao lado de uma leitura LOCAL
+    // que acabou de chegar.
+    _definirUltimoAlcance(
+      ResultadoAlcance(
+        probes: _reconciliarComRespostaReal(anterior.probes),
+        quando: DateTime.now(),
+      ),
+    );
+  }
+
+  void _definirUltimoAlcance(ResultadoAlcance alcance) {
+    _ultimoAlcance = alcance;
+    _alcanceAtual.value = alcance;
   }
 
   /// Resolve a conexao exatamente como as leituras fazem, mas sem encostar no
@@ -966,7 +1057,8 @@ class ApiService {
     });
     // 409 = a nuvem guarda outra chave para este aparelho. Se estamos propondo
     // uma troca, o caminho certo e a rotacao, que prova posse da anterior.
-    if (resultado == ResultadoChaveNuvem.chaveDivergente && alvo != credencial) {
+    if (resultado == ResultadoChaveNuvem.chaveDivergente &&
+        alvo != credencial) {
       return _postChave('$base/aparelhos/chave/rotacionar', {
         'idHardware': id,
         'chaveAtual': credencial,
@@ -989,9 +1081,13 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 15));
       if (resposta.statusCode == 200) return ResultadoChaveNuvem.registrada;
-      if (resposta.statusCode == 409) return ResultadoChaveNuvem.chaveDivergente;
+      if (resposta.statusCode == 409) {
+        return ResultadoChaveNuvem.chaveDivergente;
+      }
       // 403 na rotacao: a nuvem tem uma terceira chave, que nem o app conhece.
-      if (resposta.statusCode == 403) return ResultadoChaveNuvem.chaveDivergente;
+      if (resposta.statusCode == 403) {
+        return ResultadoChaveNuvem.chaveDivergente;
+      }
       if (resposta.statusCode == 401) return ResultadoChaveNuvem.naoAutorizado;
       return ResultadoChaveNuvem.falhou;
     } catch (_) {

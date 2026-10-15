@@ -62,4 +62,20 @@ describe('database TLS options', () => {
   it('DB_SSL=false desliga o TLS por completo', () => {
     assert.equal(__testables.criarConfigSsl({ DB_SSL: 'false' }), false);
   });
+
+  it('modo estrito recusa iniciar sem CA', () => {
+    assert.throws(
+      () => __testables.criarConfigSsl({ DB_SSL_REQUIRE_VALIDATION: 'true' }),
+      /exige DB_SSL_CA/,
+    );
+  });
+
+  it('modo estrito aceita CA e valida a cadeia', () => {
+    const config = __testables.criarConfigSsl({
+      DB_SSL_REQUIRE_VALIDATION: 'true',
+      DB_SSL_CA: 'LINHA 1\\nLINHA 2',
+    });
+    assert.equal(config.rejectUnauthorized, true);
+    assert.equal(config.ca, 'LINHA 1\nLINHA 2');
+  });
 });

@@ -5,7 +5,11 @@
 // Usado no boot (server.js): se o token nao passar, o servidor se recusa a
 // iniciar, a menos que PERMITIR_SEM_TOKEN=true seja definido para uso local.
 
-const TAMANHO_MINIMO = 8;
+// Credenciais de oito caracteres ainda cabem no espaco de uma senha humana e
+// sao pequenas demais para proteger comandos que alteram equipamento fisico.
+// Dezesseis e o piso de compatibilidade; a recomendacao operacional continua
+// sendo gerar pelo menos 32 bytes aleatorios.
+const TAMANHO_MINIMO = 16;
 
 const TOKENS_FRACOS = new Set([
   '12345678',

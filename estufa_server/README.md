@@ -39,7 +39,7 @@ Sem variáveis, o servidor roda em modo simulação e sem autenticação.
 Com chave de acesso:
 
 ```powershell
-$env:ESTUFA_API_TOKEN="minha-chave"
+$env:ESTUFA_API_TOKEN="minha-chave-forte-aleatoria-32b"
 docker compose up --build
 ```
 

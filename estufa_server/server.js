@@ -25,6 +25,7 @@ const {
 const { iniciarRetencao, lerDiasRetencao } = require('./retention_scheduler');
 const { criarEnviadorPush } = require('./push');
 const { log } = require('./log');
+const { criarContextoRequisicao } = require('./request_context');
 
 const app = express();
 const API_TOKEN = process.env.ESTUFA_API_TOKEN ?? process.env.API_AUTH_TOKEN ?? '';
@@ -44,7 +45,7 @@ if (!politicaToken.ok) {
   } else {
     log.erro(
       `ERRO: ${politicaToken.motivo}. Configure ESTUFA_API_TOKEN com um token ` +
-        'forte (>= 8 caracteres, nao trivial) antes de iniciar o servidor.',
+        'forte (>= 16 caracteres, aleatorio) antes de iniciar o servidor.',
     );
     log.erro(
       'Para desenvolvimento local sem token, defina PERMITIR_SEM_TOKEN=true.',
@@ -102,6 +103,7 @@ const bufferPush = criarBufferLeituras({
 });
 
 app.disable('x-powered-by');
+app.use(criarContextoRequisicao({ log }));
 app.use(
   helmet({
     // A API local pode ser consumida pelo app servido em outra origem.

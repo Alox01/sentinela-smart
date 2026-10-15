@@ -20,6 +20,15 @@ function criarConfigSsl(env = process.env) {
     return { rejectUnauthorized: true, ca };
   }
 
+  const exigirValidacao =
+    (env.DB_SSL_REQUIRE_VALIDATION ?? '').trim().toLowerCase() === 'true';
+  if (exigirValidacao) {
+    throw new Error(
+      'DB_SSL_REQUIRE_VALIDATION=true exige DB_SSL_CA. ' +
+        'O servidor nao iniciara uma conexao PostgreSQL sem validar o certificado.',
+    );
+  }
+
   // Sem CA nao da para validar a cadeia: o pooler do Supabase usa certificado
   // proprio, e exigir validacao aqui derrubava TODA a persistencia (testado:
   // "self-signed certificate in certificate chain"). A conexao segue cifrada;

@@ -10,6 +10,7 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 | mexer no código | **`CONVENCOES.md`** — regras de commit, comandos de build, e os fatos de domínio que parecem bug e não são |
 | saber o estado do projeto | **`HANDOFF.md`** |
 | pegar a próxima tarefa | **`AUDITORIA.md`** — é a fila de trabalho, com caixas |
+| ver as melhorias mais recentes | **`MELHORIAS_CODIGO_2026-10-15.md`** — segurança, TLS, rastreabilidade e pendências operacionais |
 
 ## O sistema como ele é
 

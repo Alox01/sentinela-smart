@@ -49,7 +49,7 @@ Não substitui os sete acima, mas conta como evidência de apoio:
   ver a lenha" soava igual a "corra". Os sons passaram a ser agrupados por
   **ação**: sirene para incêndio e >175 °F (*sair*), som antigo para desvio de
   temperatura e sem comunicação (*ir conferir*).
-- **Testes automatizados** — 173 no app, 220 no servidor. Provam robustez do
+- **Testes automatizados** — 208 no app e 234 no servidor em 15/10/2026. Provam robustez do
   software; **não** provam utilidade da solução, que é o que os sete itens acima
   fazem.
 

@@ -10,7 +10,7 @@ test('recusa token vazio ou ausente', () => {
 });
 
 test('recusa token curto demais', () => {
-  const r = avaliarTokenApi('123456');
+  const r = avaliarTokenApi('Xk9-mQ2v-Lp7t');
   assert.equal(r.ok, false);
   assert.match(r.motivo, /curto/i);
 });
@@ -22,10 +22,10 @@ test('recusa token fraco/previsivel mesmo com tamanho ok', () => {
 });
 
 test('aceita token forte', () => {
-  const r = avaliarTokenApi('Xk9-mQ2v-Lp7t');
+  const r = avaliarTokenApi('Xk9-mQ2v-Lp7t-R4s8-N6y1');
   assert.equal(r.ok, true);
 });
 
 test('ignora espacos ao redor', () => {
-  assert.equal(avaliarTokenApi('  Xk9-mQ2v-Lp7t  ').ok, true);
+  assert.equal(avaliarTokenApi('  Xk9-mQ2v-Lp7t-R4s8-N6y1  ').ok, true);
 });

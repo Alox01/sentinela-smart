@@ -35,7 +35,7 @@ chave cadastrada em cada estufa.
    Confirme no log: `Persistencia local desligada (modo aparelho)` e
    `ESP32 virtual: empurrando leituras para https://estufa-server.onrender.com`.
 
-   > O servidor agora **exige um `ESTUFA_API_TOKEN` forte** (>= 8 caracteres, não
+   > O servidor agora **exige um `ESTUFA_API_TOKEN` forte** (>= 16 caracteres, não
    > trivial) para subir. Se rodar sem token só para teste local, defina
    > `PERMITIR_SEM_TOKEN=true`. Na nuvem (Render), configure o token nas variáveis
    > de ambiente e use o mesmo valor na chave de acesso do app.
