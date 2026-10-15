@@ -152,6 +152,8 @@ unsigned long ultimaTrocaVentoinhaMs = 0;
 // de novo devolve o comando ao ajuste, e e ele que decide se ela gira agora.
 // Nao sobrevive a um reinicio: religar o aparelho destrava.
 bool ventoinhaBloqueada = false;
+// Para o diario nao repetir o aviso de prazo a cada volta do laco.
+bool avisouEsperaVentoinha = false;
 
 // Os dois pontos do visor piscam enquanto ela esta travada. E o unico aviso de
 // que ela nao vai ligar sozinha - sem ele, a estufa esfriaria e todo mundo
@@ -443,6 +445,7 @@ void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
 void aplicarVentoinha();
 void colherTemperaturaSePronta();
+void forcarReescritaVisor();
 void tarefaNuvem(void* _);
 void gravarPendenciasDeChave();
 uint8_t pontosDoVisor();
@@ -2652,12 +2655,27 @@ void aplicarVentoinha() {
   unsigned long agora = millis();
   if (!paradaImediata && ultimaTrocaVentoinhaMs != 0 &&
       agora - ultimaTrocaVentoinhaMs < TEMPO_MINIMO_VENTOINHA_MS) {
+    // Diz no diario, uma vez por espera. Sem isto, "o ajuste pede e ela nao
+    // liga" nao tem como ser distinguido em campo de travada no botao, de fogo
+    // ou de defeito - sao quatro causas com o mesmo sintoma. O aviso sai uma so
+    // vez porque esta funcao roda a cada volta do laco.
+    if (!avisouEsperaVentoinha) {
+      avisouEsperaVentoinha = true;
+      registrar(String("Ventoinha pedida: falta ") +
+                (TEMPO_MINIMO_VENTOINHA_MS -
+                 (agora - ultimaTrocaVentoinhaMs)) / 1000 +
+                "s do prazo minimo entre partidas");
+    }
     return;
   }
+  avisouEsperaVentoinha = false;
 
   ventoinhaLigada = desejado;
   ultimaTrocaVentoinhaMs = agora;
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
+  // O chaveamento e o momento em que o visor costuma perder o quadro. Reescreve
+  // em seguida em vez de esperar o segundo seguinte.
+  forcarReescritaVisor();
   registrar(String("Ventoinha ") +
             (ventoinhaLigada     ? "LIGADA"
              : fogo              ? "DESLIGADA (fogo)"
@@ -2782,11 +2800,28 @@ uint8_t pontosDoVisor() {
 // O visor so e reescrito quando o que ele mostra muda. Antes, cada volta do laco
 // mandava os quatro digitos de novo pelo protocolo do TM1637, que e bit a bit -
 // trabalho repetido centenas de vezes por segundo para desenhar o mesmo numero.
+//
+// Com uma ressalva que custou um visor apagado em campo: o TM1637 nao tem como
+// ser consultado. Se ele PERDE o quadro - e perde, no instante em que a bobina
+// do contator chaveia 220 V a centimetros dos fios de dados -, o cache continua
+// achando que o numero esta na tela e nunca mais reescreve. O visor ficava preto
+// ate alguem mexer em algo que mudasse o numero. Por isso o quadro e reescrito
+// do zero uma vez por segundo, e na hora em que o rele troca de estado.
 enum ModoVisor { VISOR_NADA, VISOR_NUMERO, VISOR_LIMPO, VISOR_TRACOS };
 ModoVisor visorModo = VISOR_NADA;
 int visorValor = 0;
 uint8_t visorPontos = 0;
 bool visorZeros = false;
+const unsigned long INTERVALO_REESCRITA_VISOR_MS = 1000;
+unsigned long ultimaReescritaVisor = 0;
+
+// Esquece o que esta na tela: a proxima escrita manda os quatro digitos de novo,
+// junto com o comando de brilho - que e o que acende o display outra vez se ele
+// perdeu tambem essa parte.
+void forcarReescritaVisor() {
+  visorModo = VISOR_NADA;
+  ultimaReescritaVisor = millis();
+}
 
 void escreverNumero(int valor, uint8_t pontos, bool zerosEsquerda) {
   if (visorModo == VISOR_NUMERO && visorValor == valor &&
@@ -2816,6 +2851,10 @@ void escreverTracos() {
 // Escreve no visor de 4 digitos: temperatura no uso normal, alvo no modo de
 // ajuste, PIN no modo de configuracao.
 void atualizarDisplay() {
+  if (millis() - ultimaReescritaVisor >= INTERVALO_REESCRITA_VISOR_MS) {
+    forcarReescritaVisor();
+  }
+
   // No modo de configuracao o visor mostra "----": um estado claramente
   // diferente de uma leitura, sem tentar escrever letras (o display de 7
   // segmentos nao mostra texto legivel). A confirmacao de entrada e o

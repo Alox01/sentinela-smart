@@ -291,6 +291,9 @@ funciona:
   A versão anterior está na etiqueta `firmware-pre-core0`, para voltar atrás sem
   arqueologia. Flash 88%, memória 15% — igual a antes.
 
+  *Em campo, no mesmo dia:* os engasgos pararam. O conserto 2 trouxe um defeito
+  próprio, corrigido em seguida — ver D12.
+
   *Situação em 14/09, com o firmware do dia:* o produtor não viu mais os
   engasgos feios. Sobra um toque de botão perdido de vez em quando ("clico 2 a 3
   vezes até responder"). Bate com o que resta do D3: a busca de comando na nuvem
@@ -573,6 +576,36 @@ funciona:
   (14/09 14:09 → 15/09) a lista mostra 19:02, 19:11, 08:00, 13:06… — parece fora
   de ordem, mas é a virada do dia. *Correção proposta:* mostrar a data
   (dd/mm) quando a estufada passa de um dia, ou um separador por dia.
+
+### 2.8 Achado em campo (15/10/2026)
+
+- [x] **D12. O visor apagava quando a ventoinha ligava e não voltava sozinho.**
+  Apareceu no mesmo dia em que o cache do visor entrou (D3, conserto 2), e só
+  nele: antes, o laço reescrevia o visor centenas de vezes por segundo, então
+  qualquer quadro perdido se desenhava de novo em milissegundos e ninguém via.
+
+  **O TM1637 não tem como ser consultado.** O cache guardava o que ele *acreditava*
+  estar na tela e, se o display perdesse o quadro, nunca mais reescrevia — o
+  visor ficava preto com o aparelho funcionando normalmente, o que o app
+  confirmava mostrando tudo certo. O quadro se perde no instante em que a bobina
+  do contator chaveia 220 V a centímetros dos fios de dados. **O sintoma que
+  entregou a causa:** apertar o botão da ventoinha trazia o visor de volta — não
+  por reiniciar nada, mas porque trocar a trava muda os dois pontos, o cache
+  vê diferença e reescreve.
+
+  *Conserto:* o quadro é reescrito do zero uma vez por segundo
+  (`forcarReescritaVisor()`) e também no instante em que o relé troca de estado,
+  que é quando o estrago acontece. Custa um quadro por segundo em vez de
+  centenas — o ganho do cache fica de pé. A reescrita manda também o comando de
+  brilho, que é o que reacende o display se ele perdeu essa parte.
+
+  *Conserto de hardware que falta:* o supressor na bobina do contator (RC ou
+  varistor) ataca a causa em vez do sintoma. Está na lista de compras.
+
+  *De passagem,* `aplicarVentoinha()` passou a registrar no `/log` quando segura
+  uma partida pelo prazo mínimo de 30 s. Era um `return` silencioso, e "o ajuste
+  pede e ela não liga" tem quatro causas com o mesmo sintoma — prazo, trava no
+  botão, fogo e falha de leitura. Agora o diário distingue.
 
 ### 2.3 Baixa — higiene
 
