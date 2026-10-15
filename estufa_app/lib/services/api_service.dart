@@ -43,9 +43,17 @@ class ApiService {
     defaultValue: '',
   );
 
-  // Ultima conexao que funcionou por estufa, compartilhada entre as telas
+  // Ultima conexao LOCAL que funcionou por estufa, compartilhada entre as telas
   // (card da home, monitoramento). Evita re-sondar tudo do zero a cada
   // instancia e reduz o tempo ate a primeira leitura.
+  //
+  // So local, de proposito. Guardar a nuvem aqui tinha um efeito que ninguem
+  // pediu: uma unica resolucao que caiu para a nuvem - por uma falha isolada do
+  // nome mDNS, que falha sozinho de vez em quando - era adotada por qualquer
+  // tela aberta nos 30 s seguintes, SEM sondar o local, porque o construtor
+  // confia na lembranca. O produtor via "do nada mudou para a nuvem" com a rede
+  // local funcionando do lado. E nao havia nada a economizar: a nuvem nem e
+  // sondada, ela e escolhida quando o local nao responde.
   static final Map<String, _ResolucaoConexao> _ultimaConexaoBoa = {};
   static const Duration _validadeResolucaoCompartilhada = Duration(seconds: 30);
 
@@ -70,6 +78,7 @@ class ApiService {
   static const int _falhasLocaisParaDesistir = 2;
   int _falhasLocaisSeguidas = 0;
   DateTime _ultimaResolucao = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _ipReportadoCarregado = false;
   ApiCommandFailure _ultimaFalhaComando = ApiCommandFailure.none;
   ResultadoAlcance? _ultimoAlcance;
 
@@ -136,10 +145,15 @@ class ApiService {
   String get modoConexao {
     final ativa = _baseUrlAtiva;
     if (ativa == null) return 'OFFLINE';
-    if (ativa == localBaseUrl || ativa == localPort80FallbackUrl) {
-      return 'LOCAL';
-    }
-    return 'NUVEM';
+    // Local e tudo que NAO e a nuvem. Antes, a conta era pela lista branca do
+    // nome e da porta 80, e o endereco que o proprio aparelho reportou - a
+    // terceira porta local, usada justamente quando o nome mDNS nao resolve -
+    // caia de fora: o app lia o aparelho na rede local e carimbava NUVEM na
+    // tela. Era parte do "do nada mudou para a nuvem" relatado em campo, e a
+    // pior parte, porque nao havia mudanca nenhuma para procurar. Tambem
+    // desligava por engano duas regras que dependem de estar em LOCAL: aprender
+    // o idHardware do aparelho e repassar a leitura para a nuvem.
+    return _ehNuvem(ativa) ? 'NUVEM' : 'LOCAL';
   }
 
   String? get baseUrlAtiva => _baseUrlAtiva;
@@ -572,7 +586,11 @@ class ApiService {
           .get(Uri.parse('$ativa$path'), headers: _headers())
           .timeout(_timeoutGet(ativa));
     } catch (_) {
-      _baseUrlAtiva = null;
+      // Sem zerar `_baseUrlAtiva` aqui. Zerar desarmava justamente a protecao de
+      // _falhasLocaisParaDesistir: ela segura a conexao local depois de UMA
+      // falha isolada, e para isso precisa saber qual era a conexao local
+      // vigente. Apagada, a primeira falha ja trocava a fonte dos numeros para
+      // a nuvem - o "mudou para a nuvem sozinho" que o produtor relatou.
       final fallback = await _resolverBaseAtiva(force: true);
       if (fallback == null) return null;
 
@@ -599,7 +617,8 @@ class ApiService {
           .post(Uri.parse('$ativa$path'), headers: headers, body: body)
           .timeout(_timeoutPost(ativa));
     } catch (_) {
-      _baseUrlAtiva = null;
+      // Mesma razao do _getComFallback: zerar a base desarma a protecao contra
+      // uma falha isolada.
       final fallback = await _resolverBaseAtiva(force: true);
       if (fallback == null) return null;
 
@@ -613,7 +632,25 @@ class ApiService {
     }
   }
 
+  /// Resolve a conexao exatamente como as leituras fazem, mas sem encostar no
+  /// banco local. Existe para o teste poder afirmar QUAL conexao foi escolhida e
+  /// em quanto tempo: `buscarStatus()` sincroniza as pendencias e abre o Isar,
+  /// que nao existe em teste de unidade.
+  @visibleForTesting
+  Future<String?> resolverConexao({bool force = false}) =>
+      _resolverBaseAtiva(force: force);
+
   Future<String?> _resolverBaseAtiva({bool force = false}) async {
+    // O endereco aprendido em sessoes anteriores precisa estar na lista ANTES da
+    // primeira sonda, e quem o carregava fazia isso sem esperar (`unawaited`):
+    // na primeira abertura do app a primeira resolucao saia so com o nome mDNS,
+    // justamente a candidata que pode levar segundos para desistir. Carregar
+    // aqui garante que a sonda rapida exista desde a primeira tentativa.
+    if (!_ipReportadoCarregado) {
+      _ipReportadoCarregado = true;
+      await carregarIpReportado();
+    }
+
     final agora = DateTime.now();
     final cacheValido =
         agora.difference(_ultimaResolucao) < const Duration(seconds: 8);
@@ -626,21 +663,10 @@ class ApiService {
 
     // Sonda so as candidatas locais, em paralelo: sao rapidas e o tempo total
     // vira o da mais lenta, em vez da soma dos timeouts.
+    // Prioridade: local primeiro; nuvem so quando nenhuma local responde.
     String? escolhida;
     if (locais.isNotEmpty) {
-      final respostas = await Future.wait(
-        locais.map((base) async => MapEntry(base, await _estaOnline(base))),
-      );
-      final online = {
-        for (final resposta in respostas) resposta.key: resposta.value,
-      };
-      // Prioridade: local primeiro; nuvem so quando o local nao responde.
-      for (final base in locais) {
-        if (online[base] == true) {
-          escolhida = base;
-          break;
-        }
-      }
+      escolhida = await _primeiraLocalQueResponde(locais);
     }
 
     if (escolhida != null) {
@@ -673,10 +699,47 @@ class ApiService {
 
     _baseUrlAtiva = escolhida;
     _ultimaResolucao = agora;
-    if (escolhida != null) {
+    if (escolhida != null && !_ehNuvem(escolhida)) {
       _ultimaConexaoBoa[localBaseUrl] = _ResolucaoConexao(escolhida, agora);
+    } else {
+      // Caiu para a nuvem: apaga a lembranca em vez de propagar a queda para as
+      // outras telas. Cada instancia volta a sondar o local por conta propria.
+      _ultimaConexaoBoa.remove(localBaseUrl);
     }
     return escolhida;
+  }
+
+  // Vence a primeira que responder, nao a primeira da lista.
+  //
+  // As sondas sempre sairam juntas, mas o resultado esperava a MAIS LENTA
+  // (`Future.wait`). Com o nome mDNS como primeira candidata - e ele leva ate
+  // 4 s para desistir no Android -, o IP aprendido respondia numa fracao de
+  // segundo e ficava esperando o nome. Era o "demora muito para conectar" da
+  // primeira abertura, e explica por que a estufa de demonstracao entrava na
+  // hora: o nome dela nao existe em rede nenhuma e falha imediatamente, em vez
+  // de pendurar.
+  //
+  // A ordem da lista deixa de valer como preferencia, e isso e aceitavel: as
+  // candidatas locais apontam para o MESMO aparelho. O nome vinha antes para
+  // sobreviver a troca de IP, e isso continua de pe - quando o IP muda, a sonda
+  // por IP falha e o nome ganha sozinho. Endereco que passou para outro
+  // aparelho continua barrado em _capturarIdHardwareLocal().
+  Future<String?> _primeiraLocalQueResponde(List<String> locais) async {
+    final decidida = Completer<String?>();
+    var faltam = locais.length;
+    for (final base in locais) {
+      unawaited(
+        _estaOnline(base).then((online) {
+          if (online) {
+            if (!decidida.isCompleted) decidida.complete(base);
+            return;
+          }
+          faltam--;
+          if (faltam == 0 && !decidida.isCompleted) decidida.complete(null);
+        }),
+      );
+    }
+    return decidida.future;
   }
 
   // Status 200 nao basta para dizer que o aparelho respondeu. O endereco pode ter
@@ -712,7 +775,13 @@ class ApiService {
         return true;
       }
     } catch (_) {
-      // Alguns prototipos ESP32 respondem o JSON diretamente na rota raiz.
+      // Estourou o prazo ou nem chegou a sair: o endereco nao esta no ar, e a
+      // rota raiz ia estourar o mesmo prazo de novo. Dois prazos de 4 s
+      // empilhados num nome mDNS que nao resolve eram 8 s de app parecendo
+      // travado. A tentativa pela raiz abaixo continua valendo para o prototipo
+      // que RESPONDE, mas so serve JSON na raiz - esse chega aqui com resposta,
+      // nao com excecao.
+      return false;
     }
 
     try {
