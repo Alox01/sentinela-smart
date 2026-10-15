@@ -327,11 +327,17 @@ String tokenAparelho;
 // proprio aparelho fora da nuvem. Apagada assim que a troca e aceita.
 String chaveAnterior;
 bool chaveRegistradaNaNuvem = false;
+// A tarefa de rede descobriu algo sobre a chave e pede ao laco que grave.
+volatile bool pedidoGravarChave = false;
 
 // Diario das ultimas linhas, lido em /log quando nao ha cabo. Ver registrar().
 const int LOG_LINHAS = 24;
 String diario[LOG_LINHAS];
 int diarioProx = 0;
+// Agora o laco e a tarefa de rede escrevem aqui, cada um no seu nucleo, e o
+// navegador le em /log. Sem tranca, uma escrita no meio de uma leitura entrega
+// um texto que acabou de ser liberado da memoria - e isso reinicia o aparelho.
+SemaphoreHandle_t trancaDiario = NULL;
 
 // IP fixo (opcional). Vazio = DHCP, que e o normal. Existe porque em muita
 // propriedade o roteador e do provedor e o produtor nao tem acesso para fazer
@@ -437,6 +443,8 @@ void aoPerderWifi(arduino_event_id_t evento, arduino_event_info_t info);
 const char* textoMotivoFalhaWifi(uint8_t motivo);
 void aplicarVentoinha();
 void colherTemperaturaSePronta();
+void tarefaNuvem(void* _);
+void gravarPendenciasDeChave();
 uint8_t pontosDoVisor();
 void registrar(const String& linha);
 void handleLog();
@@ -456,6 +464,8 @@ void setup() {
   // Deixar o pino solto nesse intervalo e deixar o contator no chute.
   pinMode(RELE_VENTOINHA, OUTPUT);
   digitalWrite(RELE_VENTOINHA, LOW);
+
+  trancaDiario = xSemaphoreCreateMutex();
 
   Serial.begin(115200);
   delay(1000);
@@ -548,6 +558,10 @@ void setup() {
   server.begin();
   iniciarMdns();
 
+  // 12 KB de pilha: o handshake TLS e guloso, e uma pilha curta aqui vira
+  // reinicio por estouro no meio de uma conexao.
+  xTaskCreatePinnedToCore(tarefaNuvem, "nuvem", 12288, NULL, 1, NULL, 0);
+
   Serial.println("Sistema iniciado");
   Serial.print("Servidor HTTP em: http://");
   Serial.println(WiFi.localIP());
@@ -566,49 +580,12 @@ void loop() {
   if (modoConfig) dnsServer.processNextRequest();
   manterWifi();
 
-  // Antes da nuvem, de proposito. Cada conversa com ela e um handshake HTTPS
-  // que segura o loop por 1-2 s, e nesse intervalo os pinos nao sao lidos: quem
-  // apertasse os tres bem na hora so seria notado 2 s depois, e a contagem
-  // comecava dali - dava para segurar 3 s de verdade e nao acontecer nada.
-  // Lendo antes, a combinacao entra na conta antes de o loop travar.
   verificarModoConfig();
 
-  // Emergencia nao espera o proximo envio agendado. Sem isto, um incendio so
-  // chegaria a nuvem ate um minuto depois - e um teste rapido no sensor de
-  // chama comecava e terminava entre dois envios, sem a nuvem ver nada.
-  // No modo de configuracao o aparelho e um ponto de acesso, sem saida para a
-  // internet: tentar falar com a nuvem so gastaria segundos do loop em
-  // conexoes fadadas a falhar.
-  // Com os tres botoes na mao, a nuvem espera. Sao 20 s ate a proxima busca e
-  // 60 ate o proximo envio - nada que se perca -, e sem isto um handshake
-  // caindo no meio da contagem engolia os 3 s de quem estava segurando.
-  //
-  // O mesmo vale para quem esta ajustando o alvo, e pela mesma razao: o envio e
-  // bloqueante, e o servidor gratuito dorme - a primeira requisicao depois do
-  // ocio leva segundos. Nesse tempo o laco nao le botao nenhum, entao segurar
-  // parava de andar e o ajuste chegava a expirar sozinho, obrigando a apertar de
-  // novo. E nao ha o que enviar de qualquer forma: um alvo que ainda esta sendo
-  // movido nao e ajuste, e cada valor intermediario seria ruido na nuvem.
-  if (!modoConfig && tresBotoesDesdeMs == 0) {
-    // Durante o ajuste, alerta nenhum sai daqui - nem fogo - ate o produtor
-    // terminar, com teto de 30 s. A regra e o motivo estao em
-    // estadoDeAlertaMudou().
-    if (estadoDeAlertaMudou()) {
-      ultimoPushNuvem = millis();
-      empurrarLeituraNuvem();
-    } else if (!modoAjuste && millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
-      ultimoPushNuvem = millis();
-      empurrarLeituraNuvem();
-    }
-
-    if (!modoAjuste && millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
-      ultimaBuscaComandos = millis();
-      buscarComandosNuvem();
-      // Pega carona no mesmo intervalo: nao ha pressa, e a funcao sai na hora
-      // quando nao ha nada a registrar.
-      sincronizarChaveNuvem();
-    }
-  }
+  // A tarefa de rede descobriu algo sobre a chave e pediu para gravar. A
+  // gravacao fica aqui porque o objeto Preferences e um so para os dois
+  // nucleos. Ver tarefaNuvem().
+  gravarPendenciasDeChave();
 
   verificarSensorLuz();
   verificarBotoes();
@@ -628,6 +605,67 @@ void loop() {
 // ============================================================
 //  REDE
 // ============================================================
+// A conversa com a nuvem roda no NUCLEO 0, sozinha. O laco do controle fica no
+// nucleo 1 e nao pode parar: e ele que le botao, decide alarme e mexe no rele.
+// Cada chamada HTTPS segura quem a executa por 1 a 3 s - o handshake e caro e
+// bloqueante -, e enquanto isso o aparelho ficava cego e surdo. Visto no visor:
+// os dois pontos paravam de piscar e nenhum botao respondia.
+//
+// O que a tarefa toca do lado de fora: alvos e timestamps (inteiros, escrita
+// atomica no ESP32) e as marcas de chave, que ela NAO grava na memoria
+// permanente - pede, e o laco grava. Isso existe porque o objeto Preferences e
+// um so: dois nucleos abrindo-o ao mesmo tempo e corrupcao garantida.
+void tarefaNuvem(void* _) {
+  for (;;) {
+    // No modo de configuracao o aparelho e um ponto de acesso, sem saida para a
+    // internet: tentar falar com a nuvem so gastaria tempo em conexoes fadadas
+    // a falhar.
+    //
+    // Com os tres botoes na mao, a nuvem espera. Sao 20 s ate a proxima busca e
+    // 60 ate o proximo envio - nada que se perca. Hoje um handshake preso no
+    // outro nucleo nao atrasa mais a contagem dos 3 s, mas a regra fica: o que
+    // se quer ali e entrar na configuracao, nao conversar com o servidor.
+    //
+    // E quem esta ajustando o alvo tambem espera: um alvo que ainda esta sendo
+    // movido nao e ajuste, e cada valor intermediario seria ruido na nuvem.
+    if (!modoConfig && tresBotoesDesdeMs == 0) {
+      // Durante o ajuste, alerta nenhum sai daqui - nem fogo - ate o produtor
+      // terminar, com teto de 30 s. A regra e o motivo estao em
+      // estadoDeAlertaMudou().
+      if (estadoDeAlertaMudou()) {
+        ultimoPushNuvem = millis();
+        empurrarLeituraNuvem();
+      } else if (!modoAjuste && millis() - ultimoPushNuvem >= PUSH_INTERVAL_MS) {
+        ultimoPushNuvem = millis();
+        empurrarLeituraNuvem();
+      }
+
+      if (!modoAjuste && millis() - ultimaBuscaComandos >= COMANDOS_INTERVAL_MS) {
+        ultimaBuscaComandos = millis();
+        buscarComandosNuvem();
+        // Pega carona no mesmo intervalo: nao ha pressa, e a funcao sai na hora
+        // quando nao ha nada a registrar.
+        sincronizarChaveNuvem();
+      }
+    }
+    // Dorme de verdade: entrega o nucleo em vez de rodar em vazio.
+    vTaskDelay(pdMS_TO_TICKS(200));
+  }
+}
+
+// Grava o que a tarefa de rede descobriu sobre a chave. Roda no laco, que e o
+// unico lugar que mexe na memoria permanente.
+void gravarPendenciasDeChave() {
+  if (!pedidoGravarChave) return;
+  pedidoGravarChave = false;
+  prefs.begin("sentinela", false);
+  prefs.putBool("chaveReg", chaveRegistradaNaNuvem);
+  if (chaveRegistradaNaNuvem && chaveAnterior.length() == 0) {
+    prefs.remove("chaveAnt");
+  }
+  prefs.end();
+}
+
 // Primeira tentativa de entrar na rede da casa, com prazo. Falhar nao e fatal:
 // o aparelho segue no controle local e manterWifi() continua tentando.
 void conectarWifi() {
@@ -1737,9 +1775,7 @@ void empurrarLeituraNuvem() {
       tokenAparelho != DEVICE_TOKEN) {
     registrar(F("A nuvem recusou a chave: vou registrar de novo."));
     chaveRegistradaNaNuvem = false;
-    prefs.begin("sentinela", false);
-    prefs.putBool("chaveReg", false);
-    prefs.end();
+    pedidoGravarChave = true;
   }
 }
 
@@ -1751,15 +1787,21 @@ void empurrarLeituraNuvem() {
 // importa aqui e o passado recente, nao o historico.
 void registrar(const String& linha) {
   Serial.println(linha);
+  if (trancaDiario == NULL) return;
+  xSemaphoreTake(trancaDiario, portMAX_DELAY);
   diario[diarioProx] = String(millis() / 1000) + "s  " + linha;
   diarioProx = (diarioProx + 1) % LOG_LINHAS;
+  xSemaphoreGive(trancaDiario);
 }
 
 void handleLog() {
   String saida;
   saida.reserve(LOG_LINHAS * 56);
   // Comeca na posicao seguinte a ultima escrita: assim sai da mais antiga para a
-  // mais nova, que e como se le um diario.
+  // mais nova, que e como se le um diario. Copia tudo com a tranca na mao e
+  // responde depois: a resposta pela rede e lenta e nao pode segurar quem quer
+  // registrar.
+  if (trancaDiario != NULL) xSemaphoreTake(trancaDiario, portMAX_DELAY);
   for (int i = 0; i < LOG_LINHAS; i++) {
     const String& linha = diario[(diarioProx + i) % LOG_LINHAS];
     if (linha.length() > 0) {
@@ -1767,6 +1809,7 @@ void handleLog() {
       saida += '\n';
     }
   }
+  if (trancaDiario != NULL) xSemaphoreGive(trancaDiario);
   if (saida.length() == 0) saida = F("(sem registros ainda)\n");
   server.send(200, "text/plain; charset=utf-8", saida);
 }
@@ -1775,10 +1818,9 @@ void handleLog() {
 void marcarChaveRegistrada() {
   chaveRegistradaNaNuvem = true;
   chaveAnterior = "";
-  prefs.begin("sentinela", false);
-  prefs.putBool("chaveReg", true);
-  prefs.remove("chaveAnt");
-  prefs.end();
+  // Quem grava e o laco, em gravarPendenciasDeChave(): esta funcao roda na
+  // tarefa de rede, no outro nucleo, e o Preferences nao aceita dois donos.
+  pedidoGravarChave = true;
 }
 
 // Conta a propria chave para a nuvem, para ela deixar de depender da chave
@@ -1837,9 +1879,7 @@ void sincronizarChaveNuvem() {
   // batendo na nuvem a cada ciclo.
   if (codigo == 409) {
     chaveRegistradaNaNuvem = true;
-    prefs.begin("sentinela", false);
-    prefs.putBool("chaveReg", true);
-    prefs.end();
+    pedidoGravarChave = true;
     registrar(F("A nuvem ja tem outra chave para este aparelho."));
   }
 }

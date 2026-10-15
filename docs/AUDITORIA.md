@@ -218,9 +218,9 @@ funciona:
   dica de arraste **estouravam a linha em 360dp**. Em release não aparece listra
   nenhuma; o texto era cortado calado. Os dois viraram `Flexible`.
 
-### 2.6 Aberto — achado em campo (10/09/2026)
+### 2.6 Achado em campo (10/09/2026)
 
-- [ ] **D3. O aparelho engasga: botões sem resposta e visor apagando por alguns
+- [x] **D3. O aparelho engasga: botões sem resposta e visor apagando por alguns
   segundos.** Relatado depois da montagem definitiva, em uso normal, *"não é no
   momento que clico várias vezes"*. Comandos e sensores funcionam; só a resposta
   local some e volta, e as leituras demoram a chegar ao app até um comando
@@ -247,14 +247,49 @@ funciona:
   *Já estava mitigado, antes:* `48d2f7d` suspende o tráfego de rotina enquanto o
   produtor ajusta o alvo — emergência continua passando.
 
-  *O que ainda NÃO está resolvido:* com o servidor acordado, cada chamada ainda
-  leva 1 a 2 s — é o cálculo do TLS no próprio ESP32 —, a cada 20 s. **O conserto
-  estrutural é mover a rede para uma tarefa do FreeRTOS no núcleo 0**, deixando o
-  `loop()` livre no núcleo 1. O cuidado que ele exige é real: `temperaturaAlvoF`,
-  `umidadeAlvo`, os carimbos de tempo, `buzzerTemperaturaAtivo` e `configSuja`
-  passariam a ser escritos por duas tarefas, e sem mutex ou fila o sintoma troca
-  de "trava perceptível" para **corrupção de dado esporádica** — mais rara e muito
-  mais difícil de achar. **Decidido: depois da banca**, não antes.
+  *Resolvido em 15/10/2026, antes da banca.* Com a ventoinha no aparelho o
+  sintoma voltou a aparecer, e agora era visível sem precisar de app: os dois
+  pontos do visor piscam quando a ventoinha está travada no botão, e eles
+  paravam de piscar por 1 a 3 segundos em intervalos indeterminados — nesse
+  tempo o aparelho não aceitava comando nenhum. Três consertos, nesta ordem:
+
+  1. **A sonda não é mais esperada de pé.** `sensorTemp.setWaitForConversion(false)`:
+     `lerSensores()` só pede a conversão, e `colherTemperaturaSePronta()` busca o
+     valor 220 ms depois, em outra passada do laço. Antes, a leitura do DS18B20
+     segurava o laço ~750 ms a cada 2,5 s — sozinha, isso já explicava um toque
+     perdido.
+  2. **O visor só é escrito quando muda.** Cada quadro do TM1637 custa dezenas de
+     milissegundos de protocolo bit a bit, e o laço reescrevia o mesmo número
+     milhares de vezes por minuto. Agora um cache (`ModoVisor`, `escreverNumero()`,
+     `limparVisor()`, `escreverTracos()`) compara antes de falar com o display.
+  3. **A rede saiu do laço de controle.** `tarefaNuvem()` roda no núcleo 0, criada
+     com `xTaskCreatePinnedToCore(..., 12288, NULL, 1, NULL, 0)` — 12 KB de pilha
+     porque o aperto de mão TLS é guloso e uma pilha curta reinicia o aparelho no
+     meio da conexão. O laço fica no núcleo 1 com botões, sensores, relé, visor e
+     `server.handleClient()`. Agora um servidor dormindo atrasa a nuvem, não o
+     controle.
+
+  *O cuidado que isto exigia, e como ficou resolvido.* O risco previsto era trocar
+  "trava perceptível" por corrupção esporádica de dado. Dois pontos mereceram
+  conserto de verdade:
+
+  - **Memória permanente.** O objeto `Preferences` é um só, e dois núcleos
+    abrindo-o ao mesmo tempo corrompem a partição. A tarefa de rede não grava
+    nada: `marcarChaveRegistrada()`, o caminho do 401 e o do 409 apenas levantam
+    `pedidoGravarChave`, e quem grava é `gravarPendenciasDeChave()`, chamada pelo
+    laço. Todas as seis aberturas de `prefs` ficaram do lado do laço.
+  - **O diário do `/log`.** Virou o único dado compartilhado de verdade: os dois
+    núcleos escrevem com `registrar()` e o navegador lê em `handleLog()`. São
+    objetos `String`, que realocam — uma escrita no meio de uma leitura entrega
+    memória já liberada. Protegido por mutex (`trancaDiario`), com a leitura
+    copiando tudo com a tranca na mão e respondendo depois.
+  - **O resto é inteiro de 32 bits:** `temperaturaAlvoF`, `umidadeAlvo` e os
+    carimbos de tempo. Escrita atômica no ESP32, e nenhum deles é lido em par com
+    outro numa decisão. `configSuja` só é levantada pela tarefa e baixada pelo
+    laço, nunca o contrário.
+
+  A versão anterior está na etiqueta `firmware-pre-core0`, para voltar atrás sem
+  arqueologia. Flash 88%, memória 15% — igual a antes.
 
   *Situação em 14/09, com o firmware do dia:* o produtor não viu mais os
   engasgos feios. Sobra um toque de botão perdido de vez em quando ("clico 2 a 3
@@ -263,7 +298,9 @@ funciona:
   nesse intervalo, nunca é lido — algo como 1 toque em 10 a 20. Não é o botão.
   Conserto pequeno possível antes do núcleo separado: guardar o toque por
   interrupção (`attachInterrupt`) e tratá-lo quando o laço voltar. Decisão do
-  produtor: aceitável por enquanto.
+  produtor: aceitável por enquanto. **Dispensado:** com a rede fora do laço, o
+  laço inteiro passa a rodar em milissegundos e não há mais janela onde o toque
+  se perca.
 
   *Dúvida em aberto que decide o próximo passo.* "O visor apaga e volta ~2 s
   depois" não é o retrato de laço parado — com o laço parado, o TM1637 **congela no
