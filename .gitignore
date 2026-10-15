@@ -12,6 +12,7 @@
 node_modules/
 
 # Build and tool output
+__pycache__/
 build/
 coverage/
 .dart_tool/
