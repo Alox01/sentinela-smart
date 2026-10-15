@@ -297,6 +297,33 @@ long long buzzerTimestamp = 0;
 
 unsigned long ultimaTentativaWifi = 0;
 const unsigned long intervaloReconexaoWifi = 15000;
+
+// ---- Recuperacao do radio, sem reiniciar o aparelho ----
+//
+// Repetir WiFi.begin() recupera queda simples de sinal e NAO recupera radio
+// travado: sobre uma pilha que ficou num estado intermediario, begin() nao faz
+// nada, e o aparelho fica fora da rede ate alguem tirar da tomada. Depois de
+// algumas tentativas sem sucesso, o radio e desmontado e montado de novo.
+//
+// ESP.restart() nao entra nesta escada, em nenhum degrau. Reiniciar e APAGAR o
+// aparelho: o visor morre, a sirene cala e o rele abre enquanto o chip sobe.
+// Numa estufa com fogo aceso isso e pior do que ficar sem aplicativo - o
+// termostato e o alarme sao locais e seguem funcionando sem rede nenhuma. Se o
+// radio nao voltar, o aparelho continua cuidando da estufa; so o app se perde.
+const int TENTATIVAS_ATE_REMONTAR_RADIO = 4;
+int tentativasWifiSeguidas = 0;
+unsigned long wifiCaiuEmMs = 0;
+// Remontar e um corte de energia do radio seguido de religar. As duas metades
+// ficam em passadas diferentes do laco: dormir entre elas pararia o controle,
+// que e justamente o que nao pode parar.
+bool radioDesligadoParaRemontar = false;
+unsigned long radioDesligadoEmMs = 0;
+const unsigned long PAUSA_REMONTAGEM_MS = 300;
+// Quantas vezes o radio precisou ser remontado desde que o aparelho foi
+// gravado. Fica na memoria permanente porque o diario e so RAM: sem isto, um
+// aparelho que se recupera sozinho de madrugada nao deixa rastro nenhum, e
+// "parece que esta bom" nao se distingue de "aconteceu tres vezes".
+unsigned int remontagensDoRadio = 0;
 // O que se faz UMA vez por boot ao entrar na rede (relogio, rede aprendida, IP
 // fixo). Antes so acontecia se a PRIMEIRA tentativa desse certo; quando a rede
 // so aparecia depois, o relogio nunca era acertado.
@@ -846,6 +873,13 @@ void manterWifi() {
   if (modoConfig) return;
   if (wifiSsid.length() == 0) return;
   if (WiFi.status() == WL_CONNECTED) {
+    if (wifiCaiuEmMs != 0) {
+      registrar(String("Rede de volta depois de ") +
+                ((millis() - wifiCaiuEmMs) / 1000) + "s fora.");
+      wifiCaiuEmMs = 0;
+    }
+    tentativasWifiSeguidas = 0;
+    radioDesligadoParaRemontar = false;
     prepararRedeConectada();
     iniciarMdns();
     return;
@@ -855,8 +889,39 @@ void manterWifi() {
     MDNS.end();
     mdnsAtivo = false;
   }
+  // Segunda metade da remontagem: o radio foi desligado numa passada anterior
+  // e agora volta. Sem delay() - quem espera e o laco, andando.
+  if (radioDesligadoParaRemontar) {
+    if (millis() - radioDesligadoEmMs < PAUSA_REMONTAGEM_MS) return;
+    radioDesligadoParaRemontar = false;
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
+    registrar(F("Radio religado; tentando entrar na rede de novo."));
+    return;
+  }
+
   if (millis() - ultimaTentativaWifi < intervaloReconexaoWifi) return;
   ultimaTentativaWifi = millis();
+
+  if (wifiCaiuEmMs == 0) wifiCaiuEmMs = millis();
+  tentativasWifiSeguidas++;
+
+  // A cada N tentativas sem sucesso, desmonta o radio em vez de repetir um
+  // begin() que ja se mostrou inutil.
+  if (tentativasWifiSeguidas % TENTATIVAS_ATE_REMONTAR_RADIO == 0) {
+    remontagensDoRadio++;
+    prefs.begin("sentinela", false);
+    prefs.putUInt("radioOff", remontagensDoRadio);
+    prefs.end();
+    registrar(String("Radio travado ha ") + ((millis() - wifiCaiuEmMs) / 1000) +
+              "s: desmontando e montando de novo (" + remontagensDoRadio +
+              "a vez desde a gravacao).");
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    radioDesligadoParaRemontar = true;
+    radioDesligadoEmMs = millis();
+    return;
+  }
   // A rede CONFIGURADA. Ate 14/09/2026 aqui estavam WIFI_SSID e WIFI_PASS - o
   // valor de fabrica, "SUA_REDE_WIFI" -, esquecidos quando o Wi-Fi passou a ser
   // configuravel (20/07). Qualquer queda de mais de 15 s, ou uma primeira
@@ -1549,6 +1614,10 @@ void carregarConfigPersistida() {
   umidTimestamp = prefs.getLong64("umidTs", 0);
   buzzerTemperaturaAtivo = prefs.getBool("buzzerAtivo", true);
   buzzerTimestamp = prefs.getLong64("buzzerTs", 0);
+  // Quantas vezes o radio ja precisou ser remontado. Volta do NVS porque a
+  // pergunta que ele responde e "isto vem acontecendo?", nao "aconteceu desde
+  // que liguei agora".
+  remontagensDoRadio = prefs.getUInt("radioOff", 0);
   // As constantes do topo sao so o valor de fabrica: o que o produtor gravou
   // pelo modo de configuracao tem precedencia.
   wifiSsid = prefs.getString("wifiSsid", WIFI_SSID);
@@ -2189,6 +2258,12 @@ void handleSimple() {
   // ligado menor que o tempo que voce esta ali quer dizer que ele reiniciou.
   doc["motivoReinicio"] = motivoDoReinicio();
   doc["ligadoHaSegundos"] = millis() / 1000;
+  // O que a rede andou fazendo enquanto ninguem olhava. Numero alto aqui com
+  // "ligado na energia" no motivo quer dizer que o aparelho NAO reiniciou: foi
+  // o radio que travou e voltou sozinho, e isso e outra investigacao.
+  doc["remontagensDoRadio"] = remontagensDoRadio;
+  doc["segundosSemRede"] =
+      wifiCaiuEmMs == 0 ? 0 : (millis() - wifiCaiuEmMs) / 1000;
   doc["ip"] = WiFi.localIP().toString();
   doc["nomeLocal"] = nomeLocal + ".local";
   doc["tokenConfigurado"] = (tokenAparelho.length() > 0);

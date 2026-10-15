@@ -649,6 +649,35 @@ funciona:
   *Combinado com o produtor:* fica para a próxima vez que a caixa for aberta, e
   é a primeira coisa a fazer quando ela abrir.
 
+### 2.9 Achado em campo (15/10/2026)
+
+- [x] **D14. Wi-Fi travado só voltava tirando da tomada.** `manterWifi()`
+  repetia `WiFi.begin()` a cada 15 s e nada mais. Isso recupera queda de sinal
+  e **não** recupera rádio travado: sobre uma pilha que ficou num estado
+  intermediário, `begin()` não faz nada, e o aparelho fica fora da rede até
+  alguém desligar da tomada — com a estufa funcionando, mas sem app.
+
+  *Conserto:* depois de 4 tentativas sem sucesso (1 min), o rádio é
+  **desmontado e montado de novo** — `disconnect(true)`, `WIFI_OFF`, e na
+  passada seguinte `WIFI_STA` + `begin()`. As duas metades ficam em passadas
+  diferentes do laço de propósito: dormir entre elas pararia o controle. Se não
+  voltar, repete a cada minuto, para sempre.
+
+  *`ESP.restart()` não entra nesta escada, em nenhum degrau.* Decisão do
+  produtor, e é a certa: reiniciar é **apagar o aparelho** — o visor morre, a
+  sirene cala e o relé abre enquanto o chip sobe. Numa estufa com fogo aceso
+  isso é pior do que ficar sem aplicativo. O termostato e o alarme são locais e
+  seguem funcionando sem rede nenhuma; se o rádio não voltar, o aparelho
+  continua cuidando da estufa e só o app se perde.
+
+  *Para a investigação não depender de alguém estar olhando:* o contador de
+  remontagens vive na memória permanente (`radioOff`) e aparece no `/dados`
+  como `remontagensDoRadio`, junto de `segundosSemRede`. O `/log` é só RAM e
+  morre no reinício — sem o contador, um aparelho que se recupera sozinho de
+  madrugada não deixa rastro, e "parece que está bom" não se distingue de
+  "aconteceu três vezes". **Número alto aí com `motivoReinicio` dizendo "ligado
+  na energia" significa que o aparelho NÃO reiniciou: foi o rádio.**
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
