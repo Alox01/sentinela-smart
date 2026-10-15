@@ -71,6 +71,12 @@ jobs:
             - name: Adafruit Unified Sensor
             - name: TM1637
             - name: ArduinoJson
+            # A sonda de temperatura entrou em 09/09/2026 e estas duas nao
+            # vieram junto: o firmware compila na maquina, onde ja estavam
+            # instaladas, e quebrava so aqui. O CI ficou vermelho um mes sem
+            # ninguem olhar, porque falhar virou o normal dele.
+            - name: OneWire
+            - name: DallasTemperature
           sketch-paths: |
             - firmware/sentinela_esp32
           enable-warnings-report: true
