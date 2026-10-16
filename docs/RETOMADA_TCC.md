@@ -328,6 +328,24 @@ Resultado: híbrido, nuvem, fila offline com dois comandos, alerta de chama e
 alertas de comunicação aprovados. Falhas vistas: D10 (tela zerada ao abrir sem
 conexão) e D11 (eventos de dias diferentes sem data).
 
+*16/10/2026, 18:23–18:44 — rodada de imagens do aparelho acabado, com ele já
+instalado na parede da estufa.* Foi a primeira rodada depois da caixa montada, do
+capacitor na bobina e da solda refundida.
+
+| Hora | Imagem | O que prova |
+|---|---|---|
+| 18:23 | painel + celular no mesmo quadro | visor mostrando a **umidade** (70) e o app em **LOCAL** com 68 °F / 70%; ajuste 75 / 80 |
+| 18:24 | painel + celular no mesmo quadro | **a imagem pareada:** visor em **68** e app em **68 °F**, o mesmo número no aparelho e no celular, no mesmo instante |
+| 18:26 | celular na lavoura, fim de tarde | selo **OFFLINE** com a estufa ao fundo: o app declara que não alcança, em vez de mostrar número inventado |
+| 18:27 | celular na lavoura, fim de tarde | selo **NUVEM** em 4G, fora da rede do aparelho, com a estufa e a lavoura ao fundo — o acesso remoto em uma imagem |
+| 18:31 | isqueiro no sensor + celular | faixa **SENSOR DE CHAMA ATIVADO** em LOCAL, com fogo real; no painel ao fundo, o LED de alarme aceso |
+| 18:44 | tela inicial + monitoramento | as duas estufas cadastradas (a real e o simulador) e o monitoramento em LOCAL |
+
+*Observação registrada no mesmo dia:* em duas fotos o visor está no ciclo da
+**umidade** enquanto o app mostra a temperatura, o que parece divergência para
+quem não conhece o ciclo do visor. A imagem escolhida para o trabalho é a das
+18:24, em que os dois mostram o mesmo número.
+
 **Evidência nova de setembro, que pode entrar:** placa conferida com multímetro
 (01/09); todos os grupos funcionando na placa soldada (09/09); troca do sensor de
 temperatura (09/09).
