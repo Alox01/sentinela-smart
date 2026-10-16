@@ -17,15 +17,20 @@ precisa de uso real, com data, resultado e limitação declarada.
 Preencher conforme testar. O que estiver em branco fica em branco — resultado
 ausente declarado vale mais que resultado inventado.
 
+> **Fechada em 16/10/2026.** Os sete itens foram testados em campo entre 25/07 e
+> 15/09/2026. O relato hora a hora de cada rodada, com o que cada imagem prova,
+> está em `RETOMADA_TCC.md`; aqui fica o resultado em uma linha, que é o que a
+> seção de resultados precisa.
+
 | # | O que provar | Data | Resultado | Limitação declarada |
 |---|---|---|---|---|
-| 1 | **Operação local com a internet desligada** — comandar e ler com o roteador sem link | | | |
-| 2 | **Comandos acumulados e sincronização** — dar ordens offline e ver a fila esvaziar ao reconectar | | | |
-| 3 | **Acesso remoto** — comandar de fora da propriedade, pela nuvem | | | |
-| 4 | **Pareamento e revogação com dois celulares** | 05/08/2026 | **Aprovado.** O segundo celular ganhou acesso pelo QR, perdeu na revogação e recuperou com QR novo; o principal nunca perdeu | Atraso de alguns segundos até o segundo celular aceitar comando; causa não determinada entre duas hipóteses (ver seção da revogação) |
-| 5 | **Alertas com o app aberto e fechado** | 25/07 e 13/08/2026 | **Aprovado.** Em 13/08 achou-se em campo um aviso que não saía: estufa desligada à noite, religada fria de manhã, nenhuma notificação. Corrigido e **reverificado no aparelho** (desligar → "sem comunicação" → religar → "temperatura fora da faixa") | O aviso sai **na borda**, uma vez por episódio; ficar horas fora da faixa não repete. Canais do Android congelam na criação: mudar som exige incrementar o sufixo do id |
-| 6 | **Uma estufada completa** — relatório, eventos, gráfico, PDF e CSV de uma cura inteira | | | |
-| 7 | **Registro de cada teste** com data, resultado, prints e limitações | | | |
+| 1 | **Operação local com a internet desligada** — comandar e ler com o roteador sem link | 14/09/2026 | **Aprovado.** Roteador desligado: o aparelho seguiu lendo e controlando sozinho (58 °F / 73–74 % no Serial, com o motivo da queda registrado) e voltou à rede sozinho ao religar; o app reconectou sem intervenção | A prova é o Serial e os prints, não captura automatizada. O aparelho não mede tensão da rede elétrica: para ele, "sem internet" e "sem energia" só se distinguem pela ausência de leituras |
+| 2 | **Comandos acumulados e sincronização** — dar ordens offline e ver a fila esvaziar ao reconectar | 14/09/2026 11:00–11:04 | **Aprovado.** Ajuste 66 → 60 pela rede local em 32 s; celular sem Wi-Fi e sem dados, ajuste 70 pedido offline (selo `OFFLINE \| 1`, pendência nomeada); ao religar, a fila esvaziou e o visor mostrou **70** às 11:04:12 | Descoberto no mesmo teste (D8): ao voltar para LOCAL a tela mostrava o ajuste antigo por alguns segundos, sem avisar que havia comando a caminho. **Corrigido no mesmo dia e refeito com o APK novo: aprovado** |
+| 3 | **Acesso remoto** — comandar de fora da propriedade, pela nuvem | 13–15/09/2026 | **Aprovado.** Celular só em dados móveis, fora da rede do aparelho: selo **NUVEM**, "Reportando (via nuvem)", e comandos aplicados pela nuvem (60 → 70 °F e 70 → 60 %), confirmados no visor e no banco | O servidor é de plano gratuito e hiberna: a primeira chamada depois do ócio leva segundos. Mitigado pelo `keep_alive` e pelos prazos de conexão, não eliminado |
+| 4 | **Pareamento e revogação com dois celulares** | 05/08 e 13–14/09/2026 | **Aprovado.** O segundo celular ganhou acesso pelo QR, perdeu na revogação e recuperou com QR novo; o principal nunca perdeu | Atraso de alguns segundos até o segundo celular aceitar comando; causa não determinada entre duas hipóteses (ver seção da revogação) |
+| 5 | **Alertas com o app aberto e fechado** | 25/07, 13/08 e 13–14/09/2026 | **Aprovado.** Em 13/08 achou-se em campo um aviso que não saía: estufa desligada à noite, religada fria de manhã, nenhuma notificação. Corrigido e **reverificado no aparelho** (desligar → "sem comunicação" → religar → "temperatura fora da faixa") | O aviso sai **na borda**, uma vez por episódio; ficar horas fora da faixa não repete. Canais do Android congelam na criação: mudar som exige incrementar o sufixo do id |
+| 6 | **Uma estufada completa** — relatório, eventos, gráfico, PDF e CSV de uma cura inteira | 14/09/2026 | **Aprovado.** Estufada #22 encerrada, **39 h 39 min** (12/09 22:30 → 14/09 14:09): CSV com as **265 leituras**, PDF com uma por hora, **4 alarmes** — um deles com o app fechado e a sirene desligada —, eventos de ajuste de todas as origens e valores finais corretos | O registro local só acontece com a tela de monitoramento aberta; os trechos com o app fechado vêm da nuvem, que grava 6 por hora. Um defeito achado aqui (D11): eventos de dias diferentes apareciam só com a hora, e a lista parecia fora de ordem. **Corrigido em 15/10/2026** |
+| 7 | **Registro de cada teste** com data, resultado, prints e limitações | 14 e 15/09/2026 | **Aprovado.** Dois registros hora a hora, com o que cada imagem prova, em `RETOMADA_TCC.md`: a rodada de comandos (11:00–11:04) e a rodada completa de 15/09 (13:05–13:18 e 20:12–20:14), esta última incluindo alerta de chama, pushes de "sem comunicação" e de retorno | As imagens ficam com o produtor e **não** no repositório, que é público. Nesta rodada apareceu o D10 (tela zerada ao abrir sem conexão), **corrigido em 15/10/2026** |
 
 ### O que já está provado por partes
 
