@@ -598,11 +598,20 @@ funciona:
   **O TM1637 não tem como ser consultado.** O cache guardava o que ele *acreditava*
   estar na tela e, se o display perdesse o quadro, nunca mais reescrevia — o
   visor ficava preto com o aparelho funcionando normalmente, o que o app
-  confirmava mostrando tudo certo. O quadro se perde no instante em que a bobina
-  do contator chaveia 220 V a centímetros dos fios de dados. **O sintoma que
-  entregou a causa:** apertar o botão da ventoinha trazia o visor de volta — não
-  por reiniciar nada, mas porque trocar a trava muda os dois pontos, o cache
-  vê diferença e reescreve.
+  confirmava mostrando tudo certo. **O sintoma que entregou essa parte:** apertar
+  o botão da ventoinha trazia o visor de volta — não por reiniciar nada, mas
+  porque trocar a trava muda os dois pontos, o cache vê diferença e reescreve.
+
+  > **Correção de 16/10/2026 — a causa do quadro perdido NÃO era o contator.**
+  > Este item atribuía a perda ao pico da bobina chaveando 220 V a centímetros
+  > dos fios de dados. Era uma hipótese plausível e estava errada: o defeito é
+  > **solda fria na placa**, e o produtor o reconheceu de quando a placa ainda
+  > estava na caixa de papelão, **antes de o contator existir**. Ver D15.
+  >
+  > O que continua valendo deste item é a outra metade, que é a de software: um
+  > cache sem caminho de cura deixava o visor preto para sempre depois de um
+  > quadro perdido, qualquer que fosse o motivo da perda. O conserto está certo
+  > e hoje ele cura as duas causas.
 
   *Conserto:* o quadro é reescrito do zero uma vez por segundo
   (`forcarReescritaVisor()`) e também no instante em que o relé troca de estado,
@@ -610,14 +619,15 @@ funciona:
   centenas — o ganho do cache fica de pé. A reescrita manda também o comando de
   brilho, que é o que reacende o display se ele perdeu essa parte.
 
-  *O conserto de hardware que falta está no D13, e é ele que ataca a causa.*
+  *O supressor do D13 continua valendo*, mas por outros motivos que não este —
+  o pico da bobina é real mesmo quando não foi ele que apagou o visor.
 
   *De passagem,* `aplicarVentoinha()` passou a registrar no `/log` quando segura
   uma partida pelo prazo mínimo de 30 s. Era um `return` silencioso, e "o ajuste
   pede e ela não liga" tem quatro causas com o mesmo sintoma — prazo, trava no
   botão, fogo e falha de leitura. Agora o diário distingue.
 
-- [ ] **D13. IMPORTANTE, PENDENTE — falta o supressor na bobina do contator.**
+- [x] **D13. Supressor na bobina do contator — instalado em 15/10/2026.**
   O conserto do D12 fez o aparelho se recuperar do distúrbio; **não o eliminou.**
   Em 15/10/2026, com o aparelho montado, o visor dá uma piscada visível a cada
   vez que o contator liga ou desliga. A piscada é o firmware reescrevendo a tela
@@ -646,8 +656,19 @@ funciona:
   ou se `/dados` mostra `ligadoHaSegundos` zerando ou `motivoReinicio` igual a
   `QUEDA DE TENSAO`, é a alimentação, e aí o item 3 entra junto.
 
-  *Combinado com o produtor:* fica para a próxima vez que a caixa for aberta, e
-  é a primeira coisa a fazer quando ela abrir.
+  *Feito em 15/10/2026:* capacitor **0,1 µF X2 275 VAC MKP** (EN 60384-14,
+  categoria climática 40/100/21) ligado em paralelo nos terminais **A1 e A2** da
+  bobina, com as pernas estendidas por fio isolado para a rede — as pernas do
+  capacitor são curtas demais para alcançar os dois parafusos. O resistor de
+  100 Ω e o varistor são **alternativas ao par**, não complemento obrigatório; o
+  trabalho principal está feito sem eles.
+
+  *Ressalva honesta sobre a justificativa:* este item nasceu da piscada do visor
+  a cada chaveamento, e **esse sintoma era solda fria** (D15), não o pico da
+  bobina. O supressor continua certo pelos outros motivos — o pico existe, o
+  barramento do DS18B20 passa perto e afundar os 5 V é o pior caso conhecido —,
+  mas deixa de ter uma evidência de campo própria. Fica como prevenção, que é o
+  que ele sempre foi para contator de 0,86 A.
 
 ### 2.9 Achado em campo (15/10/2026)
 
@@ -677,6 +698,42 @@ funciona:
   madrugada não deixa rastro, e "parece que está bom" não se distingue de
   "aconteceu três vezes". **Número alto aí com `motivoReinicio` dizendo "ligado
   na energia" significa que o aparelho NÃO reiniciou: foi o rádio.**
+
+### 2.10 Achado em campo (16/10/2026)
+
+- [x] **D15. Solda fria na placa: o visor enfraquecia a qualquer trepidação.**
+  Encontrado com a caixa aberta e o aparelho alimentado por power bank: **bater
+  de leve em qualquer ponto da placa** fazia o visor quase apagar. Não era o
+  cabo do visor — mexer nele não produzia nada.
+
+  **A medida que separou as duas hipóteses:** `/dados` antes e depois do
+  peteleco. O `ligadoHaSegundos` **continuou correndo**, ou seja, o ESP32 não
+  reiniciou. Isso tira a alimentação de 5 V da lista e joga o defeito para
+  depois do regulador — o barramento de 3V3 e o de terra da borda de baixo, que
+  servem visor, DHT22, DS18B20 e sensor de chama, e não o ESP32.
+
+  O sintoma era **enfraquecer**, não apagar: contato resistivo, não aberto. Por
+  isso continuidade apitava e não acusava nada. O teste que acha isso é a
+  **queda de tensão sob carga** — as duas pontas do multímetro nos dois lados da
+  mesma ligação, com o aparelho ligado, pressionando a placa.
+
+  *Conserto:* refundir. Resolvido — o visor parou de piscar.
+
+  **Isto reescreve o D12.** O produtor reconheceu o defeito de quando a placa
+  ainda estava na caixa de papelão, **antes de o contator existir**. A piscada
+  no chaveamento, que o D12 atribuiu ao pico da bobina, era esta solda
+  respondendo à vibração — e um contator de bobina CA vibra 120 vezes por
+  segundo, dentro da mesma caixa, durante todas as horas em que a ventoinha
+  roda. A caixa tinha uma fonte de peteleco permanente.
+
+  *O que isso NÃO explica:* as quedas de Wi-Fi. Com o ESP32 sem reiniciar, o
+  rádio travando é outro assunto, tratado no D14.
+
+  *Efeito colateral do conserto do D12, que vale saber:* com o visor reescrito
+  uma vez por segundo, uma solda marginal passa a aparecer como um tremido de
+  menos de um segundo, em vez de tela preta. É resiliência, e também disfarce —
+  um defeito de hardware nascendo fica menos visível. Vibração que faz o visor
+  tremer merece multímetro, não paciência.
 
 ### 2.3 Baixa — higiene
 
