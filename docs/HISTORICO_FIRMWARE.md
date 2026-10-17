@@ -51,10 +51,12 @@ qualquer deixar essa variável ligada com a estufa a 170 °F, a ventoinha
 continuaria soprando ar na fornalha — que é exatamente o que transforma
 temperatura alta em incêndio. A trava lê a temperatura e decide sozinha.
 
-De passagem, `limiteFogoF()` deixou de acompanhar o ajuste. O ramo que somava 5
-existia para alvo acima de 170 °F, e com o teto em 165 ele não tem mais como
-acontecer. Ficou o valor fixo de 175 °F, que é o que o aparelho sempre usou na
-prática.
+`limiteFogoF()` **não** foi mexido, e isso foi deliberado numa segunda olhada.
+Com o teto em 165 °F o ramo que soma 5 ao ajuste virou inalcançável, e chegou a
+ser simplificado para o valor fixo. Foi revertido: a regra vive em três
+linguagens — firmware, `logica.js` e `limiar_incendio.dart` — e já divergiu em
+campo. O teto é decisão de produto e pode mudar; a regra do limite é do domínio.
+Apagar em um e não nos outros dois recriaria exatamente a divergência de julho.
 
 **Pendência conhecida:** o aplicativo ainda deixa o seletor ir até 200 °F. Um
 pedido acima de 165 é aceito pela tela, cortado pelo aparelho e devolvido como

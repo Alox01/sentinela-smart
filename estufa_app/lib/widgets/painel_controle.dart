@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../features/monitoramento/limites_ajuste.dart';
+
 class PainelControle extends StatelessWidget {
-  // Faixa aceita pelo servidor (ver validacao em estufa_server/sync.js).
-  // Manter alinhado para o ajuste nao ser recusado com 400.
-  static const double temperaturaMinima = 60;
-  static const double temperaturaMaxima = 200;
+  // O teto de verdade e do aparelho (ALVO_MAXIMO_F no firmware); aqui ele
+  // existe para a tela nao oferecer o que o aparelho vai recusar. Ver
+  // limites_ajuste.dart.
+  static const double temperaturaMinima = ajusteTemperaturaMinimoF;
+  static const double temperaturaMaxima = ajusteTemperaturaMaximoF;
 
   final Function(double) onMudarTemperatura;
   final Function(double) onMudarUmidade;

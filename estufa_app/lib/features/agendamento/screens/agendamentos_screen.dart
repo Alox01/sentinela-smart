@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../monitoramento/limites_ajuste.dart';
 import 'package:intl/intl.dart';
 
 import '../../../widgets/painel_controle.dart';
@@ -246,8 +248,10 @@ class _AgendamentosScreenState extends State<AgendamentosScreen> {
         _seletorNumero(
           rotulo: 'Temperatura (°F)',
           valor: _tempAbsoluta,
-          minimo: 60,
-          maximo: 200,
+          // Mesmo teto do ajuste manual: agendar 180 seria agendar um valor
+          // que o aparelho corta para 165 na hora de aplicar.
+          minimo: ajusteTemperaturaMinimoF,
+          maximo: ajusteTemperaturaMaximoF,
           aoMudar: (v) => setState(() => _tempAbsoluta = v),
         ),
         SwitchListTile(

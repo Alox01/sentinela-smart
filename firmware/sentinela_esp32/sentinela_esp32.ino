@@ -2071,11 +2071,12 @@ const char* fasePorAlvo(int alvo) {
 // (165 F) e o limite e de so 10 F, e o sensor fica no ar mais quente da estufa.
 // Quem pede um ajuste alto de proposito nao deveria receber alarme de incendio
 // por ter conseguido o que pediu.
-// Com o alvo limitado a 165 F, o ramo que somava 5 ao alvo deixou de ter
-// como acontecer: ele existia para um alvo acima de 170. Fica o valor fixo,
-// que e o que o aparelho sempre usou na pratica.
+// A regra vive em tres linguagens - aqui, em logica.js e em limiar_incendio.dart
+// - e ja divergiu em campo. Com o teto de 165 F o ramo de cima virou inalcancavel,
+// mas ele FICA: o teto e decisao de produto e pode mudar; a regra e do dominio.
+// Apagar aqui e nao apagar nos outros dois seria recriar a divergencia de julho.
 int limiteFogoF() {
-  return 175;
+  return temperaturaAlvoF > 170 ? temperaturaAlvoF + 5 : 175;
 }
 
 // Chave aleatoria de 32 hex (128 bits). Aleatoria e por aparelho e melhor que
