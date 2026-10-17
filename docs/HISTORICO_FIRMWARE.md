@@ -27,6 +27,39 @@ Por isso este arquivo para aqui. O que vier depois de 1.0 é histórico de
 produto, e as entradas abaixo continuam valendo pelo **motivo**, não pelo
 número: cada uma foi uma estufa real se comportando diferente do esperado.
 
+## Depois do 1.0, por motivo
+
+### 16/10/2026 — teto de 165 °F no ajuste e trava de segurança na saída
+
+Pedido do produtor, e são **duas** regras, de naturezas diferentes.
+
+A primeira é um **teto no que se pode pedir**: `ALVO_MAXIMO_F = 165`. Vale em
+`definirTemperaturaAlvo()`, que é por onde passa tudo — os botões do aparelho,
+o comando vindo da nuvem e o que a sincronização traz de volta. Barrar só no
+botão deixaria a porta da nuvem aberta.
+
+A segunda é um **teto no que se pode suportar**:
+`TEMPERATURA_LIMITE_VENTOINHA_F = 165`, verificado em `aplicarVentoinha()`,
+na última linha antes do pino. Acima disso a ventoinha não liga e, se estiver
+girando, para na hora — sem consultar a histerese, o prazo mínimo entre
+partidas nem a trava do botão.
+
+O motivo da segunda é o que a torna diferente de tudo o mais no arquivo: ela
+**não confia no resto do código**. A decisão normal de ligar vem de
+`ledControleLigado`, calculado em `atualizarEstadoTemperatura()`. Se um defeito
+qualquer deixar essa variável ligada com a estufa a 170 °F, a ventoinha
+continuaria soprando ar na fornalha — que é exatamente o que transforma
+temperatura alta em incêndio. A trava lê a temperatura e decide sozinha.
+
+De passagem, `limiteFogoF()` deixou de acompanhar o ajuste. O ramo que somava 5
+existia para alvo acima de 170 °F, e com o teto em 165 ele não tem mais como
+acontecer. Ficou o valor fixo de 175 °F, que é o que o aparelho sempre usou na
+prática.
+
+**Pendência conhecida:** o aplicativo ainda deixa o seletor ir até 200 °F. Um
+pedido acima de 165 é aceito pela tela, cortado pelo aparelho e devolvido como
+165 — funciona, mas confunde. Alinhar o app ao firmware continua a fazer.
+
 ## O que foi numerado em bancada
 
 ### 1.26.0

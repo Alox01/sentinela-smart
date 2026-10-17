@@ -143,6 +143,22 @@ const unsigned long TEMPO_MINIMO_VENTOINHA_MS = 30000;
 // ela sair. Ver atualizarEstadoTemperatura() para o porque de serem diferentes.
 const int VENTOINHA_LIGA_ABAIXO_F = 2;
 const int VENTOINHA_DESLIGA_ACIMA_F = 1;
+
+// Teto do que se pode PEDIR. Vale para os botoes do aparelho e para o que
+// chega da nuvem, porque os dois passam por definirTemperaturaAlvo().
+const int ALVO_MAXIMO_F = 165;
+
+// Teto do que se pode SUPORTAR. Acima disto a ventoinha nao liga e, se
+// estiver girando, para na hora - sem consultar a histerese, o prazo minimo
+// nem a trava do botao.
+//
+// Existe como rede de baixo de propositao: a decisao normal de ligar vem de
+// ledControleLigado, calculado la em atualizarEstadoTemperatura(). Se um dia
+// um defeito de codigo deixar essa variavel ligada com a estufa a 170 F, a
+// ventoinha continuaria soprando ar na fornalha - que e exatamente o que
+// transforma temperatura alta em incendio. Esta trava le a temperatura e
+// decide sozinha, sem depender de nenhuma outra conta estar certa.
+const int TEMPERATURA_LIMITE_VENTOINHA_F = 165;
 bool ventoinhaLigada = false;
 unsigned long ultimaTrocaVentoinhaMs = 0;
 
@@ -1533,6 +1549,11 @@ void handleConfigSalvar() {
 // Troca o alvo por um caminho so, abrindo a janela de acomodacao proporcional
 // ao tamanho da mudanca. Todo lugar que mexe no ajuste passa por aqui.
 void definirTemperaturaAlvo(int novoAlvo) {
+  // O teto vale aqui porque aqui passa tudo: os botoes do aparelho, o comando
+  // vindo da nuvem e o que a sincronizacao traz de volta. Barrar so no botao
+  // deixaria a porta da nuvem aberta.
+  if (novoAlvo > ALVO_MAXIMO_F) novoAlvo = ALVO_MAXIMO_F;
+
   int delta = novoAlvo - temperaturaAlvoF;
   if (delta == 0) return;
 
@@ -2050,8 +2071,11 @@ const char* fasePorAlvo(int alvo) {
 // (165 F) e o limite e de so 10 F, e o sensor fica no ar mais quente da estufa.
 // Quem pede um ajuste alto de proposito nao deveria receber alarme de incendio
 // por ter conseguido o que pediu.
+// Com o alvo limitado a 165 F, o ramo que somava 5 ao alvo deixou de ter
+// como acontecer: ele existia para um alvo acima de 170. Fica o valor fixo,
+// que e o que o aparelho sempre usou na pratica.
 int limiteFogoF() {
-  return temperaturaAlvoF > 170 ? temperaturaAlvoF + 5 : 175;
+  return 175;
 }
 
 // Chave aleatoria de 32 hex (128 bits). Aleatoria e por aparelho e melhor que
@@ -2716,9 +2740,14 @@ void aplicarVentoinha() {
   // empurrado pela propria ventoinha. Parar tira a forca que espalha a chama. O
   // limite de temperatura de incendio entra pelo mesmo motivo.
   bool fogo = (alertaLuz || riscoIncendioAgora());
+  // Quente demais para soprar ar no fogo. Checado aqui, na saida, e nao junto
+  // com o resto da decisao: e a ultima palavra antes do pino, e nao depende de
+  // nenhuma outra variavel estar correta.
+  bool quenteDemais = leituraOk && temperaturaF > TEMPERATURA_LIMITE_VENTOINHA_F;
   // Quem manda e o ajuste. O botao so pode PARAR; para fazer girar, destrava e
   // deixa o termostato decidir.
-  bool desejado = ledControleLigado && !ventoinhaBloqueada && !fogo;
+  bool desejado = ledControleLigado && !ventoinhaBloqueada && !fogo
+                  && !quenteDemais;
   if (desejado == ventoinhaLigada) return;
 
   // PARAR nunca espera. Passou do ajuste, ou ha fogo, ou o sensor cegou, ou o
@@ -2752,9 +2781,11 @@ void aplicarVentoinha() {
   // em seguida em vez de esperar o segundo seguinte.
   forcarReescritaVisor();
   registrar(String("Ventoinha ") +
-            (ventoinhaLigada     ? "LIGADA"
-             : fogo              ? "DESLIGADA (fogo)"
-             : !leituraOk        ? "DESLIGADA (sem leitura)"
+            (ventoinhaLigada      ? "LIGADA"
+             : fogo               ? "DESLIGADA (fogo)"
+             : quenteDemais       ? "DESLIGADA (acima de 165 F: trava de "
+                                    "seguranca)"
+             : !leituraOk         ? "DESLIGADA (sem leitura)"
              : ventoinhaBloqueada ? "DESLIGADA (travada no botao)"
                                   : "DESLIGADA"));
 }
