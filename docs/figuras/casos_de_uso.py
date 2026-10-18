@@ -61,7 +61,7 @@ CASOS = [
     (16, 'Cadastrar e parear a estufa'),
     (25, 'Acompanhar temperatura\ne umidade'),
     (34, 'Ajustar os alvos de\ntemperatura e umidade'),
-    (43, 'Receber alertas de\ntemperatura e de incêndio'),
+    (43, 'Receber alertas de temperatura,\nde incêndio e de falta de comunicação'),
     (52, 'Silenciar o alarme'),
     (61, 'Iniciar e encerrar\numa estufada'),
     (70, 'Consultar e exportar\no relatório do ciclo'),
@@ -72,17 +72,20 @@ for y, texto in CASOS:
 
 # ---- atores ----
 ator(10, 38, 'Produtor')
-ator(100, 30, 'Controlador', 'da estufa\n(projeto complementar)')
-ator(100, 60, 'Serviço de\nnotificações', 'Firebase Cloud\nMessaging')
+ator(100, 34, 'Controlador', 'da estufa\n(projeto complementar)')
+ator(100, 66, 'Serviço de\nnotificações', 'Firebase Cloud\nMessaging')
 
 for y, _ in CASOS:
     liga(14, 38, 35.5, y)
 
-# o controlador participa da leitura, do ajuste e dos alertas
-for y in (25, 34, 43):
-    liga(74.5, y, 96, 30)
-# o servico de notificacao entrega os alertas
-liga(74.5, 43, 96, 60)
+# O controlador participa de tudo que depende do aparelho: ele se identifica
+# no pareamento, fornece as leituras, aplica os alvos, decide o alarme e cala
+# a sirene. Nao participa da estufada nem do relatorio - o firmware nao tem
+# conceito de ciclo e nao guarda historico nenhum.
+for y in (16, 25, 34, 43, 52):
+    liga(74.5, y, 96, 34)
+# O servico de notificacao entrega o aviso quando o aplicativo esta fechado.
+liga(74.5, 43, 96, 66)
 
 destino = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        'casos_de_uso.png')
