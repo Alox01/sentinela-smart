@@ -735,6 +735,42 @@ funciona:
   um defeito de hardware nascendo fica menos visível. Vibração que faz o visor
   tremer merece multímetro, não paciência.
 
+### 2.11 Achado na escrita do TCC (18/10/2026)
+
+- [x] **D16. O texto do artigo e do resumo expandido subdeclarava a tese.**
+  Na redação, "sem internet" virou sinônimo de "modo offline", e o modo offline
+  é o terceiro caso: nem rede local, nem nuvem. O caso que o trabalho existe
+  para provar — **rede local sem internet, lendo e comandando direto no
+  aparelho** — aparecia como "o aplicativo continuou acessível pela rede
+  local". Acessível não é comandar.
+
+  **Não havia defeito no código.** `_postComFallback` manda o comando para a
+  base devolvida por `_resolverBaseAtiva()`, que sonda as candidatas locais
+  primeiro e só cai para a nuvem quando nenhuma responde; no firmware, o
+  `POST /sincronizar` está no mesmo `WebServer` do `GET /dados`. A internet não
+  entra nesse caminho. É o contrato que `docs/CONTRATO_API.md` já declarava.
+
+  A evidência também já existia: a linha 1 de `docs/PLANO_POS_TESTES.md` se
+  chama *"Operação local com a internet desligada — comandar e ler com o
+  roteador sem link"*, aprovada em 14/09/2026.
+
+  **O segundo erro era pior:** os trabalhos futuros prometiam "a entrega do
+  comando diretamente ao controlador quando ambos estiverem na mesma rede, o
+  que eliminaria a espera da consulta periódica". Isso **já está feito** desde
+  sempre — é o que `_resolverBaseAtiva()` faz. A espera de ~20 s é só do
+  caminho pela nuvem, onde o controlador busca os comandos. Oferecer como
+  futuro o que já funciona entrega à banca uma pergunta de graça.
+
+  *Conserto:* reescritos os dois documentos (Quadro de cenários, seção de
+  resultados, considerações finais e conclusão). O item falso saiu dos
+  trabalhos futuros e deu lugar à política de retenção do banco em nuvem, que
+  é real e está no escopo.
+
+  **Regra para a próxima revisão do texto:** antes de escrever "sem internet",
+  dizer qual dos três estados — LOCAL (há Wi-Fi, não há internet), NUVEM (há
+  internet, não há rede local) ou OFFLINE (não há nenhum dos dois). Os três se
+  comportam de forma diferente, e trocá-los apaga ou infla o resultado.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
