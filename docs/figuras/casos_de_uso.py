@@ -14,8 +14,7 @@ from matplotlib.patches import Ellipse, FancyBboxPatch, Circle
 
 PRETO = '#141414'
 CINZA = '#5a5a5a'
-MOSTARDA = '#8a6d00'
-PAPEL = '#f1efe9'
+PAPEL = '#efefef'
 
 fig = plt.figure(figsize=(11, 8.2), dpi=200)
 ax = fig.add_axes([0, 0, 1, 1])

@@ -18,8 +18,7 @@ from matplotlib.patches import FancyBboxPatch, Rectangle, FancyArrowPatch
 
 PRETO = '#141414'
 CINZA = '#5a5a5a'
-MOSTARDA = '#8a6d00'
-PAPEL = '#f1efe9'
+PAPEL = '#efefef'
 
 fig = plt.figure(figsize=(14.5, 12.6), dpi=200)
 ax = fig.add_axes([0, 0, 1, 1])

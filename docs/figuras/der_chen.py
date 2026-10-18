@@ -18,7 +18,6 @@ from matplotlib.patches import Rectangle, Polygon, Circle
 
 PRETO = '#141414'
 CINZA = '#5a5a5a'
-MOSTARDA = '#8a6d00'
 
 fig = plt.figure(figsize=(19, 13.2), dpi=170)
 ax = fig.add_axes([0, 0, 1, 1])
@@ -38,11 +37,11 @@ def entidade(cx, cy, texto, w=30, h=11):
 def losango(cx, cy, texto, w=22, h=11, tracejado=False):
     ax.add_patch(Polygon([(cx, cy - h / 2), (cx + w / 2, cy),
                           (cx, cy + h / 2), (cx - w / 2, cy)], closed=True,
-                         fc='white', ec=MOSTARDA if tracejado else PRETO,
+                         fc='white', ec=PRETO if tracejado else PRETO,
                          lw=1.3, zorder=6,
                          linestyle=(0, (4, 2)) if tracejado else '-'))
     ax.text(cx, cy, texto, ha='center', va='center', fontsize=7.4,
-            color=MOSTARDA if tracejado else PRETO, zorder=7)
+            color=PRETO if tracejado else PRETO, zorder=7)
     return (cx, cy)
 
 
@@ -60,7 +59,7 @@ def borda(ent, alvo):
 def liga(ent, los, card, tracejado=False, desloca=(0, 0)):
     x1, y1 = borda(ent, los)
     x2, y2 = los
-    ax.plot([x1, x2], [y1, y2], color=MOSTARDA if tracejado else PRETO,
+    ax.plot([x1, x2], [y1, y2], color=PRETO if tracejado else PRETO,
             lw=1.1, zorder=4,
             linestyle=(0, (4, 2)) if tracejado else '-')
     tx = x1 + (x2 - x1) * 0.28 + desloca[0]
@@ -187,10 +186,10 @@ ax.text(73, 156, 'chave primária', ha='left', va='center', fontsize=7,
 ax.add_patch(Circle((96, 156), 1.0, fc='white', ec=PRETO, lw=0.9, zorder=6))
 ax.text(99, 156, 'atributo comum', ha='left', va='center', fontsize=7,
         color=PRETO)
-ax.plot([124, 128], [156, 156], color=MOSTARDA, lw=1.1, linestyle=(0, (4, 2)))
+ax.plot([124, 128], [156, 156], color=PRETO, lw=1.1, linestyle=(0, (4, 2)))
 ax.text(130, 156, 'ligação pelo identificador do aparelho, sem chave '
                   'estrangeira declarada', ha='left', va='center', fontsize=7,
-        color=MOSTARDA)
+        color=PRETO)
 
 destino = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        'der_chen.png')

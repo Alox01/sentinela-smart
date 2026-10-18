@@ -18,8 +18,7 @@ from matplotlib.patches import FancyBboxPatch, Rectangle
 
 PRETO = '#141414'
 CINZA = '#5a5a5a'
-MOSTARDA = '#8a6d00'
-PAPEL = '#f1efe9'
+PAPEL = '#efefef'
 
 LINHA = 3.1          # altura de cada coluna da tabela
 CABECALHO = 5.0
@@ -67,12 +66,12 @@ def relacao(origem, destino, texto, tracejada=False, desvio=None,
     `leituras`, que ocupa a faixa do meio de ponta a ponta.
     """
     estilo = (0, (4, 2)) if tracejada else '-'
-    cor_texto = MOSTARDA if tracejada else CINZA
+    cor_texto = CINZA
     if por_cima:
         xo = (origem[0] + origem[1]) / 2
         ax.plot([xo, xo, desvio, desvio, destino[0]],
                 [origem[3], 4, 4, destino[2], destino[2]],
-                color=MOSTARDA if tracejada else CINZA, lw=1.2, zorder=2,
+                color=CINZA, lw=1.2, zorder=2,
                 linestyle=estilo)
         xr, yr = (desvio, rotulo_em if rotulo_em is not None else destino[2])
     else:
@@ -81,7 +80,7 @@ def relacao(origem, destino, texto, tracejada=False, desvio=None,
         y1, y2 = origem[2], destino[2]
         meio = desvio if desvio is not None else (x1 + x2) / 2
         ax.plot([x1, meio, meio, x2], [y1, y1, y2, y2], lw=1.2,
-                color=MOSTARDA if tracejada else CINZA,
+                color=CINZA,
                 zorder=2, linestyle=estilo)
         xr, yr = meio, (y1 + y2) / 2
     ax.text(xr, yr, ' ' + texto + ' ', ha='center', va='center',
@@ -188,7 +187,7 @@ relacao(dispositivos, comandos_agendados, 'por identificador', True,
 ax.text(62, 104, 'Linha cheia: chave estrangeira declarada, com exclusão em '
                  'cascata.', fontsize=7.4, color=CINZA, ha='left')
 ax.text(62, 108, 'Linha tracejada: ligação pelo identificador do aparelho, '
-                 'sem chave estrangeira.', fontsize=7.4, color=MOSTARDA,
+                 'sem chave estrangeira.', fontsize=7.4, color=PRETO,
         ha='left')
 
 destino = os.path.join(os.path.dirname(os.path.abspath(__file__)),
