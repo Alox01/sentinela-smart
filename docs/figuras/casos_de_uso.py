@@ -12,9 +12,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, FancyBboxPatch, Circle
 
-AZUL = '#1f3c88'
-CINZA = '#555555'
-PRETO = '#222222'
+PRETO = '#141414'
+CINZA = '#5a5a5a'
+MOSTARDA = '#8a6d00'
+PAPEL = '#f1efe9'
 
 fig = plt.figure(figsize=(11, 8.2), dpi=200)
 ax = fig.add_axes([0, 0, 1, 1])
@@ -25,9 +26,9 @@ ax.axis('off')
 # ---- fronteira do sistema ----
 ax.add_patch(FancyBboxPatch((28, 6), 54, 72,
                             boxstyle='round,pad=0,rounding_size=1.5',
-                            fc='#fbfcfe', ec=AZUL, lw=1.6, zorder=1))
+                            fc='white', ec=PRETO, lw=1.6, zorder=1))
 ax.text(55, 10, 'Plataforma Sentinela\n(aplicativo móvel + API em nuvem)',
-        ha='center', va='center', fontsize=10, fontweight='bold', color=AZUL,
+        ha='center', va='center', fontsize=10, fontweight='bold', color=PRETO,
         linespacing=1.4, zorder=3)
 
 
@@ -47,7 +48,7 @@ def ator(x, y, nome, legenda=''):
 
 
 def caso(x, y, texto, w=40, h=7.4):
-    ax.add_patch(Ellipse((x, y), w, h, fc='white', ec=AZUL, lw=1.2, zorder=2))
+    ax.add_patch(Ellipse((x, y), w, h, fc='white', ec=PRETO, lw=1.2, zorder=2))
     ax.text(x, y, texto, ha='center', va='center', fontsize=8.2, color=PRETO,
             zorder=3, linespacing=1.25)
 

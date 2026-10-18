@@ -16,11 +16,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, Rectangle
 
-AZUL = '#1f3c88'
-AZUL_FRACO = '#eaeff9'
-CINZA = '#555555'
-PRETO = '#222222'
-VERDE = '#17603a'
+PRETO = '#141414'
+CINZA = '#5a5a5a'
+MOSTARDA = '#8a6d00'
+PAPEL = '#f1efe9'
 
 LINHA = 3.1          # altura de cada coluna da tabela
 CABECALHO = 5.0
@@ -40,17 +39,17 @@ def entidade(x, y, largura, nome, colunas):
     altura = CABECALHO + LINHA * len(colunas) + 1.4
     ax.add_patch(FancyBboxPatch((x, y), largura, altura,
                                 boxstyle='round,pad=0,rounding_size=0.8',
-                                fc='white', ec=AZUL, lw=1.3, zorder=3))
-    ax.add_patch(Rectangle((x, y), largura, CABECALHO, fc=AZUL_FRACO,
+                                fc='white', ec=PRETO, lw=1.4, zorder=3))
+    ax.add_patch(Rectangle((x, y), largura, CABECALHO, fc=PAPEL,
                            ec='none', zorder=4))
-    ax.plot([x, x + largura], [y + CABECALHO, y + CABECALHO], color=AZUL,
+    ax.plot([x, x + largura], [y + CABECALHO, y + CABECALHO], color=PRETO,
             lw=1.0, zorder=5)
     ax.text(x + largura / 2, y + CABECALHO / 2, nome, ha='center',
-            va='center', fontsize=9, fontweight='bold', color=AZUL, zorder=6)
+            va='center', fontsize=9, fontweight='bold', color=PRETO, zorder=6)
 
     for i, (campo, tipo, marca) in enumerate(colunas):
         ly = y + CABECALHO + 1.0 + LINHA * i + LINHA / 2
-        cor = VERDE if marca else PRETO
+        cor = PRETO
         peso = 'bold' if marca else 'normal'
         ax.text(x + 2.2, ly, campo, ha='left', va='center', fontsize=6.6,
                 color=cor, fontweight=peso, zorder=6)
@@ -68,19 +67,21 @@ def relacao(origem, destino, texto, tracejada=False, desvio=None,
     `leituras`, que ocupa a faixa do meio de ponta a ponta.
     """
     estilo = (0, (4, 2)) if tracejada else '-'
-    cor_texto = '#8a6d00' if tracejada else CINZA
+    cor_texto = MOSTARDA if tracejada else CINZA
     if por_cima:
         xo = (origem[0] + origem[1]) / 2
         ax.plot([xo, xo, desvio, desvio, destino[0]],
                 [origem[3], 4, 4, destino[2], destino[2]],
-                color=CINZA, lw=1.2, zorder=2, linestyle=estilo)
+                color=MOSTARDA if tracejada else CINZA, lw=1.2, zorder=2,
+                linestyle=estilo)
         xr, yr = (desvio, rotulo_em if rotulo_em is not None else destino[2])
     else:
         x1 = origem[1] if destino[0] > origem[1] else origem[0]
         x2 = destino[0] if destino[0] > origem[1] else destino[1]
         y1, y2 = origem[2], destino[2]
         meio = desvio if desvio is not None else (x1 + x2) / 2
-        ax.plot([x1, meio, meio, x2], [y1, y1, y2, y2], color=CINZA, lw=1.2,
+        ax.plot([x1, meio, meio, x2], [y1, y1, y2, y2], lw=1.2,
+                color=MOSTARDA if tracejada else CINZA,
                 zorder=2, linestyle=estilo)
         xr, yr = meio, (y1 + y2) / 2
     ax.text(xr, yr, ' ' + texto + ' ', ha='center', va='center',
@@ -187,7 +188,7 @@ relacao(dispositivos, comandos_agendados, 'por identificador', True,
 ax.text(62, 104, 'Linha cheia: chave estrangeira declarada, com exclusão em '
                  'cascata.', fontsize=7.4, color=CINZA, ha='left')
 ax.text(62, 108, 'Linha tracejada: ligação pelo identificador do aparelho, '
-                 'sem chave estrangeira.', fontsize=7.4, color='#8a6d00',
+                 'sem chave estrangeira.', fontsize=7.4, color=MOSTARDA,
         ha='left')
 
 destino = os.path.join(os.path.dirname(os.path.abspath(__file__)),
