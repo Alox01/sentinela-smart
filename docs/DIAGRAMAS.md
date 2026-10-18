@@ -15,6 +15,16 @@ Escopo: persistência na nuvem. As entidades de *estufada* e *eventos* ficam hoj
 no banco local do app (Isar, NoSQL) e não entram neste DER relacional.
 Fonte: `database/schema.sql`.
 
+> **O bloco Mermaid abaixo mostra quatro tabelas; o banco tem sete.**
+> `push_dispositivos`, `comandos_pendentes` e `comandos_agendados` nasceram
+> depois, direto no `db.js`, e nunca entraram aqui. Ficar fora do desenho foi o
+> mesmo motivo de elas terem escapado da revisão de RLS uma vez.
+>
+> A figura completa, com as sete e com a distinção entre chave estrangeira
+> declarada e ligação por `identificador_hardware`, é gerada por
+> `docs/figuras/der_nuvem.py` e sai em `docs/figuras/der_nuvem.png`. É ela que
+> vai para o artigo.
+
 ```mermaid
 erDiagram
     dispositivos ||--|| configuracoes : "tem"
