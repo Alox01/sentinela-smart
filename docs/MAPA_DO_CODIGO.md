@@ -115,8 +115,8 @@ expira sozinho.
 
 ### "Como você testou?"
 
-- **App:** 208 testes (`flutter test`, verificado em 15/10/2026).
-- **Servidor:** 234 testes (`node --test`, verificado em 15/10/2026).
+- **App:** 210 testes (`flutter test`, verificado em 18/10/2026).
+- **Servidor:** 234 testes (`node --test`, verificado em 18/10/2026).
 - **Firmware:** compilação real no CI a cada push, com o core esp32 3.2.0.
 - **Campo:** registrado em `PLANO_POS_TESTES.md`, com o que falhou e o que foi
   corrigido.
