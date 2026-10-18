@@ -124,6 +124,15 @@ comandos e leituras ficam em fila até reconectar).
 
 Fontes: `DEMO.md` (cenário 3), lógica de sync do servidor e da fila local.
 
+> **A nuvem não aparece no bloco abaixo, e deveria.** Aqui a fila volta sempre
+> pela rede local, e não é o que acontece: na volta da conexão o aplicativo
+> entrega por onde conseguir, e pela nuvem o comando ainda espera o controlador
+> buscar. É dessa espera que sai a limitação de "até cerca de vinte segundos"
+> declarada no artigo — ou seja, justamente o que o desenho omitia.
+>
+> A figura com os dois caminhos, em bloco `alt`, é gerada por
+> `docs/figuras/sequencia_sync.py`. É ela que vai para o artigo.
+
 ```mermaid
 sequenceDiagram
     actor U as Usuário
