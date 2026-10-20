@@ -11,6 +11,21 @@ import '../models/pending_sync_command_entity.dart';
 import 'coalescencia_comando.dart';
 
 
+/// Gravacao recusada: o endereco informado responde um aparelho diferente do
+/// que ja esta cadastrado nesta estufa. Em vez de substituir em silencio, o
+/// app pergunta.
+class EstufaDeOutroAparelho implements Exception {
+  EstufaDeOutroAparelho({required this.idCadastrado, required this.idRecebido});
+
+  final String idCadastrado;
+  final String idRecebido;
+
+  @override
+  String toString() =>
+      'Este endereco responde o aparelho $idRecebido, e esta estufa esta '
+      'cadastrada no $idCadastrado.';
+}
+
 class IsarService {
   IsarService._();
   static final IsarService instance = IsarService._();
@@ -51,6 +66,96 @@ class IsarService {
       name: _dbName,
       directory: dir.path,
     );
+    await _migrarChavesParaHardware();
+  }
+
+  /// Passa as estufas ja cadastradas da chave antiga (`nome::ip`) para a nova
+  /// (`hw::<idHardware>`). Roda uma vez por abertura e nao faz nada quando nao
+  /// ha o que mudar.
+  ///
+  /// Conservadora de proposito: so reescreve a linha que TEM id de hardware e
+  /// cujo destino ainda esta livre. Duas linhas do mesmo aparelho ficam como
+  /// estao - juntar sozinho escolheria qual histórico sobrevive, e essa escolha
+  /// nao e do app. Nada aqui apaga linha nenhuma.
+  ///
+  /// Os ciclos, eventos e leituras se ligam a estufa pelo IP, nao por esta
+  /// chave, entao a reescrita nao desgruda historico.
+  Future<void> _migrarChavesParaHardware() async {
+    final isar = _isar;
+    if (isar == null) return;
+    final estufas = await isar.collection<EstufaEntity>().where().findAll();
+    if (estufas.isEmpty) return;
+
+    final ocupadas = estufas.map((e) => e.chave).toSet();
+    final pendentes = <EstufaEntity>[];
+    for (final estufa in estufas) {
+      final id = estufa.idHardware?.trim();
+      if (id == null || id.isEmpty) continue;
+      final alvo = _chaveDaEstufa(
+        idHardware: id,
+        nome: estufa.nome,
+        ip: estufa.ip,
+      );
+      if (estufa.chave == alvo) continue;
+      if (ocupadas.contains(alvo)) continue;
+      ocupadas.remove(estufa.chave);
+      ocupadas.add(alvo);
+      estufa.chave = alvo;
+      pendentes.add(estufa);
+    }
+    if (pendentes.isEmpty) return;
+
+    await isar.writeTxn(() async {
+      await isar.collection<EstufaEntity>().putAll(pendentes);
+    });
+  }
+
+  // A identidade de uma estufa e o APARELHO, nunca o endereco.
+  //
+  // Ate 20/10/2026 a chave unica era `nome::ip`, com `replace: true` no indice.
+  // O IP e emprestado pelo roteador e volta para o bolo quando o aparelho
+  // desliga: bastava o DHCP entregar aquele endereco a outro ESP32 - o de um
+  // vizinho em visita, ou o proprio aparelho voltando com endereco novo - para
+  // a chave colidir e o Isar SUBSTITUIR a estufa existente, sem perguntar. A
+  // estufa continuava na lista, agora apontando para outro aparelho e com a
+  // chave de acesso errada, e os comandos passavam a falhar por credencial.
+  //
+  // O `idHardware` vem do MAC do chip e nunca repete. Quando ele e conhecido, e
+  // ele quem manda. O par nome+endereco fica so para a linha que ainda nao
+  // falou com nenhum aparelho.
+  static String _chaveDaEstufa({
+    String? idHardware,
+    required String nome,
+    required String ip,
+  }) {
+    final id = idHardware?.trim();
+    if (id != null && id.isNotEmpty) return 'hw::$id';
+    return '${nome.trim()}::${ip.trim()}';
+  }
+
+  /// Recusa gravar por cima de uma estufa que pertence a outro aparelho.
+  /// Silencio aqui foi o defeito: quem decide trocar de aparelho e o produtor.
+  Future<void> _conferirDonoDaChave(
+    Isar isar,
+    String chave,
+    String? idHardware, {
+    int? ignorandoId,
+  }) async {
+    final recebido = idHardware?.trim() ?? '';
+    final existente = await isar
+        .collection<EstufaEntity>()
+        .filter()
+        .chaveEqualTo(chave)
+        .findFirst();
+    if (existente == null) return;
+    if (ignorandoId != null && existente.id == ignorandoId) return;
+    final cadastrado = existente.idHardware?.trim() ?? '';
+    if (cadastrado.isEmpty || recebido.isEmpty) return;
+    if (cadastrado == recebido) return;
+    throw EstufaDeOutroAparelho(
+      idCadastrado: cadastrado,
+      idRecebido: recebido,
+    );
   }
 
   Future<List<EstufaEntity>> listarEstufas() async {
@@ -67,16 +172,22 @@ class IsarService {
     String? tokenAcesso,
     String? idHardware,
   }) async {
+    final idLimpo = _normalizarTextoOpcional(idHardware);
+    final chave = _chaveDaEstufa(
+      idHardware: idLimpo,
+      nome: nome,
+      ip: ip,
+    );
     final estufa = EstufaEntity()
-      ..chave = '${nome.trim()}::${ip.trim()}'
+      ..chave = chave
       ..nome = nome.trim()
       ..ip = ip.trim()
       ..tokenAcesso = _normalizarTextoOpcional(tokenAcesso)
-      ..idHardware = _normalizarTextoOpcional(idHardware)
+      ..idHardware = idLimpo
       ..criadaEm = DateTime.now();
 
-
     final isar = await database;
+    await _conferirDonoDaChave(isar, chave, idLimpo);
     await isar.writeTxn(() async {
       await isar.collection<EstufaEntity>().put(estufa);
     });
@@ -84,12 +195,18 @@ class IsarService {
   }
 
   // O id capturado automaticamente sobrevive a uma edicao que nao informa outro
-  // - o formulario so o envia quando o usuario digita algo. Mas ele foi
-  // aprendido DAQUELE endereco, entao trocar o endereco o invalida: o proximo
-  // que atender no endereco novo e quem passa a valer. E tambem o conserto de
-  // uma estufa que ficou apontada para o aparelho errado.
+  // - o formulario so o envia quando o usuario digita algo.
+  //
+  // Ate 20/10/2026 ele era DESCARTADO quando o endereco mudava, com o
+  // raciocinio de que "quem atender no endereco novo passa a valer". Era o
+  // avesso do que o cadastro precisa: endereco muda sozinho a cada concessao do
+  // roteador, e a cada troca a estufa perdia a unica marca que dizia de qual
+  // aparelho ela era. O aparelho e que identifica, nao o endereco.
+  //
+  // Para repontar uma estufa para outro aparelho, informe o id novo na edicao -
+  // ele vence o herdado - ou remova e cadastre de novo.
   static String? _idHerdado(EstufaEntity existente, String ipNovo) =>
-      existente.ip == ipNovo ? existente.idHardware : null;
+      existente.idHardware;
 
   Future<EstufaEntity> atualizarEstufa({
     required int id,
@@ -103,7 +220,11 @@ class IsarService {
     final idHardwareLimpo = _normalizarTextoOpcional(idHardware);
     final estufa = EstufaEntity()
       ..id = id
-      ..chave = '$nomeLimpo::$ipLimpo'
+      ..chave = _chaveDaEstufa(
+        idHardware: idHardwareLimpo,
+        nome: nomeLimpo,
+        ip: ipLimpo,
+      )
       ..nome = nomeLimpo
       ..ip = ipLimpo
       ..tokenAcesso = _normalizarTextoOpcional(tokenAcesso)
@@ -116,8 +237,21 @@ class IsarService {
     if (existente != null) {
       estufa.criadaEm = existente.criadaEm;
       estufa.idHardware ??= _idHerdado(existente, ipLimpo);
+      // O id pode ter sido herdado agora: a chave precisa refletir isso, senao
+      // a linha continuaria com a chave velha, de nome e endereco.
+      estufa.chave = _chaveDaEstufa(
+        idHardware: estufa.idHardware,
+        nome: nomeLimpo,
+        ip: ipLimpo,
+      );
     }
 
+    await _conferirDonoDaChave(
+      isar,
+      estufa.chave,
+      estufa.idHardware,
+      ignorandoId: id,
+    );
     await isar.writeTxn(() async {
       await isar.collection<EstufaEntity>().put(estufa);
     });

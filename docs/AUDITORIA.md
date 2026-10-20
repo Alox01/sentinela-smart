@@ -771,6 +771,61 @@ funciona:
   internet, não há rede local) ou OFFLINE (não há nenhum dos dois). Os três se
   comportam de forma diferente, e trocá-los apaga ou infla o resultado.
 
+### 2.12 Achado em campo (19/10/2026)
+
+- [x] **D17. A estufa trocava de aparelho sozinha quando o endereço mudava
+  de dono.**
+
+  O aparelho de um parente foi ligado na rede do produtor para ser
+  configurado, enquanto o aparelho do produtor estava **desligado**. O
+  roteador entregou ao ESP32 novo o endereço que era do antigo — concessão
+  vencida, endereço de volta ao bolo. A partir dali o app, falando com aquele
+  endereço, recebeu outro `idHardware`, e a estufa cadastrada passou a apontar
+  para o aparelho errado, carregando a chave de acesso do antigo. Sintoma
+  final: comandos falhando por credencial, numa estufa que continuava com o
+  nome certo na lista.
+
+  **Não é defeito do firmware.** O `idHardware` e o nome mDNS saem do MAC do
+  chip (`ESP32_xxxxxx`, `sentinela-xxxxxx`) e nunca repetem. O erro é de
+  modelo, no app, em dois lugares:
+
+  **Primeiro, a identidade era o endereço.** `EstufaEntity.chave` era
+  `'<nome>::<ip>'`, num índice `unique: true, replace: true`. Endereço é
+  emprestado pelo roteador; usá-lo como identidade significa que qualquer
+  troca de concessão pode colidir, e o `replace: true` manda o Isar
+  **substituir a linha existente em silêncio**. Agora a chave é
+  `hw::<idHardware>` quando o aparelho já se apresentou, e `nome::ip` só para
+  a linha que ainda não falou com nenhum aparelho.
+
+  **Segundo, o identificador recebido vencia o cadastrado.** Em
+  `AtualizacaoDeEstufa.entre()` estava `idHardwareNovo ?? idHardwareAtual` —
+  bastava outro ESP32 atender no endereço para a estufa trocar de dono.
+  Invertido: o cadastrado vence, e a estufa sem aparelho continua aprendendo o
+  dela, que era a razão legítima daquela linha existir.
+
+  Entrou também `_conferirDonoDaChave()`, que **recusa** gravar por cima de
+  uma estufa de outro aparelho em vez de substituir, e um aviso na
+  confirmação quando o endereço responde um aparelho diferente.
+
+  *Correção relacionada:* `_idHerdado()` descartava o `idHardware` quando o
+  endereço mudava, com o raciocínio de que "quem atender no endereço novo
+  passa a valer". Era o avesso do que o cadastro precisa — endereço muda
+  sozinho a cada concessão. Agora o identificador sobrevive à troca de
+  endereço. Para repontar uma estufa de propósito: informar o id novo na
+  edição, ou remover e cadastrar de novo.
+
+  *Migração:* as chaves já gravadas são reescritas na abertura do banco, só
+  quando a linha tem `idHardware` e o destino está livre. Nada é apagado, e
+  duas linhas do mesmo aparelho ficam como estão — juntar sozinho escolheria
+  qual histórico sobrevive, e essa escolha não é do app.
+
+  *Teste:* `test/estufa_nao_troca_de_aparelho_test.dart`, quatro casos.
+
+  **O que isto NÃO resolve:** ciclos, eventos e leituras continuam ligados à
+  estufa **pelo IP**, não pelo aparelho. Então trocar de endereço ainda
+  desgruda o histórico. É migração maior, de várias coleções, e fica
+  registrada aqui como próxima.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com

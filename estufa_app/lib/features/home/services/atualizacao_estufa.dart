@@ -35,6 +35,8 @@ class AtualizacaoDeEstufa {
 
   final bool mudaChave;
   final bool mudaEndereco;
+  /// O endereco passou a responder um aparelho que nao e o desta estufa.
+  final bool aparelhoDiferente;
 
   const AtualizacaoDeEstufa._({
     required this.id,
@@ -44,6 +46,7 @@ class AtualizacaoDeEstufa {
     required this.idHardware,
     required this.mudaChave,
     required this.mudaEndereco,
+    required this.aparelhoDiferente,
   });
 
   /// Compara o que a estufa tem hoje com o que chegou. Devolve **nulo quando
@@ -68,17 +71,37 @@ class AtualizacaoDeEstufa {
     final mudaEndereco = endereco != null && endereco != _valor(enderecoAtual);
     if (!mudaChave && !mudaEndereco) return null;
 
+    // Quem atende no endereco nao e o aparelho cadastrado nesta estufa.
+    // Acontece quando o roteador entrega o endereco a outro ESP32 - o aparelho
+    // de uma visita, ou o proprio voltando com endereco novo depois que o
+    // antigo foi reaproveitado.
+    final idAtual = _valor(idHardwareAtual);
+    final idNovo = _valor(idHardwareNovo);
+    final aparelhoDiferente =
+        idAtual != null && idNovo != null && idAtual != idNovo;
+
     return AtualizacaoDeEstufa._(
       id: id,
       nome: nome,
       endereco: endereco ?? enderecoAtual,
       chave: chave ?? chaveAtual,
       // O id do aparelho nao entra na conta do "mudou?": ele e identidade, nao
-      // configuracao. Mas segue junto para uma estufa cadastrada a mao, sem id,
+      // configuracao. Segue junto para uma estufa cadastrada a mao, sem id,
       // aprender o dele agora — sem isso ela continuaria sem ler pela nuvem.
-      idHardware: idHardwareNovo ?? idHardwareAtual,
+      //
+      // Mas o CADASTRADO vence o recebido, e isso foi um defeito ate
+      // 20/10/2026: estava `idHardwareNovo ?? idHardwareAtual`, e bastava
+      // outro ESP32 atender no endereco para a estufa trocar de aparelho em
+      // silencio — com a chave de acesso do antigo, que o novo recusa. Visto
+      // em campo em 19/10/2026, com o aparelho de um parente sendo configurado
+      // na mesma rede enquanto o do produtor estava desligado.
+      //
+      // Identidade nao se aprende duas vezes. Para repontar, o produtor informa
+      // o id novo na edicao, ou remove e cadastra de novo.
+      idHardware: idAtual ?? idNovo,
       mudaChave: mudaChave,
       mudaEndereco: mudaEndereco,
+      aparelhoDiferente: aparelhoDiferente,
     );
   }
 
@@ -90,6 +113,15 @@ class AtualizacaoDeEstufa {
     if (mudaChave && mudaEndereco) return 'a chave e o endereço';
     return mudaChave ? 'a chave' : 'o endereço';
   }
+
+  /// Aviso para a confirmacao quando o endereco passou a responder outro
+  /// aparelho. Sem isto, a tela diria apenas "atualizar o endereço" — e o que
+  /// esta em jogo e de qual aparelho esta estufa e.
+  String? get avisoDeAparelho => aparelhoDiferente
+      ? 'Atenção: este endereço responde um aparelho diferente do que está '
+            'cadastrado nesta estufa. O cadastro continua apontando para o '
+            'aparelho original.'
+      : null;
 
   Future<void> aplicar(EstufasRepository repositorio) => repositorio.atualizar(
     id: id,
