@@ -389,6 +389,9 @@ bool chaveRegistradaNaNuvem = false;
 // A tarefa de rede descobriu algo sobre a chave e pede ao laco que grave.
 volatile bool pedidoGravarChave = false;
 
+// Guardado para poder medir a folga de pilha dela em /dados.
+TaskHandle_t tarefaNuvemHandle = NULL;
+
 // Diario das ultimas linhas, lido em /log quando nao ha cabo. Ver registrar().
 const int LOG_LINHAS = 24;
 String diario[LOG_LINHAS];
@@ -397,6 +400,30 @@ int diarioProx = 0;
 // navegador le em /log. Sem tranca, uma escrita no meio de uma leitura entrega
 // um texto que acabou de ser liberado da memoria - e isso reinicia o aparelho.
 SemaphoreHandle_t trancaDiario = NULL;
+
+// Protege o estado que os DOIS nucleos escrevem: os alvos com seus carimbos de
+// tempo e as marcas de chave. Ate agora so o diario tinha tranca, e o resto
+// andava por coincidencia.
+//
+// O caso que motiva: aplicarAjustes() e chamada pela tarefa de rede (nucleo 0,
+// comando vindo da nuvem) e pelo /sincronizar (nucleo 1, comando da rede
+// local). Ela faz le-compara-escreve em `long long`, que no ESP32 sao DOIS
+// armazenamentos de 32 bits. Duas chamadas no mesmo instante podem deixar
+// metade de um carimbo atualizada - e um carimbo com a metade alta absurda faz
+// TODO comando futuro ser ignorado ate o proximo reinicio, em silencio.
+//
+// Regra de ordem, para nao travar: quem segura esta tranca pode pedir a do
+// diario (registrar() faz isso), nunca o contrario. E NADA de I/O com ela na
+// mao - as funcoes de rede copiam o que precisam e soltam antes do HTTPS.
+SemaphoreHandle_t trancaEstado = NULL;
+
+void travarEstado() {
+  if (trancaEstado != NULL) xSemaphoreTake(trancaEstado, portMAX_DELAY);
+}
+
+void soltarEstado() {
+  if (trancaEstado != NULL) xSemaphoreGive(trancaEstado);
+}
 
 // IP fixo (opcional). Vazio = DHCP, que e o normal. Existe porque em muita
 // propriedade o roteador e do provedor e o produtor nao tem acesso para fazer
@@ -526,6 +553,7 @@ void setup() {
   digitalWrite(RELE_VENTOINHA, LOW);
 
   trancaDiario = xSemaphoreCreateMutex();
+  trancaEstado = xSemaphoreCreateMutex();
 
   Serial.begin(115200);
   delay(1000);
@@ -620,7 +648,8 @@ void setup() {
 
   // 12 KB de pilha: o handshake TLS e guloso, e uma pilha curta aqui vira
   // reinicio por estouro no meio de uma conexao.
-  xTaskCreatePinnedToCore(tarefaNuvem, "nuvem", 12288, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(tarefaNuvem, "nuvem", 12288, NULL, 1,
+                          &tarefaNuvemHandle, 0);
 
   Serial.println("Sistema iniciado");
   Serial.print("Servidor HTTP em: http://");
@@ -718,9 +747,15 @@ void tarefaNuvem(void* _) {
 void gravarPendenciasDeChave() {
   if (!pedidoGravarChave) return;
   pedidoGravarChave = false;
+  // Copia sob tranca e grava solto: o Preferences e lento e nao pode segurar a
+  // tarefa de rede do outro nucleo.
+  travarEstado();
+  const bool registrada = chaveRegistradaNaNuvem;
+  const bool semAnterior = chaveAnterior.length() == 0;
+  soltarEstado();
   prefs.begin("sentinela", false);
-  prefs.putBool("chaveReg", chaveRegistradaNaNuvem);
-  if (chaveRegistradaNaNuvem && chaveAnterior.length() == 0) {
+  prefs.putBool("chaveReg", registrada);
+  if (registrada && semAnterior) {
     prefs.remove("chaveAnt");
   }
   prefs.end();
@@ -1491,8 +1526,10 @@ void handleConfigSalvar() {
   if (gerarNova) {
     prefs.putString("chaveAnt", chaveSubstituida);
     prefs.putBool("chaveReg", false);
+    travarEstado();
     chaveAnterior = chaveSubstituida;
     chaveRegistradaNaNuvem = false;
+    soltarEstado();
   }
   prefs.putString("ipFixo", ip);
   prefs.putString("gateway", gateway);
@@ -1855,8 +1892,11 @@ void empurrarLeituraNuvem() {
   String url = String(CLOUD_URL) + "/leitura";
   if (!http.begin(cliente, url)) return;
   http.addHeader("Content-Type", "application/json");
-  if (tokenAparelho.length() > 0) {
-    http.addHeader("X-Device-Token", tokenAparelho);
+  travarEstado();
+  const String chaveDoEnvio = tokenAparelho;
+  soltarEstado();
+  if (chaveDoEnvio.length() > 0) {
+    http.addHeader("X-Device-Token", chaveDoEnvio);
   }
   int codigo = http.POST(corpo);
   registrar("Push nuvem -> HTTP " + String(codigo));
@@ -1869,8 +1909,13 @@ void empurrarLeituraNuvem() {
   // ficava tentando de novo a cada 20 s com a chave ANTIGA - que a nuvem ja
   // tinha descartado - e levando 401 para sempre, com uma chamada HTTPS
   // bloqueante a mais em cada ciclo. Visto no Serial em 14/09/2026.
-  const bool faltavaConfirmar = !chaveRegistradaNaNuvem || chaveAnterior.length() > 0;
-  if (codigo == 200 && faltavaConfirmar && tokenAparelho != DEVICE_TOKEN) {
+  travarEstado();
+  const bool faltavaConfirmar =
+      !chaveRegistradaNaNuvem || chaveAnterior.length() > 0;
+  const bool registroDadoPorFeito =
+      chaveRegistradaNaNuvem && chaveAnterior.length() == 0;
+  soltarEstado();
+  if (codigo == 200 && faltavaConfirmar && chaveDoEnvio != DEVICE_TOKEN) {
     registrar(F("A nuvem ja aceita a chave deste aparelho."));
     marcarChaveRegistrada();
   }
@@ -1882,10 +1927,11 @@ void empurrarLeituraNuvem() {
   // ciclo, sem nunca tentar se apresentar de novo. Reabre a tentativa de
   // registro: se a nuvem tiver mesmo outra chave, ela responde 409 e
   // sincronizarChaveNuvem() desiste sozinha, entao isto nao vira laco.
-  if (codigo == 401 && chaveRegistradaNaNuvem && chaveAnterior.length() == 0 &&
-      tokenAparelho != DEVICE_TOKEN) {
+  if (codigo == 401 && registroDadoPorFeito && chaveDoEnvio != DEVICE_TOKEN) {
     registrar(F("A nuvem recusou a chave: vou registrar de novo."));
+    travarEstado();
     chaveRegistradaNaNuvem = false;
+    soltarEstado();
     pedidoGravarChave = true;
   }
 }
@@ -1927,8 +1973,10 @@ void handleLog() {
 
 // A nuvem conhece a chave atual: para de tentar registrar ou trocar.
 void marcarChaveRegistrada() {
+  travarEstado();
   chaveRegistradaNaNuvem = true;
   chaveAnterior = "";
+  soltarEstado();
   // Quem grava e o laco, em gravarPendenciasDeChave(): esta funcao roda na
   // tarefa de rede, no outro nucleo, e o Preferences nao aceita dois donos.
   pedidoGravarChave = true;
@@ -1945,20 +1993,27 @@ void marcarChaveRegistrada() {
 void sincronizarChaveNuvem() {
   if (strlen(CLOUD_URL) == 0) return;
   if (WiFi.status() != WL_CONNECTED) return;
-  if (chaveRegistradaNaNuvem && chaveAnterior.length() == 0) return;
-  if (tokenAparelho.length() == 0) return;
+  // Fotografa as chaves e solta: daqui para baixo ha HTTPS, que leva segundos,
+  // e segurar a tranca durante ele prenderia o /sincronizar do outro nucleo.
+  travarEstado();
+  const bool jaRegistrada = chaveRegistradaNaNuvem;
+  const String anterior = chaveAnterior;
+  const String atual = tokenAparelho;
+  soltarEstado();
+  if (jaRegistrada && anterior.length() == 0) return;
+  if (atual.length() == 0) return;
   // Mesma regra do resto: emergencia manda, e o handshake HTTPS trava o loop.
   if (alertaLuz || riscoIncendioAgora()) return;
 
-  const bool rotacionando = chaveAnterior.length() > 0;
+  const bool rotacionando = anterior.length() > 0;
 
   JsonDocument doc;
   doc["idHardware"] = idHardware;
   if (rotacionando) {
-    doc["chaveAtual"] = chaveAnterior;
-    doc["chaveNova"] = tokenAparelho;
+    doc["chaveAtual"] = anterior;
+    doc["chaveNova"] = atual;
   } else {
-    doc["chave"] = tokenAparelho;
+    doc["chave"] = atual;
   }
   String corpo;
   serializeJson(doc, corpo);
@@ -1972,7 +2027,7 @@ void sincronizarChaveNuvem() {
   http.addHeader("Content-Type", "application/json");
   // Autentica com a credencial que a nuvem AINDA conhece: a anterior durante uma
   // rotacao, a atual quando e o primeiro registro.
-  http.addHeader("X-Device-Token", rotacionando ? chaveAnterior : tokenAparelho);
+  http.addHeader("X-Device-Token", rotacionando ? anterior : atual);
   int codigo = http.POST(corpo);
   http.end();
 
@@ -2033,7 +2088,9 @@ void buscarComandosNuvem() {
   JsonDocument descartavel;
   JsonArray aplicadas = descartavel["a"].to<JsonArray>();
   JsonArray ignoradas = descartavel["i"].to<JsonArray>();
+  travarEstado();
   aplicarAjustes(comando, aplicadas, ignoradas);
+  soltarEstado();
   if (aplicadas.size() == 0) return;
 
   // Confirma na hora, em vez de esperar o proximo push: e a leitura empurrada
@@ -2297,6 +2354,22 @@ void handleSimple() {
   // computador: e assim que se investiga em campo, onde nao ha Serial. Tempo
   // ligado menor que o tempo que voce esta ali quer dizer que ele reiniciou.
   doc["motivoReinicio"] = motivoDoReinicio();
+  // Memoria livre agora e o pior momento desde que ligou. O arquivo usa String
+  // em tudo - diario, respostas, concatenacao a cada evento -, e isso fragmenta
+  // o heap ao longo de semanas. Sem estes dois, um reinicio no decimo dia de
+  // estufada nao tem como ser atribuido a nada. O minimo e o que importa: ele
+  // guarda o fundo do poco mesmo que a medida de agora esteja folgada.
+  doc["heapLivre"] = ESP.getFreeHeap();
+  doc["heapMinimo"] = ESP.getMinFreeHeap();
+  // Folga de pilha da tarefa de rede, em bytes. Os 12 KB dela foram escolhidos
+  // por estimativa e nunca medidos; o handshake TLS e o que mais consome.
+  // Ja vem em BYTES: no port Xtensa o StackType_t e uint8_t, diferente do
+  // FreeRTOS de manual, onde a conta sai em palavras e se multiplica por 4.
+  // Multiplicar aqui reportaria quatro vezes mais folga do que existe.
+  doc["pilhaNuvemLivre"] =
+      tarefaNuvemHandle != NULL
+          ? (uint32_t)uxTaskGetStackHighWaterMark(tarefaNuvemHandle)
+          : 0;
   doc["ligadoHaSegundos"] = millis() / 1000;
   // O que a rede andou fazendo enquanto ninguem olhava. Numero alto aqui com
   // "ligado na energia" no motivo quer dizer que o aparelho NAO reiniciou: foi
@@ -2409,7 +2482,9 @@ void handleSincronizar() {
   JsonArray aplicadas = resp["alteracoesAplicadas"].to<JsonArray>();
   JsonArray ignoradas = resp["alteracoesIgnoradas"].to<JsonArray>();
 
+  travarEstado();
   aplicarAjustes(entrada.as<JsonObjectConst>(), aplicadas, ignoradas);
+  soltarEstado();
 
   resp["sucesso"] = true;
   JsonObject cfg = resp["configAtualizada"].to<JsonObject>();

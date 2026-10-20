@@ -29,6 +29,46 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ## Depois do 1.0, por motivo
 
+### 20/10/2026 — tranca de estado entre os dois núcleos, e memória visível
+
+Saiu de uma revisão do arquivo inteiro. Nenhuma das três muda comportamento:
+duas fecham corridas que ninguém tinha visto acontecer, e a terceira só publica
+números que já existiam dentro do chip.
+
+**A corrida que importava.** `aplicarAjustes()` tem dois chamadores em núcleos
+diferentes: `buscarComandosNuvem()` no núcleo 0 e `handleSincronizar()` no
+núcleo 1. Ela faz lê-compara-escreve nos carimbos de tempo, que são `long long`
+— **dois armazenamentos de 32 bits** nesta máquina. Dois comandos no mesmo
+instante podiam deixar metade de um carimbo atualizada.
+
+Perder um ajuste seria o dano pequeno. O grande é o carimbo ficar com a metade
+alta absurda: a partir dali **todo comando é ignorado para sempre**, em
+silêncio, até alguém reiniciar o aparelho — e nada no visor nem no diário diria
+por quê. Probabilidade baixa, diagnóstico quase impossível em campo.
+
+Entrou `trancaEstado`, um mutex só, com duas regras escritas no código: quem o
+segura pode pedir a tranca do diário, nunca o contrário; e **nada de I/O com
+ele na mão**. Por isso as funções de rede passaram a *fotografar* as chaves e
+soltar antes do HTTPS, em vez de ler as `String` compartilhadas no meio de uma
+chamada que leva segundos.
+
+**A segunda corrida** era a mesma coisa nas `String` `tokenAparelho` e
+`chaveAnterior`, lidas no núcleo 0 e escritas no núcleo 1 por
+`handleConfigSalvar()`. Estava protegida só pela circunstância de aquela rota
+exigir o PIN do visor — proteção por sorte, não por desenho.
+
+**E o que não dava para medir.** O arquivo usa `String` em tudo, e isso
+fragmenta o heap ao longo de semanas. Não havia uma única medida de memória no
+aparelho: um reinício no décimo dia de estufada não tinha como ser atribuído a
+nada. O `/dados` passou a publicar `heapLivre`, `heapMinimo` e
+`pilhaNuvemLivre`. O que vale olhar é o **mínimo**, que guarda o fundo do poço
+mesmo quando a medida do momento está folgada.
+
+Um detalhe que quase virou erro: no port Xtensa o `uxTaskGetStackHighWaterMark()`
+devolve **bytes**, porque o `StackType_t` ali é `uint8_t`. No FreeRTOS de manual
+a conta sai em palavras e se multiplica por 4 — fazer isso aqui reportaria
+quatro vezes mais folga do que existe. Conferido no cabeçalho do core instalado.
+
 ### 20/10/2026 — a trava do botão se solta sozinha em 5 minutos
 
 Pedido do produtor. A trava do botão do buzzer existe para parar **só a
