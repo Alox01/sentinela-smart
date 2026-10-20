@@ -168,6 +168,20 @@ unsigned long ultimaTrocaVentoinhaMs = 0;
 // de novo devolve o comando ao ajuste, e e ele que decide se ela gira agora.
 // Nao sobrevive a um reinicio: religar o aparelho destrava.
 bool ventoinhaBloqueada = false;
+
+// A trava se solta sozinha depois deste prazo, e o motivo e esquecimento.
+// Travada e esquecida, a ventoinha nunca mais gira: a estufa esfria, a fase
+// atrasa e a estufada se perde - e o unico aviso sao os dois pontos piscando
+// no visor, que ninguem ve de longe nem de noite. Esquecer e barato de
+// acontecer e caro de descobrir, entao o prazo existe como rede.
+//
+// Soltar a trava NAO liga a ventoinha: devolve o comando ao ajuste, que decide
+// pela temperatura, como se o produtor tivesse apertado o botao de novo. Se a
+// estufa estiver quente, ela segue parada.
+const unsigned long TEMPO_MAXIMO_TRAVA_VENTOINHA_MS = 5UL * 60 * 1000;
+// Instante em que a trava foi posta. Zero quer dizer destravada, mesmo idioma
+// de ultimaTrocaVentoinhaMs.
+unsigned long ventoinhaBloqueadaDesdeMs = 0;
 // Para o diario nao repetir o aviso de prazo a cada volta do laco.
 bool avisouEsperaVentoinha = false;
 
@@ -2276,6 +2290,7 @@ void handleSimple() {
   // acima quando o prazo de 30 s ainda nao venceu, ou quando ha fogo.
   doc["ventoinhaLigada"] = ventoinhaLigada;
   doc["ventoinhaBloqueada"] = ventoinhaBloqueada;
+  doc["segundosAteDestravar"] = segundosAteDestravarVentoinha();
   doc["leituraOk"] = leituraOk;
   doc["umidadeOk"] = umidadeOk;
   // Os dois vao no /dados para serem lidos pelo navegador do celular, sem
@@ -2550,6 +2565,9 @@ void verificarBotoes() {
     // aconteca o que acontecer com a temperatura; destravada, o ajuste volta a
     // mandar - e pode religa-la na hora, se a estufa estiver fria.
     ventoinhaBloqueada = !ventoinhaBloqueada;
+    // Travando, comeca a contar o prazo; destravando na mao, ele some. Travar
+    // de novo reinicia os 5 min, em vez de somar ao que ja passou.
+    ventoinhaBloqueadaDesdeMs = ventoinhaBloqueada ? millis() : 0;
     registrar(ventoinhaBloqueada ? F("Ventoinha travada desligada no botao")
                                  : F("Ventoinha destravada: o ajuste manda"));
   }
@@ -2730,11 +2748,33 @@ void atualizarEstadoTemperatura() {
   }
 }
 
+// Quanto falta para a trava do botao se soltar sozinha, em segundos. Zero
+// quando ela nao esta posta ou quando o prazo ja venceu.
+unsigned long segundosAteDestravarVentoinha() {
+  if (!ventoinhaBloqueada || ventoinhaBloqueadaDesdeMs == 0) return 0;
+  unsigned long decorrido = millis() - ventoinhaBloqueadaDesdeMs;
+  if (decorrido >= TEMPO_MAXIMO_TRAVA_VENTOINHA_MS) return 0;
+  return (TEMPO_MAXIMO_TRAVA_VENTOINHA_MS - decorrido) / 1000;
+}
+
 // Leva ao rele a mesma decisao que acende o LED de controle: quem manda e
 // `ledControleLigado`, calculado em atualizarEstadoTemperatura() com os 2 F de
 // histerese e ja zerado quando o DS18B20 falha. Aqui so entram as regras que o
 // LED nao precisava ter - o prazo minimo entre trocas e a pressa para desligar.
 void aplicarVentoinha() {
+  // Vence o prazo, cai a trava. Fica aqui, antes de tudo, para que a decisao
+  // da ventoinha ja comece a enxergar o estado novo - e nao um laco atrasada.
+  if (ventoinhaBloqueada && ventoinhaBloqueadaDesdeMs != 0 &&
+      millis() - ventoinhaBloqueadaDesdeMs >=
+          TEMPO_MAXIMO_TRAVA_VENTOINHA_MS) {
+    ventoinhaBloqueada = false;
+    ventoinhaBloqueadaDesdeMs = 0;
+    registrar(F("Ventoinha destravada sozinha: venceu o prazo de 5 min"));
+    // Os dois pontos param de piscar neste instante; reescreve em vez de
+    // esperar o refresh do segundo seguinte.
+    forcarReescritaVisor();
+  }
+
   // A ventoinha sopra ar DENTRO da fornalha para o fogo pegar mais forte. O
   // sensor de chama fica FORA do forno, na cabine: fogo dentro do forno e o
   // normal, e o sensor acusar quer dizer que o fogo saiu de onde devia estar -

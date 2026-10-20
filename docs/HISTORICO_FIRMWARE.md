@@ -29,6 +29,36 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ## Depois do 1.0, por motivo
 
+### 20/10/2026 — a trava do botão se solta sozinha em 5 minutos
+
+Pedido do produtor. A trava do botão do buzzer existe para parar **só a
+ventoinha** enquanto se põe lenha ou se mexe na fornalha, sem desligar o
+aparelho. O que faltava era o caminho de volta: travada e esquecida, ela ficava
+travada até alguém reparar — e o único aviso são os dois pontos piscando no
+visor, que ninguém vê de longe nem de noite.
+
+O custo do esquecimento é alto e silencioso: a ventoinha não gira, a estufa
+esfria, a fase atrasa e a estufada se perde. O custo de soltar sozinha é
+pequeno, porque **soltar não liga nada** — devolve o comando ao ajuste, que
+decide pela temperatura. Com a estufa quente, ela segue parada.
+
+`TEMPO_MAXIMO_TRAVA_VENTOINHA_MS = 5 min`, contado de
+`ventoinhaBloqueadaDesdeMs`, carimbado no toque do botão. A verificação é a
+primeira coisa dentro de `aplicarVentoinha()`, para a decisão da ventoinha já
+começar enxergando o estado novo em vez de um laço atrasada.
+
+**O comando na mão continua inteiro.** Apertar o botão antes dos 5 minutos
+destrava na hora, como sempre fez, e reinicia o prazo se travar de novo. Nada
+do que existia mudou de comportamento — só foi acrescentado um fim.
+
+O `/dados` passou a publicar `segundosAteDestravar`, para o aplicativo poder
+mostrar quanto falta em vez de só dizer que está travada.
+
+**O risco que isso cria, declarado:** a ventoinha pode partir sozinha cinco
+minutos depois, com o produtor ainda de mãos na fornalha. O aviso continua
+sendo o mesmo de antes, os dois pontos piscando. Se cinco minutos se mostrarem
+curtos para pôr lenha, o número está numa constante só.
+
 ### 16/10/2026 — teto de 165 °F no ajuste e trava de segurança na saída
 
 Pedido do produtor, e são **duas** regras, de naturezas diferentes.
