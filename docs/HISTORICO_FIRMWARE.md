@@ -54,10 +54,13 @@ do que existia mudou de comportamento — só foi acrescentado um fim.
 O `/dados` passou a publicar `segundosAteDestravar`, para o aplicativo poder
 mostrar quanto falta em vez de só dizer que está travada.
 
-**O risco que isso cria, declarado:** a ventoinha pode partir sozinha cinco
-minutos depois, com o produtor ainda de mãos na fornalha. O aviso continua
-sendo o mesmo de antes, os dois pontos piscando. Se cinco minutos se mostrarem
-curtos para pôr lenha, o número está numa constante só.
+**Cinco minutos cobrem a tarefa com folga, e isso é dado de campo:** pôr lenha
+no forno não chega perto desse tempo (produtor, 20/10/2026). Quando o prazo
+vence, o serviço acabou há muito — então a ventoinha não parte com ninguém de
+mãos na fornalha, que era o risco que se cogitou ao escrever isto.
+
+Se um dia a tarefa mudar, ou a trava passar a servir para outra coisa, o número
+está numa constante só.
 
 ### 16/10/2026 — teto de 165 °F no ajuste e trava de segurança na saída
 
