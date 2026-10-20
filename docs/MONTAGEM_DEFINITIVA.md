@@ -14,14 +14,16 @@ em algo que aguenta uma safra.
 
 | Sinal | GPIO | Sai da caixa? |
 |---|---|---|
-| DHT22 (dado) | 32 | sim |
-| Sensor de chama | 35 | sim |
+| DS18B20 — temperatura | 23 | sim |
+| DHT22 — umidade | 32 | sim |
+| Sensor de chama (`DO`) | 35 | sim |
+| Relé da ventoinha | 16 | sim |
 | Botão do buzzer | 13 | painel |
 | Botão verde | 4 | painel |
 | Botão vermelho | 33 | painel |
 | LED de alerta | 26 | painel |
 | LED de umidade | 27 | painel |
-| LED de controle de temperatura | 14 | painel |
+| ~~LED de controle de temperatura~~ | ~~14~~ | **saiu em 09/09; a via `K` de cima está livre** |
 | Buzina | 25 | sim |
 | Display TM1637 — CLK | 18 | painel |
 | Display TM1637 — DIO | 19 | painel |
@@ -119,15 +121,22 @@ barramentos nus quanto os 20 fios dos componentes.
 **Carregador de celular** — é ele que alimenta o aparelho até a etapa do
 acionamento. Ver a seção da alimentação acima.
 
-### Pendência: o DS18B20 comprado não tem lugar no firmware
+### Resolvido: o DS18B20 assumiu a temperatura
 
-Ele foi comprado em 21/08 com sonda de 5 m, e **o firmware não lê nenhum
-DS18B20** — a temperatura sai toda do DHT22, no `GPIO 32`. A placa montada também
-não tem borne para ele.
+Comprado em 21/08 com sonda de 5 m, ficou um tempo sem lugar no firmware. **Entrou
+em 09/09/2026** e hoje é ele quem mede a temperatura, no `GPIO 23`, por OneWire —
+o DHT22 ficou só com a umidade, no `GPIO 32`. O comentário no firmware explica a
+divisão: a sonda selada fica dentro da estufa, no meio do fumo, e o DHT22 mede a
+umidade em outro ponto; ler as duas grandezas no mesmo sensor seria descrever um
+lugar só e chamar de dois.
 
-Fica registrado como pergunta em aberto: ou ele assume a temperatura e o DHT22 fica
-só com a umidade — o que exige borne, GPIO e código novos —, ou ele sobra. Decidir
-antes de furar a caixa, porque muda quantos prensa-cabos ela precisa.
+Na placa ele ocupou as duas vias que este documento dava como livres — `M` (3V3) e
+`B₂` (`D23`) —, e o terra divide o borne `K` da borda de baixo com o do DHT22.
+
+**O barramento OneWire é endereçado**, então sondas adicionais entram nos mesmos
+dois fios, sem GPIO novo: `requestTemperatures()` já dispara todas de uma vez, e
+cada uma se lê pelo índice. É o caminho para um segundo ponto de temperatura, que
+transforma o alarme de incêndio de limiar absoluto em diferença entre dois pontos.
 
 ### Para a etapa do cabo longo
 
@@ -174,7 +183,6 @@ compra.
 | **Tomada de embutir** | 10 A **com pino terra**; a plaqueta manda aterrar o motor |
 | **Capacitor supressor** *(necessário — ver D12)* | 100 nF **classe X2, 275 VAC** — cerâmico de 50 V não serve. Vai na **bobina do contator**, terminais A1/A2 |
 | **Resistor do supressor** *(necessário — ver D12)* | 100 Ω / 1 W — o par RC é para bobina **de 220 V CA**; diodo só serviria em bobina de corrente contínua |
-| **Resistor de segurança** | segura a linha do relé desligada durante o boot |
 | **Fio 1,5 mm²** | fase, neutro e terra |
 | **Conectores Wago** | emendas da rede — nunca fita |
 | **Divisória** | chapa de plástico ou acrílico, separando rede de baixa tensão |
@@ -543,7 +551,7 @@ liga 2 °F abaixo do alvo e desliga 2 °F acima, e vai para o app como
 **O terceiro já era o relé em miniatura.** Ele existia para demonstrar o
 acionamento enquanto não havia acionamento. Com o relé, a luz perde a função.
 
-**A via `K` da borda de cima fica vazia e recebe o módulo do relé.** Consequências:
+**A via `K` da borda de cima fica vazia.** Consequências:
 
 - **Nenhuma mudança de placa.** Nada é dessoldado; só não se liga o LED
 - **Nenhuma mudança de código** para o comando ligar e desligar — a lógica com
@@ -560,6 +568,22 @@ incomodar o optoacoplador, troca-se por um fio) e o **resistor que segura a linh
 desligada durante o boot**, que é o que cumpre a decisão de "reiniciou, ventoinha
 parada".
 
+> **Corrigido em 18/10/2026: o relé não foi para a via `K`.** O firmware usa
+> `RELE_VENTOINHA 16`, e a razão está no próprio código: *"O 16 nao e pino de boot
+> nem de flash, e no reset ele nasce baixo: a ventoinha nunca parte sozinha."*
+>
+> O `D14`, que é o que a via `K` alcança, **emite um pulso PWM durante o boot** —
+> ligado ao relé, chutaria a ventoinha a cada reinício, exatamente o que o
+> requisito proíbe. Trocar de pino resolveu sem componente nenhum.
+>
+> Duas consequências: a via `K` está **livre de verdade**, sem dono; e o
+> **resistor de segurança** que a Lista de compra pedia para segurar a linha no
+> boot **deixou de ser necessário**.
+>
+> Para quem for usar a via `K`: ela serve a sinal **digital**. Não serve a leitura
+> analógica, porque o `D14` é **ADC2**, e o ADC2 não funciona com o Wi-Fi ligado —
+> só o ADC1 (`32`, `33`, `34`, `35`, `36`, `39`).
+
 **Contra-argumento registrado, e recusado pelo produtor:** com o relé fechado dentro
 da caixa, o LED seria a única forma de distinguir *"o aparelho não mandou"* de *"o
 aparelho mandou e o relé não obedeceu"*. Fica anotado para quem for diagnosticar
@@ -570,7 +594,7 @@ ventoinha parada sem ele.
 `ledControleLigado` **liga quando esfria** e desliga quando esquenta, e o firmware
 chama isso de `aquecedorLigado`. Serve como está se a ventoinha empurra o ar quente
 da fornalha. Existindo ela para **resfriar**, o sentido é o inverso e o código
-precisa saber. Decidir antes de ligar o relé na via `K`.
+precisa saber. Decidir antes de ligar o relé (hoje no `GPIO 16`).
 
 **O que comprar para esta etapa está na Lista de compra**, junto com todo o
 resto — lista partida em dois lugares não se leva para a loja.
