@@ -826,6 +826,53 @@ funciona:
   desgruda o histórico. É migração maior, de várias coleções, e fica
   registrada aqui como próxima.
 
+### 2.13 Achado em campo (20/10/2026)
+
+- [x] **D18. A estufa exibia o aparelho do vizinho, com selo LOCAL — e isso
+  era regressão de um conserto nosso.**
+
+  Aparelho do produtor **desligado**. O de um parente foi ligado na mesma rede
+  e o roteador lhe deu o endereço que era do antigo. A estufa do produtor,
+  cadastrada como `sentinela-215788.local`, passou a mostrar os números do
+  aparelho do parente. Comandos falhavam por credencial.
+
+  **O produtor disse a frase que resolveu o caso: "antes não era assim".**
+  Era regressão, e o `git log` apontou qual: **`d29d37e` (15/10)**, *"Stop
+  waiting on the slowest local probe"* — feito para atender outra queixa dele,
+  a demora para conectar na rede local.
+
+  Aquele commit trocou a sondagem **em ordem** por uma **corrida em paralelo**,
+  onde ganha o primeiro endereço que responder. O comentário do código assumia
+  que a ordem continuava protegendo (*"quando o IP muda, a sonda por IP falha e
+  o nome ganha sozinho"*) — e isso só vale quando ninguém **atende** no IP
+  velho. Com outro ESP32 segurando o endereço, ele responde primeiro e ganha,
+  porque o nome mDNS do aparelho desligado não responde nunca.
+
+  A guarda que existia (`_capturarIdHardwareLocal`) agia **tarde**: só depois
+  de o endereço já ter virado a conexão ativa, e só quando a estufa tinha um
+  `idHardware` gravado.
+
+  *Conserto:* a verificação passou para a **sondagem**. Endereço cujo `/status`
+  informa outro aparelho não vira conexão ativa — não há leitura para descartar
+  depois, nem id errado para aprender. A corrida e a velocidade de `d29d37e`
+  ficam de pé; só os candidatos errados são eliminados.
+
+  *E uma defesa que não existia:* **o próprio endereço declara o dono.** O
+  aparelho se anuncia como `sentinela-XXXXXX` e se identifica como
+  `ESP32_XXXXXX` — os dois saem dos mesmos 6 hex do MAC. Então dá para saber
+  qual aparelho é o certo **sem rede e sem nada gravado**, o que fecha o caso
+  da estufa digitada à mão que nunca aprendeu o id.
+
+  *Teste:* `test/endereco_nao_adota_outro_aparelho_test.dart`, quatro casos —
+  inclusive o de que o aparelho **certo** continua conectando, porque conserto
+  que derruba quem está certo não é conserto.
+
+  **Lição de método, que vale mais que o conserto:** três perguntas minhas de
+  diagnóstico não chegaram perto. O que localizou o defeito em um minuto foi o
+  produtor dizer *"antes não era assim"* — e o `git log` do que mudou desde
+  então. Comportamento novo em código estável é regressão até prova em
+  contrário, e a primeira pergunta devia ter sido **"quando começou?"**.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com

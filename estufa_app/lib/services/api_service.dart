@@ -240,13 +240,15 @@ class ApiService {
     final idLido = status is Map ? status['idHardware'] : null;
     if (idLido is! String || idLido.isEmpty) return true;
 
-    final atual = idHardware;
-    if (atual != null && atual.isNotEmpty) {
-      // Trocar o ESP de uma estufa e possivel, mas pela reconfiguracao, que e um
-      // ato deliberado. Silenciosamente, nunca: dar os numeros de um aparelho
-      // como se fossem de outro e pior do que nao mostrar numero nenhum.
-      return idLido == atual;
-    }
+    // Trocar o ESP de uma estufa e possivel, mas pela reconfiguracao, que e um
+    // ato deliberado. Silenciosamente, nunca: dar os numeros de um aparelho
+    // como se fossem de outro e pior do que nao mostrar numero nenhum.
+    //
+    // O esperado vem do id cadastrado OU do nome no endereco. Antes so olhava o
+    // cadastrado, e a estufa sem id aceitava qualquer um que atendesse.
+    final esperado = _idEsperado;
+    if (esperado != null && idLido != esperado) return false;
+    if (idHardware != null && idHardware!.isNotEmpty) return true;
 
     idHardware = idLido;
     unawaited(
@@ -865,6 +867,37 @@ class ApiService {
   // porque o HTML nao decodifica, e sem cair para a nuvem, porque a sonda
   // insistia que estava tudo bem. A resposta tem que se PARECER com a de um
   // Sentinela.
+  // O proprio endereco declara de quem ele e. O aparelho se anuncia como
+  // `sentinela-XXXXXX` e se identifica como `ESP32_XXXXXX`: os dois saem dos
+  // mesmos 6 hex do MAC do chip. Entao, para uma estufa cadastrada pelo nome,
+  // da para saber qual aparelho e o certo SEM rede e SEM nada gravado.
+  //
+  // Isso importa porque o id cadastrado pode faltar - estufa digitada a mao que
+  // nunca alcancou o aparelho -, e era justamente nesse buraco que outro ESP32
+  // atendendo no endereco era adotado como se fosse o desta estufa.
+  static final RegExp _nomeDeSentinela = RegExp(r'sentinela-([0-9a-fA-F]{6})');
+
+  String? get _idEsperado {
+    final cadastrado = idHardware;
+    if (cadastrado != null && cadastrado.isNotEmpty) return cadastrado;
+    final achado = _nomeDeSentinela.firstMatch(ipOriginal);
+    if (achado == null) return null;
+    return 'ESP32_${achado.group(1)!.toUpperCase()}';
+  }
+
+  /// Respondeu, parece um Sentinela, mas e OUTRO aparelho. Checado ja na
+  /// sondagem: assim o endereco errado nunca chega a virar a conexao ativa, e
+  /// nao ha leitura para descartar depois nem id errado para aprender.
+  bool _respondeuOutroAparelho(String corpo) {
+    final esperado = _idEsperado;
+    if (esperado == null) return false;
+    final mapa = _decodificarMapa(corpo);
+    final status = mapa?['status'];
+    final lido = status is Map ? status['idHardware'] : null;
+    if (lido is! String || lido.isEmpty) return false;
+    return lido != esperado;
+  }
+
   bool _pareceSentinela(String corpo) {
     final mapa = _decodificarMapa(corpo);
     return mapa != null && mapa['status'] is Map;
@@ -888,7 +921,7 @@ class ApiService {
           .get(Uri.parse('$base$caminho'), headers: _headers())
           .timeout(timeout);
       if (response.statusCode == 200 && _pareceSentinela(response.body)) {
-        return true;
+        return !_respondeuOutroAparelho(response.body);
       }
     } catch (_) {
       // Estourou o prazo ou nem chegou a sair: o endereco nao esta no ar, e a
