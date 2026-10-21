@@ -11,26 +11,20 @@ Future<void> mostrarDetalhesConexaoDialog({
   required String Function() modoConexaoAtual,
   // Estado do aparelho (esta reportando ou nao), separado do alcance dos
   // servidores: a nuvem pode estar de pe e o aparelho, mudo.
-  required String Function() estadoAparelhoAtual,
   required Listenable atualizacoesConexao,
   // Versao do firmware relatada pelo aparelho. Fica visivel, e nao nos detalhes
   // tecnicos, porque a pergunta "qual versao esta naquele ESP?" so aparece
   // quando ja se esta em campo - e ate aqui a unica resposta era ir ate la com
   // um terminal. Nulo quando ainda nao chegou leitura nenhuma.
-  required String? versaoFirmware,
   // Qual aparelho esta estufa le na nuvem. Sem isso nao havia como responder
   // "de quem sao estes numeros?" - e ja houve uma estufa exibindo a leitura de
   // outra, por um endereco reaproveitado.
   required String? idHardware,
-  required String? baseUrlAtiva,
-  required String localBaseUrl,
-  required String? cloudBaseUrl,
   // Este celular esta inscrito para receber avisos deste aparelho? `null` = a
   // conferencia ainda nao terminou. Estava no menu da estufa e saiu de la: o
   // produtor nao sabe o que e uma inscricao de push, nao pode agir sobre ela, e
   // ler "ativos" so levantava duvida. Aqui e diagnostico, e quem abre isto esta
   // procurando defeito - inclusive o defeito de nunca ter chegado um aviso.
-  required bool? vigiadaPorPush,
   required int totalPendencias,
   required List<PendingSyncCommandEntity> pendencias,
   // O ultimo teste ja feito nesta estufa (nulo na primeira vez) e como refazer.
@@ -84,18 +78,23 @@ Future<void> mostrarDetalhesConexaoDialog({
                           animation: atualizacoesConexao,
                           builder: (context, _) => Column(
                             children: [
+                              // Saiu a linha "Aparelho", que repetia em outras
+                              // palavras o que "Conexão usada agora" ja diz: na
+                              // rede da propriedade e sempre LOCAL, fora dela e
+                              // sempre NUVEM. Quando ha problema de verdade, o
+                              // aviso de "sem comunicacao ha Xh" aparece na
+                              // faixa vermelha no topo da tela, que e onde ele
+                              // precisa estar - nao escondido num dialogo.
                               _LinhaDetalhe(
                                 'Conexão usada agora',
                                 modoConexaoAtual(),
                               ),
-                              _LinhaDetalhe('Aparelho', estadoAparelhoAtual()),
                             ],
                           ),
                         ),
-                        _LinhaDetalhe(
-                          'Firmware',
-                          versaoFirmware ?? 'Desconhecida',
-                        ),
+                        // Saiu a linha "Firmware": numero de versao nao muda
+                        // decisao nenhuma do produtor, e quem precisa dele le o
+                        // /dados do aparelho.
                         // Nao ha linha de "Chave". Ela dizia "Configurada"
                         // ou "Nao configurada" para um segredo que o produtor
                         // nunca viu, nao escolheu e nao tem como configurar —
@@ -124,13 +123,7 @@ Future<void> mostrarDetalhesConexaoDialog({
                         // diagnostica em campo abre e ve tudo. Nada aqui da
                         // acesso a nada (a chave nunca e mostrada), mas nao ha
                         // motivo para o nome do aparelho viajar em cada print.
-                        _DetalhesTecnicos(
-                          vigiadaPorPush: vigiadaPorPush,
-                          idHardware: idHardware,
-                          baseUrlAtiva: baseUrlAtiva,
-                          localBaseUrl: localBaseUrl,
-                          cloudBaseUrl: cloudBaseUrl,
-                        ),
+                        _DetalhesTecnicos(idHardware: idHardware),
                         if (pendencias.isNotEmpty) ...[
                           const SizedBox(height: 14),
                           const Text(
@@ -214,18 +207,8 @@ Future<void> mostrarDetalhesConexaoDialog({
 /// "por que nao conecta", nao informacao de rotina para quem cuida da estufa.
 class _DetalhesTecnicos extends StatefulWidget {
   final String? idHardware;
-  final bool? vigiadaPorPush;
-  final String? baseUrlAtiva;
-  final String localBaseUrl;
-  final String? cloudBaseUrl;
 
-  const _DetalhesTecnicos({
-    required this.idHardware,
-    required this.baseUrlAtiva,
-    required this.localBaseUrl,
-    required this.cloudBaseUrl,
-    required this.vigiadaPorPush,
-  });
+  const _DetalhesTecnicos({required this.idHardware});
 
   @override
   State<_DetalhesTecnicos> createState() => _DetalhesTecnicosState();
@@ -233,10 +216,6 @@ class _DetalhesTecnicos extends StatefulWidget {
 
 class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
   bool _aberto = false;
-
-  bool get _semCanal => widget.baseUrlAtiva == null;
-  bool get _ativoEhNuvem =>
-      widget.baseUrlAtiva != null && widget.baseUrlAtiva == widget.cloudBaseUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -270,31 +249,14 @@ class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
             'Aparelho (id)',
             widget.idHardware ?? 'Não identificado',
           ),
-          // Uma linha para o canal EM USO e outra para a alternativa — nunca
-          // repetindo na segunda o que ja esta na primeira.
+          // Sairam as tres linhas de endereco e a de avisos push, a pedido do
+          // produtor: ele quer saber se esta funcionando, nao por onde. Quem
+          // diagnostica usa o teste de alcance logo acima, que diz o mesmo em
+          // disponivel/indisponivel, e o /dados do proprio aparelho.
           //
-          // Eram tres linhas, rotuladas "Ativo", "Local" e "Nuvem", e a leitura
-          // embaralhava: "Ativo" e "Local" saiam como dois enderecos quase
-          // identicos, diferindo so no numero da porta. E o pior era o que a
-          // porta significava — **3000 e a porta do servidor local/simulador,
-          // 80 e a do aparelho de verdade** (`WebServer server(80)` no
-          // firmware). Com o ESP32 na frente, aquela linha `:3000` mostrava um
-          // endereco que nunca ia responder.
-          _LinhaDetalhe('Em uso agora', widget.baseUrlAtiva ?? '-'),
-          // Sem canal ativo, os dois candidatos importam. Com um deles em uso,
-          // so a alternativa acrescenta — o que esta em uso ja esta acima.
-          if (_semCanal || _ativoEhNuvem)
-            _LinhaDetalhe('Endereço local', widget.localBaseUrl),
-          if (_semCanal || !_ativoEhNuvem)
-            _LinhaDetalhe(
-              'Endereço na nuvem',
-              widget.cloudBaseUrl ?? 'Não configurada',
-            ),
-          _LinhaDetalhe('Avisos push', switch (widget.vigiadaPorPush) {
-            true => 'Este celular inscrito',
-            false => 'NÃO inscrito',
-            null => 'Conferindo',
-          }),
+          // O id FICA. E a unica coisa aqui que identifica de qual aparelho a
+          // estufa e, e foi por ela que se achou o aparelho errado atendendo no
+          // endereco (D17 e D18).
         ],
       ],
     );

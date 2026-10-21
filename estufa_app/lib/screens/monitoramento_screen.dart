@@ -81,7 +81,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   String _corStatusAparelho = 'green';
   // Versao do firmware relatada pelo aparelho. Ate a v1.x nao havia como saber
   // qual versao estava gravada sem ir ate la com um terminal.
-  String? _versaoFirmware;
   // Estado REAL da sirene de temperatura deste aparelho, como ele reporta. O
   // interruptor global e uma intencao guardada no celular; segurar o botao do
   // aparelho por 3 s muda a coisa em si, e sem ler de volta o app mostrava o
@@ -423,15 +422,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       // seria uma piora.
       final buzzerLido = config['buzzerAtivo'];
       if (buzzerLido is bool) _buzzerAparelhoAtivo = buzzerLido;
-      // Nos dois lugares de proposito: o /status do aparelho poe a versao na RAIZ
-      // do JSON, enquanto as leituras ficam dentro de `status`. Pela nuvem ela
-      // acaba dentro de `status`, porque o POST /leitura espalha a raiz do corpo
-      // ali. Ler so um dos dois fazia a versao aparecer pela nuvem e sumir na
-      // conexao local, que e onde o produtor esta quando pergunta.
-      final versaoLida = status['versaoFirmware'] ?? dados['versaoFirmware'];
-      if (versaoLida is String && versaoLida.isNotEmpty) {
-        _versaoFirmware = versaoLida;
-      }
       isFire = fogoDetectado;
       // So considera "sem comunicacao" no modo nuvem: em LOCAL, uma leitura
       // recebida ja significa que o aparelho esta vivo agora.
@@ -869,28 +859,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     if (mounted) setState(() {});
   }
 
-  String _descreverEstadoAparelho() {
-    // Estufa sem id de aparelho nao esta offline: o app simplesmente nao sabe
-    // de qual aparelho perguntar na nuvem, e nao pergunta. Dizer "offline"
-    // manda o produtor procurar problema na rede quando falta um campo.
-    final idConhecido = (_idHardware ?? api.idHardware ?? '').trim();
-    if (idConhecido.isEmpty && _modoConexao != 'LOCAL') {
-      return 'Aparelho não identificado';
-    }
-    if (_semComunicacaoAparelho) {
-      final ms = _ultimaLeituraMs;
-      return ms == null
-          ? 'Sem comunicação'
-          : 'Sem comunicação há ${formatarTempoDecorrido(ms)}';
-    }
-    return switch (_modoConexao) {
-      'CONECTANDO' => 'Verificando...',
-      'OFFLINE' => 'Não alcançado',
-      'LOCAL' => 'Reportando (rede local)',
-      _ => 'Reportando (via nuvem)',
-    };
-  }
-
   // Puxar a tela para baixo, no topo, atualiza a leitura na hora e sincroniza
   // os ajustes que ficaram pendentes - o mesmo que o item do menu fazia, mas
   // num gesto mais natural (como o "puxar para atualizar" de outros apps).
@@ -1273,16 +1241,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
       // enquanto a tela avisa que o aparelho esta mudo.
       modoConexaoAtual: () =>
           _semComunicacaoAparelho ? 'SEM SINAL' : _modoConexao,
-      estadoAparelhoAtual: _descreverEstadoAparelho,
       atualizacoesConexao: _monitor,
-      versaoFirmware: _versaoFirmware,
       idHardware: _idHardware ?? api.idHardware,
-      baseUrlAtiva: api.baseUrlAtiva,
-      localBaseUrl: api.localBaseUrl,
-      cloudBaseUrl: api.cloudBaseUrl,
-      vigiadaPorPush: PushNotificationService.instance.vigiada(
-        (_idHardware ?? api.idHardware)?.trim(),
-      ),
       totalPendencias: _pendenciasSincronizacao,
       pendencias: pendencias,
       alcanceConhecido: api.ultimoAlcance,
