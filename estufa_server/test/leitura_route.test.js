@@ -325,6 +325,56 @@ test('POST /sincronizar de aparelho real nao aplica no simulador', async () => {
   assert.equal(simulador.aplicados.length, 0);
 });
 
+test('POST /sincronizar so confirma depois de persistir o comando pendente', async () => {
+  let liberarPersistencia;
+  const persistencia = new Promise((resolve) => { liberarPersistencia = resolve; });
+  const app = criarApp({
+    simulador: simuladorEspiao(),
+    db: {
+      salvarComandoPendente: () => persistencia,
+      salvarComandoSync: async () => {},
+    },
+  });
+
+  let respondeu = false;
+  const requisicao = postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  }).then((resultado) => {
+    respondeu = true;
+    return resultado;
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(respondeu, false);
+  liberarPersistencia();
+  const resultado = await requisicao;
+  assert.equal(resultado.status, 200);
+});
+
+test('POST /sincronizar nao confirma quando o comando pendente nao persiste', async () => {
+  const app = criarApp({
+    simulador: simuladorEspiao(),
+    db: {
+      salvarComandoPendente: async () => { throw new Error('banco fora'); },
+      salvarComandoSync: async () => {},
+    },
+  });
+
+  const { status, body } = await postSincronizar(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    temperaturaMeta: 80,
+    tempTimestamp: 1000,
+  });
+
+  assert.equal(status, 503);
+  assert.equal(body.sucesso, false);
+
+  const pendente = await requisitar(app, '/comandos?idHardware=ESP32_CAMPO_01');
+  assert.equal(pendente.body.comando, null);
+});
+
 test('POST /sincronizar sem idHardware continua indo para o simulador', async () => {
   const simulador = simuladorEspiao();
   const app = criarApp({ simulador, db: { salvarComandoSync: async () => {} } });

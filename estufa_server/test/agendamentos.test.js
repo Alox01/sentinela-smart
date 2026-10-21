@@ -273,6 +273,27 @@ describe('iniciarAgendador', () => {
     await assert.doesNotReject(() => agendador.verificar());
   });
 
+  it('nao remove o agendamento quando guardar o comando falha', async () => {
+    const removidos = [];
+    const agendador = iniciarAgendador({
+      listarAgendamentos: async () => [{
+        id: 'ag-1',
+        idHardware: 'ESP32_CAMPO_01',
+        aplicarEmMs: 1000,
+        temperaturaMeta: 120,
+      }],
+      configDoAparelho: () => ({}),
+      aplicarComando: async () => { throw new Error('banco fora'); },
+      remover: async (id) => removidos.push(id),
+      setIntervalFn: () => null,
+      agora: () => 2000,
+      logger: { error() {} },
+    });
+
+    await agendador.verificar();
+    assert.deepEqual(removidos, []);
+  });
+
   it('sem as funcoes obrigatorias nao inicia', () => {
     assert.equal(iniciarAgendador({}), null);
   });

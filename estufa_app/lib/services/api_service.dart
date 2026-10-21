@@ -266,7 +266,7 @@ class ApiService {
     final status = dados['status'];
     final ip = status is Map ? status['ipLocal'] : null;
     if (ip is! String || ip.isEmpty || ip == '0.0.0.0') return;
-    final base = _normalizarBaseUrl(ip);
+    final base = _normalizarEnderecoReportado(ip);
     if (base.isEmpty || base == localBaseUrl) return;
     if (_enderecoReportado == base) return;
     _enderecoReportado = base;
@@ -295,7 +295,7 @@ class ApiService {
       final prefs = await SharedPreferences.getInstance();
       final ip = prefs.getString('$_prefixoIpReportado$id');
       if (ip == null || ip.isEmpty) return;
-      final base = _normalizarBaseUrl(ip);
+      final base = _normalizarEnderecoReportado(ip);
       if (base.isNotEmpty && base != localBaseUrl) _enderecoReportado = base;
     } catch (_) {
       // Segue sem a segunda porta.
@@ -1032,6 +1032,15 @@ class ApiService {
 
     return 'http://${uri.host}:80';
   }
+
+  /// O endereco reportado vem do proprio ESP32 (`WiFi.localIP()`), cujo
+  /// WebServer escuta na porta 80. A normalizacao comum usa 3000 porque tambem
+  /// atende o servidor Node local; aplicada aqui, transformava a rota de fuga
+  /// do mDNS em `192.168.x.x:3000`, onde o aparelho nunca respondeu.
+  ///
+  /// Se no futuro o aparelho informar uma porta explicitamente, ela vence.
+  static String _normalizarEnderecoReportado(String endereco) =>
+      _normalizarFallbackPorta80(endereco) ?? _normalizarBaseUrl(endereco);
 
   static String? _normalizarCloudUrl(String? cloudUrl) {
     final valor = cloudUrl?.trim() ?? '';

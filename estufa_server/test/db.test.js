@@ -79,3 +79,57 @@ describe('database TLS options', () => {
     assert.equal(config.ca, 'LINHA 1\nLINHA 2');
   });
 });
+
+describe('database device key registration', () => {
+  it('reports conflict when another key wins the insert race', async () => {
+    let selects = 0;
+    const pool = {
+      async query(sql) {
+        if (sql.startsWith('select chave_acesso')) {
+          selects++;
+          return selects === 1
+            ? { rows: [] }
+            : { rows: [{ chave_acesso: 'chave-vencedora' }] };
+        }
+        if (sql.startsWith('update dispositivos')) return { rowCount: 0 };
+        if (sql.startsWith('insert into dispositivos')) {
+          return { rowCount: 0, rows: [] };
+        }
+        throw new Error(`SQL inesperado: ${sql}`);
+      },
+    };
+
+    const resultado = await __testables.registrarChaveAparelhoNoPool(
+      pool,
+      'ESP32_CORRIDA',
+      'chave-perdedora',
+    );
+
+    assert.deepEqual(resultado, { estado: 'conflito' });
+    assert.equal(selects, 2);
+  });
+
+  it('accepts the same key when an equal registration wins the race', async () => {
+    let selects = 0;
+    const pool = {
+      async query(sql) {
+        if (sql.startsWith('select chave_acesso')) {
+          selects++;
+          return selects === 1
+            ? { rows: [] }
+            : { rows: [{ chave_acesso: 'chave-igual' }] };
+        }
+        if (sql.startsWith('update dispositivos')) return { rowCount: 0 };
+        return { rowCount: 0, rows: [] };
+      },
+    };
+
+    const resultado = await __testables.registrarChaveAparelhoNoPool(
+      pool,
+      'ESP32_CORRIDA',
+      'chave-igual',
+    );
+
+    assert.deepEqual(resultado, { estado: 'ja_registrada' });
+  });
+});

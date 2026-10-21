@@ -122,7 +122,14 @@ async function registrarChaveAparelho(idHardware, chave) {
   if (!idHardware || !chave) return { estado: 'invalido' };
   await garantirColunaVersaoFirmware();
 
-  const atual = await pool.query(
+  return registrarChaveAparelhoNoPool(pool, idHardware, chave);
+}
+
+// Separada do pool global para a corrida do TOFU poder ser reproduzida em
+// teste. O SELECT inicial e apenas o caminho rapido; a decisao definitiva vem
+// do UPDATE/INSERT atomico e, se outra requisicao ganhar, de uma nova leitura.
+async function registrarChaveAparelhoNoPool(poolAlvo, idHardware, chave) {
+  const atual = await poolAlvo.query(
     'select chave_acesso from dispositivos where identificador_hardware = $1 limit 1',
     [idHardware],
   );
@@ -135,7 +142,7 @@ async function registrarChaveAparelho(idHardware, chave) {
 
   // `where chave_acesso is null` fecha a corrida entre dois registros
   // simultaneos: o segundo nao encontra linha para atualizar.
-  const gravou = await pool.query(
+  const gravou = await poolAlvo.query(
     `update dispositivos set chave_acesso = $2, updated_at = now()
      where identificador_hardware = $1 and chave_acesso is null`,
     [idHardware, chave],
@@ -143,13 +150,26 @@ async function registrarChaveAparelho(idHardware, chave) {
   if (gravou.rowCount > 0) return { estado: 'registrada' };
 
   // Aparelho ainda sem linha (nunca mandou leitura): cria ja com a chave.
-  await pool.query(
+  const inseriu = await poolAlvo.query(
     `insert into dispositivos (nome, identificador_hardware, chave_acesso, updated_at)
      values ($1, $2, $3, now())
-     on conflict (identificador_hardware) do nothing`,
+     on conflict (identificador_hardware) do nothing
+     returning chave_acesso`,
     [`Dispositivo ${idHardware}`, idHardware, chave],
   );
-  return { estado: 'registrada' };
+  if (inseriu.rowCount > 0) return { estado: 'registrada' };
+
+  // Outra requisicao criou a linha entre o SELECT e o INSERT. Nao podemos
+  // declarar sucesso sem conferir qual chave venceu, pois a rota colocaria a
+  // chave perdedora no cache de autorizacao ate o proximo restart.
+  const depoisDaCorrida = await poolAlvo.query(
+    'select chave_acesso from dispositivos where identificador_hardware = $1 limit 1',
+    [idHardware],
+  );
+  const vencedora = depoisDaCorrida.rows[0]?.chave_acesso ?? null;
+  return vencedora === chave
+    ? { estado: 'ja_registrada' }
+    : { estado: 'conflito' };
 }
 
 /// Troca a chave de um aparelho, exigindo a antiga. E o caminho da rotacao: quem
@@ -901,5 +921,6 @@ module.exports = {
     normalizarFonteLeitura,
     normalizarIpLocal,
     normalizarTipoDispositivo,
+    registrarChaveAparelhoNoPool,
   },
 };

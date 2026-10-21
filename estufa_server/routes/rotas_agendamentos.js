@@ -28,7 +28,7 @@ function criarRotasAgendamentos({
         : [],
     // O alvo vigente resolve o "+10 F" no instante de aplicar, nao no de agendar.
     configDoAparelho: (idHardware) => estado.configVigente(idHardware),
-    aplicarComando: (idHardware, comando) => {
+    aplicarComando: async (idHardware, comando) => {
       // O simulador nao busca a caixa de comandos - ele e servido do proprio
       // modelo, aqui dentro. Sem este desvio, um agendamento para ele ficava na
       // caixa para sempre: o aviso chegava e o ajuste nunca mudava, dando a
@@ -36,7 +36,7 @@ function criarRotasAgendamentos({
       if (!idHardware || idHardware === ID_SIMULADOR) {
         simulador.sincronizarConfiguracao(comando);
       } else {
-        estado.guardarComandoPendente(idHardware, comando);
+        await estado.guardarComandoPendente(idHardware, comando);
       }
       log.debug(
         `Agendamento aplicado (${idHardware}): ${JSON.stringify(comando)}`,

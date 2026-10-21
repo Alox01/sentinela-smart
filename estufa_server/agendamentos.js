@@ -179,7 +179,7 @@ function iniciarAgendador({
         // partir nao tem resposta certa, e chutar mexeria na estufa errado.
         if (comando === null) continue;
 
-        aplicarComando(agendamento.idHardware, comando);
+        await aplicarComando(agendamento.idHardware, comando);
         await remover?.(agendamento.id);
       }
     } catch (erro) {

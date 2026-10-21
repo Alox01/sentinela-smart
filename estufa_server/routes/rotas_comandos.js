@@ -39,7 +39,15 @@ function criarRotasComandos({
     if (paraAparelhoReal) {
       const comando = { ...configDoApp };
       delete comando.idHardware;
-      estado.guardarComandoPendente(idHardware, comando);
+      try {
+        await estado.guardarComandoPendente(idHardware, comando);
+      } catch (_error) {
+        res.status(503).json({
+          sucesso: false,
+          erro: 'Nao foi possivel guardar o comando com seguranca.',
+        });
+        return;
+      }
 
       const resultado = {
         sucesso: true,

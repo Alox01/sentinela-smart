@@ -50,17 +50,31 @@ function criarEstadoEstufa({ db, simulador }) {
       });
   }
 
-  function guardarComandoPendente(idHardware, comando) {
+  async function guardarComandoPendente(idHardware, comando) {
     const pendente = comandosPendentes.get(idHardware) || {};
     // Campos diferentes convivem; o mesmo campo e sobrescrito pelo mais novo,
     // que e o mesmo criterio que o aparelho aplicaria de qualquer forma.
     const fundido = { ...pendente, ...comando };
     comandosPendentes.set(idHardware, fundido);
     if (db?.salvarComandoPendente) {
-      db.salvarComandoPendente(idHardware, fundido).catch((error) => {
+      try {
+        await db.salvarComandoPendente(idHardware, fundido);
+      } catch (error) {
+        // Nao deixe o aparelho buscar um comando que a API acabou de recusar.
+        // A comparacao por referencia evita apagar um comando mais novo que
+        // tenha chegado enquanto esta gravacao aguardava o banco.
+        if (comandosPendentes.get(idHardware) === fundido) {
+          if (Object.keys(pendente).length === 0) {
+            comandosPendentes.delete(idHardware);
+          } else {
+            comandosPendentes.set(idHardware, pendente);
+          }
+        }
         log.erro('Falha ao persistir comando pendente:', error.message);
-      });
+        throw error;
+      }
     }
+    return fundido;
   }
 
   function comandoPendente(idHardware) {

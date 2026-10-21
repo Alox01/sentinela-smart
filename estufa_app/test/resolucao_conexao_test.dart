@@ -49,6 +49,9 @@ void main() {
         await Future<void>.delayed(const Duration(seconds: 4));
         throw http.ClientException('sem resolucao');
       }
+      if (requisicao.url.port != 80) {
+        throw http.ClientException('o ESP32 so escuta na porta 80');
+      }
       return ok();
     });
 
@@ -64,7 +67,7 @@ void main() {
     final base = await api.resolverConexao();
     cronometro.stop();
 
-    expect(base, 'http://192.168.0.77:3000');
+    expect(base, 'http://192.168.0.77:80');
     expect(api.modoConexao, 'LOCAL');
     expect(
       cronometro.elapsed,
@@ -73,6 +76,38 @@ void main() {
           'esperou o nome mDNS desistir em vez de sair com o IP que já '
           'tinha respondido',
     );
+  });
+
+  test('IP aprendido do ESP usa porta 80 e preserva porta explicita', () async {
+    SharedPreferences.setMockInitialValues({
+      'ip_reportado_ESP32_DEF456': '192.168.0.78:8080',
+    });
+
+    final portas = <int>[];
+    final cliente = MockClient((requisicao) async {
+      portas.add(requisicao.url.port);
+      if (requisicao.url.host.endsWith('.local')) {
+        throw http.ClientException('mDNS indisponivel');
+      }
+      if (requisicao.url.port == 8080) {
+        return http.Response(
+          '{"status":{"idHardware":"ESP32_DEF456"}}',
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      throw http.ClientException('porta errada');
+    });
+
+    final api = ApiService(
+      'sentinela-def456.local',
+      idHardware: 'ESP32_DEF456',
+      cliente: cliente,
+    );
+
+    expect(await api.resolverConexao(), 'http://192.168.0.78:8080');
+    expect(portas, contains(8080));
+    expect(api.modoConexao, 'LOCAL');
   });
 
   test('queda para a nuvem nao e herdada pela proxima tela', () async {

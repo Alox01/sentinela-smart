@@ -873,6 +873,62 @@ funciona:
   então. Comportamento novo em código estável é regressão até prova em
   contrário, e a primeira pergunta devia ter sido **"quando começou?"**.
 
+### 2.14 Revisão de segurança e durabilidade (20/10/2026)
+
+- [x] **D19. Registro concorrente podia autorizar uma chave que o banco não
+  guardou.**
+
+  O TOFU fazia `SELECT`, tentava `UPDATE` e, para aparelho ainda sem linha,
+  executava `INSERT ... ON CONFLICT DO NOTHING`. Se duas chaves chegassem ao
+  mesmo tempo, só uma entrava no banco, mas as duas requisições devolviam
+  `registrada`. A rota então colocava a chave perdedora no cache de autorização,
+  divergindo do PostgreSQL até o processo reiniciar.
+
+  *Conserto:* o `INSERT` agora usa `RETURNING`; quando perde a corrida, o método
+  relê a chave persistida e distingue `ja_registrada` de `conflito`. Só a chave
+  que realmente venceu chega ao cache.
+
+  *Testes:* dois casos em `test/db.test.js`, cobrindo concorrência com chave
+  diferente e repetição concorrente da mesma chave.
+
+- [x] **D20. A API confirmava comando remoto antes de ele estar durável.**
+
+  A caixa colocava o comando no mapa, disparava a gravação no banco sem esperar
+  e já respondia sucesso. Um reciclo do Render nesse intervalo perdia um ajuste
+  que o app acreditava estar pendente. O agendador tinha a mesma janela e ainda
+  removia o agendamento antes de saber se o comando fora guardado.
+
+  *Conserto:* a persistência passou a ser aguardada. Falha devolve HTTP 503 e
+  desfaz o comando em memória quando ele ainda é o vigente; comando concorrente
+  mais novo não é apagado. O agendador também aguarda e só remove a origem após
+  sucesso.
+
+  *Testes:* a resposta espera o banco, falha não deixa comando buscável e
+  agendamento não é removido quando a caixa falha. Servidor: **239 testes
+  passando**.
+
+### 2.15 Achado em campo (20/10/2026)
+
+- [x] **D21. O fallback por IP do ESP32 apontava para a porta do servidor
+  Node.**
+
+  O aparelho informa `ipLocal` como `192.168.x.x` e serve HTTP na porta 80. A
+  normalização genérica acrescentava porta 3000, adequada ao servidor local de
+  desenvolvimento, mas inexistente no ESP32. Quando o mDNS `.local` oscilava,
+  a suposta segunda porta tentava `192.168.x.x:3000`, falhava junto e fazia o
+  selo alternar LOCAL → NUVEM → OFFLINE mesmo com celular e aparelho no mesmo
+  Wi-Fi.
+
+  *Conserto:* endereço aprendido do aparelho usa porta 80; uma porta informada
+  explicitamente continua sendo respeitada. A checagem de `idHardware` segue em
+  todas as candidatas, então dois aparelhos na mesma rede não misturam dados
+  mesmo se o roteador reutilizar um IP antigo.
+
+  *Teste:* `test/resolucao_conexao_test.dart` agora derruba o mDNS, só deixa o
+  IP responder na porta 80 e confirma LOCAL; há também cobertura para porta
+  explícita. App: `flutter analyze` limpo e **219 testes passando**. APKs
+  completo e TCC foram gerados com a URL da nuvem e validados pelo build.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
