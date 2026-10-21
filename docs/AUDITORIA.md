@@ -940,6 +940,59 @@ funciona:
   explícita. App: `flutter analyze` limpo e **219 testes passando**. APKs
   completo e TCC foram gerados com a URL da nuvem e validados pelo build.
 
+### 2.16 Achado em campo (21/10/2026)
+
+- [x] **D22. Um ajuste de 55 °F nos botões parou TODA a telemetria por 14
+  horas, com a rede perfeita.**
+
+  Sintoma: o produtor foi à cidade e a nuvem não mostrava nada. O app dizia
+  *"Aparelho sem comunicação há 14h 24min"*, e ao mesmo tempo *"Servidor na
+  nuvem: disponível"*. O local funcionava.
+
+  **A prova veio do diário do próprio aparelho**, alcançado pela rede local:
+
+  ```
+  15405s  Push nuvem -> HTTP 400
+  15466s  Push nuvem -> HTTP 400
+  ```
+
+  `400`, não `401` nem `-1`: o aparelho **alcança** o servidor e o servidor
+  **recusa o conteúdo**. O `/dados` confirmou que a rede estava impecável —
+  `segundosSemRede: 0`, `remontagensDoRadio: 0` — e entregou o culpado:
+  `"temperaturaAlvoF": 55`.
+
+  **A causa:** `definirTemperaturaAlvo()` limitava só o **teto**
+  (`ALVO_MAXIMO_F = 165`) e nunca o **piso**. O servidor recusa abaixo de 60
+  (`LIMITE_TEMPERATURA_MIN`, em `sync.js` e `agendamentos.js`) e o aplicativo
+  também não oferece menos (`ajusteTemperaturaMinimoF`). Só o aparelho ficou
+  fora do contrato — o espelho exato do que aconteceu com o teto de 165, que
+  foi corrigido nos três lugares em 16/10. O piso nunca foi feito.
+
+  **O que torna isto grave não é o comando recusado — é o raio do estrago.** O
+  envio de leitura leva a configuração vigente junto, então um único campo fora
+  da faixa faz o servidor descartar **a leitura inteira**, a cada minuto, em
+  silêncio. Perde-se temperatura, umidade, alarme e histórico — tudo por causa
+  de um número que nem é medição. E, visto de fora, parece falta de internet.
+
+  *Conserto:* `ALVO_MINIMO_F = 60`, aplicado no mesmo ponto e pelo mesmo motivo
+  do teto — *"aqui passa tudo: os botões do aparelho, o comando vindo da nuvem e
+  o que a sincronização traz de volta"*.
+
+  *Desbloqueio sem gravar nada:* subir o ajuste para 60 °F pelos botões faz o
+  envio voltar no ciclo seguinte.
+
+  **Aberto, e maior que este conserto:** validar configuração junto com
+  telemetria faz um erro de configuração apagar medição. O servidor está certo
+  em recusar payload inválido, mas o preço é desproporcional e mudo. Vale
+  separar: recusar o campo de configuração e **ainda assim gravar a leitura**,
+  ou ao menos registrar no servidor por que a recusa aconteceu — hoje o 400 só
+  aparece no diário do aparelho, se alguém for olhar.
+
+  **Lição de método:** o diagnóstico levou minutos porque o aparelho registra o
+  que acontece quando ninguém está olhando, e porque `heapMinimo` e
+  `pilhaNuvemLivre` existiam para descartar memória e pilha de cara. Os dois
+  entraram ontem. Instrumento vale mais que palpite.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com

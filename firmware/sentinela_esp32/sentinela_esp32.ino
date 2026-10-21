@@ -148,6 +148,19 @@ const int VENTOINHA_DESLIGA_ACIMA_F = 1;
 // chega da nuvem, porque os dois passam por definirTemperaturaAlvo().
 const int ALVO_MAXIMO_F = 165;
 
+// Piso do que se pode PEDIR. Existe pelo mesmo motivo do teto, e por um defeito
+// que custou 14 horas de historico em 21/10/2026: os botoes levaram o ajuste a
+// 55 F, o servidor recusa abaixo de 60 (`LIMITE_TEMPERATURA_MIN` em `sync.js` e
+// `agendamentos.js`) e o aplicativo tambem nao oferece menos que isso
+// (`ajusteTemperaturaMinimoF`). So o aparelho ficou de fora.
+//
+// O estrago nao foi um comando recusado - foi TODA a telemetria parar. O envio
+// de leitura leva a configuracao vigente junto, entao o servidor devolvia 400 e
+// descartava a leitura inteira, a cada minuto, em silencio. Do lado de fora
+// parecia falta de internet, e o aparelho estava com a rede perfeita
+// (`segundosSemRede: 0`).
+const int ALVO_MINIMO_F = 60;
+
 // Teto do que se pode SUPORTAR. Acima disto a ventoinha nao liga e, se
 // estiver girando, para na hora - sem consultar a histerese, o prazo minimo
 // nem a trava do botao.
@@ -1619,6 +1632,7 @@ void definirTemperaturaAlvo(int novoAlvo) {
   // vindo da nuvem e o que a sincronizacao traz de volta. Barrar so no botao
   // deixaria a porta da nuvem aberta.
   if (novoAlvo > ALVO_MAXIMO_F) novoAlvo = ALVO_MAXIMO_F;
+  if (novoAlvo < ALVO_MINIMO_F) novoAlvo = ALVO_MINIMO_F;
 
   int delta = novoAlvo - temperaturaAlvoF;
   if (delta == 0) return;
