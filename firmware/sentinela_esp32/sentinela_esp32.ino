@@ -766,6 +766,19 @@ void gravarPendenciasDeChave() {
 void conectarWifi() {
   if (wifiSsid.length() == 0) return;
   WiFi.mode(WIFI_STA);
+  // Sem economia de energia no radio. O padrao do ESP32 em STA e dormir entre
+  // os beacons do roteador e acordar de tempos em tempos: a resposta que leva
+  // 50 ms passa a levar segundos de vez em quando, ou se perde. No app isso
+  // aparece como o selo indo de LOCAL para OFFLINE e voltando sozinho a cada
+  // dez ou quinze segundos, com a rede inteira funcionando - e o pior e que
+  // some quando alguem vai olhar, porque mexer no celular mantem o trafego
+  // acordado.
+  //
+  // O preco sao uns 25 mA a mais, continuos. O aparelho vive na tomada, e a
+  // caixa fica fora da zona quente da estufa: nao ha onde esses 80 mW
+  // incomodem. Prazo de sonda do lado do app ja tinha sido alongado por causa
+  // deste sintoma (4 s para nome mDNS) - tratava o efeito, nao a causa.
+  WiFi.setSleep(false);
   WiFi.setAutoReconnect(true);
   // Entra SEMPRE por DHCP, mesmo havendo IP fixo configurado. O fixo so e
   // aplicado depois, e so se pertencer a faixa que o roteador entregou.
@@ -960,6 +973,8 @@ void manterWifi() {
     if (millis() - radioDesligadoEmMs < PAUSA_REMONTAGEM_MS) return;
     radioDesligadoParaRemontar = false;
     WiFi.mode(WIFI_STA);
+    // Mesma razao da conexao inicial: radio remontado volta dormindo.
+    WiFi.setSleep(false);
     WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
     registrar(F("Radio religado; tentando entrar na rede de novo."));
     return;

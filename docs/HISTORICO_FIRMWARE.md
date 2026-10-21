@@ -29,6 +29,32 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ## Depois do 1.0, por motivo
 
+### 20/10/2026 — o rádio para de dormir
+
+Relato do produtor: a estufa fica **LOCAL**, e de dez em dez, quinze em quinze
+segundos vai para **OFFLINE** — às vezes para **NUVEM** — e volta sozinha. Com
+a internet normal e o aparelho na mesma rede.
+
+Causa: `WiFi.setSleep(false)` nunca era chamado. O padrão do ESP32 em modo
+estação é **dormir entre os beacons** do roteador e acordar de tempos em
+tempos. A resposta que normalmente leva 50 ms passa a levar segundos de vez em
+quando, ou se perde — e o app, que sonda o endereço local a cada resolução,
+conclui que o aparelho sumiu.
+
+É um defeito traiçoeiro por dois motivos. Ele **some quando alguém vai olhar**,
+porque mexer no celular mantém o tráfego acordado. E o sintoma aponta para o
+lado errado: parece rede do app, ou roteador, ou nome mDNS.
+
+Tanto que já tinha sido tratado **pelo efeito**: o prazo da sonda do nome mDNS
+foi alongado para 4 s justamente por causa dele, com o comentário certo —
+*"de forma intermitente, que é o pior jeito de falhar"*. Aliviou e não curou.
+
+Entrou nos dois caminhos que ligam o rádio: a conexão inicial e a remontagem
+do `manterWifi()`, porque rádio remontado volta dormindo.
+
+**O preço** são uns 25 mA contínuos a mais, ou 80 mW. O aparelho vive na
+tomada e a caixa fica fora da zona quente: não há onde isso incomode.
+
 ### 20/10/2026 — tranca de estado entre os dois núcleos, e memória visível
 
 Saiu de uma revisão do arquivo inteiro. Nenhuma das três muda comportamento:
