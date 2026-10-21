@@ -924,6 +924,12 @@ funciona:
   todas as candidatas, então dois aparelhos na mesma rede não misturam dados
   mesmo se o roteador reutilizar um IP antigo.
 
+  **Hipótese errada que este achado derrubou:** o mesmo sintoma levou a
+  desligar a economia de energia do rádio no firmware (`WiFi.setSleep(false)`,
+  20/10). A mudança é boa e ficou, mas não era a causa — e a entrada dela no
+  `HISTORICO_FIRMWARE.md` foi corrigida para dizer isso, senão quem lesse
+  depois herdaria a explicação errada junto com o conserto certo.
+
   *Teste:* `test/resolucao_conexao_test.dart` agora derruba o mDNS, só deixa o
   IP responder na porta 80 e confirma LOCAL; há também cobertura para porta
   explícita. App: `flutter analyze` limpo e **219 testes passando**. APKs

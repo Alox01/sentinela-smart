@@ -31,11 +31,29 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ### 20/10/2026 — o rádio para de dormir
 
+> **Correção de 21/10/2026, antes de qualquer outra coisa: esta mudança NÃO
+> era a causa do defeito que a motivou.** O selo piscando entre LOCAL, NUVEM e
+> OFFLINE era o **D21**, no aplicativo: o endereço aprendido do aparelho era
+> normalizado com a porta 3000 — a do servidor Node de desenvolvimento —
+> enquanto o `WebServer` do ESP32 escuta na **80**. A rota de fuga do mDNS
+> apontava para uma porta onde ninguém atende, então quando o nome `.local`
+> oscilava não sobrava candidato local nenhum.
+>
+> Eu persegui o lado errado. O sintoma era de rede, o aparelho é quem fala na
+> rede, e eu fui para o rádio sem ter medido nada dele. O que achou a causa foi
+> olhar o código do app que normaliza endereço.
+>
+> **A mudança abaixo continua valendo**, por mérito próprio: rádio dormindo
+> atrasa resposta de forma intermitente e é problema esperando acontecer. Só
+> não era *este* problema. Fica aqui como está para quem vier depois saber que
+> um conserto correto pode ter justificativa errada — e que a justificativa é
+> o que se herda.
+
 Relato do produtor: a estufa fica **LOCAL**, e de dez em dez, quinze em quinze
 segundos vai para **OFFLINE** — às vezes para **NUVEM** — e volta sozinha. Com
 a internet normal e o aparelho na mesma rede.
 
-Causa: `WiFi.setSleep(false)` nunca era chamado. O padrão do ESP32 em modo
+Motivo da mudança: `WiFi.setSleep(false)` nunca era chamado. O padrão do ESP32 em modo
 estação é **dormir entre os beacons** do roteador e acordar de tempos em
 tempos. A resposta que normalmente leva 50 ms passa a levar segundos de vez em
 quando, ou se perde — e o app, que sonda o endereço local a cada resolução,
