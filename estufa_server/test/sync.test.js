@@ -110,7 +110,7 @@ test('rejeita ajustes fora da faixa operacional', () => {
   assert.equal(temperaturaBaixa.valido, false);
   assert.equal(temperaturaAlta.valido, false);
   assert.equal(umidadeAlta.valido, false);
-  assert.match(temperaturaAlta.erros.join(' '), /entre 60 e 200/);
+  assert.match(temperaturaAlta.erros.join(' '), /entre 50 e 200/);
   assert.match(umidadeAlta.erros.join(' '), /entre 0 e 100/);
 });
 
@@ -145,12 +145,28 @@ test('aceita a leitura de um aparelho recem-gravado (timestamps zerados)', () =>
   assert.equal(r.valido, true, JSON.stringify(r.erros));
 });
 
-test('timestamp negativo na config relatada continua invalido', () => {
+test('config invalida na leitura sai separada, sem derrubar a medicao', () => {
   const r = validarPayloadLeitura(
     { idHardware: 'ESP32_X', temperaturaAtual: 100, umidadeAtual: 50 },
     { temperaturaMeta: 117, tempTimestamp: -1 },
   );
-  assert.equal(r.valido, false);
+  // D22: a medicao e valida e continua valida; o problema fica em `errosConfig`,
+  // para quem chamou descartar so a configuracao.
+  assert.equal(r.valido, true, JSON.stringify(r.erros));
+  assert.ok(r.errosConfig.length > 0);
+  assert.ok(r.errosConfig.some((e) => e.includes('tempTimestamp')));
+});
+
+test('ajuste abaixo do piso e config invalida, nao leitura invalida', () => {
+  // O caso do campo foi 55 F vindo dos botoes, quando o piso era 60. O piso
+  // virou 50 em 21/10/2026, entao 55 passou a ser legitimo e o teste usa 45 -
+  // o que importa e a SEPARACAO, nao o numero.
+  const r = validarPayloadLeitura(
+    { idHardware: 'ESP32_215788', temperaturaAtual: 67, umidadeAtual: 72 },
+    { temperaturaMeta: 45, tempTimestamp: 1 },
+  );
+  assert.equal(r.valido, true, JSON.stringify(r.erros));
+  assert.ok(r.errosConfig.some((e) => e.includes('temperatura')));
 });
 
 test('comando ainda exige timestamp real (LWW nao aceita zero)', () => {

@@ -134,11 +134,16 @@ const bool SENSOR_LUZ_ATIVO_LOW = true;
 // nunca parte sozinha.
 #define RELE_VENTOINHA 16
 
-// Quanto tempo a ventoinha precisa ficar em um estado antes de trocar. Protege
-// a bobina do contator e o motor de 1/8 cv contra liga-desliga seguido, que os
-// 2 F de histerese sozinhos nao impedem quando a temperatura fica na fronteira.
-// Desligar por falha de sensor ignora esse prazo: seguranca nao espera.
-const unsigned long TEMPO_MINIMO_VENTOINHA_MS = 30000;
+// O prazo minimo de 30 s entre partidas SAIU em 21/10/2026, a pedido do
+// produtor. A justificativa dele: a histerese ja faz a ventoinha demorar para
+// ligar, porque a temperatura da estufa leva minutos para atravessar a faixa de
+// 3 F entre entrar e sair - entao o prazo nao somava protecao, so atrasava o
+// que o produtor acabara de mandar pelo botao.
+//
+// O que ele protegia era o caso de a temperatura ficar parada na fronteira.
+// Fica registrado para quem vier: se o contator comecar a bater seguido, e aqui
+// que se volta - e a volta e mais barata que a espera, porque um prazo curto
+// (uns 5 s) ja cortaria a batida sem o atraso que incomodava.
 // Quanto a temperatura precisa afastar do ajuste para a ventoinha entrar e para
 // ela sair. Ver atualizarEstadoTemperatura() para o porque de serem diferentes.
 const int VENTOINHA_LIGA_ABAIXO_F = 2;
@@ -150,16 +155,22 @@ const int ALVO_MAXIMO_F = 165;
 
 // Piso do que se pode PEDIR. Existe pelo mesmo motivo do teto, e por um defeito
 // que custou 14 horas de historico em 21/10/2026: os botoes levaram o ajuste a
-// 55 F, o servidor recusa abaixo de 60 (`LIMITE_TEMPERATURA_MIN` em `sync.js` e
-// `agendamentos.js`) e o aplicativo tambem nao oferece menos que isso
-// (`ajusteTemperaturaMinimoF`). So o aparelho ficou de fora.
+// 55 F, o servidor recusava abaixo de 60 e o aplicativo tambem nao oferecia
+// menos. So o aparelho ficou de fora, e um ajuste que ele aceitava a nuvem
+// recusava.
+//
+// O piso virou 50 F em 21/10/2026, por decisao do produtor, e foi movido nos
+// TRES lugares de uma vez - aqui, em `ajusteTemperaturaMinimoF` no aplicativo e
+// em `LIMITE_TEMPERATURA_MIN` no servidor (`sync.js` e `agendamentos.js`).
+// Mover em dois e esquecer o terceiro e exatamente o defeito que esta linha
+// existe para impedir.
 //
 // O estrago nao foi um comando recusado - foi TODA a telemetria parar. O envio
 // de leitura leva a configuracao vigente junto, entao o servidor devolvia 400 e
 // descartava a leitura inteira, a cada minuto, em silencio. Do lado de fora
 // parecia falta de internet, e o aparelho estava com a rede perfeita
 // (`segundosSemRede: 0`).
-const int ALVO_MINIMO_F = 60;
+const int ALVO_MINIMO_F = 50;
 
 // Teto do que se pode SUPORTAR. Acima disto a ventoinha nao liga e, se
 // estiver girando, para na hora - sem consultar a histerese, o prazo minimo
@@ -195,8 +206,6 @@ const unsigned long TEMPO_MAXIMO_TRAVA_VENTOINHA_MS = 5UL * 60 * 1000;
 // Instante em que a trava foi posta. Zero quer dizer destravada, mesmo idioma
 // de ultimaTrocaVentoinhaMs.
 unsigned long ventoinhaBloqueadaDesdeMs = 0;
-// Para o diario nao repetir o aviso de prazo a cada volta do laco.
-bool avisouEsperaVentoinha = false;
 
 // Os dois pontos do visor piscam enquanto ela esta travada. E o unico aviso de
 // que ela nao vai ligar sozinha - sem ele, a estufa esfriaria e todo mundo
@@ -2895,32 +2904,12 @@ void aplicarVentoinha() {
                   && !quenteDemais;
   if (desejado == ventoinhaLigada) return;
 
-  // PARAR nunca espera. Passou do ajuste, ou ha fogo, ou o sensor cegou, ou o
-  // produtor mandou: a ventoinha sai na hora. Ela atica o fogo, entao insistir
-  // por mais meio minuto empurra a estufa justamente para onde nao se quer.
-  // O prazo minimo fica so para LIGAR, e isso ja basta para o contator nao
-  // bater seguido: entre duas partidas passam sempre 30 s.
-  bool paradaImediata = !desejado;
-  unsigned long agora = millis();
-  if (!paradaImediata && ultimaTrocaVentoinhaMs != 0 &&
-      agora - ultimaTrocaVentoinhaMs < TEMPO_MINIMO_VENTOINHA_MS) {
-    // Diz no diario, uma vez por espera. Sem isto, "o ajuste pede e ela nao
-    // liga" nao tem como ser distinguido em campo de travada no botao, de fogo
-    // ou de defeito - sao quatro causas com o mesmo sintoma. O aviso sai uma so
-    // vez porque esta funcao roda a cada volta do laco.
-    if (!avisouEsperaVentoinha) {
-      avisouEsperaVentoinha = true;
-      registrar(String("Ventoinha pedida: falta ") +
-                (TEMPO_MINIMO_VENTOINHA_MS -
-                 (agora - ultimaTrocaVentoinhaMs)) / 1000 +
-                "s do prazo minimo entre partidas");
-    }
-    return;
-  }
-  avisouEsperaVentoinha = false;
-
+  // Sem prazo nenhum, nem para ligar nem para desligar: quem segura o
+  // liga-desliga e a histerese de atualizarEstadoTemperatura(). O carimbo
+  // continua sendo guardado - ele nao decide mais nada, mas diz no /dados ha
+  // quanto tempo a ventoinha esta no estado em que esta.
   ventoinhaLigada = desejado;
-  ultimaTrocaVentoinhaMs = agora;
+  ultimaTrocaVentoinhaMs = millis();
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);
   // O chaveamento e o momento em que o visor costuma perder o quadro. Reescreve
   // em seguida em vez de esperar o segundo seguinte.

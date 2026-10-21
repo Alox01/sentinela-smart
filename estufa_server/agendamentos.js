@@ -11,7 +11,7 @@
 // funciona sem internet nenhuma. Este modulo so mexe no alvo, em silencio, para
 // nao chegarem dois avisos da mesma coisa.
 
-const LIMITE_TEMPERATURA_MIN = 60;
+const LIMITE_TEMPERATURA_MIN = 50;
 const LIMITE_TEMPERATURA_MAX = 200;
 const LIMITE_UMIDADE_MIN = 0;
 const LIMITE_UMIDADE_MAX = 100;

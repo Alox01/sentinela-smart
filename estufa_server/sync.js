@@ -13,7 +13,7 @@ const CAMPOS_PERMITIDOS = new Set([
   'idHardware',
 ]);
 
-const LIMITE_TEMPERATURA_MIN = 60;
+const LIMITE_TEMPERATURA_MIN = 50;
 const LIMITE_TEMPERATURA_MAX = 200;
 const LIMITE_UMIDADE_MIN = 0;
 const LIMITE_UMIDADE_MAX = 100;
@@ -287,11 +287,25 @@ function validarPayloadLeitura(payload, config) {
     erros.push('fonte deve ser hardware, simulador ou manual.');
   }
 
-  erros.push(...validarConfigLeitura(config));
+  // A configuracao vem SEPARADA de proposito, e nao somada a `erros`.
+  //
+  // Ate 21/10/2026 os dois erros caiam no mesmo balaio, e qualquer problema de
+  // configuracao devolvia 400 e descartava a leitura inteira. O estrago disso
+  // foi medido em campo (D22): o ajuste do aparelho foi a 55 F pelos botoes, a
+  // faixa aqui comeca em 60, e a cada minuto o servidor recusava a leitura toda
+  // - temperatura, umidade, alarme e historico - por causa de um numero que nem
+  // e medicao. Catorze horas sem telemetria, com a rede perfeita, parecendo
+  // falta de internet.
+  //
+  // Medicao invalida continua sendo 400: ai o que chegou nao serve para nada.
+  // Configuracao invalida nao derruba a leitura; ela e descartada sozinha, e
+  // quem chamou decide o que fazer com o aviso.
+  const errosConfig = validarConfigLeitura(config);
 
   return {
     valido: erros.length === 0,
     erros,
+    errosConfig,
   };
 }
 

@@ -20,5 +20,5 @@
 /// `sync.js` e `agendamentos.js`), de propósito: aquilo é guarda contra lixo,
 /// não regra de produto, e apertar o limite lá rejeitaria um agendamento antigo
 /// em vez de simplesmente cortá-lo. O maior alvo já registrado no banco é 160.
-const double ajusteTemperaturaMinimoF = 60;
+const double ajusteTemperaturaMinimoF = 50;
 const double ajusteTemperaturaMaximoF = 165;

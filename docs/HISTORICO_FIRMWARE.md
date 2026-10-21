@@ -29,6 +29,29 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ## Depois do 1.0, por motivo
 
+### 21/10/2026 — piso de 50 °F, e o prazo de 30 s entre partidas saiu
+
+**O piso.** `definirTemperaturaAlvo()` limitava só o teto, e os botões levaram o
+ajuste a 55 °F — abaixo do que o servidor aceitava. Custou 14 horas de
+telemetria (D22 na auditoria). Entrou `ALVO_MINIMO_F`, no mesmo ponto do teto,
+*"porque aqui passa tudo"*.
+
+O número ficou em **50 °F**, decisão do produtor, e foi movido nos **três**
+lugares de uma vez: aqui, em `ajusteTemperaturaMinimoF` no aplicativo e em
+`LIMITE_TEMPERATURA_MIN` no servidor (`sync.js` e `agendamentos.js`). Mover em
+dois e esquecer o terceiro é exatamente o defeito que o piso existe para
+impedir — foi assim que o D22 nasceu.
+
+**O prazo de 30 s entre partidas saiu**, a pedido do produtor. A justificativa
+dele: a histerese já faz a ventoinha demorar para ligar, porque a temperatura
+leva minutos para atravessar a faixa de 3 °F entre entrar e sair. O prazo não
+somava proteção — só atrasava o que ele acabara de mandar pelo botão, e era
+isso que incomodava.
+
+O que ele protegia era o caso de a temperatura ficar **parada na fronteira**.
+Fica registrado para quem vier: se o contator começar a bater seguido, é aqui
+que se volta, e um prazo curto de uns 5 s cortaria a batida sem o atraso.
+
 ### 20/10/2026 — o rádio para de dormir
 
 > **Correção de 21/10/2026, antes de qualquer outra coisa: esta mudança NÃO

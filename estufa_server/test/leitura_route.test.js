@@ -178,15 +178,36 @@ test('POST /leitura exige aparelho e valida a configuracao recebida', async () =
   assert.equal(semId.status, 400);
   assert.ok(semId.body.detalhes.some((d) => d.includes('idHardware')));
 
+  // D22: configuracao fora da faixa NAO derruba a leitura. Em campo isso custou
+  // 14 horas de telemetria - o ajuste do aparelho foi a 55 F pelos botoes e o
+  // servidor passou a recusar a leitura inteira, a cada minuto, em silencio.
   const configInvalida = await postLeitura(app, {
     idHardware: 'ESP32_CAMPO_01',
     temperaturaAtual: 90,
     umidadeAtual: 50,
     config: { temperaturaMeta: 999, modoSilencioso: 'sim' },
   });
-  assert.equal(configInvalida.status, 400);
-  assert.ok(configInvalida.body.detalhes.some((d) => d.includes('temperaturaMeta')));
-  assert.ok(configInvalida.body.detalhes.some((d) => d.includes('modoSilencioso')));
+  assert.equal(configInvalida.status, 200);
+  assert.equal(configInvalida.body.sucesso, true);
+  assert.ok(
+    configInvalida.body.configRecusada.some((d) => d.includes('temperaturaMeta')),
+  );
+  assert.ok(
+    configInvalida.body.configRecusada.some((d) => d.includes('modoSilencioso')),
+  );
+});
+
+test('medicao invalida continua derrubando a leitura', async () => {
+  const app = criarApp({ db: { estaHabilitado: () => false } });
+
+  // A separacao do D22 vale so para configuracao. Medicao sem numero nao serve
+  // para nada, e aceitar isso encheria o historico de lixo.
+  const semMedicao = await postLeitura(app, {
+    idHardware: 'ESP32_CAMPO_01',
+    umidadeAtual: 50,
+  });
+  assert.equal(semMedicao.status, 400);
+  assert.ok(semMedicao.body.detalhes.some((d) => d.includes('temperaturaAtual')));
 });
 test('POST /leitura alimenta o /status daquele aparelho', async () => {
   const app = criarApp({ db: { estaHabilitado: () => false } });

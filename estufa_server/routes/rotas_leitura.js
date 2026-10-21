@@ -103,25 +103,46 @@ function criarRotasLeitura({
       return;
     }
 
+    // Configuracao fora da faixa nao derruba a leitura: ela e descartada e a
+    // medicao segue para o banco. Ver D22 e o comentario de validarPayloadLeitura.
+    const configAceita = validacao.errosConfig.length === 0;
+    const config = configAceita ? req.body.config : null;
+    if (!configAceita) {
+      // No diario do aparelho isto so aparece como "HTTP 400", e so se alguem
+      // for olhar. Aqui fica no log do servidor, com o aparelho e o motivo.
+      // `erro` e nao `info`: no Render o nivel e `erro`, entao info sumiria
+      // justo onde isto precisa aparecer. E o log nao tem nivel de aviso de
+      // proposito - ver o comentario em log.js.
+      log.erro(
+        `Config recusada de ${status.idHardware}; leitura gravada mesmo assim:`,
+        validacao.errosConfig.join(' '),
+      );
+    }
+
     status.fonte = status.fonte || 'hardware';
-    const dados = { status, config: req.body.config };
+    const dados = { status, config };
 
     // Alimenta o estado ao vivo DAQUELE aparelho (nao mistura com o simulador).
     const idHw = status.idHardware;
     if (idHw && idHw !== ID_SIMULADOR) {
-      estado.registrarLeituraAoVivo(idHw, status, req.body.config);
+      estado.registrarLeituraAoVivo(idHw, status, config);
       // A leitura que o aparelho empurra carrega a config dele: e por ela que
       // sabemos se o comando pendente ja foi obedecido.
-      estado.limparPendentesConfirmados(idHw, req.body.config);
+      estado.limparPendentesConfirmados(idHw, config);
       // Avisa o produtor no celular quando um problema COMECA. Nao aguarda: a
       // resposta ao aparelho nao pode depender do FCM.
-      alertas.avaliarAlertas(idHw, status, req.body.config).catch((error) =>
+      alertas.avaliarAlertas(idHw, status, config).catch((error) =>
         log.erro('Falha ao avaliar alertas:', error.message),
       );
     }
 
     if (!db.estaHabilitado()) {
-      res.json({ sucesso: true, persistido: false, motivo: 'persistencia_desabilitada' });
+      res.json({
+        sucesso: true,
+        persistido: false,
+        motivo: 'persistencia_desabilitada',
+        configRecusada: !configAceita ? validacao.errosConfig : undefined,
+      });
       return;
     }
 
@@ -139,6 +160,7 @@ function criarRotasLeitura({
         sucesso: true,
         persistido: false,
         motivo: decisao.motivo,
+        configRecusada: !configAceita ? validacao.errosConfig : undefined,
       });
       return;
     }
@@ -150,6 +172,7 @@ function criarRotasLeitura({
         sucesso: true,
         persistido: true,
         motivo: decisao.motivo,
+        configRecusada: !configAceita ? validacao.errosConfig : undefined,
       });
     } catch (error) {
       if (!buffer) {
