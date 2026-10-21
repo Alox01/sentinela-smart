@@ -1,23 +1,27 @@
 const express = require('express');
 
 const { log } = require('../log');
+const { extrairToken, tokensIguais } = require('../auth');
 
 // ---- Chave por aparelho ----
-// Ambas as rotas ficam ATRAS do authMiddleware, e essa foi a decisao de
-// seguranca do desenho. O TOFU puro (rota aberta, primeiro a registrar vence)
-// deixaria qualquer um reivindicar um `idHardware` antes do aparelho - e o id
-// nao e segredo: aparece em toda resposta de /status. Exigir a credencial
-// atual mantem a ancora onde ela ja esta hoje (quem tem a chave global e o
-// produtor) e nao abre exposicao nova. O aparelho consegue registrar porque a
-// chave dele ainda E a global; depois disso passa a usar a propria.
+// O primeiro registro e TOFU: ainda nao existe chave que possa autentica-lo.
+// Exige que o cabecalho repita a chave do corpo para rejeitar requisicoes
+// acidentais ou incompletas; o primeiro valor coerente para aquele id vence no
+// banco. Com o id derivado dos 48 bits do MAC, ele nao e adivinhavel por uma
+// varredura curta. A rotacao continua atras do authMiddleware e exige a chave
+// anterior.
 function criarRotasChaves({ db, authMiddleware, chavesAparelhos }) {
   const router = express.Router();
 
-  router.post('/aparelhos/chave', authMiddleware, async (req, res) => {
+  router.post('/aparelhos/chave', async (req, res) => {
     const idHardware = (req.body?.idHardware || '').trim();
     const chave = (req.body?.chave || '').trim();
     if (!idHardware || !chave) {
       res.status(400).json({ erro: 'idHardware e chave obrigatorios' });
+      return;
+    }
+    if (!tokensIguais(extrairToken(req), chave)) {
+      res.status(401).json({ erro: 'A chave apresentada nao confere' });
       return;
     }
     if (!db.registrarChaveAparelho) {

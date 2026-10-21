@@ -16,11 +16,11 @@ const { log } = require('./log');
 // sistema que funciona.
 // [exigirChaveDoAparelho] separa as credenciais por ESTRAGO, nao por etapa.
 //
-// A chave universal fica compilada no firmware, entao ela nao e segredo: quem
-// tiver o binario ou acesso a flash a extrai. Tratar como credencial seria
-// mentira. Ela e um portao - barra varredura aleatoria da internet - e por isso
-// so abre o que faz pouco estrago: o aparelho reportar leitura e registrar a
-// propria chave.
+// A chave universal fica compilada em clientes antigos, entao ela nao e
+// segredo: quem tiver o binario ou acesso a flash a extrai. Tratar como
+// credencial seria mentira. Ela e um portao para rotas de baixo impacto. O
+// primeiro registro de um aparelho e TOFU e mora na propria rota; depois dele,
+// leitura e comandos usam a chave individual.
 //
 // Registrar com ela e o que tira o beco sem saida: um aparelho que perde a chave
 // propria ainda consegue voltar, em vez de ficar na rede funcionando e mudo para

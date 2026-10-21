@@ -95,12 +95,12 @@ function comChave(chave, corpo) {
   };
 }
 
-test('a chave global continua autorizando', async () => {
+test('o primeiro registro aceita a chave que o proprio aparelho apresenta', async () => {
   const app = criarApp({ db: dbFalso() });
   const { status } = await requisitar(
     app,
     '/aparelhos/chave',
-    comChave(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'chave-do-a' }),
+    comChave('chave-do-a', { idHardware: ID_A, chave: 'chave-do-a' }),
   );
   assert.equal(status, 200);
 });
@@ -144,17 +144,14 @@ test('chave desconhecida e recusada', async () => {
   assert.equal(status, 401);
 });
 
-// Sem idHardware na requisicao nao ha a que amarrar a chave do aparelho, entao
-// so a global serve. Do contrario, uma chave qualquer autorizaria rotas que nao
-// dizem de quem falam.
-test('sem idHardware, a chave de aparelho nao serve', async () => {
+test('sem idHardware o registro e recusado antes de autenticar', async () => {
   const app = criarApp({ db: dbFalso({ [ID_A]: 'chave-do-a' }) });
   const { status } = await requisitar(
     app,
     '/aparelhos/chave',
     comChave('chave-do-a', { chave: 'sem-id' }),
   );
-  assert.equal(status, 401);
+  assert.equal(status, 400);
 });
 
 test('TOFU: o primeiro registro vence e o segundo com chave diferente da 409', async () => {
@@ -164,7 +161,7 @@ test('TOFU: o primeiro registro vence e o segundo com chave diferente da 409', a
   const primeiro = await requisitar(
     app,
     '/aparelhos/chave',
-    comChave(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'primeira' }),
+    comChave('primeira', { idHardware: ID_A, chave: 'primeira' }),
   );
   assert.equal(primeiro.status, 200);
   assert.equal(primeiro.body.estado, 'registrada');
@@ -172,7 +169,10 @@ test('TOFU: o primeiro registro vence e o segundo com chave diferente da 409', a
   const tomada = await requisitar(
     app,
     '/aparelhos/chave',
-    comChave(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'tentativa-de-roubo' }),
+    comChave('tentativa-de-roubo', {
+      idHardware: ID_A,
+      chave: 'tentativa-de-roubo',
+    }),
   );
   assert.equal(tomada.status, 409);
   assert.equal(db.chaves.get(ID_A), 'primeira');
@@ -185,12 +185,12 @@ test('registrar de novo a MESMA chave e aceito', async () => {
   await requisitar(
     app,
     '/aparelhos/chave',
-    comChave(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'a-mesma' }),
+    comChave('a-mesma', { idHardware: ID_A, chave: 'a-mesma' }),
   );
   const repetido = await requisitar(
     app,
     '/aparelhos/chave',
-    comChave(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'a-mesma' }),
+    comChave('a-mesma', { idHardware: ID_A, chave: 'a-mesma' }),
   );
   assert.equal(repetido.status, 200);
   assert.equal(repetido.body.estado, 'ja_registrada');
@@ -237,14 +237,14 @@ test('depois da rotacao a chave velha para de valer', async () => {
   );
   assert.equal(comNova.status, 200);
 
-  // E a velha, sem a global no meio, nao entra mais.
+  // E a velha nao consegue substituir a nova: o primeiro registro vence.
   const appSemGlobal = criarApp({ db, tokenGlobal: '' });
   const comVelha = await requisitar(
     appSemGlobal,
     '/aparelhos/chave',
     comChave('chave-velha', { idHardware: ID_A, chave: 'chave-velha' }),
   );
-  assert.equal(comVelha.status, 401);
+  assert.equal(comVelha.status, 409);
 });
 
 test('rotacionar para a mesma chave e recusado', async () => {
@@ -344,15 +344,15 @@ test('aparelho ainda sem chave registrada aceita a universal', async () => {
   assert.notEqual(status, 401);
 });
 
-// O beco sem saida que motivou tudo: um aparelho que perdeu a chave propria
-// precisa conseguir registrar a nova, ou fica na rede funcionando e mudo.
-test('a universal registra a chave de um aparelho', async () => {
+// O beco sem saida que motivou tudo: um aparelho novo ainda nao possui uma
+// chave registrada no servidor, portanto apresenta a propria chave no cadastro.
+test('o proprio aparelho registra a chave sem depender da universal', async () => {
   const db = dbFalso();
   const app = criarAppSeparado({ db });
   const { status } = await requisitar(
     app,
     '/aparelhos/chave',
-    comando(CHAVE_GLOBAL, { idHardware: ID_A, chave: 'nova-do-a' }),
+    comando('nova-do-a', { idHardware: ID_A, chave: 'nova-do-a' }),
   );
   assert.equal(status, 200);
   assert.equal(db.chaves.get(ID_A), 'nova-do-a');
