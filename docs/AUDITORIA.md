@@ -924,6 +924,11 @@ funciona:
   todas as candidatas, então dois aparelhos na mesma rede não misturam dados
   mesmo se o roteador reutilizar um IP antigo.
 
+  **Confirmado em campo em 21/10/2026**, com o APK corrigido instalado: o selo
+  para de alternar e fica em LOCAL. A verificação é deixar o celular **parado**
+  na tela da estufa — mexer no aparelho mantém o tráfego acordado e esconde o
+  defeito, que foi o que atrasou o diagnóstico.
+
   **Hipótese errada que este achado derrubou:** o mesmo sintoma levou a
   desligar a economia de energia do rádio no firmware (`WiFi.setSleep(false)`,
   20/10). A mudança é boa e ficou, mas não era a causa — e a entrada dela no
