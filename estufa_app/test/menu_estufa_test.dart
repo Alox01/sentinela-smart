@@ -21,8 +21,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Uma posição some DE PROPÓSITO: "Avisos no celular" só existe quando este
 /// celular não vai ser avisado. Estar tudo certo é o caso comum, e anunciá-lo
 /// para quem não sabe o que é uma inscrição de push só levantava dúvida. O
-/// inventário normal tem 16 linhas por isso — e há um teste só para provar que
-/// a 17ª volta quando há problema, senão esta economia viraria justamente o item
+/// inventário normal tem 10 linhas por isso — e há um teste só para provar que
+/// a 11ª volta quando há problema, senão esta economia viraria justamente o item
 /// sumindo em silêncio que o arquivo inteiro existe para impedir.
 ///
 /// ## Os três *singletons*
@@ -83,7 +83,7 @@ void main() {
   }
 
   group('inventário da gaveta', () {
-    testWidgets('12 posições, na ordem, com o aparelho ainda calado', (
+    testWidgets('10 posições, na ordem, com o aparelho ainda calado', (
       tester,
     ) async {
       // Tudo o que o aparelho ainda não informou vem `null`: é o estado em que a
@@ -96,7 +96,6 @@ void main() {
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
         'item: Reconfigurar aparelho',
-        'item: Compartilhar acesso',
         'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AVISOS',
@@ -107,7 +106,7 @@ void main() {
       ]);
     });
 
-    testWidgets('as mesmas 12 posições com o aparelho já reportando', (
+    testWidgets('as mesmas 10 posições com o aparelho já reportando', (
       tester,
     ) async {
       // Dois itens trocam de título conforme o estado, e um `switch` que ganhe um
@@ -125,7 +124,6 @@ void main() {
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
         'item: Reconfigurar aparelho',
-        'item: Compartilhar acesso',
         'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AVISOS',
@@ -135,7 +133,7 @@ void main() {
       ]);
     });
 
-    testWidgets('a 13ª posição volta quando o celular não será avisado', (
+    testWidgets('a 11ª posição volta quando o celular não será avisado', (
       tester,
     ) async {
       // O contrário dos dois acima, e a razão de o item existir: uma estufa não
@@ -153,7 +151,6 @@ void main() {
         'seção: CONEXÃO',
         'item: Detalhes da conexão',
         'item: Reconfigurar aparelho',
-        'item: Compartilhar acesso',
         'item: Tirar acesso dos outros celulares',
         'divisor',
         'seção: AVISOS',
@@ -162,38 +159,6 @@ void main() {
         'item: Sirene do aparelho: ligada',
       ]);
     });
-  });
-
-  testWidgets('no escopo do TCC sai o compartilhar, e a revogação FICA', (
-    tester,
-  ) async {
-    // A primeira versão tirava os dois, e estava errada. O que contradiz "só
-    // comanda quem esteve na frente do aparelho" é o QR Code, que faz o acesso
-    // atravessar a cidade. A revogação exige os três botões e o PIN — é a outra
-    // metade da mesma regra, e é a resposta para "e se o senhor vender o
-    // aparelho?".
-    final inventario = await abrirGaveta(
-      tester,
-      _dados(escopoReduzido: true),
-    );
-
-    expect(inventario, isNot(contains('item: Compartilhar acesso')));
-    expect(inventario, contains('item: Tirar acesso dos outros celulares'));
-    // A secao ACOES RAPIDAS inteira sai, por tres motivos diferentes:
-    // agendamento contradiz o escopo (automacao de curva), reiniciar ajustes e
-    // atalho do que o + e o - ja fazem, e apagar estufadas e porta duplicada —
-    // a lixeira da tela de relatorios ja faz isso, e e onde faz sentido fazer.
-    expect(inventario, isNot(contains('item: Agendar ajuste')));
-    expect(inventario, isNot(contains('item: Reiniciar ajustes do aparelho')));
-    expect(inventario, isNot(contains('item: Apagar estufadas')));
-    // Sem itens, o titulo e o divisor da secao saem junto.
-    expect(inventario, isNot(contains('seção: AÇÕES RÁPIDAS')));
-    expect(inventario.where((l) => l.startsWith('seção: ')).length, 2);
-    // O que responde pergunta de banca fica.
-    expect(inventario, contains('item: Detalhes da conexão'));
-    expect(inventario, contains('item: Reconfigurar aparelho'));
-    expect(inventario, contains('item: Silenciar avisos'));
-    expect(inventario, contains('item: Tirar acesso dos outros celulares'));
   });
 
   group('as duas seções', () {
@@ -223,11 +188,9 @@ void main() {
 
       expect(secaoDe('item: Silenciar avisos'), 'seção: AVISOS');
       expect(secaoDe('item: Sirene do aparelho'), 'seção: AVISOS');
-      // Compartilhar e tirar acesso ficam em CONEXÃO desde 05/08/2026. Moravam
-      // em AVISOS — posição herdada da tela antiga e preservada sem discussão
-      // quando a gaveta foi extraída. Os dois decidem QUEM COMANDA a estufa, o
-      // que não é assunto de aviso, e ficam juntos porque um desfaz o outro.
-      expect(secaoDe('item: Compartilhar acesso'), 'seção: CONEXÃO');
+      // Tirar acesso fica em CONEXÃO desde 05/08/2026. Morava em AVISOS —
+      // posição herdada da tela antiga e preservada sem discussão quando a
+      // gaveta foi extraída. Quem comanda a estufa não é assunto de aviso.
       expect(
         secaoDe('item: Tirar acesso dos outros celulares'),
         'seção: CONEXÃO',
@@ -273,9 +236,7 @@ DadosMenuEstufa _dados({
   String? idHardware = 'AABBCCDDEEFF',
   bool? vigiada,
   bool? buzzerAparelhoAtivo,
-  bool escopoReduzido = false,
 }) => DadosMenuEstufa(
-  escopoReduzido: escopoReduzido,
   idEstufa: 7,
   nomeEstufa: 'Estufa do Fundo',
   ipEstufa: '192.168.0.50',

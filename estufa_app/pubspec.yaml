@@ -24,17 +24,8 @@ dependencies:
   firebase_core: ^4.12.1
   firebase_messaging: ^16.4.3
   flutter_local_notifications: ^22.1.0
-  # Ja vinha junto com o flutter_local_notifications; declarado porque o
-  # agendamento de ajuste usa TZDateTime direto. Dart puro, sem parte nativa.
-  timezone: ^0.11.1
-  # Desenha o QR do convite de acesso. Dart puro, sem parte nativa: nao entra no
-  # Gradle e nao pede permissao nenhuma.
-  qr_flutter: ^4.1.0
-  # Entrega ao app o endereco `sentinela://convite?c=...` que vem do QR. Tem
-  # parte nativa, mas nao pede permissao: quem le o codigo e a camera comum do
-  # celular, nao o app. Foi a alternativa deliberada a um leitor de QR embutido
-  # (mobile_scanner e afins), que traria permissao de camera.
-  app_links: ^7.2.1
+  # Entrega o CSV do historico ao app que o produtor escolher (WhatsApp, e-mail,
+  # arquivos). Sem isto o relatorio nao sai do celular.
   share_plus: ^13.3.0
 
 dev_dependencies:

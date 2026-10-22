@@ -2,13 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../escopo.dart';
-import '../features/home/models/convite_estufa.dart';
 import '../features/home/models/modelo_estufa.dart';
 import '../features/home/services/estufas_repository.dart';
 import '../features/home/widgets/adicionar_estufa_card.dart';
 import '../features/home/widgets/estufa_resumo_card.dart';
-import '../features/home/widgets/ouvinte_convite_link.dart';
 import '../features/notificacoes/screens/notificacoes_screen.dart';
 import '../services/isar_service.dart';
 import '../services/monitor_estufas.dart';
@@ -46,23 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // O ouvinte fica aqui, e nao acima do `MaterialApp`, para reusar este
-    // caminho inteiro: o mesmo formulario, a mesma recarga da lista e o mesmo
-    // aviso de "Estufa cadastrada" do botao "Adicionar estufa". Um convite que
-    // chega pelo QR nao deveria terminar diferente de um digitado a mao.
-    // No escopo do TCC o app nao GERA convite, e tambem nao RECEBE. Ouvir o
-    // link ali seria uma porta que a versao apresentada nao consegue abrir mas
-    // aceita que abram por ela: um QR guardado de antes ainda cadastraria a
-    // estufa com a chave, e "so comanda quem esteve na frente do aparelho"
-    // deixaria de valer justamente na versao em que essa frase e defendida.
-    if (escopoTcc) return _buildHome(context);
-    return OuvinteConviteLink(
-      aoReceber: (convite) => _abrirFormularioEstufa(convite: convite),
-      child: _buildHome(context),
-    );
-  }
-
-  Widget _buildHome(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0E1012),
       appBar: AppBar(
@@ -165,23 +145,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _abrirFormularioEstufa({
-    ModeloEstufa? estufa,
-    ConviteEstufa? convite,
-  }) async {
+  Future<void> _abrirFormularioEstufa({ModeloEstufa? estufa}) async {
     final resultado = await Navigator.of(context).push<ResultadoFormEstufa>(
-      MaterialPageRoute(
-        builder: (_) => EstufaFormScreen(estufa: estufa, convite: convite),
-      ),
+      MaterialPageRoute(builder: (_) => EstufaFormScreen(estufa: estufa)),
     );
 
     if (resultado == null || !mounted) return;
     await _carregarEstufas();
     if (!mounted) return;
 
-    // Quem diz o que aconteceu e o formulario, nao esta tela: um convite de
-    // aparelho ja cadastrado entra por "Adicionar estufa" e termina em
-    // atualizacao, e anunciar "cadastrada" ali seria contar outra historia.
+    // Quem diz o que aconteceu e o formulario, nao esta tela: a mesma tela
+    // cadastra e edita, e anunciar "cadastrada" depois de uma edicao seria
+    // contar outra historia.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

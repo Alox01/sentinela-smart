@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../escopo.dart';
 import '../../../services/api_service.dart';
 import '../prefixo_da_rede.dart';
 
@@ -41,13 +40,12 @@ enum UsoDaConfiguracao {
   /// a rede e a senha do Wi-Fi de novo, e gravar por cima de uma configuracao
   /// que ja estava boa, correndo o risco de estraga-la.
   ///
-  /// E o unico caminho para um segundo celular quando o compartilhamento por QR
-  /// esta fora (ver `escopo.dart`) — e o que faz "so comanda quem esteve na
-  /// frente do aparelho" valer sem excecao.
+  /// E o unico caminho para um segundo celular — e o que faz "so comanda quem
+  /// esteve na frente do aparelho" valer sem excecao.
   apenasAcesso,
 
   /// Tirar o acesso dos outros celulares: o aparelho gera uma chave nova, e
-  /// todo QR compartilhado antes deixa de valer.
+  /// toda chave entregue antes deixa de valer.
   ///
   /// Reaproveita esta tela inteira porque o caminho e o mesmo — presenca fisica,
   /// PIN do visor, gravacao — mudando so o que se pede e o que se diz. A rede
@@ -218,24 +216,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// A revogacao aconteceu no aparelho, mas o app nao recebeu a chave nova.
   /// Firmware antigo. Os comandos deste celular tambem param — e preciso dizer.
   bool _revogouSemChave = false;
-
-  /// Marca curta de uma chave, para conferir sem mostrar a chave.
-  ///
-  /// FNV-1a de 32 bits, exibido em 4 digitos hex. Serve para comparar o que o
-  /// app guardou com o que o aparelho e a nuvem tem, sem que nada de segredo
-  /// apareca na tela nem numa foto dela.
-  static String marcaDaChave(String? chave) {
-    if (chave == null || chave.isEmpty) return '----';
-    var h = 0x811c9dc5;
-    for (final c in chave.codeUnits) {
-      h = (h ^ c) & 0xffffffff;
-      h = (h * 0x01000193) & 0xffffffff;
-    }
-    return (h & 0xffff).toRadixString(16).padLeft(4, '0');
-  }
-
-  /// O que o aparelho respondeu na revogacao, resumido para conferencia.
-  String? _diagnosticoRevogacao;
 
   Map<String, dynamic>? _lerJson(String corpo) {
     try {
@@ -667,15 +647,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         if (_revogando) {
           final corpo = _lerJson(resposta.body);
           chaveNova = corpo?['chaveNova']?.toString();
-          // Diagnostico de uma operacao que so acontece uma vez e nao da para
-          // repetir: se a chave nova nao chegar, o produtor perde o acesso e nao
-          // ha como reconstruir o que o aparelho respondeu. Sem conteudo de
-          // segredo - so o tipo da resposta e o tamanho.
-          _diagnosticoRevogacao =
-              'http ${resposta.statusCode} · json ${corpo != null ? "sim" : "nao"}'
-              ' · campos ${corpo?.keys.join("/") ?? "-"}'
-              ' · chave nova ${chaveNova == null ? "AUSENTE" : "${chaveNova.length} chars"}'
-              ' · marca ${marcaDaChave(chaveNova)}';
         }
         setState(() {
           if (chaveNova != null && chaveNova.isNotEmpty) {
@@ -784,19 +755,12 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                         // Mesma frase da tela anterior, palavra por palavra: o
                         // produtor acabou de ler aquilo, e reescrever a mesma
                         // ideia com outras palavras faz procurar a diferenca.
-                        // Sem o compartilhamento na tela, mandar compartilhar
-                        // um QR Code manda fazer o que nao existe. Devolver o
-                        // acesso volta a ser o que sempre foi no escopo
-                        // reduzido: ir ate o aparelho.
-                        : escopoTcc
-                        ? 'Este celular continua com acesso — para devolver '
+                        // Devolver o acesso e ir ate o aparelho: nao ha
+                        // compartilhamento por QR Code nesta versao.
+                        : 'Este celular continua com acesso — para devolver '
                               'para outro celular, ele vai até o aparelho e '
                               'usa "pegar acesso" no app. O comando pela '
-                              'internet volta quando o aparelho reconectar.'
-                        : 'Este celular continua com acesso — para devolver '
-                              'para outro celular, é só compartilhar um QR '
-                              'Code novo. O comando pela internet volta quando '
-                              'o aparelho reconectar.')
+                              'internet volta quando o aparelho reconectar.')
                   : 'O aparelho está reiniciando e vai entrar na rede nova. '
                         'A rede "Sentinela-Config" vai sumir — reconecte o '
                         'celular no Wi-Fi da propriedade.',
@@ -858,27 +822,6 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
-          // Diagnostico de uma operacao que acontece uma vez e nao da para
-          // repetir: se a chave nova nao chegar, o produtor perde o acesso e nao
-          // sobra nada que diga o que o aparelho respondeu. A "marca" e um hash
-          // de 4 digitos — da para comparar com o que a nuvem tem sem que a
-          // chave apareca na tela nem numa foto dela.
-          //
-          // Ja se pagou: foi ela que provou que a chave chegava certa ao app, e
-          // mandou procurar o defeito onde ele estava — na lista da home
-          // segurando a chave velha em memoria.
-          //
-          // Fora do escopo do TCC: e ferramenta de suporte, e numa apresentacao
-          // vira ruido tecnico embaixo da unica acao da tela. O valor dela e
-          // para quem esta depurando, e quem depura usa o APK completo.
-          if (!escopoTcc && _diagnosticoRevogacao != null) ...[
-            const SizedBox(height: 10),
-            SelectableText(
-              _diagnosticoRevogacao!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-          ],
           const SizedBox(height: 8),
           // O nome so resolve com os dois na mesma rede. Como o botao acima
           // confere antes de seguir, o aviso passa a ser sobre a ORDEM: trocar
@@ -1081,15 +1024,10 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            escopoTcc
-                ? 'Todos os outros celulares perdem o controle. Este continua '
-                      'com acesso — para devolver para outro celular, ele vai '
-                      'até o aparelho e usa "pegar acesso" no app. O Wi-Fi do '
-                      'aparelho não muda.'
-                : 'Os celulares que receberam o QR Code desta estufa perdem o '
-                      'controle. Este celular continua com acesso — para '
-                      'devolver para outro celular, é só compartilhar um QR '
-                      'Code novo. O Wi-Fi do aparelho não muda.',
+            'Todos os outros celulares perdem o controle. Este continua '
+            'com acesso — para devolver para outro celular, ele vai até o '
+            'aparelho e usa "pegar acesso" no app. O Wi-Fi do aparelho não '
+            'muda.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
           ),
           SizedBox(height: 10),

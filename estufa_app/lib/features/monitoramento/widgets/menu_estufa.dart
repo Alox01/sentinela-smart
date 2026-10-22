@@ -2,10 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../escopo.dart';
-
-import '../../home/models/convite_estufa.dart';
-import '../../home/screens/compartilhar_acesso_screen.dart';
 import '../../notificacoes/models/preferencias_notificacao.dart';
 import '../../notificacoes/services/preferencias_notificacao_service.dart';
 import '../../notificacoes/services/push_notification_service.dart';
@@ -16,10 +12,9 @@ import 'itens_menu_estufa.dart';
 ///
 /// ## Por que dois objetos em vez de treze parâmetros
 ///
-/// O menu lia 5 valores da tela e chamava 3 métodos dela, além de compartilhar
-/// acesso, abrir agendamentos e gerenciar estufadas. Extraí-lo item a item dava
-/// um construtor com ~13 posições soltas, onde trocar dois `String?` de lugar
-/// compila e só quebra em campo.
+/// O menu lia 5 valores da tela, chamava 3 métodos dela e ainda gerenciava
+/// estufadas. Extraí-lo item a item dava um construtor com ~13 posições soltas,
+/// onde trocar dois `String?` de lugar compila e só quebra em campo.
 ///
 /// A saída escolhida foi **agrupar**: [DadosMenuEstufa] é o que o menu desenha,
 /// [AcoesMenuEstufa] é o que ele pede de volta à tela. Sobram duas posições, e a
@@ -36,9 +31,8 @@ import 'itens_menu_estufa.dart';
 /// 2. O caso tido como claro (silenciar avisos) não mexe em estado da tela: ele
 ///    lê os *singletons* [SilenciamentoEstufas] e
 ///    [PreferenciasNotificacaoService] e chama um serviço, sem tocar em nenhum
-///    campo do `State` nem chamar `setState`. Pelo mesmo motivo vieram junto
-///    "Compartilhar acesso", "Agendar ajuste" e "Apagar estufadas": os três são
-///    função apenas dos valores acima.
+///    campo do `State` nem chamar `setState`. Pelo mesmo motivo veio junto
+///    "Apagar estufadas": também é função apenas dos valores acima.
 ///
 /// O que ficou na tela ficou porque depende mesmo dela: os detalhes da conexão
 /// (leem pendências e o `ApiService`), a reconfiguração do aparelho (grava a
@@ -136,20 +130,16 @@ class MenuEstufa extends StatelessWidget {
             // sem discussao quando a gaveta foi extraida. Nao e assunto de
             // aviso: os dois decidem QUEM COMANDA a estufa, que e do que esta
             // secao trata. E ficam juntos porque um desfaz o outro.
-            // So o compartilhamento sai no escopo do TCC; a revogacao FICA.
-            //
-            // O que contradiz "so comanda quem esteve na frente do aparelho" e o
-            // QR Code, que faz o acesso atravessar a cidade. A revogacao exige os
-            // tres botoes e o PIN: ela e a outra metade da mesma regra, presenca
-            // fisica para dar e presenca fisica para tirar. E e a resposta para
+            // A outra metade de "so comanda quem esteve na frente do
+            // aparelho": presenca fisica para dar o acesso ("pegar acesso", com
+            // o PIN do visor) e presenca fisica para tirar. E a resposta para
             // "e se o senhor vender o aparelho?" — sem ela, a pergunta fica sem
-            // resposta na versao apresentada.
-            if (!dados.escopoReduzido) _ItemCompartilharAcesso(dados: dados),
-            // Ao lado de "Compartilhar acesso" de proposito: e o contrario dele,
-            // e e ali que alguem vai procurar depois de ter compartilhado com
-            // quem nao devia. Ate agora a revogacao existia so no formulario do
-            // navegador do aparelho, atras de "avancado" — o caminho existia e
-            // era invisivel.
+            // resposta.
+            //
+            // Em CONEXAO, junto de "Reconfigurar aparelho": os dois decidem
+            // quem comanda a estufa, o que nao e assunto de aviso. Ate agora a
+            // revogacao existia so no formulario do navegador do aparelho,
+            // atras de "avancado" — o caminho existia e era invisivel.
             ListTile(
               leading: const Icon(
                 Icons.person_remove_outlined,
@@ -164,11 +154,8 @@ class MenuEstufa extends StatelessWidget {
                 // aqui e falar de uma coisa que nao existe. O que sobra e o que
                 // sempre foi verdade nos dois escopos: todo celular que tinha
                 // acesso perde, independente de como o conseguiu.
-                dados.escopoReduzido
-                    ? 'Gera uma chave nova no aparelho. Todos os outros '
-                          'celulares perdem o controle'
-                    : 'Troca a chave da estufa. Quem tem o QR Code antigo perde '
-                          'o controle',
+                'Gera uma chave nova no aparelho. Todos os outros '
+                    'celulares perdem o controle',
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
@@ -233,15 +220,7 @@ class DadosMenuEstufa {
   final double temperaturaNovaEstufada;
   final double umidadeNovaEstufada;
 
-  /// Esconde o compartilhar por QR Code. A revogacao FICA — ver [escopoTcc].
-  ///
-  /// Vem por aqui, e não lido direto da constante, para o teste conseguir montar
-  /// a gaveta nos dois escopos: `bool.fromEnvironment` é resolvido na
-  /// compilação, e um teste não tem como mudá-lo.
-  final bool escopoReduzido;
-
   const DadosMenuEstufa({
-    this.escopoReduzido = escopoTcc,
     required this.idEstufa,
     required this.nomeEstufa,
     required this.ipEstufa,
@@ -369,54 +348,3 @@ class _ItemSilenciarAvisos extends StatelessWidget {
   }
 }
 
-/// Manda para outro celular da familia o que ele precisa para acompanhar e
-/// comandar esta estufa.
-///
-/// A chave e do APARELHO, nao do celular, entao vario celulares ja podiam
-/// comandar - faltava o segundo receber a chave. A outra via seria o modo de
-/// configuracao, que derruba o aparelho do ar enquanto dura; no meio de uma
-/// estufada isso e caro.
-///
-/// O item so abre a tela. Antes ele chamava o compartilhamento do sistema
-/// direto; agora ha duas formas de entregar o convite (QR e texto), e a escolha
-/// entre elas tem consequencia — o texto fica gravado na conversa de quem
-/// recebe, com a chave dentro. Escolha com consequencia precisa de tela.
-class _ItemCompartilharAcesso extends StatelessWidget {
-  final DadosMenuEstufa dados;
-
-  const _ItemCompartilharAcesso({required this.dados});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.group_add_outlined, color: Colors.white70),
-      title: const Text(
-        'Compartilhar acesso',
-        style: TextStyle(color: Colors.white),
-      ),
-      subtitle: const Text(
-        // "celular", nao "aparelho": neste app "aparelho" e sempre o ESP32 —
-        // "Configurar aparelho", "Sirene do aparelho", "Reiniciar ajustes do
-        // aparelho" —, e "adicionar esta estufa em outro aparelho" leria como
-        // ligar a estufa a um segundo ESP.
-        'QR Code para adicionar esta estufa em outro celular',
-        style: TextStyle(color: Colors.white38, fontSize: 12),
-      ),
-      onTap: () {
-        Navigator.of(context).pop();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => CompartilharAcessoScreen(
-              convite: ConviteEstufa(
-                nome: dados.nomeEstufa,
-                endereco: dados.ipEstufa,
-                chave: dados.tokenAcesso,
-                idHardware: dados.idHardware,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
