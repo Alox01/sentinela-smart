@@ -253,22 +253,4 @@ module.exports = {
     return resultado;
   },
 
-  simularBotaoFisico: (tipo, valor) => {
-    const agora = Date.now();
-    if (tipo === 'temp') {
-      // O ajuste fisico tambem abre a janela: a estufa vai perseguir o alvo
-      // novo do mesmo jeito, tenha vindo do app ou do botao.
-      acomodacaoTemp = {
-        desdeMs: agora,
-        folga: Math.max(
-          0,
-          Math.abs(statusFisico.temperaturaAtual - valor)
-            - Math.abs(statusFisico.temperaturaAtual - configLocal.temperaturaMeta),
-        ),
-      };
-      configLocal.temperaturaMeta = valor;
-      configLocal.tempTimestamp = agora;
-      log.info(`Botao fisico alterou ajuste de temperatura para ${valor} F`);
-    }
-  },
 };

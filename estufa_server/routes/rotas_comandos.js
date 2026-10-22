@@ -1,7 +1,6 @@
 const express = require('express');
 
 const {
-  validarPayloadBotaoFisico,
   validarPayloadSincronizacao,
 } = require('../sync');
 const { log } = require('../log');
@@ -86,27 +85,6 @@ function criarRotasComandos({
     res.json({ idHardware, comando: estado.comandoPendente(idHardware) });
   });
 
-  router.post('/debug/botao-fisico', authMiddleware, async (req, res) => {
-    const { tipo, valor } = req.body;
-    const validacao = validarPayloadBotaoFisico(req.body);
-
-    if (!validacao.valido) {
-      res.status(400).json({
-        sucesso: false,
-        erro: 'Payload invalido',
-        detalhes: validacao.erros,
-      });
-      return;
-    }
-
-    simulador.simularBotaoFisico(tipo, valor);
-    try {
-      await db.salvarConfiguracaoSnapshot(simulador.lerCompleto());
-    } catch (error) {
-      log.erro('Falha ao salvar ajuste fisico no banco:', error.message);
-    }
-    res.json({ msg: `Simulado botao fisico: ${tipo} -> ${valor}` });
-  });
 
   return router;
 }

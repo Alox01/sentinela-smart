@@ -115,68 +115,7 @@ function criarRotasPush({ db, authMiddleware, push, alertas }) {
     res.json({ sucesso: true });
   });
 
-  // Roda o watchdog na hora, sem esperar o ciclo. Serve para testar o aviso de
-  // silencio sem precisar desligar a estufa e cronometrar 15 minutos.
-  router.post('/push/verificar-silencio', authMiddleware, async (_req, res) => {
-    if (!alertas.vigia) {
-      res.status(503).json({ erro: 'Watchdog indisponivel' });
-      return;
-    }
-    try {
-      await alertas.vigia.verificar();
-      res.json({ sucesso: true });
-    } catch (error) {
-      log.erro('Falha ao verificar silencio:', error.message);
-      res.status(500).json({ erro: 'Falha ao verificar silencio' });
-    }
-  });
 
-  // Push de teste: confirma a ponta a ponta (credencial, token, canal) sem
-  // precisar provocar um incendio de verdade.
-  router.post('/push/teste', authMiddleware, async (req, res) => {
-    const idHardware = (req.body?.idHardware || '').trim();
-    if (!idHardware) {
-      res.status(400).json({ erro: 'idHardware obrigatorio' });
-      return;
-    }
-    if (!push?.habilitado) {
-      res.status(503).json({ erro: 'Push desabilitado no servidor' });
-      return;
-    }
-
-    try {
-      // Tambem por nome, como os avisos de verdade: o teste so serve se
-      // mostrar o que o produtor vai realmente ler na barra.
-      const inscritos = await db.listarDispositivosPush(idHardware);
-      const porNome = new Map();
-      for (const inscrito of inscritos) {
-        const nome = inscrito.nome || '';
-        const tokens = porNome.get(nome) || [];
-        tokens.push(inscrito.tokenPush);
-        porNome.set(nome, tokens);
-      }
-
-      let enviados = 0;
-      const invalidos = [];
-      for (const [nome, tokens] of porNome) {
-        const resultado = await push.enviar({
-          tokens,
-          titulo: nome ? `${nome} · Sentinela Smart` : 'Sentinela Smart',
-          corpo: 'Notificação de teste. O aviso remoto está funcionando.',
-          evento: 'alarmeProcesso',
-        });
-        enviados += resultado.enviados;
-        invalidos.push(...resultado.invalidos);
-      }
-      if (invalidos.length > 0 && db.removerTokensPushInvalidos) {
-        await db.removerTokensPushInvalidos(invalidos);
-      }
-      res.json({ sucesso: true, enviados, inscritos: inscritos.length });
-    } catch (error) {
-      log.erro('Falha no push de teste:', error.message);
-      res.status(500).json({ erro: 'Falha ao enviar push de teste' });
-    }
-  });
 
   return router;
 }

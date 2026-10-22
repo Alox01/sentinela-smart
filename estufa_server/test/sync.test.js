@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const { ConfiguracaoAlvo } = require('../classes');
 const {
   aplicarSincronizacao,
-  validarPayloadBotaoFisico,
   validarPayloadLeitura,
   validarPayloadSincronizacao,
 } = require('../sync');
@@ -114,15 +113,6 @@ test('rejeita ajustes fora da faixa operacional', () => {
   assert.match(umidadeAlta.erros.join(' '), /entre 0 e 100/);
 });
 
-test('valida payload do botao fisico simulado', () => {
-  const valido = validarPayloadBotaoFisico({ tipo: 'temp', valor: 110 });
-  const tipoInvalido = validarPayloadBotaoFisico({ tipo: 'umid', valor: 70 });
-  const valorInvalido = validarPayloadBotaoFisico({ tipo: 'temp', valor: 500 });
-
-  assert.equal(valido.valido, true);
-  assert.equal(tipoInvalido.valido, false);
-  assert.equal(valorInvalido.valido, false);
-});
 
 // Regressao: um ESP recem-gravado tem os timestamps em 0 (nunca recebeu
 // comando). Exigir > 0 rejeitava toda leitura dele com HTTP 400, deixando o

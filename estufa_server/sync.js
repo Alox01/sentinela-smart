@@ -163,36 +163,6 @@ function validarPayloadSincronizacao(payload) {
   };
 }
 
-function validarPayloadBotaoFisico(payload) {
-  const erros = [];
-
-  if (!isObjetoPlano(payload)) {
-    return {
-      valido: false,
-      erros: ['Payload deve ser um objeto JSON.'],
-    };
-  }
-
-  if (payload.tipo !== 'temp') {
-    erros.push('tipo deve ser "temp".');
-  }
-
-  if (!isNumeroFinito(payload.valor)) {
-    erros.push('valor deve ser numero.');
-  } else if (
-    payload.valor < LIMITE_TEMPERATURA_MIN ||
-    payload.valor > LIMITE_TEMPERATURA_MAX
-  ) {
-    erros.push(
-      `valor deve estar entre ${LIMITE_TEMPERATURA_MIN} e ${LIMITE_TEMPERATURA_MAX}.`,
-    );
-  }
-
-  return {
-    valido: erros.length === 0,
-    erros,
-  };
-}
 
 const FONTES_LEITURA_VALIDAS = new Set(['hardware', 'simulador', 'manual']);
 
@@ -351,7 +321,6 @@ function aplicarSincronizacao(configLocal, payload, options = {}) {
 
 module.exports = {
   aplicarSincronizacao,
-  validarPayloadBotaoFisico,
   validarPayloadLeitura,
   validarPayloadSincronizacao,
 };
