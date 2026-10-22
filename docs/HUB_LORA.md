@@ -9,6 +9,11 @@ pelas rotas que já existem.
 > em uso. O documento serve como "trabalho futuro fundamentado": mesmo que nada
 > seja construído, as decisões e os porquês ficam registrados.
 
+> **FORA DO ESCOPO DO TCC.** O hub, sua tela, ESP-NOW, LoRa, cartão SD e o
+> monitoramento local em segundo plano são ideias de produto para depois da
+> apresentação. Não entram no APK de TCC, na demonstração, nos critérios de
+> conclusão nem na lista de pendências da banca.
+
 As seções marcadas **[campo]** são conhecimento do produtor. As **[inferência]**
 são conclusões técnicas — e caem junto se a premissa cair. As **[medido]** são
 contas feitas aqui, com a fórmula e os parâmetros à vista, para poderem ser
@@ -815,6 +820,205 @@ O módulo de bolso deixa de precisar de placa com visor: qualquer ESP32 + LoRa
 hub**, onde o visor ajuda a diagnosticar sem computador.
 
 ---
+
+## Evolução pós-TCC — hub local com tela e comandos (21/10/2026)
+
+Esta seção consolida a evolução discutida depois do plano original. A ideia é
+instalar dentro da casa uma central dedicada que continue útil quando a
+internet da propriedade cair.
+
+### Arquitetura proposta
+
+```text
+ [ESP da estufa 1] --\
+ [ESP da estufa 2] ---- ESP-NOW e/ou LoRa ---> [HUB NA CASA]
+ [ESP da estufa N] --/                           | tela touch
+                                                  | buzzer
+                                                  | cartão SD
+                                                  | Wi-Fi local
+                                                  +----> nuvem, quando disponível
+                                                  +----> app, pela rede local
+```
+
+O hub passa a ser a fonte local consolidada: recebe as leituras, identifica
+cada `idHardware`, vigia o silêncio de cada aparelho, guarda o histórico e
+encaminha dados e comandos. A estufa continua sendo *edge-first*: sensores,
+botões, proteção e buzzer funcionam mesmo que o hub desapareça.
+
+### ESP-NOW e LoRa não têm o mesmo papel
+
+Para a perna curta, normalmente 10–50 m na propriedade, **ESP-NOW deve ser a
+primeira tentativa**: já existe rádio 2,4 GHz no ESP32, tem resposta rápida e
+não exige módulo em cada nó. LoRa fica para distância maior, obstáculos que
+reprovarem o teste de ESP-NOW ou a perna de quilômetros até o produtor.
+
+Os dois podem coexistir no hub, mas não devem ser acrescentados ao mesmo tempo
+sem necessidade medida. Cada transporte aumenta pareamento, diagnóstico,
+testes e modos de falha.
+
+Restrição importante do ESP-NOW: quando o hub está conectado ao roteador, o
+rádio normalmente precisa usar o **mesmo canal Wi-Fi**. Se o roteador escolher
+outro canal automaticamente, os nós podem perder o hub. A implantação deve
+fixar o canal de 2,4 GHz ou implementar descoberta e recuperação de canal. Isso
+precisa ser testado com o roteador real, inclusive depois de reiniciá-lo.
+
+### Hardware recomendado para o hub
+
+- ESP32-S3 com PSRAM, para tela e interface LVGL com folga;
+- tela touch de aproximadamente 4,3 ou 5 polegadas;
+- microSD em FAT32 para fila e histórico local;
+- buzzer próprio, distinto dos buzzers das estufas;
+- Wi-Fi 2,4 GHz para o roteador da casa e para a API local;
+- ESP-NOW no mesmo rádio, respeitando a restrição de canal;
+- módulo LoRa 915 MHz somente se o ensaio de alcance justificar;
+- RTC opcional com bateria para preservar horário durante falta de internet;
+- pequeno nobreak/bateria para **hub e roteador**.
+
+Tela, rádio LoRa e SD podem disputar SPI e GPIO. A placa só deve ser escolhida
+depois de conferir o mapa completo de pinos; comprar uma tela e uma placa
+separadamente sem essa conferência repete o problema de colisão já documentado
+neste arquivo.
+
+### Interface: parecida com o app, mas deliberadamente menor
+
+O hub não deve copiar o aplicativo inteiro. A interface presencial cobre apenas
+consulta rápida, comandos essenciais e diagnóstico:
+
+**Tela inicial**
+
+- cartões das estufas;
+- nome e estado por cor;
+- temperatura e umidade atuais;
+- `NORMAL`, `ALERTA` ou `SEM SINAL`;
+- tempo desde a última leitura;
+- ícones de rádio, Wi-Fi, nuvem, SD e pendências.
+
+**Detalhe de uma estufa**
+
+- leitura e ajuste de temperatura/umidade;
+- botões `−` e `+`;
+- `Aplicar` com confirmação;
+- `Silenciar buzzer`;
+- horário da última leitura, sinal do rádio e comandos pendentes.
+
+**Diagnóstico do hub**
+
+- internet disponível ou indisponível;
+- qualidade do Wi-Fi e do enlace de cada nó;
+- espaço e estado do cartão;
+- leituras aguardando envio;
+- alimentação principal/bateria, se houver medição real.
+
+LVGL é o caminho previsto para uma interface nativa no ESP32-S3. Uma alternativa
+mais simples de software é deixar o hub sem tela sofisticada e usar um tablet
+Android como painel, mas isso cria dois equipamentos e mantém dependência do
+Android. Para uma caixa única e dedicada, ESP32-S3 + LVGL é a direção preferida.
+
+### Comandos precisam de confirmação, não apenas de transmissão
+
+Para ajustar uma estufa pelo hub, o rádio passa a ser bidirecional:
+
+```text
+Hub -> nó: comando com id, sequência e autenticação
+nó  -> hub: recebido
+nó aplica localmente
+nó  -> hub: aplicado, com valor efetivo
+```
+
+A tela deve distinguir `Enviando`, `Recebido`, `Aplicado` e `Falhou/sem
+resposta`. Mostrar o novo ajuste antes da confirmação repetiria o erro já
+evitado no app: um servidor ou hub disponível não prova que o aparelho obedeceu.
+
+Cada comando precisa de:
+
+- `idComando` único e `idHardware` completo;
+- número de sequência/nonce contra repetição;
+- valor e timestamp de origem;
+- autenticação com chave de rádio própria do nó;
+- prazo de validade;
+- confirmação idempotente, para retransmitir sem aplicar duas vezes.
+
+Comandos críticos, principalmente silenciar buzzer, exigem confirmação visual.
+O nó continua tendo a última palavra sobre limites seguros; o hub não pode
+ordenar valores que o firmware local recusaria.
+
+### Cartão SD: fila durável e histórico local
+
+O fluxo seguro é `receber -> validar -> gravar -> tentar enviar -> confirmar`.
+Uma linha só pode ser marcada como enviada depois da resposta da nuvem. Quando
+a internet voltar, o hub faz *backfill* em ordem cronológica.
+
+O servidor deve aceitar chave idempotente por aparelho, sequência e timestamp,
+para reenviar o mesmo arquivo sem duplicar o banco. Queda de energia durante uma
+escrita não pode corromper toda a fila: usar registros anexados, CRC e rotação
+de arquivos, nunca reescrever um JSON grande inteiro.
+
+### Alarmes quando a internet cair
+
+Sem internet, o hub ainda pode:
+
+- tocar seu buzzer;
+- mostrar qual estufa alarmou;
+- detectar uma estufa silenciosa pelo tempo desde a última leitura;
+- guardar o episódio no SD;
+- atender o app por uma API local;
+- enviar tudo para a nuvem quando a conexão voltar.
+
+Para o celular gerar som sem internet, ele precisa estar no Wi-Fi da casa e
+monitorar o hub. Com o app em segundo plano, isso exige um serviço persistente
+do Android e uma notificação fixa. Essa melhoria também está especificada em
+`NOTIFICACOES_PUSH.md`, marcada como pós-TCC.
+
+O hub não cria push FCM sem internet. Ele substitui esse caminho pelo buzzer e
+pela tela local; o app próximo pode criar uma notificação local. Um celular
+longe da propriedade e sem internet permanece inalcançável.
+
+### Energia e interpretação correta do silêncio
+
+O hub deve ter energia de reserva, preferencialmente junto do roteador. Se os
+dois morrerem com a rede elétrica, não existe central capaz de tocar ou
+registrar a queda naquele momento.
+
+Mesmo com bateria, silêncio de um nó não revela automaticamente a causa: pode
+ser energia da estufa, rádio, travamento ou interferência. A interface deve
+dizer `SEM SINAL — verifique energia ou comunicação`, salvo se existir sensor
+de tensão real no nó.
+
+### Cadastro e segurança
+
+- Pareamento exige presença física no nó e no hub;
+- cada nó possui chave de rádio própria, separada da chave HTTP;
+- o hub nunca aceita um endereço/IP ou quadro como se fosse outro
+  `idHardware`;
+- o primeiro cadastro mostra o ID completo na tela para confirmação;
+- remover um nó exige confirmação e não apaga silenciosamente seu histórico;
+- comandos e leituras de rádio precisam de MIC/autenticação e proteção contra
+  repetição.
+
+### Sequência recomendada de protótipos
+
+1. Hub sem tela, dois nós por ESP-NOW e log serial.
+2. Medir alcance, perda e recuperação após reinício/troca de canal do roteador.
+3. Adicionar buzzer e watchdog individual por nó.
+4. Adicionar SD, retirar internet por uma hora e provar o reenvio sem duplicar.
+5. Criar API local e testar o app consultando somente o hub.
+6. Adicionar tela touch com lista e detalhes somente para leitura.
+7. Implementar comandos com confirmação e idempotência.
+8. Testar nobreak, reinício, cartão ausente/corrompido e sete dias contínuos.
+9. Somente então testar LoRa onde ESP-NOW realmente não alcançar.
+
+### Critérios mínimos antes de chamar de produto
+
+- duas ou mais estufas nunca misturam identidade, leitura ou comando;
+- uma estufa desligada fica `SEM SINAL` sem derrubar as demais;
+- reiniciar hub, roteador ou nó recupera a comunicação sozinho;
+- comando retransmitido não é aplicado duas vezes;
+- uma hora sem internet é recuperada integralmente e sem linhas duplicadas;
+- cartão cheio/ausente aparece na tela e não trava o monitoramento;
+- queda de internet não impede alarme local;
+- queda de energia é coberta pelo tempo especificado do nobreak;
+- tela deixa claro se o dado é atual, antigo, local, por rádio ou já enviado à
+  nuvem.
 
 ## O que este documento não cobre
 

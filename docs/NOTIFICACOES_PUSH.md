@@ -351,6 +351,113 @@ celular não tiver dados móveis, ninguém acorda o produtor remotamente — pus
 exige internet no celular, e o aparelho morreu junto. A saída real é um hub com
 bateria e canal fora da banda (GSM/SMS); ver `VIABILIDADE_COMERCIAL.md`.
 
+## Pós-TCC: aviso local de aparelho sem comunicação (não implementado)
+
+> **FORA DO ESCOPO DO TCC.** Esta seção registra uma possibilidade de produto
+> para depois da apresentação. Ela não é requisito, entrega, pendência nem parte
+> da demonstração do TCC. O APK de TCC deve permanecer sem o serviço persistente
+> descrito abaixo; uma implementação futura entra apenas na edição completa.
+
+O watchdog da nuvem cobre o produtor à distância, mas o FCM precisa de internet
+no celular. Há um segundo caminho útil para propriedades com internet instável:
+quando o celular estiver no **mesmo Wi-Fi do ESP32**, o próprio app pode observar
+que o aparelho parou de responder e publicar uma **notificação local**, sem FCM.
+
+Isso não é uma mensagem enviada pelo ESP ao Android. É o celular que consulta o
+ESP periodicamente e conclui, pela ausência de respostas, que há um problema.
+Como silêncio não revela a causa, o texto deve continuar honesto:
+
+> **Estufa sem comunicação**
+> Não recebo dados há 3 minutos. Pode ser falta de energia ou falha no Wi-Fi da
+> propriedade. Verifique a estufa.
+
+### Comportamento esperado
+
+- Reutilizar a regra visual de `SEM SINAL`: disparar depois de **3 minutos sem
+  leitura válida**, nunca na primeira falha isolada.
+- Gerar somente **um aviso por episódio**. Não repetir a cada sondagem.
+- Ao voltar a receber leituras, encerrar o episódio e permitir um novo aviso em
+  uma queda futura. O aviso de retorno deve ser silencioso ou opcional.
+- Respeitar a preferência global existente de `semComunicacao`: `Notificar`
+  decide se a mensagem existe e `Tocar` decide se usa o canal de alarme.
+- Identificar a estufa no título e abrir a estufa correta ao tocar na
+  notificação.
+- Não disparar o aviso local e o push para o mesmo episódio quando os dois
+  caminhos estiverem disponíveis. A deduplicação pode usar
+  `idHardware + tipoEvento + inicioDoEpisodio`.
+- Manter a sirene física independente. Desligar notificações no celular nunca
+  pode desligar o buzzer do ESP32.
+
+### Execução em segundo plano no Android
+
+Timers do Flutter não são confiáveis depois que o app vai para segundo plano.
+Para vigiar a rede local continuamente, a implementação deve usar um **serviço
+em primeiro plano do Android** (*foreground service*) com notificação permanente,
+por exemplo `Sentinela monitorando 2 estufas`.
+
+Requisitos e limites:
+
+- O serviço deve ser opt-in: o produtor liga `Monitoramento local em segundo
+  plano` e vê claramente o custo de bateria.
+- Usar o tipo e as permissões de serviço compatíveis com a versão-alvo do
+  Android; validar especialmente Android 13, 14 e Samsung/One UI.
+- Solicitar que o usuário retire o Sentinela da otimização de bateria apenas
+  com explicação e link para a tela do sistema. Não presumir que a exceção foi
+  concedida.
+- Se o usuário usar **Forçar parada**, o Android interrompe o serviço; o app
+  deve explicar essa limitação. Reinício automático após boot é uma decisão à
+  parte e só deve existir se o usuário tiver ativado o monitoramento.
+- A sondagem deve ser econômica e não competir com o polling da tela. Enquanto
+  a tela estiver aberta, compartilhar o estado de `MonitorEstufas`; em segundo
+  plano, consultar apenas os aparelhos cadastrados cujo endereço seja local.
+- Endereço `.local` pode falhar em implementações Android em segundo plano.
+  Guardar o último IP confirmado como alternativa, sem permitir que ele adote
+  outro `idHardware`.
+
+### Som, vibração e canal
+
+O aviso local deve usar o mesmo conceito do push `semComunicacao`: alta
+prioridade, vibração e, quando `Tocar` estiver ligado, o som
+`alarme_estufa`. O canal deve ser separado do canal de incêndio.
+
+O Android congela som e importância na primeira criação do canal. Se o canal
+existente não puder ser reutilizado com exatamente a mesma finalidade, criar
+um id versionado, por exemplo `sentinela_sem_comunicacao_local_v1`. Alterar o
+som depois exige um novo sufixo. O usuário ainda pode silenciar o canal nas
+configurações do sistema; o app não pode contornar essa escolha.
+
+### O que este recurso não resolve
+
+- Se o **roteador desligar**, o celular perde a rede que o ligava ao ESP. Ele
+  ainda pode avisar que perdeu comunicação, mas não sabe se caiu o roteador, a
+  energia do ESP ou ambos.
+- Se o **ESP desligar antes de uma leitura**, ele não consegue enviar uma causa.
+- Se o celular estiver fora da propriedade e sem internet, não existe caminho
+  até ele. Para atravessar esse cenário é necessário hardware com energia de
+  reserva e outro meio físico, como LoRa ou GSM onde houver cobertura.
+- Um nobreak para **ESP + roteador** aumenta a disponibilidade do caminho local,
+  mas não substitui sensor de tensão quando for necessário distinguir falta de
+  energia de falta de internet.
+
+### Critérios de aceite e testes
+
+1. Com internet desligada, mas celular e ESP no mesmo Wi-Fi, as leituras locais
+   continuam e nenhum aviso falso é gerado.
+2. Desligando o ESP ou o roteador, surge uma única notificação após 3 minutos,
+   com nome correto, som e vibração conforme as preferências.
+3. App em segundo plano e tela bloqueada continuam sendo monitorados por pelo
+   menos 30 minutos nos Androids de teste.
+4. Ao restabelecer o aparelho, o episódio fecha; uma segunda queda volta a
+   notificar.
+5. Push e aviso local simultâneos não criam duas notificações do mesmo evento.
+6. Duas estufas cadastradas são vigiadas separadamente; a queda de uma não muda
+   o estado nem a notificação da outra.
+7. IP reaproveitado pelo DHCP para outro ESP é recusado pela conferência de
+   `idHardware`.
+8. `Forçar parada`, modo economia de bateria, reinício do celular e canal
+   silenciado têm comportamento documentado e não são apresentados como
+   garantias que o Android não oferece.
+
 ## Dependências e custos
 
 - **Projeto Firebase** (grátis) + `google-services.json` no app.
@@ -433,6 +540,10 @@ bateria e canal fora da banda (GSM/SMS); ver `VIABILIDADE_COMERCIAL.md`.
    o som longo em volume de alarme resolve a maior parte do problema.
 7. **Ajustes finos:** link para abrir a estufa certa no app, eventual exceção
    de preferência por estufa.
+8. **Pós-TCC — fora do escopo:** watchdog local em segundo plano. Não entra no
+   APK, na apresentação nem nos critérios de conclusão do TCC. Se for
+   implementado depois, fica apenas na edição completa do app. A especificação
+   está em "Pós-TCC: aviso local de aparelho sem comunicação".
 
 ## Como ligar o push (configuração)
 
@@ -464,10 +575,11 @@ registrou o token (abrir o app com internet e a estufa cadastrada).
 
 ## Estado atual no app
 
-**Tudo o que este documento propõe está implementado** (24/07/2026), incluindo o
-que ele mesmo listava como pendente: a tela de preferências, o som e a vibração
-locais e a camada de push (FCM) com o app fechado — esta última **confirmada em
-campo**.
+**A arquitetura push original está implementada** (24/07/2026), incluindo a
+tela de preferências, o som e a vibração e a camada FCM com o app fechado — esta
+última **confirmada em campo**. O plano posterior de watchdog local em segundo
+plano, acrescentado em 21/10/2026, ainda não está implementado e está
+explicitamente **fora do escopo do TCC**.
 
 Além do proposto, foram acrescentados: som em **volume de alarme** com opção de
 furar o "Não perturbe" (canal `sentinela_critico_v3`), o **watchdog de silêncio**
