@@ -91,10 +91,6 @@ class PreferenciasNotificacao {
 
   /// Padrao ligado: e mais seguro o produtor receber de mais do que de menos,
   /// e ele desliga o que nao quiser.
-  ///
-  /// A excecao e o **toque** do ajuste agendado: alarme e para problema, e um
-  /// lembrete que o proprio produtor marcou nao e problema. Nasce como aviso
-  /// comum — quem quiser ser acordado por ele liga o interruptor.
   static OpcaoEvento padraoDe(EventoNotificacao evento) =>
       const OpcaoEvento(notificar: true, tocarVibrar: true);
 

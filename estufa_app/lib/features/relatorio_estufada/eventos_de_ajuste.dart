@@ -7,9 +7,8 @@ import '../../models/historico_leitura_entity.dart';
 /// errava de dois jeitos (`AUDITORIA.md`, D7):
 ///
 /// - **mudanca feita nos botoes do aparelho nao aparecia** — nem a feita por
-///   outro celular, nem a do agendamento, nem nada que acontecesse com o app
-///   fechado. O relatorio contava a historia do app, e o aparelho e a fonte da
-///   verdade;
+///   outro celular, nem nada que acontecesse com o app fechado. O relatorio
+///   contava a historia do app, e o aparelho e a fonte da verdade;
 /// - **mexer no app com pausas virava uma rajada** — "75", "76", "80", "85" no
 ///   mesmo minuto, uma linha por pausa de 1 s do produtor.
 ///

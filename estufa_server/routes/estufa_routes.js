@@ -9,8 +9,8 @@ const { criarRotasChaves } = require('./rotas_chaves');
 
 // Monta a API da estufa. Este arquivo nao tem regra de negocio: ele cria o
 // estado que as rotas dividem, liga os avisos e pendura cada grupo de rotas.
-// Cada grupo mora no seu proprio arquivo, para que "mexer no push" e "mexer no
-// agendamento" deixem de ser a mesma edicao.
+// Cada grupo mora no seu proprio arquivo, para que "mexer no push" e "mexer na
+// leitura" deixem de ser a mesma edicao.
 function createEstufaRouter({
   simulador,
   db,

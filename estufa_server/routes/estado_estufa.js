@@ -163,12 +163,6 @@ function criarEstadoEstufa({ db, simulador }) {
     });
   }
 
-  // O alvo vigente, para o agendamento resolver o "+10 F" no instante de
-  // aplicar e nao no de agendar.
-  function configVigente(idHardware) {
-    return dispositivosAoVivo.get(idHardware)?.config;
-  }
-
   function ultimoContatoAoVivoMs(idHardware) {
     return dispositivosAoVivo.get(idHardware)?.recebidoMs ?? 0;
   }
@@ -188,7 +182,6 @@ function criarEstadoEstufa({ db, simulador }) {
     configComPendente,
     lerDispositivo,
     registrarLeituraAoVivo,
-    configVigente,
     ultimoContatoAoVivoMs,
     ultimaPersistida,
     marcarPersistida,

@@ -191,7 +191,6 @@ class MenuEstufa extends StatelessWidget {
 
 /// O que o menu desenha. Só valores — nada aqui chama de volta a tela.
 class DadosMenuEstufa {
-  final int idEstufa;
   final String nomeEstufa;
   final String ipEstufa;
   final String? tokenAcesso;
@@ -200,10 +199,6 @@ class DadosMenuEstufa {
   /// conhece o `ApiService`, e a estufa pode ter sido cadastrada sem o id, que
   /// só aparece depois da primeira conversa na rede local.
   final String? idHardware;
-
-  /// Ajustes em vigor, que a tela de agendamento usa como ponto de partida.
-  final double temperaturaAjuste;
-  final double umidadeAjuste;
 
   /// Estado da sirene como o aparelho reporta. `null` = ainda não informou.
   final bool? buzzerAparelhoAtivo;
@@ -215,23 +210,13 @@ class DadosMenuEstufa {
   /// não quando a tela desenha.
   final bool? vigiada;
 
-  /// Os valores para os quais "Reiniciar ajustes" volta o aparelho. Ficaram na
-  /// tela, que é quem manda o comando; aqui só aparecem na legenda do item.
-  final double temperaturaNovaEstufada;
-  final double umidadeNovaEstufada;
-
   const DadosMenuEstufa({
-    required this.idEstufa,
     required this.nomeEstufa,
     required this.ipEstufa,
     required this.tokenAcesso,
     required this.idHardware,
-    required this.temperaturaAjuste,
-    required this.umidadeAjuste,
     required this.buzzerAparelhoAtivo,
     required this.vigiada,
-    required this.temperaturaNovaEstufada,
-    required this.umidadeNovaEstufada,
   });
 }
 
@@ -243,18 +228,14 @@ class AcoesMenuEstufa {
   /// Reconfigura o aparelho e grava a estufa com o endereço/chave novos.
   final VoidCallback aoConfigurarAparelho;
 
-  /// Troca a chave do aparelho: os celulares que receberam o QR antigo perdem
-  /// o controle, e este continua.
+  /// Troca a chave do aparelho: os celulares que receberam a chave antiga
+  /// perdem o controle, e este continua.
   final VoidCallback aoTirarAcessoDosOutros;
-
-  /// Confirma e devolve temperatura e umidade aos valores de nova estufada.
-  final VoidCallback aoReiniciarAjustes;
 
   const AcoesMenuEstufa({
     required this.aoAbrirDetalhesConexao,
     required this.aoConfigurarAparelho,
     required this.aoTirarAcessoDosOutros,
-    required this.aoReiniciarAjustes,
   });
 }
 

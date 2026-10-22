@@ -229,7 +229,6 @@ final _acoesInertes = AcoesMenuEstufa(
   aoAbrirDetalhesConexao: () {},
   aoConfigurarAparelho: () {},
   aoTirarAcessoDosOutros: () {},
-  aoReiniciarAjustes: () {},
 );
 
 DadosMenuEstufa _dados({
@@ -237,17 +236,12 @@ DadosMenuEstufa _dados({
   bool? vigiada,
   bool? buzzerAparelhoAtivo,
 }) => DadosMenuEstufa(
-  idEstufa: 7,
   nomeEstufa: 'Estufa do Fundo',
   ipEstufa: '192.168.0.50',
   tokenAcesso: 'chave-de-teste',
   idHardware: idHardware,
-  temperaturaAjuste: 130,
-  umidadeAjuste: 45,
   buzzerAparelhoAtivo: buzzerAparelhoAtivo,
   vigiada: vigiada,
-  temperaturaNovaEstufada: 95,
-  umidadeNovaEstufada: 60,
 );
 
 final _dadosBase = _dados();

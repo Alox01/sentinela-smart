@@ -74,10 +74,8 @@ class _EstufaFormScreenState extends State<EstufaFormScreen> {
   ///
   /// Duas perguntas, porque uma so nao basta. O endereco e texto: o mesmo
   /// aparelho pode estar cadastrado como `192.168.0.50` num celular e como
-  /// `sentinela-215788.local` noutro, e comparar texto nao acusa. O convite por
-  /// QR tornou isso comum, porque o segundo celular recebe o endereco tal como o
-  /// primeiro escreveu. Ja o `idHardware` e identidade de verdade — vem do MAC
-  /// do chip e nao muda.
+  /// `sentinela-215788.local` noutro, e comparar texto nao acusa. Ja o
+  /// `idHardware` e identidade de verdade — vem do MAC do chip e nao muda.
   ///
   /// A propria estufa em edicao nao conta.
   Future<({ModeloEstufa estufa, bool mesmoAparelho})?> _conflitoDeCadastro(

@@ -6,23 +6,16 @@ import '../../../services/identidade_aparelho.dart';
 ///
 /// ## Por que existe
 ///
-/// Duas portas levam ao mesmo lugar, e as duas mexem no mesmo par de campos:
-///
-/// - o **modo de configuracao** (`UsoDaConfiguracao.atualizacao`), quando o
-///   produtor gira a chave no proprio aparelho;
-/// - o **convite** de quem ja tem a chave nova, quando a estufa daquele
-///   aparelho ja esta cadastrada neste celular.
-///
-/// Cada porta calculando o proprio "mudou?" era o caminho curto para uma gravar
-/// o que a outra recusa — e o campo em jogo e a chave, que gravada errada tira o
-/// acesso do produtor ate ele ir ate o aparelho.
+/// Endereco e chave de uma estufa ja cadastrada mudam por um caminho so: o
+/// **modo de configuracao** (`UsoDaConfiguracao`), com o produtor na frente do
+/// aparelho. Ate 22/10/2026 havia um segundo — o convite por QR Code —, e cada
+/// porta calculando o proprio "mudou?" era o caminho curto para uma gravar o
+/// que a outra recusa. O campo em jogo e a chave, que gravada errada tira o
+/// acesso do produtor ate ele ir ate o aparelho; a conta mora aqui, uma vez so.
 ///
 /// ## O que esta classe NAO faz
 ///
-/// Nao pergunta nada. Confirmar e decisao de quem chama, porque as duas portas
-/// chegam com autoridade diferente: no modo de configuracao o produtor acabou de
-/// ler a chave do aparelho, com ele na mao; pelo convite, a chave vem de fora,
-/// e ai a confirmacao e obrigatoria.
+/// Nao pergunta nada, e nao grava sozinha. Confirmar e decisao de quem chama.
 class AtualizacaoDeEstufa {
   final int id;
 

@@ -145,7 +145,7 @@ class RelatorioEstufadaRepository {
   /// As leituras correspondentes continuam na nuvem, orfas — nenhuma tela as
   /// alcanca, porque toda consulta de historico parte de um ciclo, e o ciclo so
   /// existe aqui. E escolha, nao esquecimento: apagar na nuvem apagaria a copia
-  /// de **todo mundo**, e o acesso e compartilhavel por QR Code. Ver
+  /// de **todo mundo**, e mais de um celular pode comandar a mesma estufa. Ver
   /// `docs/PLANO_BANCO_DADOS.md`, secao "A estufada e do celular".
   Future<void> apagarCiclo(int cicloId) async {
     await _isar.apagarCiclo(cicloId);

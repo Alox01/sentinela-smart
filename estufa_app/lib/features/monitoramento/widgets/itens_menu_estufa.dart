@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 /// onde mais defeito de campo apareceu nesta semana — cada pedaço que só lê um
 /// valor sai daqui em diante.
 ///
-/// O que continua na tela é o que mexe em estado: silenciar avisos, agendar,
-/// reconfigurar.
+/// O que continua na tela é o que mexe em estado: silenciar avisos e
+/// reconfigurar o aparelho.
 
 /// Cabeçalho de seção do menu.
 class TituloMenu extends StatelessWidget {

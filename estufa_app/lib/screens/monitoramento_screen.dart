@@ -59,8 +59,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   // colados no grafico quando varios eventos acontecem em sequencia.
   static const int _cooldownEventoMs = 3 * 60 * 1000;
   // Valores iniciais de uma nova estufada (inicio da amarelacao). Ajustaveis.
-  static const double _tempNovaEstufada = 90.0;
-  static const double _umidNovaEstufada = 100.0;
 
   double temperatura = 0.0;
   String avisoEmergencia = '';
@@ -652,8 +650,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
     if (dados == null || !mounted) return;
 
-    // A conta do "mudou?" e a gravacao sao as mesmas do convite de um aparelho
-    // ja cadastrado; ver `AtualizacaoDeEstufa`.
+    // A conta do "mudou?" e a gravacao moram em `AtualizacaoDeEstufa`.
     final mudanca = AtualizacaoDeEstufa.entre(
       id: widget.idEstufa,
       nome: _nome,
@@ -686,32 +683,26 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     Navigator.of(context).pop();
   }
 
-  /// Monta a gaveta. Os valores vao num objeto e as tres acoes noutro: o menu
-  /// depende de doze coisas desta tela, e doze posicoes soltas no construtor
-  /// eram o convite a trocar dois `String?` de lugar sem o compilador reclamar.
-  /// O porque da divisao esta em `menu_estufa.dart`.
+  /// Monta a gaveta. Os valores vao num objeto e as acoes noutro: o menu
+  /// depende de varias coisas desta tela, e uma fila de posicoes soltas no
+  /// construtor deixava trocar dois `String?` de lugar sem o compilador
+  /// reclamar. O porque da divisao esta em `menu_estufa.dart`.
   Widget _buildMenuEstufa() {
     final idHw = _idHardware ?? api.idHardware;
     return MenuEstufa(
       dados: DadosMenuEstufa(
-        idEstufa: widget.idEstufa,
         nomeEstufa: _nome,
         ipEstufa: _ip,
         tokenAcesso: _token,
         idHardware: idHw,
-        temperaturaAjuste: tempAjuste,
-        umidadeAjuste: umidAjuste,
         buzzerAparelhoAtivo: _buzzerAparelhoAtivo,
         vigiada: PushNotificationService.instance.vigiada(idHw?.trim()),
-        temperaturaNovaEstufada: _tempNovaEstufada,
-        umidadeNovaEstufada: _umidNovaEstufada,
       ),
       acoes: AcoesMenuEstufa(
         aoAbrirDetalhesConexao: () => unawaited(_mostrarDetalhesConexao()),
         aoConfigurarAparelho: () => unawaited(_reconfigurarAparelho()),
         aoTirarAcessoDosOutros: () =>
             unawaited(_reconfigurarAparelho(uso: UsoDaConfiguracao.revogacao)),
-        aoReiniciarAjustes: () => unawaited(_prepararNovaEstufada()),
       ),
     );
   }
@@ -865,62 +856,6 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
   Future<void> _onPullRefresh() async {
     await _monitor.atualizarAgora();
     await _sincronizarPendenciasSeNecessario(forcar: true);
-  }
-
-  Future<void> _prepararNovaEstufada() async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text(
-          'Reiniciar ajustes do aparelho',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          'Reinicia os valores de temperatura e umidade para '
-          '${_tempNovaEstufada.toStringAsFixed(0)}°F e '
-          '${_umidNovaEstufada.toStringAsFixed(0)}%. Deseja continuar?',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reiniciar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmar != true) return;
-
-    final tempAnterior = tempAjuste;
-    final umidAnterior = umidAjuste;
-    final agoraMs = DateTime.now().millisecondsSinceEpoch;
-    _detectorOscilacao.registrarMudancaAjusteTemperatura(
-      agoraMs,
-      leitura: temperatura,
-      ajusteAnterior: tempAnterior,
-      ajusteNovo: _tempNovaEstufada,
-    );
-    _detectorOscilacao.registrarMudancaAjusteUmidade(
-      agoraMs,
-      leitura: umidade,
-      ajusteAnterior: umidAnterior,
-      ajusteNovo: _umidNovaEstufada,
-    );
-    setState(() {
-      tempAjuste = _tempNovaEstufada;
-      umidAjuste = _umidNovaEstufada;
-      _tempAjustePendente = _tempNovaEstufada;
-      _umidAjustePendente = _umidNovaEstufada;
-    });
-    // Usa o caminho normal de comando: a queda para <100 dispara a mesma
-    // sugestao de "quer terminar a estufada?" quando ha um ciclo ativo.
-    _agendarEnvioTemperatura(_tempNovaEstufada, tempAnterior);
-    _agendarEnvioUmidade(_umidNovaEstufada, umidAnterior);
   }
 
   void _abrirRelatorioEstufada() {
