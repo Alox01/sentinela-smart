@@ -328,6 +328,7 @@ int folgaAcomodacao = 0;
 // deve voltar a valer.
 Preferences prefs;
 bool configSuja = false;
+uint32_t configRevisao = 0;
 unsigned long ultimoSalvamentoConfig = 0;
 const unsigned long INTERVALO_SALVAR_CONFIG_MS = 5000;
 
@@ -580,14 +581,17 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // Id unico do aparelho a partir do MAC do chip (6 hex do final).
+  // Identidade usa o MAC inteiro. Usar so os 6 hex finais causou uma colisao
+  // real entre dois ESP32 em propriedades diferentes: ambos viraram 215788,
+  // compartilharam a mesma linha na nuvem e a segunda chave recebeu HTTP 401.
   uint64_t chipMac = ESP.getEfuseMac();
-  char idBuf[16];
-  snprintf(idBuf, sizeof(idBuf), "ESP32_%06X", (unsigned)(chipMac & 0xFFFFFF));
+  char idBuf[20];
+  snprintf(idBuf, sizeof(idBuf), "ESP32_%012llX",
+           (unsigned long long)(chipMac & 0xFFFFFFFFFFFFULL));
   idHardware = idBuf;
-  char nomeLocalBuf[24];
-  snprintf(nomeLocalBuf, sizeof(nomeLocalBuf), "sentinela-%06x",
-           (unsigned)(chipMac & 0xFFFFFF));
+  char nomeLocalBuf[28];
+  snprintf(nomeLocalBuf, sizeof(nomeLocalBuf), "sentinela-%012llx",
+           (unsigned long long)(chipMac & 0xFFFFFFFFFFFFULL));
   nomeLocal = nomeLocalBuf;
   Serial.print("ID do aparelho: ");
   Serial.println(idHardware);
@@ -1663,6 +1667,7 @@ void definirTemperaturaAlvo(int novoAlvo) {
 
   temperaturaAlvoF = novoAlvo;
   configSuja = true;
+  configRevisao++;
   atualizarEstadoTemperatura();
 }
 
@@ -1676,6 +1681,7 @@ void definirUmidadeAlvo(int novoAlvo) {
 
   umidadeAlvo = novoAlvo;
   configSuja = true;
+  configRevisao++;
 }
 
 // Ajusta o alvo DO QUE O VISOR ESTA MOSTRANDO. Antes, entrar em ajuste forcava
@@ -1684,17 +1690,26 @@ void definirUmidadeAlvo(int novoAlvo) {
 // tinha errado o botao. Mexer no que esta na frente dispensa dizer qual dos
 // dois o botao muda.
 void ajustarAlvo(int passo) {
-  if (mostrandoUmidade) {
+  travarEstado();
+  const bool ajustandoUmidade = mostrandoUmidade;
+  int alvoAtualizado;
+  if (ajustandoUmidade) {
     definirUmidadeAlvo(umidadeAlvo + passo);
     umidTimestamp = nowMs();  // ajuste fisico participa do LWW
-    Serial.print("Umidade desejada: ");
-    Serial.println(umidadeAlvo);
+    configSuja = true;
+    configRevisao++;
+    alvoAtualizado = umidadeAlvo;
   } else {
     definirTemperaturaAlvo(temperaturaAlvoF + passo);
     tempTimestamp = nowMs();
-    Serial.print("Temperatura desejada: ");
-    Serial.println(temperaturaAlvoF);
+    configSuja = true;
+    configRevisao++;
+    alvoAtualizado = temperaturaAlvoF;
   }
+  soltarEstado();
+  Serial.print(ajustandoUmidade ? "Umidade desejada: "
+                                : "Temperatura desejada: ");
+  Serial.println(alvoAtualizado);
   ultimoTempoAjuste = millis();
   displayAjusteLigado = true;
   ultimoPiscaAjuste = millis();
@@ -1740,13 +1755,12 @@ void carregarConfigPersistida() {
   // e trocado sozinho: a troca automatica deixaria app e nuvem sem a chave nova
   // se o registro falhasse, e o produtor perderia o acesso ao que funcionava.
   // Trocar e sempre ato deliberado, no modo de configuracao.
-  if (tokenAparelho.length() == 0
-      || tokenAparelho == "COLE_AQUI_O_MESMO_TOKEN_DO_APP") {
+  const bool precisaGerarChave =
+      tokenAparelho.length() == 0
+      || tokenAparelho == "COLE_AQUI_O_MESMO_TOKEN_DO_APP";
+  if (precisaGerarChave) {
     tokenAparelho = gerarChaveAleatoria();
-    prefs.putString("token", tokenAparelho);
-    prefs.putBool("chaveReg", false);
     chaveRegistradaNaNuvem = false;
-    Serial.println("Chave de acesso gerada (primeira vez).");
   }
   ipFixo = prefs.getString("ipFixo", "");
   gatewayFixo = prefs.getString("gateway", "");
@@ -1754,6 +1768,17 @@ void carregarConfigPersistida() {
   gatewayAprendido = prefs.getString("gwDhcp", "");
   mascaraAprendida = prefs.getString("mascDhcp", "");
   prefs.end();
+
+  // A namespace acima estava aberta como somente leitura. Gravar nela falha e
+  // fazia um aparelho novo gerar outra chave a cada reinicio. Reabre em escrita
+  // somente quando ha de fato uma chave nova para persistir.
+  if (precisaGerarChave) {
+    prefs.begin("sentinela", false);
+    prefs.putString("token", tokenAparelho);
+    prefs.putBool("chaveReg", false);
+    prefs.end();
+    Serial.println("Chave de acesso gerada e gravada (primeira vez).");
+  }
 
   Serial.print("Wi-Fi configurado: ");
   Serial.println(wifiSsid.length() > 0 ? wifiSsid : String("(nenhum)"));
@@ -1769,23 +1794,40 @@ void carregarConfigPersistida() {
 // ajuste por toque, e a NVS tem numero limitado de escritas - juntar as
 // mudancas numa so evita gastar a flash a toa.
 void salvarConfigSeNecessario() {
-  if (!configSuja) return;
+  travarEstado();
+  const bool precisaSalvar = configSuja;
+  soltarEstado();
+  if (!precisaSalvar) return;
   // Espera o produtor parar de mexer, nao terminar de ajustar. Durante o ajuste
   // ultimoTempoAjuste anda a cada toque e a cada repeticao, entao isto libera
   // 1,5 s depois da ULTIMA mudanca - com o visor ainda piscando.
   if (modoAjuste && millis() - ultimoTempoAjuste < ESPERA_APOS_ALTERACAO_MS) return;
   if (millis() - ultimoSalvamentoConfig < INTERVALO_SALVAR_CONFIG_MS) return;
 
+  // Fotografa o estado sob a tranca e solta antes da NVS, que e I/O lento.
+  // A revisao impede apagar uma alteracao que chegue enquanto a foto e gravada.
+  travarEstado();
+  const int tempParaSalvar = temperaturaAlvoF;
+  const int umidParaSalvar = umidadeAlvo;
+  const long long tempTsParaSalvar = tempTimestamp;
+  const long long umidTsParaSalvar = umidTimestamp;
+  const bool buzzerParaSalvar = buzzerTemperaturaAtivo;
+  const long long buzzerTsParaSalvar = buzzerTimestamp;
+  const uint32_t revisaoSalva = configRevisao;
+  soltarEstado();
+
   prefs.begin("sentinela", false);
-  prefs.putInt("tempAlvo", temperaturaAlvoF);
-  prefs.putInt("umidAlvo", umidadeAlvo);
-  prefs.putLong64("tempTs", tempTimestamp);
-  prefs.putLong64("umidTs", umidTimestamp);
-  prefs.putBool("buzzerAtivo", buzzerTemperaturaAtivo);
-  prefs.putLong64("buzzerTs", buzzerTimestamp);
+  prefs.putInt("tempAlvo", tempParaSalvar);
+  prefs.putInt("umidAlvo", umidParaSalvar);
+  prefs.putLong64("tempTs", tempTsParaSalvar);
+  prefs.putLong64("umidTs", umidTsParaSalvar);
+  prefs.putBool("buzzerAtivo", buzzerParaSalvar);
+  prefs.putLong64("buzzerTs", buzzerTsParaSalvar);
   prefs.end();
 
-  configSuja = false;
+  travarEstado();
+  if (configRevisao == revisaoSalva) configSuja = false;
+  soltarEstado();
   ultimoSalvamentoConfig = millis();
   Serial.println("Ajustes salvos na memoria");
 }
@@ -2082,7 +2124,9 @@ void sincronizarChaveNuvem() {
   // configuracao (presenca fisica) desfaz isso. Para de tentar para nao ficar
   // batendo na nuvem a cada ciclo.
   if (codigo == 409) {
+    travarEstado();
     chaveRegistradaNaNuvem = true;
+    soltarEstado();
     pedidoGravarChave = true;
     registrar(F("A nuvem ja tem outra chave para este aparelho."));
   }
@@ -2105,8 +2149,11 @@ void buscarComandosNuvem() {
   prepararConexaoNuvem(cliente, http);
   String url = String(CLOUD_URL) + "/comandos?idHardware=" + idHardware;
   if (!http.begin(cliente, url)) return;
-  if (tokenAparelho.length() > 0) {
-    http.addHeader("X-Device-Token", tokenAparelho);
+  travarEstado();
+  const String chaveDaBusca = tokenAparelho;
+  soltarEstado();
+  if (chaveDaBusca.length() > 0) {
+    http.addHeader("X-Device-Token", chaveDaBusca);
   }
 
   int codigo = http.GET();
@@ -2248,8 +2295,8 @@ void reativarAlarme() {
   ultimoTempoBuzzer = 0;
 }
 
-// Sirene fisica ligada agora? Incendio (nao silenciavel) ou temperatura fora
-// (silenciavel). Espelha a logica de atualizarSaidas().
+// Sirene fisica ligada agora? Incendio ou temperatura fora da faixa. Os dois
+// aceitam silencio temporario; fogo novo cancela o silencio em atualizarSaidas().
 bool alarmeAtivoAgora() {
   if (!alertaLuz && !alertaTemperatura) return false;
   // O silencio de 10 min cobre todos os alarmes, inclusive o fogo que ja estava
@@ -2382,7 +2429,7 @@ void handleSimple() {
   // rele da ventoinha.
   doc["ledControleLigado"] = ledControleLigado;
   // O estado REAL do rele, que e o que se quer ver em campo. Difere da linha
-  // acima quando o prazo de 30 s ainda nao venceu, ou quando ha fogo.
+  // acima quando a trava manual esta posta, ou quando ha fogo.
   doc["ventoinhaLigada"] = ventoinhaLigada;
   doc["ventoinhaBloqueada"] = ventoinhaBloqueada;
   doc["segundosAteDestravar"] = segundosAteDestravarVentoinha();
@@ -2436,6 +2483,8 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
     if (ts > tempTimestamp) {
       definirTemperaturaAlvo((int)round(entrada["temperaturaMeta"].as<float>()));
       tempTimestamp = ts;
+      configSuja = true;
+      configRevisao++;
       aplicadas.add("temperaturaMeta");
     } else {
       ignoradas.add("temperaturaMeta");
@@ -2446,9 +2495,10 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
   if (!entrada["umidadeMeta"].isNull()) {
     long long ts = entrada["umidTimestamp"].as<long long>();
     if (ts > umidTimestamp) {
-      umidadeAlvo = (int)round(entrada["umidadeMeta"].as<float>());
+      definirUmidadeAlvo((int)round(entrada["umidadeMeta"].as<float>()));
       umidTimestamp = ts;
       configSuja = true;
+      configRevisao++;
       aplicadas.add("umidadeMeta");
     } else {
       ignoradas.add("umidadeMeta");
@@ -2488,6 +2538,7 @@ void aplicarAjustes(JsonObjectConst entrada, JsonArray aplicadas,
       buzzerTemperaturaAtivo = entrada["buzzerAtivo"].as<bool>();
       buzzerTimestamp = ts;
       configSuja = true;
+      configRevisao++;
       aplicadas.add("buzzerAtivo");
     } else {
       ignoradas.add("buzzerAtivo");
@@ -2613,19 +2664,23 @@ void verificarSegurarBuzzer() {
   if (millis() - buzzerSeguradoDesdeMs < TEMPO_SEGURAR_BUZZER_MS) return;
 
   buzzerAlternadoNesteAperto = true;
+  travarEstado();
   buzzerTemperaturaAtivo = !buzzerTemperaturaAtivo;
   // Participa do LWW como qualquer ajuste: um toque fisico e mais recente que
   // um comando remoto antigo, e o app reflete a mudanca na proxima leitura.
   buzzerTimestamp = nowMs();
   configSuja = true;
+  configRevisao++;
+  const bool buzzerLigado = buzzerTemperaturaAtivo;
+  soltarEstado();
 
   // Religar deve religar de verdade: se havia um silencio de 10 min correndo,
   // ele perderia o sentido logo apos o produtor pedir a sirene de volta.
-  if (buzzerTemperaturaAtivo) reativarAlarme();
+  if (buzzerLigado) reativarAlarme();
 
-  confirmarAlternanciaBuzzer(buzzerTemperaturaAtivo);
+  confirmarAlternanciaBuzzer(buzzerLigado);
   Serial.print("Sirene de temperatura ");
-  Serial.println(buzzerTemperaturaAtivo ? "LIGADA (botao)" : "DESLIGADA (botao)");
+  Serial.println(buzzerLigado ? "LIGADA (botao)" : "DESLIGADA (botao)");
 }
 
 // Confirmacao fisica, sem depender do visor: dois apitos curtos quando liga, um
@@ -2667,10 +2722,12 @@ void verificarBotoes() {
     if (alertaTemperatura || alertaLuz) {
       // Mesmo comportamento do botao do app: silencia por 10 min. Apertar de
       // novo reinicia o prazo em vez de religar a sirene na hora.
+      travarEstado();
       silenciarPorPrazo();
       // Registra o momento para o LWW: um silenciamento fisico e mais recente
       // que ajustes remotos antigos.
       modoSilenciosoTimestamp = nowMs();
+      soltarEstado();
       Serial.println("Buzzer silenciado por 10 min");
     }
 
@@ -2852,7 +2909,7 @@ void atualizarEstadoTemperatura() {
   // estufa ja perdeu 2 F, e sai assim que passa 1 F do ajuste. Esfriar e lento
   // (depende do fogo pegar), esquentar demais e rapido - entao o lado de cima
   // corta mais cedo. A faixa morta de 3 F ainda evita o liga-desliga seguido,
-  // junto com o prazo minimo de 30 s.
+  // sem precisar de um prazo minimo entre partidas.
   if (temperaturaF <= temperaturaAlvoF - VENTOINHA_LIGA_ABAIXO_F) {
     ledControleLigado = true;
   }

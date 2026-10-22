@@ -152,7 +152,7 @@ O firmware anuncia automaticamente um nome local exclusivo, formado pelos seis
 últimos caracteres do MAC do ESP32. Exemplo:
 
 ```text
-sentinela-a1b2c3.local
+sentinela-aabbcca1b2c3.local
 ```
 
 **Onde ver o nome** (o produtor não tem a IDE do Arduino):

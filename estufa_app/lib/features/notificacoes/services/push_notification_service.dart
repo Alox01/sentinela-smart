@@ -14,8 +14,7 @@ import '../models/preferencias_notificacao.dart';
 import 'preferencias_notificacao_service.dart';
 import 'silenciamento_estufas.dart';
 
-bool get _androidCompativel =>
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+bool get _androidCompativel => defaultTargetPlatform == TargetPlatform.android;
 
 @pragma('vm:entry-point')
 Future<void> tratarPushEmSegundoPlano(RemoteMessage mensagem) async {

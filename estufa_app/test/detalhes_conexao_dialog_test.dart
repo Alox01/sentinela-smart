@@ -60,6 +60,9 @@ void main() {
     expect(valor.left - rotulo.right, greaterThanOrEqualTo(12));
     expect(find.text('Aparelho local: disponível'), findsOneWidget);
     expect(find.text('Servidor na nuvem: disponível'), findsOneWidget);
+    expect(find.text('Aparelho (id)'), findsOneWidget);
+    expect(find.text('ESP32_TESTE'), findsOneWidget);
+    expect(find.text('Detalhes técnicos'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

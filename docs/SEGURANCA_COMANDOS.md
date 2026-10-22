@@ -54,7 +54,7 @@ automaticamente `estufa_server/.env` quando esse arquivo existir.
 No aplicativo Flutter:
 
 ```powershell
-flutter run -d chrome --dart-define=ESTUFA_API_TOKEN=minha-chave-de-teste-forte
+flutter run -d ID_DO_APARELHO --dart-define=ESTUFA_API_TOKEN=minha-chave-de-teste-forte
 ```
 
 Ou cadastre a estufa no app e preencha o campo

@@ -103,5 +103,23 @@ void main() {
         reason: 'trocar de endereco e normal: o DHCP faz isso sozinho',
       );
     });
+
+    test('id legado evolui para o MAC completo sem virar outro aparelho', () {
+      final mudanca = AtualizacaoDeEstufa.entre(
+        id: 5,
+        nome: 'Estufa do Fundo',
+        enderecoAtual: 'sentinela-215788.local',
+        chaveAtual: 'chave-do-produtor',
+        idHardwareAtual: 'ESP32_215788',
+        enderecoNovo: 'sentinela-aabbcc215788.local',
+        chaveNova: 'chave-do-produtor',
+        idHardwareNovo: 'ESP32_AABBCC215788',
+      );
+
+      expect(mudanca, isNotNull);
+      expect(mudanca!.idHardware, 'ESP32_AABBCC215788');
+      expect(mudanca.mudaIdentidade, isTrue);
+      expect(mudanca.aparelhoDiferente, isFalse);
+    });
   });
 }

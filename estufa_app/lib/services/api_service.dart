@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/notificacoes/services/push_notification_service.dart';
 import 'isar_service.dart';
+import 'identidade_aparelho.dart';
 
 enum ApiCommandFailure {
   none,
@@ -247,8 +248,9 @@ class ApiService {
     // O esperado vem do id cadastrado OU do nome no endereco. Antes so olhava o
     // cadastrado, e a estufa sem id aceitava qualquer um que atendesse.
     final esperado = _idEsperado;
-    if (esperado != null && idLido != esperado) return false;
-    if (idHardware != null && idHardware!.isNotEmpty) return true;
+    if (esperado != null && !idsDoMesmoAparelho(esperado, idLido)) return false;
+    final migrou = ehMigracaoDeIdLegado(idHardware, idLido);
+    if (idHardware != null && idHardware!.isNotEmpty && !migrou) return true;
 
     idHardware = idLido;
     unawaited(
@@ -868,14 +870,17 @@ class ApiService {
   // insistia que estava tudo bem. A resposta tem que se PARECER com a de um
   // Sentinela.
   // O proprio endereco declara de quem ele e. O aparelho se anuncia como
-  // `sentinela-XXXXXX` e se identifica como `ESP32_XXXXXX`: os dois saem dos
-  // mesmos 6 hex do MAC do chip. Entao, para uma estufa cadastrada pelo nome,
+  // `sentinela-XXXXXXXXXXXX` se identifica como `ESP32_XXXXXXXXXXXX`: os dois
+  // saem do MAC do chip. Nomes legados de 6 hex continuam reconhecidos durante
+  // a migracao. Entao, para uma estufa cadastrada pelo nome,
   // da para saber qual aparelho e o certo SEM rede e SEM nada gravado.
   //
   // Isso importa porque o id cadastrado pode faltar - estufa digitada a mao que
   // nunca alcancou o aparelho -, e era justamente nesse buraco que outro ESP32
   // atendendo no endereco era adotado como se fosse o desta estufa.
-  static final RegExp _nomeDeSentinela = RegExp(r'sentinela-([0-9a-fA-F]{6})');
+  static final RegExp _nomeDeSentinela = RegExp(
+    r'sentinela-([0-9a-fA-F]{12}|[0-9a-fA-F]{6})',
+  );
 
   String? get _idEsperado {
     final cadastrado = idHardware;
@@ -895,7 +900,7 @@ class ApiService {
     final status = mapa?['status'];
     final lido = status is Map ? status['idHardware'] : null;
     if (lido is! String || lido.isEmpty) return false;
-    return lido != esperado;
+    return !idsDoMesmoAparelho(esperado, lido);
   }
 
   bool _pareceSentinela(String corpo) {

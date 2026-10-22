@@ -18,8 +18,9 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
   referência de quem mexe em qualquer uma das três pontas.
 - **`CONFIGURACAO_ESP32.md`** — pinagem, modo de configuração, endereçamento na
   rede, chave por aparelho e PIN de emparelhamento. O maior e o mais consultado.
-- **`NOTIFICACOES_PUSH.md`** — quais avisos existem, quem acorda de madrugada, e
-  a pegadinha dos canais do Android que estão congelados desde a criação.
+- **`NOTIFICACOES_PUSH.md`** — quais avisos existem, quem acorda de madrugada e
+  a pegadinha dos canais do Android. Ao fim, preserva separadamente uma ideia
+  de produto **pós-TCC**, que não entra no APK nem na apresentação da banca.
 - **`HISTORICO_FIRMWARE.md`** — o que cada versao do firmware mudou e por que.
   Morava no topo do `.ino`; o motivo medido em campo esta aqui, o *quando* esta
   no `git log`.
@@ -37,9 +38,9 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## Trabalho futuro (nada disso está construído)
 
-- **`HUB_LORA.md`** — o rádio para levar a leitura até a lavoura, onde não há
-  internet. Leia o aviso do topo: há duas pernas de rádio, e só uma justifica o
-  projeto.
+- **`HUB_LORA.md`** — evolução pós-TCC: hub local com ESP-NOW/LoRa, tela touch,
+  SD, alarmes sem internet e comandos confirmados. Leia o aviso do topo: não
+  entra no APK, na demonstração nem nos critérios da banca.
 - **`AGENDAMENTO_CURA.md`** — curva de cura por fases, além do agendamento
   simples que já existe.
 - **`SUPRESSAO_INCENDIO.md`** — atuação contra fogo, não só aviso.

@@ -99,8 +99,7 @@ class AgendamentoService extends ChangeNotifier {
   List<AgendamentoAjuste> get agendamentos => _agendamentos;
   bool get carregado => _carregado;
 
-  bool get _suportado =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _suportado => defaultTargetPlatform == TargetPlatform.android;
 
   /// Carrega o que estava salvo e **reagenda tudo**. Reiniciar o celular apaga
   /// os alarmes do sistema; o receptor de boot do plugin cobre o caso normal, mas

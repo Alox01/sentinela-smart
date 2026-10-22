@@ -26,8 +26,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
 
   // O "Nao perturbe" so existe no Android; nas outras plataformas o cartao nem
   // aparece, em vez de mostrar um botao que nao faz nada.
-  bool get _ehAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _ehAndroid => defaultTargetPlatform == TargetPlatform.android;
 
   String _modoDeSom = 'normal';
 

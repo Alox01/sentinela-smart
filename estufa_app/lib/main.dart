@@ -145,12 +145,6 @@ class _BootstrapScreenState extends State<_BootstrapScreen>
                         style: const TextStyle(color: Colors.white70),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'No navegador, tente executar com: flutter run -d chrome --no-web-resources-cdn',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
                       const SizedBox(height: 18),
                       ElevatedButton.icon(
                         onPressed: _tentarNovamente,

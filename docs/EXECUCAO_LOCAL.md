@@ -46,22 +46,19 @@ http://192.168.1.11:3000/status
 
 Se aparecer JSON, o servidor esta acessivel.
 
-## Rodar o app para abrir no celular
+## Rodar o app no celular
 
-Em outro terminal:
+Conecte o aparelho por USB ou depuração sem fio. Em outro terminal:
 
 ```powershell
 cd estufa_app
-flutter run -d chrome --web-hostname 0.0.0.0 --web-port 53312
+flutter devices
+flutter run -d ID_DO_APARELHO --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
 ```
 
-No celular:
-
-```text
-http://192.168.1.11:53312
-```
-
-A porta `53312` abre o app. A porta `3000` abre a API/JSON.
+O app não possui versão web. A porta `3000` continua sendo a API/JSON do
+simulador local. A página `192.168.4.1` é servida pelo próprio ESP32 e configura
+o aparelho; ela não é a versão web do app.
 
 ## Cadastrar a estufa no app
 
@@ -83,7 +80,7 @@ Chave de acesso: deixar vazio enquanto o firmware nao tiver chave
 
 ## Como explicar no vídeo
 
-1. O app Flutter roda no celular ou navegador.
+1. O app Flutter roda no celular.
 2. O servidor local roda no PC e simula o aparelho físico.
 3. O app faz requisições HTTP para buscar temperatura, umidade e estado da estufa.
 4. Quando o produtor altera um ajuste, o app envia um comando HTTP para o servidor ou ESP32.
@@ -94,7 +91,7 @@ Chave de acesso: deixar vazio enquanto o firmware nao tiver chave
 ## Problemas comuns
 
 - Abrir `http://IP_DO_PC:3000/status` mostra JSON. Isso é esperado: é a API, não o app.
-- Para abrir o app no celular, use a porta do Flutter, por exemplo `53312`.
-- Se o celular não abrir, confirme que PC e celular estão na mesma rede Wi-Fi.
+- Se o simulador não responder no celular, confirme que PC e celular estão na
+  mesma rede Wi-Fi e que a porta `3000` está liberada no firewall.
 - Se comandos falharem com chave inválida, confira se a chave cadastrada no app é igual ao `ESTUFA_API_TOKEN`.
 - Se usar Docker, reinicie com `docker compose up --build` depois de alterar variáveis de ambiente.

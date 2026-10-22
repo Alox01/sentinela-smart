@@ -8,8 +8,8 @@ import '../models/ciclo_secagem_entity.dart';
 import '../models/evento_ciclo_entity.dart';
 import '../models/historico_leitura_entity.dart';
 import '../models/pending_sync_command_entity.dart';
+import 'identidade_aparelho.dart';
 import 'coalescencia_comando.dart';
-
 
 /// Gravacao recusada: o endereco informado responde um aparelho diferente do
 /// que ja esta cadastrado nesta estufa. Em vez de substituir em silencio, o
@@ -152,14 +152,10 @@ class IsarService {
     final cadastrado = existente.idHardware?.trim() ?? '';
     if (cadastrado.isEmpty || recebido.isEmpty) return;
     if (cadastrado == recebido) return;
-    throw EstufaDeOutroAparelho(
-      idCadastrado: cadastrado,
-      idRecebido: recebido,
-    );
+    throw EstufaDeOutroAparelho(idCadastrado: cadastrado, idRecebido: recebido);
   }
 
   Future<List<EstufaEntity>> listarEstufas() async {
-
     final isar = await database;
     final itens = await isar.collection<EstufaEntity>().where().findAll();
     itens.sort((a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()));
@@ -173,11 +169,7 @@ class IsarService {
     String? idHardware,
   }) async {
     final idLimpo = _normalizarTextoOpcional(idHardware);
-    final chave = _chaveDaEstufa(
-      idHardware: idLimpo,
-      nome: nome,
-      ip: ip,
-    );
+    final chave = _chaveDaEstufa(idHardware: idLimpo, nome: nome, ip: ip);
     final estufa = EstufaEntity()
       ..chave = chave
       ..nome = nome.trim()
@@ -231,7 +223,6 @@ class IsarService {
       ..idHardware = idHardwareLimpo
       ..criadaEm = DateTime.now();
 
-
     final isar = await database;
     final existente = await isar.collection<EstufaEntity>().get(id);
     if (existente != null) {
@@ -259,7 +250,6 @@ class IsarService {
   }
 
   Future<void> removerEstufa(int id) async {
-
     final isar = await database;
     await isar.writeTxn(() async {
       await isar.collection<EstufaEntity>().delete(id);
@@ -286,7 +276,6 @@ class IsarService {
       ..umidadeMeta = umidadeMeta
       ..aviso = aviso
       ..alertaIncendio = alertaIncendio;
-
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -316,7 +305,6 @@ class IsarService {
       ..valorAnterior = valorAnterior
       ..valorAtual = valorAtual;
 
-
     final isar = await database;
     await isar.writeTxn(() async {
       await isar.collection<EventoCicloEntity>().put(evento);
@@ -324,7 +312,6 @@ class IsarService {
   }
 
   Future<List<EventoCicloEntity>> listarEventosPorCiclo(int cicloId) async {
-
     final isar = await database;
     final itens = await isar
         .collection<EventoCicloEntity>()
@@ -336,7 +323,6 @@ class IsarService {
   }
 
   Future<CicloSecagemEntity?> buscarCicloAbertoPorIp(String ipEstufa) async {
-
     final isar = await database;
     final ciclos = await isar
         .collection<CicloSecagemEntity>()
@@ -364,7 +350,6 @@ class IsarService {
       ..status = 'em_andamento'
       ..observacao = '';
 
-
     final isar = await database;
     await isar.writeTxn(() async {
       await isar.collection<CicloSecagemEntity>().put(ciclo);
@@ -373,7 +358,6 @@ class IsarService {
   }
 
   Future<CicloSecagemEntity?> finalizarCicloSecagem(int id) async {
-
     final isar = await database;
     late final CicloSecagemEntity? ciclo;
     await isar.writeTxn(() async {
@@ -388,7 +372,6 @@ class IsarService {
   }
 
   Future<List<CicloSecagemEntity>> listarCiclosPorIp(String ipEstufa) async {
-
     final isar = await database;
     final itens = await isar
         .collection<CicloSecagemEntity>()
@@ -402,7 +385,6 @@ class IsarService {
   /// Apaga uma estufada por completo: o ciclo, seus eventos e as leituras
   /// gravadas dentro do periodo dele (inicio..fim). Irreversivel.
   Future<void> apagarCiclo(int cicloId) async {
-
     final isar = await database;
     final ciclo = await isar.collection<CicloSecagemEntity>().get(cicloId);
     if (ciclo == null) return;
@@ -435,7 +417,6 @@ class IsarService {
   Future<List<HistoricoLeituraEntity>> listarHistoricoPorIp(
     String ipEstufa,
   ) async {
-
     final isar = await database;
     final itens = await isar
         .collection<HistoricoLeituraEntity>()
@@ -451,7 +432,6 @@ class IsarService {
     DateTime inicio,
     DateTime fim,
   ) async {
-
     final isar = await database;
     final itens = await isar
         .collection<HistoricoLeituraEntity>()
@@ -479,8 +459,15 @@ class IsarService {
           .ipEqualTo(ip)
           .findAll();
       for (final e in estufas) {
-        if (e.idHardware == null || e.idHardware!.isEmpty) {
+        if (e.idHardware == null ||
+            e.idHardware!.isEmpty ||
+            ehMigracaoDeIdLegado(e.idHardware, idHardware)) {
           e.idHardware = idHardware;
+          e.chave = _chaveDaEstufa(
+            idHardware: idHardware,
+            nome: e.nome,
+            ip: e.ip,
+          );
           await isar.collection<EstufaEntity>().put(e);
         }
       }
@@ -496,7 +483,6 @@ class IsarService {
       ..ipEstufa = ipEstufa
       ..payloadJson = jsonEncode(payload)
       ..createdAt = DateTime.now();
-
 
     final isar = await database;
     await isar.writeTxn(() async {
@@ -528,7 +514,6 @@ class IsarService {
     String ipEstufa, {
     int limite = 200,
   }) async {
-
     final isar = await database;
     final itens = await isar
         .collection<PendingSyncCommandEntity>()
@@ -541,7 +526,6 @@ class IsarService {
   }
 
   Future<int> contarPendenciasPorIp(String ipEstufa) async {
-
     final isar = await database;
     return isar
         .collection<PendingSyncCommandEntity>()
@@ -553,7 +537,6 @@ class IsarService {
   Future<void> removerPendenciasPorIds(List<int> ids) async {
     if (ids.isEmpty) return;
 
-
     final isar = await database;
     await isar.writeTxn(() async {
       await isar.collection<PendingSyncCommandEntity>().deleteAll(ids);
@@ -561,7 +544,6 @@ class IsarService {
   }
 
   Future<int> limparPendenciasPorIp(String ipEstufa) async {
-
     final isar = await database;
     late final int removidas;
     await isar.writeTxn(() async {
@@ -573,7 +555,6 @@ class IsarService {
     });
     return removidas;
   }
-
 
   Future<void> _executarLimpezaSeNecessario(
     Isar isar, {
@@ -612,7 +593,6 @@ class IsarService {
     );
   }
 
-
   String? _normalizarTextoOpcional(String? value) {
     final texto = value?.trim() ?? '';
     return texto.isEmpty ? null : texto;
@@ -623,5 +603,4 @@ class IsarService {
 
   String? _chaveCoalescenciaComando(Map<String, dynamic> payload) =>
       chaveCoalescenciaComando(payload);
-
 }

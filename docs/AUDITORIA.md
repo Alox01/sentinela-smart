@@ -1,5 +1,19 @@
 # Auditoria do Sentinela Smart
 
+## D22 — identidade de 24 bits colidiu entre dois aparelhos (21/10/2026)
+
+Dois ESP32 em propriedades diferentes se anunciaram como
+`sentinela-215788.local`. O primeiro já havia registrado sua chave na nuvem; o
+segundo recebeu `HTTP 401` tanto em `Chave -> nuvem` quanto em
+`Push nuvem ->`, ficou apenas LOCAL, não enviou alertas push e seu QR foi
+interpretado como atualização da estufa do primeiro aparelho.
+
+A causa era o identificador usar somente os 24 bits finais do MAC. O firmware
+agora usa os 48 bits (`ESP32_XXXXXXXXXXXX` e
+`sentinela-xxxxxxxxxxxx.local`). O app reconhece exclusivamente a migração do
+formato antigo para um MAC completo com o mesmo sufixo; qualquer outra troca de
+ID continua bloqueada como outro aparelho.
+
 > Levantamento de 31/07/2026, sobre o estado do repositório após a semana de
 > testes de campo. Serve a dois fins: apontar o que corrigir, e ser o **registro
 > de progresso** — cada item tem caixa, e quem retomar o trabalho sabe onde

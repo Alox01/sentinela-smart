@@ -1,4 +1,5 @@
 import 'estufas_repository.dart';
+import '../../../services/identidade_aparelho.dart';
 
 /// O que muda numa estufa JA cadastrada quando chegam chave e endereco novos
 /// do mesmo aparelho.
@@ -35,6 +36,8 @@ class AtualizacaoDeEstufa {
 
   final bool mudaChave;
   final bool mudaEndereco;
+  final bool mudaIdentidade;
+
   /// O endereco passou a responder um aparelho que nao e o desta estufa.
   final bool aparelhoDiferente;
 
@@ -46,6 +49,7 @@ class AtualizacaoDeEstufa {
     required this.idHardware,
     required this.mudaChave,
     required this.mudaEndereco,
+    required this.mudaIdentidade,
     required this.aparelhoDiferente,
   });
 
@@ -69,16 +73,20 @@ class AtualizacaoDeEstufa {
     final endereco = _valor(enderecoNovo);
     final mudaChave = chave != null && chave != _valor(chaveAtual);
     final mudaEndereco = endereco != null && endereco != _valor(enderecoAtual);
-    if (!mudaChave && !mudaEndereco) return null;
+    final idAtual = _valor(idHardwareAtual);
+    final idNovo = _valor(idHardwareNovo);
+    final mudaIdentidade = ehMigracaoDeIdLegado(idAtual, idNovo);
+    if (!mudaChave && !mudaEndereco && !mudaIdentidade) return null;
 
     // Quem atende no endereco nao e o aparelho cadastrado nesta estufa.
     // Acontece quando o roteador entrega o endereco a outro ESP32 - o aparelho
     // de uma visita, ou o proprio voltando com endereco novo depois que o
     // antigo foi reaproveitado.
-    final idAtual = _valor(idHardwareAtual);
-    final idNovo = _valor(idHardwareNovo);
     final aparelhoDiferente =
-        idAtual != null && idNovo != null && idAtual != idNovo;
+        idAtual != null &&
+        idNovo != null &&
+        idAtual != idNovo &&
+        !mudaIdentidade;
 
     return AtualizacaoDeEstufa._(
       id: id,
@@ -98,9 +106,10 @@ class AtualizacaoDeEstufa {
       //
       // Identidade nao se aprende duas vezes. Para repontar, o produtor informa
       // o id novo na edicao, ou remove e cadastra de novo.
-      idHardware: idAtual ?? idNovo,
+      idHardware: mudaIdentidade ? idNovo : idAtual ?? idNovo,
       mudaChave: mudaChave,
       mudaEndereco: mudaEndereco,
+      mudaIdentidade: mudaIdentidade,
       aparelhoDiferente: aparelhoDiferente,
     );
   }
@@ -110,6 +119,14 @@ class AtualizacaoDeEstufa {
   /// Existe para a confirmacao dizer O QUE muda em vez de um "OK?" generico:
   /// quem le precisa poder recusar sabendo o que estava prestes a acontecer.
   String get oQueMuda {
+    if (mudaIdentidade && mudaChave && mudaEndereco) {
+      return 'a identificação, a chave e o endereço';
+    }
+    if (mudaIdentidade && mudaChave) return 'a identificação e a chave';
+    if (mudaIdentidade && mudaEndereco) {
+      return 'a identificação e o endereço';
+    }
+    if (mudaIdentidade) return 'a identificação';
     if (mudaChave && mudaEndereco) return 'a chave e o endereço';
     return mudaChave ? 'a chave' : 'o endereço';
   }

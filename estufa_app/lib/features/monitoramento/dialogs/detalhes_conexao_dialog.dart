@@ -102,6 +102,10 @@ Future<void> mostrarDetalhesConexaoDialog({
                         // que parece defeito e nao e. Quem precisa saber se a
                         // chave chegou olha o aparelho no modo de configuracao.
                         _LinhaDetalhe('Pend\u00EAncias', '$totalPendencias'),
+                        _LinhaDetalhe(
+                          'Aparelho (id)',
+                          idHardware ?? 'N\u00E3o identificado',
+                        ),
                         const SizedBox(height: 14),
                         const Text(
                           'CAMINHOS DISPONÍVEIS',
@@ -118,12 +122,6 @@ Future<void> mostrarDetalhesConexaoDialog({
                           alcanceAtual: alcanceAtual,
                           testar: testarAlcance,
                         ),
-                        // Enderecos ficam fechados: para o produtor sao ruido -
-                        // ele quer saber se esta funcionando, nao por onde. Quem
-                        // diagnostica em campo abre e ve tudo. Nada aqui da
-                        // acesso a nada (a chave nunca e mostrada), mas nao ha
-                        // motivo para o nome do aparelho viajar em cada print.
-                        _DetalhesTecnicos(idHardware: idHardware),
                         if (pendencias.isNotEmpty) ...[
                           const SizedBox(height: 14),
                           const Text(
@@ -201,66 +199,6 @@ Future<void> mostrarDetalhesConexaoDialog({
       );
     },
   );
-}
-
-/// Enderecos de rede, fechados por padrao. Sao a ferramenta de quem investiga
-/// "por que nao conecta", nao informacao de rotina para quem cuida da estufa.
-class _DetalhesTecnicos extends StatefulWidget {
-  final String? idHardware;
-
-  const _DetalhesTecnicos({required this.idHardware});
-
-  @override
-  State<_DetalhesTecnicos> createState() => _DetalhesTecnicosState();
-}
-
-class _DetalhesTecnicosState extends State<_DetalhesTecnicos> {
-  bool _aberto = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 6),
-        InkWell(
-          onTap: () => setState(() => _aberto = !_aberto),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Icon(
-                  _aberto ? Icons.expand_less : Icons.expand_more,
-                  color: Colors.white38,
-                  size: 18,
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'Detalhes técnicos',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (_aberto) ...[
-          const SizedBox(height: 4),
-          _LinhaDetalhe(
-            'Aparelho (id)',
-            widget.idHardware ?? 'Não identificado',
-          ),
-          // Sairam as tres linhas de endereco e a de avisos push, a pedido do
-          // produtor: ele quer saber se esta funcionando, nao por onde. Quem
-          // diagnostica usa o teste de alcance logo acima, que diz o mesmo em
-          // disponivel/indisponivel, e o /dados do proprio aparelho.
-          //
-          // O id FICA. E a unica coisa aqui que identifica de qual aparelho a
-          // estufa e, e foi por ela que se achou o aparelho errado atendendo no
-          // endereco (D17 e D18).
-        ],
-      ],
-    );
-  }
 }
 
 class _LinhaDetalhe extends StatelessWidget {

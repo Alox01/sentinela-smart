@@ -28,8 +28,8 @@ Preencha no topo do `.ino`:
 
 O **id do aparelho é gerado automaticamente do chip (MAC)** — único por ESP, sem
 configurar nada. Ao ligar, o Serial (115200) mostra o **id** (ex.:
-`ESP32_A1B2C3`), o **IP** e o **nome local** (ex.:
-`sentinela-a1b2c3.local`). No app, prefira o nome local; se a rede ou o celular
+`ESP32_AABBCCA1B2C3`), o **IP** e o **nome local** (ex.:
+`sentinela-aabbcca1b2c3.local`). No app, prefira o nome local; se a rede ou o celular
 não resolver mDNS, cadastre o IP exibido no Serial.
 
 O nome mDNS funciona somente na mesma rede local e não substitui o acesso pela
@@ -61,15 +61,17 @@ LEDs e buzzer operam offline; a rede é uma camada adicional.
 
 - **Fahrenheit:** lido direto com `dht.readTemperature(true)`.
 - **Incêndio:** o sensor de luz faz o papel de chama (`alertaIncendio` /
-  `perigoChama`); alarme não silenciável. `riscoIncendio` também dispara se a
-  temperatura passar de 175 °F.
+  `perigoChama`). `riscoIncendio` também dispara se a temperatura passar de
+  175 °F. Quem está diante do aparelho pode confirmar que viu o alerta e calar
+  a sirene por 10 minutos; uma nova causa de fogo cancela o silêncio na hora.
 - **Umidade:** o `umidadeMeta` é registrado e reportado, mas **não é atuado**
   (não há umidificador). `ventiladorLigado` fica `false` (sem relé).
 - **Silenciar tem prazo:** silenciar (pelo botão ou pelo app) cala a sirene por
   **10 minutos**, o mesmo `TEMPO_SILENCIO` do servidor. Passado o prazo, se a
   temperatura ainda estiver fora, ela volta a tocar. Apertar o botão de novo
-  reinicia os 10 min — não religa a sirene na hora. Incêndio continua **não
-  silenciável**.
+  reinicia os 10 min — não religa a sirene na hora. No incêndio, isso significa
+  que a pessoa presente confirmou que já viu aquela emergência; chama que some
+  e reaparece, ou outra causa nova de fogo, volta a tocar imediatamente.
 - **Desligar o alarme de temperatura (permanente):** pelo app (menu da estufa →
   Notificações → "Alarme do aparelho") dá para **desligar de vez o buzzer do
   alarme de temperatura** — há produtor que não aguenta o bipe. Vem como comando
