@@ -30,10 +30,8 @@ responder.
 | `fl_chart` | gráfico da estufada | desenha linha e pontos com escala controlada, e permite ler os valores desenhados (foi como um gráfico vazio foi detectado por teste) |
 | `pdf` + `printing` | exportar o relatório | gerar e compartilhar o PDF da estufada |
 | `firebase_messaging` | notificação push | alerta chega com o app fechado, que é o caso que importa às 3h da manhã |
-| `flutter_local_notifications` | mostrar o aviso e agendar | canais de som por assunto, e o alarme agendado toca sem internet |
+| `flutter_local_notifications` | mostrar o aviso | canais de som por assunto, com o app aberto |
 | `shared_preferences` | preferências simples | interruptores e silenciamentos, que não merecem uma tabela |
-| `qr_flutter` + `app_links` | QR e link do convite | compartilhar acesso pela câmera comum do outro celular |
-| `timezone` | agendamento correto | alarme às 3h tem de ser 3h locais, com horário de verão resolvido |
 | `intl` | datas e números em português | — |
 
 ### Servidor
@@ -109,14 +107,14 @@ expira sozinho.
 - **No celular:** Isar — estufas, leituras, estufadas, eventos e a fila de
   comandos pendentes.
 - **Na nuvem:** PostgreSQL (Supabase) — histórico com retenção, estado por
-  aparelho, agendamentos e inscrições de push.
+  aparelho e inscrições de push.
 - **No aparelho:** NVS — rede, chave e ajustes, para sobreviver à queda de
   energia.
 
 ### "Como você testou?"
 
-- **App:** 210 testes (`flutter test`, verificado em 18/10/2026).
-- **Servidor:** 234 testes (`node --test`, verificado em 18/10/2026).
+- **App:** 163 testes (`flutter test`, verificado em 22/10/2026).
+- **Servidor:** 202 testes (`node --test`, verificado em 22/10/2026).
 - **Firmware:** compilação real no CI a cada push, com o core esp32 3.2.0.
 - **Campo:** registrado em `PLANO_POS_TESTES.md`, com o que falhou e o que foi
   corrigido.

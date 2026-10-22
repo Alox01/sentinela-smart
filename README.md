@@ -219,13 +219,16 @@ Estudado e não construído: rádio LoRa para alcançar estufas sem Wi-Fi
 
 ---
 
-## Marca de build
+## Esta branch é a versão reduzida
 
-O aplicativo tem um interruptor de compilação, `ESCOPO_TCC`, que reduz a
-interface ao escopo declarado na proposta do trabalho — sai o compartilhamento de
-acesso por QR Code, sai o agendamento de ajuste. O motivo de cada exclusão está
-comentado em [`estufa_app/lib/escopo.dart`](estufa_app/lib/escopo.dart).
+`tcc-versao-simplificada` é o recorte apresentado no trabalho: o que estava fora
+dos objetivos declarados **foi removido do código**, e não escondido por uma
+marca de compilação. Sai um APK só, sem `--dart-define=ESCOPO_TCC`:
 
 ```bash
-flutter build apk --release --split-per-abi --dart-define=ESCOPO_TCC=true --dart-define=CLOUD_API_URL=https://SEU-SERVIDOR
+flutter build apk --release --split-per-abi --dart-define=CLOUD_API_URL=https://SEU-SERVIDOR
 ```
+
+O que saiu, e por quê, está em [`docs/VERSAO_TCC.md`](docs/VERSAO_TCC.md). A
+versão completa continua em `test/http-local-device`, que é a branch de produção
+— é dela que o produtor instala e é dela que o Render publica.

@@ -48,6 +48,10 @@ para separar o que **vale hoje** do que é **registro do que já foi**.
 
 ## TCC
 
+- **`VERSAO_TCC.md`** — o que a branch `tcc-versao-simplificada` removeu da
+  versão de produção, por quê, e o que continua existindo. É a resposta para
+  "por que o sistema não faz X?".
+
 - **`MAPA_DO_CODIGO.md`** — o que responder quando perguntarem "qual biblioteca
   você usou para isso?" ou "onde está a lógica do alarme?". Feito para ler uma vez
   antes de apresentar.

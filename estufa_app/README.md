@@ -28,5 +28,5 @@ flutter test
 flutter build apk --release --split-per-abi --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
 ```
 
-Para a versão de apresentação do TCC, acrescente
-`--dart-define=ESCOPO_TCC=true`.
+Nesta branch não existe `ESCOPO_TCC`: ela já *é* a versão de apresentação, e sai
+um APK só. Ver [`../docs/VERSAO_TCC.md`](../docs/VERSAO_TCC.md).

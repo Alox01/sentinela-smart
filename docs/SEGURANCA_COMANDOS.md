@@ -137,9 +137,9 @@ Desenho escrito antes de existir, e construído no mesmo dia. O formulário do
 navegador do aparelho (`192.168.4.1` → "Chave de acesso (avançado)" → "Gerar uma
 chave nova") continua valendo como caminho de recuperação e manutenção.
 
-No app: menu da estufa → **"Tirar acesso dos outros celulares"**, ao lado de
-"Compartilhar acesso" — é o contrário dele, e é ali que se procura depois de ter
-compartilhado com quem não devia.
+No app: menu da estufa → **"Tirar acesso dos outros celulares"**, na seção
+CONEXÃO, junto de "Reconfigurar aparelho" — os dois decidem quem comanda a
+estufa.
 
 ### O problema que isto resolve
 
@@ -272,6 +272,11 @@ conhecer a chave. Ela não substitui HTTPS, controle de usuários, revogação d
 tokens nem proteções de rede, que podem ser adicionadas em uma etapa futura.
 
 ## Compartilhar acesso entre celulares (31/07/2026)
+
+> **Removido da branch `tcc-versao-simplificada` em 22/10/2026.** O registro
+> abaixo fica porque descreve uma decisão real e o que ela custou; na versão
+> apresentada o segundo celular recebe a chave pelo próprio aparelho ("pegar
+> acesso", com o PIN do visor). Ver [`VERSAO_TCC.md`](VERSAO_TCC.md).
 
 Vários celulares sempre puderam comandar a mesma estufa — a chave é do
 **aparelho**, não do celular — e o push já é por celular, com preferências

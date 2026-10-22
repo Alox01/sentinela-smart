@@ -68,9 +68,10 @@ OFFLINE:
 flutter build apk --release --split-per-abi --dart-define=CLOUD_API_URL=https://estufa-server.onrender.com
 ```
 
-**APK da apresentação** — acrescentar `--dart-define=ESCOPO_TCC=true`. Ele esconde o
-que está fora dos cinco objetivos: compartilhar por QR Code, agendamento de ajuste
-e a seção "Ações rápidas" do menu.
+**APK da apresentação** — é o da branch `tcc-versao-simplificada`, onde o que
+está fora dos cinco objetivos (compartilhar por QR Code, agendamento de ajuste e
+a seção "Ações rápidas" do menu) foi **removido**, e não escondido por marca de
+compilação. Ver [`VERSAO_TCC.md`](VERSAO_TCC.md).
 
 ---
 
