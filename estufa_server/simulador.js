@@ -15,68 +15,20 @@ configLocal.umidadeMeta = 99.0;
 configLocal.tempTimestamp = Date.now();
 configLocal.umidTimestamp = Date.now();
 
-let ultimoEventoTempo = Date.now();
-const INTERVALO_MIN_EVENTO = 2 * 60 * 1000;
-const CHANCE_EVENTO = 0.0085;
-
-// Em modo receptor, a nuvem para de simular e passa a refletir a ultima leitura
-// real recebida via POST /leitura. A evolucao automatica fica pausada.
 // Ultima mudanca de ajuste: abre a janela de acomodacao, para o simulador nao
 // alarmar enquanto a estufa "persegue" o alvo novo (mesma regra do firmware).
 let acomodacaoTemp = { desdeMs: 0, folga: 0 };
 
-let evolucaoPausada = false;
-
 setInterval(() => {
-  if (evolucaoPausada) return;
   statusFisico.timestampLeitura = Date.now();
   const agora = Date.now();
 
-  if (
-    agora - ultimoEventoTempo > INTERVALO_MIN_EVENTO
-    && Math.random() < CHANCE_EVENTO
-  ) {
-    const cenario = Math.floor(Math.random() * 4);
-    let deltaT = 0;
-    let deltaU = 0;
-    let nomeCenario = '';
-
-    switch (cenario) {
-      case 0:
-        nomeCenario = 'Chuva repentina';
-        deltaT = -(Math.random() * 8 + 3);
-        deltaU = Math.random() * 15 + 5;
-        break;
-      case 1:
-        nomeCenario = 'Sol forte';
-        deltaT = Math.random() * 10 + 4;
-        deltaU = -(Math.random() * 15 + 5);
-        break;
-      case 2:
-        nomeCenario = 'Frente fria seca';
-        deltaT = -(Math.random() * 8 + 4);
-        deltaU = -(Math.random() * 10 + 5);
-        break;
-      case 3:
-        nomeCenario = 'Calor abafado';
-        deltaT = Math.random() * 6 + 2;
-        deltaU = Math.random() * 10 + 2;
-        break;
-      default:
-        break;
-    }
-
-    log.info(`\n>>> [EVENTO] ${nomeCenario}! <<<`);
-    log.info(`    Temp mudou ${deltaT.toFixed(0)} F | Umid mudou ${deltaU.toFixed(0)}%`);
-
-    statusFisico.temperaturaAtual += deltaT;
-    statusFisico.umidadeAtual += deltaU;
-
-    if (statusFisico.umidadeAtual > 100) statusFisico.umidadeAtual = 100;
-    if (statusFisico.umidadeAtual < 0) statusFisico.umidadeAtual = 0;
-
-    ultimoEventoTempo = agora;
-  }
+  // O gerador de eventos meteorologicos aleatorios saiu nesta versao. Ele
+  // sorteava chuva, sol forte, vento ou calor abafado e empurrava a
+  // temperatura e a umidade - realismo que o trabalho nao demonstra, e que
+  // tornava os numeros da tela impossiveis de justificar numa pergunta.
+  // A evolucao termica em direcao ao alvo, logo abaixo, e o que a estufa de
+  // demonstracao precisa ter.
 
   if (statusFisico.temperaturaAtual < configLocal.temperaturaMeta) {
     statusFisico.temperaturaAtual += 0.4;
@@ -126,12 +78,6 @@ setInterval(() => {
 
 module.exports = {
   lerCompleto: () => ({ status: statusFisico, config: configLocal }),
-
-  // Liga/desliga o modo receptor: quando pausado, a estufa nao evolui sozinha e
-  // o estado so muda por leituras reais (aplicarStatusPersistido) ou comandos.
-  pausarEvolucao: (pausar = true) => {
-    evolucaoPausada = Boolean(pausar);
-  },
 
   aplicarConfiguracaoPersistida: (configPersistida) => {
     if (!configPersistida) return false;
