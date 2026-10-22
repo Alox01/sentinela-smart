@@ -83,7 +83,7 @@ void main() {
   }
 
   group('inventário da gaveta', () {
-    testWidgets('16 posições, na ordem, com o aparelho ainda calado', (
+    testWidgets('12 posições, na ordem, com o aparelho ainda calado', (
       tester,
     ) async {
       // Tudo o que o aparelho ainda não informou vem `null`: é o estado em que a
@@ -104,15 +104,10 @@ void main() {
         // Sem "Avisos no celular": `vigiada` é `null` (ainda conferindo), e a
         // linha só aparece no caso `false`.
         'item: Sirene do aparelho',
-        'divisor',
-        'seção: AÇÕES RÁPIDAS',
-        'item: Agendar ajuste',
-        'item: Reiniciar ajustes do aparelho',
-        'item: Apagar estufadas',
       ]);
     });
 
-    testWidgets('as mesmas 16 posições com o aparelho já reportando', (
+    testWidgets('as mesmas 12 posições com o aparelho já reportando', (
       tester,
     ) async {
       // Dois itens trocam de título conforme o estado, e um `switch` que ganhe um
@@ -137,15 +132,10 @@ void main() {
         'item: Silenciar avisos',
         // Inscrito: continua fora. Era aqui que a linha dizia "ativos".
         'item: Sirene do aparelho: ligada',
-        'divisor',
-        'seção: AÇÕES RÁPIDAS',
-        'item: Agendar ajuste',
-        'item: Reiniciar ajustes do aparelho',
-        'item: Apagar estufadas',
       ]);
     });
 
-    testWidgets('a 17ª posição volta quando o celular não será avisado', (
+    testWidgets('a 13ª posição volta quando o celular não será avisado', (
       tester,
     ) async {
       // O contrário dos dois acima, e a razão de o item existir: uma estufa não
@@ -170,11 +160,6 @@ void main() {
         'item: Silenciar avisos',
         'item: Este celular não será avisado',
         'item: Sirene do aparelho: ligada',
-        'divisor',
-        'seção: AÇÕES RÁPIDAS',
-        'item: Agendar ajuste',
-        'item: Reiniciar ajustes do aparelho',
-        'item: Apagar estufadas',
       ]);
     });
   });
@@ -211,15 +196,15 @@ void main() {
     expect(inventario, contains('item: Tirar acesso dos outros celulares'));
   });
 
-  group('as três seções', () {
+  group('as duas seções', () {
     testWidgets('aparecem uma vez cada, nesta ordem', (tester) async {
       final inventario = await abrirGaveta(tester, _dadosBase);
 
       expect(
         inventario.where((linha) => linha.startsWith('seção: ')).toList(),
-        ['seção: CONEXÃO', 'seção: AVISOS', 'seção: AÇÕES RÁPIDAS'],
+        ['seção: CONEXÃO', 'seção: AVISOS'],
       );
-      expect(find.byType(TituloMenu), findsNWidgets(3));
+      expect(find.byType(TituloMenu), findsNWidgets(2));
     });
 
     testWidgets('cada item está sob a seção certa', (tester) async {
@@ -247,13 +232,6 @@ void main() {
         secaoDe('item: Tirar acesso dos outros celulares'),
         'seção: CONEXÃO',
       );
-
-      expect(secaoDe('item: Agendar ajuste'), 'seção: AÇÕES RÁPIDAS');
-      expect(
-        secaoDe('item: Reiniciar ajustes do aparelho'),
-        'seção: AÇÕES RÁPIDAS',
-      );
-      expect(secaoDe('item: Apagar estufadas'), 'seção: AÇÕES RÁPIDAS');
 
       // O cabeçalho vem antes de qualquer seção.
       expect(inventario.first, startsWith('cabeçalho: '));

@@ -15,7 +15,6 @@ enum EventoNotificacao {
   incendio,
   temperaturaMuitoAlta,
   semComunicacao,
-  ajusteAgendado,
 }
 
 extension EventoNotificacaoInfo on EventoNotificacao {
@@ -24,7 +23,6 @@ extension EventoNotificacaoInfo on EventoNotificacao {
     EventoNotificacao.incendio => 'incendio',
     EventoNotificacao.temperaturaMuitoAlta => 'temperaturaMuitoAlta',
     EventoNotificacao.semComunicacao => 'semComunicacao',
-    EventoNotificacao.ajusteAgendado => 'ajusteAgendado',
   };
 
   String get titulo => switch (this) {
@@ -32,7 +30,6 @@ extension EventoNotificacaoInfo on EventoNotificacao {
     EventoNotificacao.incendio => 'Inc\u00eandio',
     EventoNotificacao.temperaturaMuitoAlta => 'Temperatura muito elevada',
     EventoNotificacao.semComunicacao => 'Sem comunica\u00e7\u00e3o',
-    EventoNotificacao.ajusteAgendado => 'Ajuste agendado',
   };
 
   String get descricao => switch (this) {
@@ -43,8 +40,6 @@ extension EventoNotificacaoInfo on EventoNotificacao {
     EventoNotificacao.semComunicacao =>
       'O aparelho não está se comunicando, pode ser falta de energia '
           'ou internet (internet caso o app esteja no modo Nuvem).',
-    EventoNotificacao.ajusteAgendado =>
-      'Lembrete na hora que você marcou para ajustar a estufa.',
   };
 
   /// Avisos de risco de fogo. Sao dois porque as causas sao independentes -
@@ -100,10 +95,8 @@ class PreferenciasNotificacao {
   /// A excecao e o **toque** do ajuste agendado: alarme e para problema, e um
   /// lembrete que o proprio produtor marcou nao e problema. Nasce como aviso
   /// comum — quem quiser ser acordado por ele liga o interruptor.
-  static OpcaoEvento padraoDe(EventoNotificacao evento) => OpcaoEvento(
-    notificar: true,
-    tocarVibrar: evento != EventoNotificacao.ajusteAgendado,
-  );
+  static OpcaoEvento padraoDe(EventoNotificacao evento) =>
+      const OpcaoEvento(notificar: true, tocarVibrar: true);
 
   factory PreferenciasNotificacao.padrao() => PreferenciasNotificacao({
     for (final evento in EventoNotificacao.values) evento: padraoDe(evento),

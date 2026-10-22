@@ -491,9 +491,6 @@ class PushNotificationService {
     EventoNotificacao.temperaturaMuitoAlta => canalTempMuitoAltaId,
     EventoNotificacao.alarmeProcesso => canalTemperaturaId,
     EventoNotificacao.semComunicacao => canalSemComunicacaoId,
-    // O lembrete de agendamento e local, montado pelo AgendamentoService; nunca
-    // chega por push. Cai no canal comum se algum dia chegar.
-    EventoNotificacao.ajusteAgendado => _canalAlertas.id,
   };
 
   Future<void> _mostrarMensagemEmPrimeiroPlano(RemoteMessage mensagem) async {

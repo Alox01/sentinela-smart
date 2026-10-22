@@ -12,14 +12,13 @@ void main() {
   // Alarme e para problema. Um lembrete que o proprio produtor marcou nao e
   // problema, entao nasce como aviso comum - quem quiser ser acordado por ele
   // liga o interruptor.
-  test('so o ajuste agendado nasce sem tocar como alarme', () {
+  test('todo evento nasce tocando como alarme', () {
+    // Era "so o ajuste agendado nasce sem tocar". Com o agendamento fora desta
+    // versao, nao sobrou evento silencioso: todos os que restam sao avisos que
+    // o produtor precisa ouvir.
     final p = PreferenciasNotificacao.padrao();
     for (final e in EventoNotificacao.values) {
-      expect(
-        p.opcao(e).tocarVibrar,
-        e != EventoNotificacao.ajusteAgendado,
-        reason: e.chave,
-      );
+      expect(p.opcao(e).tocarVibrar, isTrue, reason: e.chave);
     }
   });
 
@@ -89,7 +88,7 @@ void main() {
       EventoNotificacao.values.map((e) => e.chave),
       isNot(contains('faltaEnergia')),
     );
-    expect(EventoNotificacao.values, hasLength(5));
+    expect(EventoNotificacao.values, hasLength(4));
   });
 
   test('preferencia antiga com faltaEnergia continua carregando', () {

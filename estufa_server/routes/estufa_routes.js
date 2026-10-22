@@ -4,7 +4,6 @@ const { criarEstadoEstufa } = require('./estado_estufa');
 const { criarAlertasPush } = require('./alertas_push');
 const { criarRotasLeitura } = require('./rotas_leitura');
 const { criarRotasComandos } = require('./rotas_comandos');
-const { criarRotasAgendamentos } = require('./rotas_agendamentos');
 const { criarRotasPush } = require('./rotas_push');
 const { criarRotasChaves } = require('./rotas_chaves');
 
@@ -57,15 +56,6 @@ function createEstufaRouter({
   );
   router.use(
     criarRotasComandos({
-      simulador,
-      db,
-      authMiddleware,
-      autorizarComando,
-      estado,
-    }),
-  );
-  router.use(
-    criarRotasAgendamentos({
       simulador,
       db,
       authMiddleware,

@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../../escopo.dart';
 
-import '../../agendamento/screens/agendamentos_screen.dart';
 import '../../home/models/convite_estufa.dart';
 import '../../home/screens/compartilhar_acesso_screen.dart';
 import '../../notificacoes/models/preferencias_notificacao.dart';
 import '../../notificacoes/services/preferencias_notificacao_service.dart';
 import '../../notificacoes/services/push_notification_service.dart';
 import '../../notificacoes/services/silenciamento_estufas.dart';
-import '../../relatorio_estufada/screens/gerenciar_estufadas_screen.dart';
 import 'itens_menu_estufa.dart';
 
 /// A casca do menu (gaveta) da tela de monitoramento, com todos os seus itens.
@@ -191,98 +189,12 @@ class MenuEstufa extends StatelessWidget {
               semIdHardware: (dados.idHardware?.trim() ?? '').isEmpty,
             ),
             ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
-            // A seção INTEIRA sai no escopo do TCC, e por três motivos
-            // diferentes — vale distinguir, porque não é a mesma razão que tirou
-            // o compartilhamento por QR Code.
-            //
-            // **Agendar ajuste** contradiz o escopo: "às 14h deixe em 120 °F" é
-            // automação de curva, e nenhum dos cinco objetivos declarados fala
-            // nisso — monitorar, controlar, sincronizar, registrar e alertar.
-            //
-            // **Reiniciar ajustes** é atalho, não capacidade: tudo o que ele faz
-            // se faz com o + e o − da tela principal. Tirar não remove nada do
-            // sistema apresentado.
-            //
-            // **Apagar estufadas** é ação irreversível numa demonstração ao
-            // vivo: um toque errado apaga a estufada que está sendo mostrada. E
-            // a pergunta que ele responderia — "como se gerencia o dado antigo?"
-            // — tem resposta melhor: a retenção automática (300 dias na nuvem,
-            // equivalente no Isar) faz isso sozinha.
-            //
-            // Sem os três, a seção fica vazia; o título e o divisor saem junto.
-            if (!dados.escopoReduzido) ...[
-            const Divider(color: Colors.white12, height: 1),
-            const TituloMenu('AÇÕES RÁPIDAS'),
-            ListTile(
-              leading: const Icon(
-                Icons.alarm_add_outlined,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Agendar ajuste',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                'Agenda ajustes de temperatura/umidade para um determinado '
-                'tempo',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AgendamentosScreen(
-                      idEstufa: dados.idEstufa,
-                      nomeEstufa: dados.nomeEstufa,
-                      idHardware: dados.idHardware,
-                      tokenAcesso: dados.tokenAcesso,
-                      temperaturaAtual: dados.temperaturaAjuste,
-                      umidadeAtual: dados.umidadeAjuste,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.restart_alt, color: Colors.white70),
-              title: const Text(
-                'Reiniciar ajustes do aparelho',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: Text(
-                'Reinicia os valores de temperatura e umidade para '
-                '${dados.temperaturaNovaEstufada.toStringAsFixed(0)}°F e '
-                '${dados.umidadeNovaEstufada.toStringAsFixed(0)}%',
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                acoes.aoReiniciarAjustes();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.white70),
-              title: const Text(
-                'Apagar estufadas',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                'Remove relatórios',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => GerenciarEstufadasScreen(
-                      nomeEstufa: dados.nomeEstufa,
-                      ipEstufa: dados.ipEstufa,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ],
+            // A secao ACOES RAPIDAS saiu desta versao: agendar ajuste,
+            // reiniciar ajustes e apagar estufadas. O agendamento nao esta
+            // em nenhum dos cinco objetivos; reiniciar ajustes e atalho para
+            // o + e o - da tela principal; e apagar estufadas ja existe na
+            // propria tela de relatorios, na lixeira da barra. Nenhuma
+            // capacidade se perde - uma porta a menos, so.
           ],
         ),
       ),
