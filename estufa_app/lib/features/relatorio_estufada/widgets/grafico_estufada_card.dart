@@ -13,65 +13,30 @@ class GraficoEstufadaCard extends StatelessWidget {
   final TextStyle tituloSecaoStyle;
   final ValueChanged<bool> onGraficoChanged;
 
-  /// Com filtro, quem manda no periodo e o produtor: o grafico mostra o que ele
-  /// pediu, do comeco ao fim. Sem filtro, abre nas ultimas [_janelaSemFiltro].
-  final bool filtroAtivo;
-
   const GraficoEstufadaCard({
     super.key,
     required this.leituras,
     required this.graficoTemperatura,
     required this.tituloSecaoStyle,
     required this.onGraficoChanged,
-    this.filtroAtivo = false,
   });
 
-  /// Quanto tempo o grafico mostra quando ninguem filtrou nada.
-  ///
-  /// Uma secagem passa de 100h. Desenhar tudo de uma vez e o que amassava o
+  /// Uma secagem passa de 100h, e desenhar tudo de uma vez e o que amassava o
   /// cartao: ou a largura crescia sem fim, ou um teto espremia a estufada
-  /// inteira num punhado de pixels. Um dia e o que cabe sendo legivel, e o resto
-  /// continua a um filtro de distancia — nada e apagado.
-  static const Duration _janelaSemFiltro = Duration(hours: 24);
-
+  /// inteira num punhado de pixels. Quem recorta agora e a tela, que entrega um
+  /// dia de cada vez — nada e apagado, e o cartao nao precisa mais de janela
+  /// propria.
   /// Quanto tempo cabe em uma tela. Fixo de proposito: uma hora de secagem ocupa
   /// o mesmo espaco tenha a estufada 3h ou 100h, e o grafico deixa de apertar
   /// conforme a secagem cresce.
   static const double _horasPorTela = 2;
 
-  /// Recorta na janela padrao, ancorando no ULTIMO DADO e nunca no relogio.
-  ///
-  /// Ancorar em "agora" ja custou caro aqui: relatorio de estufada encerrada
-  /// abria vazio, porque a janela parava num intervalo sem leitura nenhuma —
-  /// moldura, eixos e botoes, sem linha. O fim da estufada e o fim da janela.
-  ({List<HistoricoLeituraEntity> visiveis, bool recortou}) _janela(
-    List<HistoricoLeituraEntity> ordenadas,
-  ) {
-    if (filtroAtivo || ordenadas.length < 2) {
-      return (visiveis: ordenadas, recortou: false);
-    }
-
-    final corte = ordenadas.last.timestamp.subtract(_janelaSemFiltro);
-    if (!ordenadas.first.timestamp.isBefore(corte)) {
-      return (visiveis: ordenadas, recortou: false);
-    }
-
-    return (
-      visiveis: ordenadas
-          .where((leitura) => !leitura.timestamp.isBefore(corte))
-          .toList(),
-      recortou: true,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // Ordena por horario para a linha nunca "voltar no tempo" e para manter
     // leitura, ajuste e cor alinhados pelo mesmo indice.
-    final todas = [...leituras]
+    final leiturasOrdenadas = [...leituras]
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    final janela = _janela(todas);
-    final leiturasOrdenadas = janela.visiveis;
     final pontosGraficoTemperatura = leiturasOrdenadas
         .map(
           (leitura) => FlSpot(
@@ -123,7 +88,6 @@ class GraficoEstufadaCard extends StatelessWidget {
       tituloSecaoStyle: tituloSecaoStyle,
       graficoTemperatura: graficoTemperatura,
       onGraficoChanged: onGraficoChanged,
-      recortadoNaJanelaPadrao: janela.recortou,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final telaEstreita = MediaQuery.sizeOf(context).width < 430;
@@ -284,7 +248,6 @@ class _MolduraGrafico extends StatelessWidget {
   final ValueChanged<bool> onGraficoChanged;
   final Widget child;
   final double? altura;
-  final bool recortadoNaJanelaPadrao;
 
   const _MolduraGrafico({
     required this.tituloSecaoStyle,
@@ -292,7 +255,6 @@ class _MolduraGrafico extends StatelessWidget {
     required this.onGraficoChanged,
     required this.child,
     this.altura,
-    this.recortadoNaJanelaPadrao = false,
   });
 
   @override
@@ -312,10 +274,6 @@ class _MolduraGrafico extends StatelessWidget {
             tituloSecaoStyle: tituloSecaoStyle,
             onGraficoChanged: onGraficoChanged,
           ),
-          if (recortadoNaJanelaPadrao) ...[
-            const SizedBox(height: 6),
-            const _AvisoJanelaPadrao(),
-          ],
           const SizedBox(height: 10),
           child,
         ],
@@ -415,34 +373,6 @@ class _CabecalhoGrafico extends StatelessWidget {
 /// Sem isto o recorte seria silencioso, e quem abrisse o relatorio de uma
 /// secagem de quatro dias concluiria que ela durou um. Um recorte que se anuncia
 /// e escolha informada; um recorte calado e informacao errada.
-class _AvisoJanelaPadrao extends StatelessWidget {
-  const _AvisoJanelaPadrao();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.schedule_rounded, size: 14, color: Colors.white38),
-        SizedBox(width: 6),
-        // Curta o bastante para caber em uma linha: quebrando em duas, o icone
-        // saia do eixo das outras duas legendas e a pilha inteira ficava torta.
-        // Como chegar ao resto e o filtro, que esta logo acima nesta tela.
-        Flexible(
-          child: Text(
-            'Mostrando as últimas 24h',
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// Diz o que e a linha tracejada.
 ///
 /// Sem isto, o cinza pontilhado ao lado da leitura nao se explica: quem nao

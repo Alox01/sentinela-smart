@@ -18,11 +18,6 @@ class ResumoEstufadaCard extends StatelessWidget {
   final int totalAlarmes;
   final TextStyle tituloSecaoStyle;
 
-  /// Com filtro, a duração é a única coisa aqui que NÃO acompanha o recorte:
-  /// filtrar muda o que se olha, não quanto tempo a estufada durou. O subtítulo
-  /// diz isso, senão o número parece teimoso.
-  final bool filtroAtivo;
-
   const ResumoEstufadaCard({
     super.key,
     required this.duracao,
@@ -32,7 +27,6 @@ class ResumoEstufadaCard extends StatelessWidget {
     required this.umidadeAjusteFinal,
     required this.totalAlarmes,
     required this.tituloSecaoStyle,
-    this.filtroAtivo = false,
   });
 
   @override
@@ -59,7 +53,11 @@ class ResumoEstufadaCard extends StatelessWidget {
                 'DURA\u00C7\u00C3O',
                 _formatarDuracao(duracao),
                 Colors.white70,
-                subtitulo: filtroAtivo ? 'Estufada inteira' : null,
+                // A duração é a única coisa aqui que NÃO acompanha o dia
+                // aberto na tela: trocar de dia muda o que se olha, não quanto
+                // tempo a estufada durou. Sem o subtítulo o número parece
+                // teimoso.
+                subtitulo: 'Estufada inteira',
               ),
               const SizedBox(width: 12),
               _ResumoCard(

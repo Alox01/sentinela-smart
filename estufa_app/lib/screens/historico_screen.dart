@@ -50,7 +50,6 @@ class HistoricoScreen extends StatefulWidget {
 }
 
 class _HistoricoScreenState extends State<HistoricoScreen> {
-  static const Duration _intervaloMinimoFiltro = Duration(hours: 1);
   static const _tituloSecaoStyle = TextStyle(
     color: Colors.white54,
     fontSize: 12,
@@ -96,8 +95,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   final Map<int, int> _posicaoPorCiclo = {};
   List<EventoCicloEntity> _eventos = [];
   int? _cicloSelecionadoId;
-  DateTime? _inicioFiltro;
-  DateTime? _fimFiltro;
+  DateTime? _diaSelecionado;
   bool _graficoTemperatura = true;
   bool _mostrarGrafico = false;
   Timer? _timerGrafico;
@@ -148,11 +146,12 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     _cicloNuvemEmProgresso = null;
     _cargaNuvem = null;
 
-    final dados = await (precarga ??
-        _relatorioRepository.carregarRelatorio(
-          widget.ipEstufa,
-          cicloPreferidoId: cicloPreferidoId,
-        ));
+    final dados =
+        await (precarga ??
+            _relatorioRepository.carregarRelatorio(
+              widget.ipEstufa,
+              cicloPreferidoId: cicloPreferidoId,
+            ));
 
     final ciclo = dados.cicloSelecionado;
     if (ciclo != null) {
@@ -291,8 +290,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     }
     return resultado;
   }
-
-
 
   void _adiarExibicaoGrafico() {
     if (_mostrarGrafico || _timerGrafico != null) return;
@@ -527,8 +524,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                       umidadeAjusteFinal: umidadeAjusteFinal,
                       totalAlarmes: totalAlarmes,
                       tituloSecaoStyle: _tituloSecaoStyle,
-                      filtroAtivo:
-                          _inicioFiltro != null || _fimFiltro != null,
                     ),
                     const SizedBox(height: 18),
 
@@ -536,8 +531,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                       EventosEstufadaCard(
                         cicloSelecionado: cicloSelecionado,
                         eventos: _aplicarFiltroEventos(_eventos),
-                        filtroAtivo:
-                            _inicioFiltro != null || _fimFiltro != null,
                         tituloSecaoStyle: _tituloSecaoStyle,
                       ),
                       const SizedBox(height: 24),
@@ -549,8 +542,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                             graficoTemperatura: _graficoTemperatura,
                             tituloSecaoStyle: _tituloSecaoStyle,
                             onGraficoChanged: _alterarTipoGrafico,
-                            filtroAtivo:
-                                _inicioFiltro != null || _fimFiltro != null,
                           )
                         : GraficoEstufadaLoadingCard(
                             graficoTemperatura: _graficoTemperatura,
@@ -571,13 +562,12 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     return SeletorEstufadaPeriodoCard(
       ciclos: _ciclos,
       cicloSelecionadoId: _cicloSelecionadoId,
-      inicioFiltro: _inicioFiltro,
-      fimFiltro: _fimFiltro,
+      diaSelecionado: _diaExibido,
       tituloSecaoStyle: _tituloSecaoStyle,
       onCicloChanged: _selecionarCiclo,
-      onSelecionarInicio: _selecionarInicio,
-      onSelecionarFim: _selecionarFim,
-      onLimparFiltro: _limparFiltro,
+      onSelecionarDia: _diaExibido == null ? null : _selecionarDia,
+      onDiaAnterior: _podeIrAoDiaAnterior ? () => _mudarDia(-1) : null,
+      onProximoDia: _podeIrAoProximoDia ? () => _mudarDia(1) : null,
       rotuloCiclo: _rotuloCiclo,
     );
   }
@@ -586,8 +576,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     setState(() {
       _resetarExibicaoGrafico();
       _cicloSelecionadoId = cicloId;
-      _inicioFiltro = null;
-      _fimFiltro = null;
+      _diaSelecionado = null;
       _dadosFuture = _carregarDadosRelatorio(cicloPreferidoId: cicloId);
     });
   }
@@ -648,99 +637,68 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     });
   }
 
-  Future<void> _selecionarInicio() async {
-    final selecionado = await _selecionarDataHora(
-      valorAtual: _inicioFiltro,
-      referencia: _fimFiltro,
-      horaPadrao: const TimeOfDay(hour: 0, minute: 0),
-    );
-    if (selecionado == null) return;
-
-    final novoFim = _fimFiltro;
-    if (!_filtroPeriodoValido(inicio: selecionado, fim: novoFim)) return;
-
-    setState(() => _inicioFiltro = selecionado);
+  DateTime? get _diaExibido {
+    if (_diaSelecionado != null) return DateUtils.dateOnly(_diaSelecionado!);
+    if (_leiturasBrutas.isEmpty) return null;
+    return DateUtils.dateOnly(_leiturasBrutas.last.timestamp);
   }
 
-  Future<void> _selecionarFim() async {
-    final selecionado = await _selecionarDataHora(
-      valorAtual: _fimFiltro,
-      referencia: _inicioFiltro,
-      horaPadrao: const TimeOfDay(hour: 23, minute: 59),
-    );
-    if (selecionado == null) return;
+  DateTime? get _primeiroDiaDisponivel => _leiturasBrutas.isEmpty
+      ? null
+      : DateUtils.dateOnly(_leiturasBrutas.first.timestamp);
 
-    final novoInicio = _inicioFiltro;
-    if (!_filtroPeriodoValido(inicio: novoInicio, fim: selecionado)) return;
+  DateTime? get _ultimoDiaDisponivel => _leiturasBrutas.isEmpty
+      ? null
+      : DateUtils.dateOnly(_leiturasBrutas.last.timestamp);
 
-    setState(() => _fimFiltro = selecionado);
+  bool get _podeIrAoDiaAnterior {
+    final dia = _diaExibido;
+    final primeiro = _primeiroDiaDisponivel;
+    return dia != null && primeiro != null && dia.isAfter(primeiro);
   }
 
-  Future<DateTime?> _selecionarDataHora({
-    required DateTime? valorAtual,
-    required DateTime? referencia,
-    required TimeOfDay horaPadrao,
-  }) async {
-    final base = valorAtual ?? referencia ?? DateTime.now();
-    final dataSelecionada = await showDatePicker(
+  bool get _podeIrAoProximoDia {
+    final dia = _diaExibido;
+    final ultimo = _ultimoDiaDisponivel;
+    return dia != null && ultimo != null && dia.isBefore(ultimo);
+  }
+
+  Future<void> _selecionarDia() async {
+    final primeiro = _primeiroDiaDisponivel;
+    final ultimo = _ultimoDiaDisponivel;
+    if (primeiro == null || ultimo == null) return;
+
+    final selecionado = await showDatePicker(
       context: context,
-      initialDate: base,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      initialDate: _diaExibido ?? ultimo,
+      firstDate: primeiro,
+      lastDate: ultimo,
     );
-    if (dataSelecionada == null || !mounted) return null;
-
-    final horaInicial = valorAtual == null
-        ? horaPadrao
-        : TimeOfDay(hour: valorAtual.hour, minute: valorAtual.minute);
-    final horaSelecionada = await showTimePicker(
-      context: context,
-      initialTime: horaInicial,
-    );
-    if (horaSelecionada == null) return null;
-
-    return DateTime(
-      dataSelecionada.year,
-      dataSelecionada.month,
-      dataSelecionada.day,
-      horaSelecionada.hour,
-      horaSelecionada.minute,
-    );
+    if (selecionado == null || !mounted) return;
+    setState(() => _diaSelecionado = DateUtils.dateOnly(selecionado));
   }
 
-  void _limparFiltro() {
-    setState(() {
-      _inicioFiltro = null;
-      _fimFiltro = null;
-    });
-  }
-
-  bool _filtroPeriodoValido({DateTime? inicio, DateTime? fim}) {
-    if (inicio == null || fim == null) return true;
-
-    if (fim.isBefore(inicio)) {
-      _mostrarAvisoFiltro('O fim do filtro precisa ser depois do in\u00EDcio.');
-      return false;
-    }
-
-    if (fim.difference(inicio) < _intervaloMinimoFiltro) {
-      _mostrarAvisoFiltro(
-        'Escolha um intervalo de pelo menos 1 hora para filtrar o relat\u00F3rio.',
-      );
-      return false;
-    }
-
-    return true;
-  }
-
-  void _mostrarAvisoFiltro(String mensagem) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  void _mudarDia(int deslocamento) {
+    final dia = _diaExibido;
+    if (dia == null) return;
+    setState(() => _diaSelecionado = dia.add(Duration(days: deslocamento)));
   }
 
   List<HistoricoLeituraEntity> _aplicarFiltro(
+    List<HistoricoLeituraEntity> leituras,
+  ) {
+    final filtradas = _aplicarRecorteCiclo(leituras);
+    final dia = _diaExibido;
+    if (dia == null) return filtradas;
+    final proximoDia = dia.add(const Duration(days: 1));
+    return filtradas
+        .where(
+          (e) => !e.timestamp.isBefore(dia) && e.timestamp.isBefore(proximoDia),
+        )
+        .toList();
+  }
+
+  List<HistoricoLeituraEntity> _aplicarRecorteCiclo(
     List<HistoricoLeituraEntity> leituras,
   ) {
     var filtradas = leituras;
@@ -754,27 +712,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 !e.timestamp.isBefore(ciclo.inicio) &&
                 !e.timestamp.isAfter(fimCiclo),
           )
-          .toList();
-    }
-
-    if (_inicioFiltro != null) {
-      filtradas = filtradas
-          .where((e) => !e.timestamp.isBefore(_inicioFiltro!))
-          .toList();
-    }
-
-    if (_fimFiltro != null) {
-      final fimInclusivo = DateTime(
-        _fimFiltro!.year,
-        _fimFiltro!.month,
-        _fimFiltro!.day,
-        _fimFiltro!.hour,
-        _fimFiltro!.minute,
-        59,
-        999,
-      );
-      filtradas = filtradas
-          .where((e) => !e.timestamp.isAfter(fimInclusivo))
           .toList();
     }
 
@@ -833,7 +770,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     // 5) existe para o desenho nao embolar; no arquivo ele sumia com leitura de
     // verdade — em 14/09 o CSV saiu sem a leitura das 23:21 de 12/09, a que
     // trazia o ajuste novo. A tabela do PDF ja escolhe as suas (uma por hora).
-    return _aplicarFiltro(_leiturasCompletasAtuais);
+    return _aplicarRecorteCiclo(_leiturasCompletasAtuais);
   }
 
   Future<void> _exportarPdf() async {
@@ -855,7 +792,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
         break;
       }
     }
-    final eventosFiltrados = _aplicarFiltroEventos(_eventos);
+    final eventosFiltrados = _aplicarFiltroEventos(_eventos, filtrarDia: false);
     final nomeArquivo = _csvService.nomeArquivo(
       widget.nomeEstufa,
       leiturasFiltradas,
@@ -915,8 +852,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   }
 
   List<EventoCicloEntity> _aplicarFiltroEventos(
-    List<EventoCicloEntity> eventos,
-  ) {
+    List<EventoCicloEntity> eventos, {
+    bool filtrarDia = true,
+  }) {
     // Umidade fora do ajuste nao e evento de relatorio: numa estufa de secagem
     // ficar muito abaixo e o objetivo do processo, e a linha se repetia a
     // estufada inteira, empurrando para fora da tela o que diz alguma coisa. O
@@ -931,7 +869,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     // E os alarmes que so as leituras viram — com o app fechado nao ha evento
     // guardado (`eventos_de_alarme.dart`). Os que o app gravou ficam, e o
     // derivado do mesmo episodio nao se repete.
-    final leiturasDoPeriodo = _aplicarFiltro(_leiturasCompletasAtuais);
+    final leiturasDoPeriodo = filtrarDia
+        ? _aplicarFiltro(_leiturasCompletasAtuais)
+        : _aplicarRecorteCiclo(_leiturasCompletasAtuais);
     var filtrados = [
       for (final e in eventos)
         if (!e.tipo.startsWith('oscilacao_umidade') &&
@@ -950,28 +890,20 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       ),
     ]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    if (_inicioFiltro != null) {
-      filtrados = filtrados
-          .where((e) => !e.timestamp.isBefore(_inicioFiltro!))
-          .toList();
-    }
-
-    if (_fimFiltro != null) {
-      final fimInclusivo = DateTime(
-        _fimFiltro!.year,
-        _fimFiltro!.month,
-        _fimFiltro!.day,
-        _fimFiltro!.hour,
-        _fimFiltro!.minute,
-        59,
-        999,
-      );
-      filtrados = filtrados
-          .where((e) => !e.timestamp.isAfter(fimInclusivo))
-          .toList();
+    if (filtrarDia) {
+      final dia = _diaExibido;
+      if (dia != null) {
+        final proximoDia = dia.add(const Duration(days: 1));
+        filtrados = filtrados
+            .where(
+              (e) =>
+                  !e.timestamp.isBefore(dia) &&
+                  e.timestamp.isBefore(proximoDia),
+            )
+            .toList();
+      }
     }
 
     return filtrados;
   }
 }
-

@@ -6,26 +6,24 @@ import '../../../models/ciclo_secagem_entity.dart';
 class SeletorEstufadaPeriodoCard extends StatelessWidget {
   final List<CicloSecagemEntity> ciclos;
   final int? cicloSelecionadoId;
-  final DateTime? inicioFiltro;
-  final DateTime? fimFiltro;
+  final DateTime? diaSelecionado;
   final TextStyle tituloSecaoStyle;
   final ValueChanged<int> onCicloChanged;
-  final VoidCallback onSelecionarInicio;
-  final VoidCallback onSelecionarFim;
-  final VoidCallback onLimparFiltro;
+  final VoidCallback? onSelecionarDia;
+  final VoidCallback? onDiaAnterior;
+  final VoidCallback? onProximoDia;
   final String Function(CicloSecagemEntity ciclo) rotuloCiclo;
 
   const SeletorEstufadaPeriodoCard({
     super.key,
     required this.ciclos,
     required this.cicloSelecionadoId,
-    required this.inicioFiltro,
-    required this.fimFiltro,
+    required this.diaSelecionado,
     required this.tituloSecaoStyle,
     required this.onCicloChanged,
-    required this.onSelecionarInicio,
-    required this.onSelecionarFim,
-    required this.onLimparFiltro,
+    required this.onSelecionarDia,
+    required this.onDiaAnterior,
+    required this.onProximoDia,
     required this.rotuloCiclo,
   });
 
@@ -90,13 +88,12 @@ class SeletorEstufadaPeriodoCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _FiltroPeriodo(
-            inicioFiltro: inicioFiltro,
-            fimFiltro: fimFiltro,
+            diaSelecionado: diaSelecionado,
             telaEstreita: telaEstreita,
             tituloSecaoStyle: tituloSecaoStyle,
-            onSelecionarInicio: onSelecionarInicio,
-            onSelecionarFim: onSelecionarFim,
-            onLimparFiltro: onLimparFiltro,
+            onSelecionarDia: onSelecionarDia,
+            onDiaAnterior: onDiaAnterior,
+            onProximoDia: onProximoDia,
           ),
         ],
       ),
@@ -324,31 +321,27 @@ class RotuloEstufada extends StatelessWidget {
 }
 
 class _FiltroPeriodo extends StatelessWidget {
-  final DateTime? inicioFiltro;
-  final DateTime? fimFiltro;
+  final DateTime? diaSelecionado;
   final bool telaEstreita;
   final TextStyle tituloSecaoStyle;
-  final VoidCallback onSelecionarInicio;
-  final VoidCallback onSelecionarFim;
-  final VoidCallback onLimparFiltro;
+  final VoidCallback? onSelecionarDia;
+  final VoidCallback? onDiaAnterior;
+  final VoidCallback? onProximoDia;
 
   const _FiltroPeriodo({
-    required this.inicioFiltro,
-    required this.fimFiltro,
+    required this.diaSelecionado,
     required this.telaEstreita,
     required this.tituloSecaoStyle,
-    required this.onSelecionarInicio,
-    required this.onSelecionarFim,
-    required this.onLimparFiltro,
+    required this.onSelecionarDia,
+    required this.onDiaAnterior,
+    required this.onProximoDia,
   });
 
   @override
   Widget build(BuildContext context) {
-    final inicioTexto = inicioFiltro == null
-        ? 'Início'
-        : _formatarPeriodo(inicioFiltro!);
-    final fimTexto = fimFiltro == null ? 'Fim' : _formatarPeriodo(fimFiltro!);
-    final temFiltro = inicioFiltro != null || fimFiltro != null;
+    final diaTexto = diaSelecionado == null
+        ? 'Selecione um dia'
+        : DateFormat('dd/MM/yyyy').format(diaSelecionado!);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
@@ -363,7 +356,7 @@ class _FiltroPeriodo extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: Text(
-              'FILTRO DO PERÍODO',
+              'DIA EXIBIDO',
               style: tituloSecaoStyle,
               textAlign: TextAlign.center,
             ),
@@ -372,7 +365,7 @@ class _FiltroPeriodo extends StatelessWidget {
           const SizedBox(
             width: double.infinity,
             child: Text(
-              'Use intervalos de pelo menos 1 hora.',
+              'O PDF e o CSV sempre incluem a estufada completa.',
               style: TextStyle(color: Colors.white38, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -380,48 +373,33 @@ class _FiltroPeriodo extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                child: _BotaoFiltroPeriodo(
-                  texto: inicioTexto,
-                  icone: Icons.date_range,
-                  telaEstreita: telaEstreita,
-                  onPressed: onSelecionarInicio,
-                ),
+              IconButton(
+                onPressed: onDiaAnterior,
+                icon: const Icon(Icons.chevron_left),
+                color: Colors.white70,
+                tooltip: 'Dia anterior',
               ),
               SizedBox(width: telaEstreita ? 6 : 10),
               Expanded(
                 child: _BotaoFiltroPeriodo(
-                  texto: fimTexto,
-                  icone: Icons.event,
+                  texto: diaTexto,
+                  icone: Icons.calendar_today,
                   telaEstreita: telaEstreita,
-                  onPressed: onSelecionarFim,
+                  onPressed: onSelecionarDia,
                 ),
               ),
-              if (temFiltro) ...[
-                SizedBox(width: telaEstreita ? 2 : 8),
-                IconButton(
-                  onPressed: onLimparFiltro,
-                  icon: const Icon(Icons.close),
-                  color: Colors.white70,
-                  tooltip: 'Limpar filtro',
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints.tightFor(
-                    width: telaEstreita ? 32 : 48,
-                    height: telaEstreita ? 36 : 48,
-                  ),
-                ),
-              ],
+              SizedBox(width: telaEstreita ? 6 : 10),
+              IconButton(
+                onPressed: onProximoDia,
+                icon: const Icon(Icons.chevron_right),
+                color: Colors.white70,
+                tooltip: 'Próximo dia',
+              ),
             ],
           ),
         ],
       ),
     );
-  }
-
-  String _formatarPeriodo(DateTime data) {
-    if (!telaEstreita) return DateFormat('dd/MM HH:mm').format(data);
-    if (data.minute == 0) return DateFormat("dd/MM HH'h'").format(data);
-    return DateFormat('dd/MM HH:mm').format(data);
   }
 }
 
@@ -429,7 +407,7 @@ class _BotaoFiltroPeriodo extends StatelessWidget {
   final String texto;
   final IconData icone;
   final bool telaEstreita;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const _BotaoFiltroPeriodo({
     required this.texto,

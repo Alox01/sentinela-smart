@@ -7,29 +7,21 @@ import '../../../models/evento_ciclo_entity.dart';
 class EventosEstufadaCard extends StatelessWidget {
   final CicloSecagemEntity? cicloSelecionado;
   final List<EventoCicloEntity> eventos;
-  final bool filtroAtivo;
   final TextStyle tituloSecaoStyle;
 
   const EventosEstufadaCard({
     super.key,
     required this.cicloSelecionado,
     required this.eventos,
-    required this.filtroAtivo,
     required this.tituloSecaoStyle,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Um dia inteiro de eventos cabe na rolagem do proprio cartao; o corte nos
+    // ultimos 8 existia quando a lista era a estufada inteira.
     const limiteEventos = 8;
-    final eventosVisiveis = filtroAtivo
-        ? eventos
-        : eventos
-              .skip(
-                eventos.length > limiteEventos
-                    ? eventos.length - limiteEventos
-                    : 0,
-              )
-              .toList();
+    final eventosVisiveis = eventos;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -63,7 +55,7 @@ class EventosEstufadaCard extends StatelessWidget {
           else
             _ListaEventos(
               eventos: eventosVisiveis,
-              comRolagem: filtroAtivo && eventosVisiveis.length > limiteEventos,
+              comRolagem: eventosVisiveis.length > limiteEventos,
             ),
         ],
       ),

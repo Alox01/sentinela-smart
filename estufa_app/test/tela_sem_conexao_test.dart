@@ -113,7 +113,6 @@ void main() {
         emTela(
           EventosEstufadaCard(
             cicloSelecionado: ciclo,
-            filtroAtivo: false,
             tituloSecaoStyle: const TextStyle(),
             eventos: [
               evento(DateTime(2026, 9, 14, 19, 2), 'Ajuste para 95 F'),
@@ -140,7 +139,6 @@ void main() {
         emTela(
           EventosEstufadaCard(
             cicloSelecionado: ciclo,
-            filtroAtivo: false,
             tituloSecaoStyle: const TextStyle(),
             eventos: [
               evento(DateTime(2026, 9, 14, 19, 2), 'Ajuste para 95 F'),
