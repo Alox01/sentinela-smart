@@ -163,10 +163,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     // em vez de esperar a propria busca.
     _monitor.assinar(_aoMudarLeitura);
     _aoMudarLeitura();
-    // Adianta o relatorio desta estufa. Ele custa tres consultas ao banco local,
-    // e ate agora elas comecavam quando o produtor ja estava olhando a tela de
-    // relatorios, esperando. Nada nelas depende daquela tela - o endereco esta
-    // aqui desde sempre -, entao nao havia motivo para so entao comecar.
+    // Precarrega os dados para reduzir a espera ao abrir o relatório.
     RelatorioEstufadaRepository(IsarService.instance).precarregar(_ip);
     // Por ultimo, e sem segurar nada: confere no banco se a copia que esta tela
     // recebeu ainda vale. E o que impede a chave revogada de sobreviver aqui.
@@ -176,20 +173,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     unawaited(api.reconhecerAlerta());
   }
 
-  /// Preenche a tela com a ultima leitura gravada no celular, enquanto nao
-  /// houver leitura ao vivo.
-  ///
-  /// Abrir a estufa sem conexao mostrava 0 degF, 0% e ajuste 0 — numeros que o
-  /// app nunca leu de aparelho nenhum, com a mesma cara dos numeros de verdade.
-  /// Pior: os botoes + e - trabalhavam sobre esse zero, e o pedido entrava na
-  /// fila para ser aplicado na volta da internet. Ajustar sem internet continua
-  /// valendo (e proposital, e o produtor usa); ajustar a partir de um numero
-  /// inventado, nao.
-  ///
-  /// Sai na frente de qualquer leitura ao vivo: `_temLeituraReal` so e falso
-  /// enquanto nada chegou, e a verificacao acontece de novo depois do await —
-  /// uma leitura de verdade pode ter chegado durante a consulta ao banco, e ela
-  /// manda.
+  /// Exibe a última leitura persistida enquanto não houver dados em tempo real.
+  /// Uma leitura recebida durante a consulta sempre tem prioridade.
   Future<void> _mostrarUltimaLeituraGuardada() async {
     if (_temLeituraReal) return;
     final historico = await IsarService.instance.listarHistoricoPorIp(_ip);
@@ -205,13 +190,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     });
   }
 
-  /// Relê a estufa no banco e troca o monitor quando o que chegou por copia
-  /// envelheceu — chave revogada, endereco editado, aparelho reidentificado.
-  ///
-  /// Sem isto, trocar a chave gravava no banco e nao nas copias em transito: o
-  /// registro comparava a chave velha com a velha, dizia "nao mudou" e reusava o
-  /// `ApiService` morto. Todo comando virava "Chave invalida" ate reiniciar o
-  /// app, inclusive na rede local com o aparelho ao lado.
+  /// Revalida endereço, chave e identificação da estufa no banco local.
+  /// Se algum dado mudou, substitui o monitor que utiliza as credenciais antigas.
   Future<void> _revalidarComOBanco() async {
     final atual = await credenciaisDeAgora(
       idEstufa: widget.idEstufa,
@@ -292,11 +272,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     final novoAviso = status['aviso'] ?? '';
     final novaSireneLigada =
         status['alarmeAtivo'] ?? status['alertaIncendio'] ?? false;
-    // O ALARME DO PROCESSO - temperatura fora da faixa ou fogo -, e nao a
-    // sirene. E ele que vira evento e vai para o historico. Com a sirene, o
-    // buzzer desligado no aparelho apagava o alarme do relatorio: em 13/09/2026
-    // foram duas horas 10 F abaixo do ajuste sem nenhum "Alarme acionado". A
-    // sirene continua mandando no que a tela mostra como tocando.
+    // Registra a condição do processo independentemente do estado da sirene.
+    // A sirene determina apenas a indicação sonora exibida na tela.
     // `alertaTemperatura` so vem do aparelho de verdade; sem ele (simulador,
     // firmware antigo), segue pela sirene como antes.
     final alertaTemperaturaLido = status['alertaTemperatura'];
@@ -367,12 +344,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
 
     setState(() {
-      // So o APARELHO confirma um ajuste pendente. A leitura da nuvem com
-      // comando ainda na fila do servidor (`aguardandoAparelho`) traz o ajuste
-      // PEDIDO, e confirmar por ela apagava o pendente cedo demais: na volta da
-      // internet o app passava para LOCAL, lia o valor antigo que o aparelho
-      // ainda tinha e mostrava o ajuste voltando para tras por alguns segundos
-      // (D8, teste de 14/09).
+      // Somente uma leitura confirmada pelo aparelho conclui o ajuste pendente.
+      // A nuvem pode informar o valor solicitado enquanto o comando ainda está na fila.
       if (!aguardandoAparelho) {
         if (_tempAjustePendente != null &&
             _tempAjustePendente == novoTempAjuste) {
@@ -455,10 +428,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     bool porEvento = false,
   }) {
     if (_cicloAtual == null) return;
-    // Sem leitura do aparelho ainda, os valores da tela sao os zeros de
-    // partida. Gravar isso inventava uma leitura de 0°F / 0% — em 14/09/2026 o
-    // fim da estufada #22 gravou uma, e o relatorio saiu com temperatura final
-    // 0 e "ajuste alterado de 70 para 0°F".
+    // Não persiste os valores iniciais antes da primeira leitura do aparelho.
     if (!_temLeituraReal) return;
 
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
@@ -530,11 +500,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
                       temperaturaAjuste: tempAjuste,
                       avisoEmergencia: avisoEmergencia,
                     ),
-                  // Sem banner de falta de energia: o aparelho nao tem sensor de
-                  // tensao nem bateria, entao `temEnergia` e sempre true e o
-                  // aviso nunca aparecia. O texto ainda prometia "o sistema esta
-                  // na bateria/gerador", que nao existe. Quem cobre queda de luz
-                  // e o banner de sem comunicacao, pela ausencia de leituras.
+                  // Sem sensor de tensão, a ausência de leituras é representada
+                  // pelo aviso de falta de comunicação.
                   if (_leituraGuardadaDe != null)
                     _buildBannerLeituraGuardada(_leituraGuardadaDe!),
                   if (_semComunicacaoAparelho) _buildBannerSemComunicacao(),
@@ -744,9 +711,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
   }
 
-  // Cinza, nao vermelho nem ambar: nao e falha nem espera. E um retrato, e o
-  // unico defeito possivel aqui seria o produtor achar que esta vendo o agora.
-  // Por isso o banner diz a hora da leitura, e nao so "sem conexao".
+  // Identifica dados persistidos e informa o horário para diferenciá-los dos dados atuais.
   Widget _buildBannerLeituraGuardada(DateTime quando) {
     final formato = DateFormat('dd/MM HH:mm');
     return Container(
@@ -837,9 +802,7 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
     );
   }
 
-  /// Reinscreve esta estufa para avisos ao abri-la. Nao e so para saber o estado:
-  /// abrir a estufa passa a CONSERTAR uma inscricao que nao aconteceu, em vez de
-  /// so relatar. Ate aqui o conserto dependia de reabrir o app inteiro.
+  /// Garante a inscrição da estufa nas notificações ao abrir o monitoramento.
   Future<void> _garantirVigilancia() async {
     final id = (_idHardware ?? api.idHardware)?.trim();
     if (id == null || id.isEmpty) return;
@@ -1072,15 +1035,8 @@ class _MonitoramentoScreenState extends State<MonitoramentoScreen> {
         alertaIncendioAtual: alertaIncendioAtual,
       );
     }
-    // A umidade continua sendo AVALIADA — o detector guarda o estado dela, e a
-    // folga da acomodacao alimenta o limiar do LED —, mas o evento e descartado.
-    //
-    // Ela nao vira linha no relatorio por decisao do produtor (11/08/2026): numa
-    // estufa de secagem a umidade ficar muito abaixo do ajuste e o OBJETIVO do
-    // processo, entao "umidade abaixo do ajuste" se repetia a estufada inteira,
-    // empurrando para fora da tela os eventos que dizem alguma coisa — alarme,
-    // mudanca de ajuste, queda de conexao. O comportamento da umidade continua
-    // visivel onde ele se le melhor: no proprio grafico, que tem aba propria.
+    // Avalia a umidade para o indicador, mas não gera eventos repetitivos no relatório.
+    // A variação completa permanece disponível no gráfico específico.
     _detectorOscilacao.avaliarUmidade(
       leitura: umidadeAtual,
       ajuste: umidadeAjusteAtual,

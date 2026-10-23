@@ -69,17 +69,9 @@ class IsarService {
     await _migrarChavesParaHardware();
   }
 
-  /// Passa as estufas ja cadastradas da chave antiga (`nome::ip`) para a nova
-  /// (`hw::<idHardware>`). Roda uma vez por abertura e nao faz nada quando nao
-  /// ha o que mudar.
+  /// Migra a chave `nome::ip` para `hw::<idHardware>` quando não há conflito.
   ///
-  /// Conservadora de proposito: so reescreve a linha que TEM id de hardware e
-  /// cujo destino ainda esta livre. Duas linhas do mesmo aparelho ficam como
-  /// estao - juntar sozinho escolheria qual histórico sobrevive, e essa escolha
-  /// nao e do app. Nada aqui apaga linha nenhuma.
-  ///
-  /// Os ciclos, eventos e leituras se ligam a estufa pelo IP, nao por esta
-  /// chave, entao a reescrita nao desgruda historico.
+  /// A operação preserva cadastros ambíguos e não altera históricos.
   Future<void> _migrarChavesParaHardware() async {
     final isar = _isar;
     if (isar == null) return;
@@ -110,19 +102,7 @@ class IsarService {
     });
   }
 
-  // A identidade de uma estufa e o APARELHO, nunca o endereco.
-  //
-  // Ate 20/10/2026 a chave unica era `nome::ip`, com `replace: true` no indice.
-  // O IP e emprestado pelo roteador e volta para o bolo quando o aparelho
-  // desliga: bastava o DHCP entregar aquele endereco a outro ESP32 - o de um
-  // vizinho em visita, ou o proprio aparelho voltando com endereco novo - para
-  // a chave colidir e o Isar SUBSTITUIR a estufa existente, sem perguntar. A
-  // estufa continuava na lista, agora apontando para outro aparelho e com a
-  // chave de acesso errada, e os comandos passavam a falhar por credencial.
-  //
-  // O `idHardware` vem do MAC do chip e nunca repete. Quando ele e conhecido, e
-  // ele quem manda. O par nome+endereco fica so para a linha que ainda nao
-  // falou com nenhum aparelho.
+  // O idHardware identifica o aparelho; nome e endereço são usados como fallback.
   static String _chaveDaEstufa({
     String? idHardware,
     required String nome,
@@ -133,8 +113,7 @@ class IsarService {
     return '${nome.trim()}::${ip.trim()}';
   }
 
-  /// Recusa gravar por cima de uma estufa que pertence a outro aparelho.
-  /// Silencio aqui foi o defeito: quem decide trocar de aparelho e o produtor.
+  /// Impede que um cadastro substitua silenciosamente outro aparelho.
   Future<void> _conferirDonoDaChave(
     Isar isar,
     String chave,
@@ -186,17 +165,7 @@ class IsarService {
     return estufa;
   }
 
-  // O id capturado automaticamente sobrevive a uma edicao que nao informa outro
-  // - o formulario so o envia quando o usuario digita algo.
-  //
-  // Ate 20/10/2026 ele era DESCARTADO quando o endereco mudava, com o
-  // raciocinio de que "quem atender no endereco novo passa a valer". Era o
-  // avesso do que o cadastro precisa: endereco muda sozinho a cada concessao do
-  // roteador, e a cada troca a estufa perdia a unica marca que dizia de qual
-  // aparelho ela era. O aparelho e que identifica, nao o endereco.
-  //
-  // Para repontar uma estufa para outro aparelho, informe o id novo na edicao -
-  // ele vence o herdado - ou remova e cadastre de novo.
+  // Preserva o idHardware quando a edição altera somente nome ou endereço.
   static String? _idHerdado(EstufaEntity existente, String ipNovo) =>
       existente.idHardware;
 

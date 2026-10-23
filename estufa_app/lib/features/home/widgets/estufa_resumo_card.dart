@@ -9,16 +9,7 @@ class EstufaResumoCard extends StatefulWidget {
   final VoidCallback onEditar;
   final VoidCallback onRemover;
 
-  /// Recarrega a lista quando o produtor volta do monitoramento.
-  ///
-  /// Existe por causa de um defeito que custou uma tarde: dentro do
-  /// monitoramento da para trocar a CHAVE do aparelho (reconfigurar, tirar o
-  /// acesso dos outros), e isso grava no banco — mas a lista aqui continua com a
-  /// estufa que ela carregou ao abrir, com a chave velha. Ao reabrir a estufa,
-  /// era a chave velha que ia junto, o `MonitorEstufas` via "nada mudou", devolvia
-  /// o mesmo `ApiService` de antes, e todo comando voltava "Chave inválida" —
-  /// inclusive na rede local, com o aparelho ali do lado. Só reiniciando o app
-  /// aquilo se resolvia, e nada na tela ligava uma coisa à outra.
+  /// Recarrega o cadastro e as credenciais ao retornar do monitoramento.
   final VoidCallback aoVoltar;
 
   const EstufaResumoCard({
@@ -387,8 +378,7 @@ class _EstufaResumoCardState extends State<EstufaResumoCard> {
   // de quem perguntar. Chamar isso de OFFLINE manda procurar problema na rede
   // quando o que falta e um campo - foi o que aconteceu com a estufa do
   // simulador, que so pode ter o id digitado (nao ha aparelho para descobrir).
-  bool get _semIdentificacao =>
-      (widget.estufa.idHardware ?? '').trim().isEmpty;
+  bool get _semIdentificacao => (widget.estufa.idHardware ?? '').trim().isEmpty;
 
   Widget _buildLayoutSemDados(bool offline) {
     final cor = offline ? Colors.redAccent : Colors.white38;

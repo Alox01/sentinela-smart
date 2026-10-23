@@ -51,21 +51,10 @@ class PushNotificationService {
         importance: Importance.high,
       );
 
-  /// Temperatura acima do limite de incendio (175 °F). Evento separado do sensor
-  /// de chama porque as causas sao independentes - o produtor pode querer
-  /// desligar o aviso de uma sem perder o da outra.
+  /// Canal para temperatura acima do limite de incêndio.
   ///
-  /// **Mesma sirene do incendio**, e `_v2` por causa disso. Som diferente so vale
-  /// quando leva a uma acao diferente, e estes dois significam a mesma coisa para
-  /// quem esta dormindo: risco de fogo, va agora. Antes ele soava igual a um
-  /// desvio comum de temperatura — o produtor acordava, reconhecia o som de
-  /// sempre e voltava a dormir. Os sons ficam agrupados por ACAO: sirene do fogo
-  /// e "sair", `alarme_estufa` e "ir conferir".
-  ///
-  /// O canal continua sendo o seu: mesmo som, canais diferentes, para o produtor
-  /// silenciar um sem levar o outro e cada aviso aparecer com o nome certo nas
-  /// configuracoes do Android.
-  /// **Tem que casar com `CANAL_TEMP_MUITO_ALTA` em `estufa_server/push.js`.**
+  /// Usa a sirene de incêndio, mas permite configuração independente. O
+  /// identificador deve corresponder a `CANAL_TEMP_MUITO_ALTA` no servidor.
   static const String canalTempMuitoAltaId = 'sentinela_temp_muito_alta_v2';
 
   static AndroidNotificationChannel _canalTempMuitoAlta() =>
@@ -83,12 +72,9 @@ class PushNotificationService {
         vibrationPattern: Int64List.fromList([0, 1000, 400, 1000, 400, 1000]),
       );
 
-  /// Aparelho mudo tira da cama: as 3h da manha pode ser queda de energia
-  /// com a estufada em andamento. Antes este aviso ia no canal do INCENDIO
-  /// (o watchdog o marca como critico) - acordava, mas aparecia como "Incendio"
-  /// nas configuracoes do Android, e o produtor nao conseguia silenciar um sem
-  /// perder o outro.
-  /// **Tem que casar com `CANAL_SEM_COMUNICACAO` em `estufa_server/push.js`.**
+  /// Canal para perda de comunicação com o aparelho.
+  ///
+  /// O identificador deve corresponder a `CANAL_SEM_COMUNICACAO` no servidor.
   static const String canalSemComunicacaoId = 'sentinela_sem_comunicacao_v1';
 
   static AndroidNotificationChannel _canalSemComunicacao() =>
@@ -115,19 +101,10 @@ class PushNotificationService {
         ]),
       );
 
-  /// Temperatura fora da faixa: toca em volume de **alarme**, como o incendio.
-  /// E de madrugada que esse aviso precisa acordar alguem, e o volume de
-  /// notificacao costuma estar baixo justamente nessa hora.
+  /// Canal de alarme para temperatura fora da faixa.
   ///
-  /// Canal separado do incendio, e nao o mesmo, porque cada um tem a sua
-  /// historia de configuracao no Android: o produtor pode querer silenciar um
-  /// sem perder o outro, e um canal ja criado nao se reconfigura.
-  ///
-  /// Usa a mesma sirene do incendio - e o unico som longo disponivel, e o toque
-  /// precisa ser **persistente** para acordar, nao um bipe. A vibracao e mais
-  /// espacada que a do fogo, o que ajuda a distinguir de perto; pelo som, os
-  /// dois sao parecidos (ver ressalva em NOTIFICACOES_PUSH.md).
-  /// **Tem que casar com `CANAL_TEMPERATURA` em `estufa_server/push.js`.**
+  /// Permanece separado do incêndio para aceitar configuração independente. O
+  /// identificador deve corresponder a `CANAL_TEMPERATURA` no servidor.
   static const String canalTemperaturaId = 'sentinela_temperatura_v1';
 
   static AndroidNotificationChannel _canalTemperatura() =>
@@ -145,16 +122,8 @@ class PushNotificationService {
         vibrationPattern: Int64List.fromList([0, 800, 600, 800, 600, 800]),
       );
 
-  /// O numero no fim sobe a cada mudanca de som ou importancia, e nao e
-  /// enfeite: o Android **congela a configuracao de um canal quando ele e
-  /// criado**, entao trocar o som sem trocar o ID nao muda nada em celular que
-  /// ja tem o app. Canal novo e a unica forma de a mudanca valer para todo
-  /// mundo. Foi `_v2` quando o bipe curto padrao virou som longo; e `_v3` desde
-  /// que o incendio ganhou sirene propria (`sirene_incendio.mp3`, 24 s).
-  ///
-  /// **Tem que casar com o `channelId` que o servidor envia**
-  /// (`estufa_server/push.js`) — divergir faz o Android entregar no canal padrao
-  /// e o alerta perde o som de alarme, sem erro nenhum aparecer.
+  /// O sufixo muda quando som ou importância são alterados, pois o Android não
+  /// reconfigura canais existentes. O identificador deve coincidir com o servidor.
   static const String canalCriticoId = 'sentinela_critico_v3';
 
   /// Som longo e em volume de ALARME (nao de notificacao). Essa distincao e o

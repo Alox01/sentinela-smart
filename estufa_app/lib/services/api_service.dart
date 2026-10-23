@@ -46,17 +46,7 @@ class ApiService {
     defaultValue: '',
   );
 
-  // Ultima conexao LOCAL que funcionou por estufa, compartilhada entre as telas
-  // (card da home, monitoramento). Evita re-sondar tudo do zero a cada
-  // instancia e reduz o tempo ate a primeira leitura.
-  //
-  // So local, de proposito. Guardar a nuvem aqui tinha um efeito que ninguem
-  // pediu: uma unica resolucao que caiu para a nuvem - por uma falha isolada do
-  // nome mDNS, que falha sozinho de vez em quando - era adotada por qualquer
-  // tela aberta nos 30 s seguintes, SEM sondar o local, porque o construtor
-  // confia na lembranca. O produtor via "do nada mudou para a nuvem" com a rede
-  // local funcionando do lado. E nao havia nada a economizar: a nuvem nem e
-  // sondada, ela e escolhida quando o local nao responde.
+  // Cacheia somente conexões locais válidas para acelerar novas instâncias.
   static final Map<String, _ResolucaoConexao> _ultimaConexaoBoa = {};
   static const Duration _validadeResolucaoCompartilhada = Duration(seconds: 30);
 
@@ -158,14 +148,7 @@ class ApiService {
   String get modoConexao {
     final ativa = _baseUrlAtiva;
     if (ativa == null) return 'OFFLINE';
-    // Local e tudo que NAO e a nuvem. Antes, a conta era pela lista branca do
-    // nome e da porta 80, e o endereco que o proprio aparelho reportou - a
-    // terceira porta local, usada justamente quando o nome mDNS nao resolve -
-    // caia de fora: o app lia o aparelho na rede local e carimbava NUVEM na
-    // tela. Era parte do "do nada mudou para a nuvem" relatado em campo, e a
-    // pior parte, porque nao havia mudanca nenhuma para procurar. Tambem
-    // desligava por engano duas regras que dependem de estar em LOCAL: aprender
-    // o idHardware do aparelho e repassar a leitura para a nuvem.
+    // Qualquer endereço diferente da API pública representa uma conexão local.
     return _ehNuvem(ativa) ? 'NUVEM' : 'LOCAL';
   }
 
@@ -224,17 +207,8 @@ class ApiService {
     return null;
   }
 
-  // Na conexao local (lendo o ESP direto), guarda o idHardware do aparelho para
-  // as leituras remotas puxarem o estado dele na nuvem. So captura em LOCAL: no
-  // modo nuvem o id vem do proprio parametro enviado.
-  //
-  // Devolve false quando quem atendeu NAO e o aparelho desta estufa. Um endereco
-  // nao identifica um aparelho: o IP muda por DHCP e redes diferentes reusam a
-  // mesma faixa, entao o endereco guardado de uma estufa pode, mais tarde,
-  // pertencer a outro ESP - inclusive ao de outra estufa do proprio app. Foi o
-  // que aconteceu em campo: um aparelho desligado na casa do primo, o endereco
-  // dele reaproveitado na rede daqui, e a estufa dele passou a exibir os dados
-  // da estufa daqui. Aprender o id so vale enquanto ela ainda nao tem um.
+  // Confirma o idHardware nas leituras locais para evitar reutilização indevida
+  // de endereços atribuídos por DHCP.
   bool _capturarIdHardwareLocal(Map<String, dynamic> dados) {
     if (modoConexao != 'LOCAL') return true;
     final status = dados['status'];
@@ -312,15 +286,7 @@ class ApiService {
     _ultimaResolucao = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
-  // Busca o historico persistido na nuvem/servidor para o periodo. Serve para
-  // preencher, no relatorio, os trechos gravados enquanto o app estava fechado
-  // (o registro local so acontece com a tela de monitoramento aberta).
-  //
-  // Vai direto na nuvem, e nao pela conexao ativa. O historico so existe la: o
-  // aparelho nao tem `/historico`. Pela conexao ativa, com o celular no Wi-Fi da
-  // estufa o pedido ia para o aparelho, voltava 404, e o relatorio saia so com o
-  // que o app gravou no celular — em 13/09/2026 um PDF de 34 h mostrou uma
-  // noite inteira vazia, com as 6 leituras por hora guardadas na nuvem.
+  // Consulta diretamente a nuvem, pois o controlador não oferece histórico.
   Future<List<Map<String, dynamic>>> buscarHistorico({
     required DateTime inicio,
     required DateTime fim,
@@ -387,19 +353,9 @@ class ApiService {
     }
   }
 
-  /// Repassa para a nuvem uma leitura obtida na rede LOCAL ("ponte").
+  /// Repassa à nuvem uma leitura local quando o celular possui acesso externo.
   ///
-  /// Existe por causa de um falso alarme real: com energia na propriedade mas
-  /// sem internet la, o aparelho nao consegue postar, e o watchdog da nuvem -
-  /// que so ve ausencia - avisa "sem comunicacao" mesmo com a estufa
-  /// funcionando e o app mostrando tudo certo em LOCAL. Se o celular tem
-  /// internet propria (4G), ele e a unica ponte disponivel: repassando a
-  /// leitura, o `ultimoContatoMs` do servidor fica fresco e o alarme falso nao
-  /// chega a nascer. De brinde, quem acompanha de longe volta a ver os dados.
-  ///
-  /// So faz sentido quando a leitura veio do proprio aparelho (modo LOCAL); em
-  /// modo nuvem a leitura JA veio de la. Silencioso de proposito: e um esforco
-  /// oportunista, e falhar nao pode atrapalhar a tela.
+  /// A operação é oportunista e não interfere na atualização da tela.
   Future<bool> repassarLeituraParaNuvem(Map<String, dynamic> dados) async {
     final nuvem = cloudBaseUrl;
     final id = idHardware;
@@ -688,20 +644,9 @@ class ApiService {
     }
   }
 
-  /// Uma leitura que chegou pela conexao local vale mais do que qualquer sonda:
-  /// ela PROVA que o caminho esta de pe. Renovando a resolucao a cada resposta,
-  /// a sondagem periodica some enquanto esta tudo funcionando.
+  /// Renova a resolução local após cada leitura confirmada.
   ///
-  /// Era dai que vinha o selo trocando sozinho a cada poucos segundos. A
-  /// resolucao valia 8 s, a tela le a cada 3 s, entao a cada duas ou tres
-  /// leituras o app parava e sondava tudo de novo - e sonda e uma conexao nova,
-  /// que falha por mil motivos passageiros (o nome mDNS e o campeao). Uma falha
-  /// dessas, com a leitura chegando normalmente, bastava para o selo pular para
-  /// NUVEM ou OFFLINE e voltar no ciclo seguinte.
-  ///
-  /// So vale para a conexao local. Na nuvem a resolucao continua expirando de
-  /// propósito: e justamente expirando que ela volta a sondar o local e
-  /// descobre que o aparelho esta ao alcance de novo.
+  /// Resoluções pela nuvem expiram para permitir nova tentativa de conexão local.
   void _renovarResolucaoLocal(String base) {
     if (_ehNuvem(base)) return;
     _ultimaResolucao = DateTime.now();
@@ -829,21 +774,7 @@ class ApiService {
     return escolhida;
   }
 
-  // Vence a primeira que responder, nao a primeira da lista.
-  //
-  // As sondas sempre sairam juntas, mas o resultado esperava a MAIS LENTA
-  // (`Future.wait`). Com o nome mDNS como primeira candidata - e ele leva ate
-  // 4 s para desistir no Android -, o IP aprendido respondia numa fracao de
-  // segundo e ficava esperando o nome. Era o "demora muito para conectar" da
-  // primeira abertura, e explica por que a estufa de demonstracao entrava na
-  // hora: o nome dela nao existe em rede nenhuma e falha imediatamente, em vez
-  // de pendurar.
-  //
-  // A ordem da lista deixa de valer como preferencia, e isso e aceitavel: as
-  // candidatas locais apontam para o MESMO aparelho. O nome vinha antes para
-  // sobreviver a troca de IP, e isso continua de pe - quando o IP muda, a sonda
-  // por IP falha e o nome ganha sozinho. Endereco que passou para outro
-  // aparelho continua barrado em _capturarIdHardwareLocal().
+  // Aceita a primeira sonda válida, sem aguardar candidatos locais mais lentos.
   Future<String?> _primeiraLocalQueResponde(List<String> locais) async {
     final decidida = Completer<String?>();
     var faltam = locais.length;
@@ -862,22 +793,8 @@ class ApiService {
     return decidida.future;
   }
 
-  // Status 200 nao basta para dizer que o aparelho respondeu. O endereco pode ter
-  // passado para outro dispositivo qualquer da rede - impressora, camera,
-  // roteador -, e qualquer um deles devolve 200 com HTML na porta 80. O app
-  // entao concluia "a estufa esta na rede local" e ficava preso ali: sem dado,
-  // porque o HTML nao decodifica, e sem cair para a nuvem, porque a sonda
-  // insistia que estava tudo bem. A resposta tem que se PARECER com a de um
-  // Sentinela.
-  // O proprio endereco declara de quem ele e. O aparelho se anuncia como
-  // `sentinela-XXXXXXXXXXXX` se identifica como `ESP32_XXXXXXXXXXXX`: os dois
-  // saem do MAC do chip. Nomes legados de 6 hex continuam reconhecidos durante
-  // a migracao. Entao, para uma estufa cadastrada pelo nome,
-  // da para saber qual aparelho e o certo SEM rede e SEM nada gravado.
-  //
-  // Isso importa porque o id cadastrado pode faltar - estufa digitada a mao que
-  // nunca alcancou o aparelho -, e era justamente nesse buraco que outro ESP32
-  // atendendo no endereco era adotado como se fosse o desta estufa.
+  // Valida o formato da resposta e, quando possível, relaciona o nome mDNS ao
+  // idHardware derivado do MAC. Respostas HTTP genéricas não identificam a estufa.
   static final RegExp _nomeDeSentinela = RegExp(
     r'sentinela-([0-9a-fA-F]{12}|[0-9a-fA-F]{6})',
   );
@@ -1067,24 +984,9 @@ class ApiService {
       statusCode == 403 ||
       (statusCode >= 400 && statusCode < 500);
 
-  /// Sobe a chave desta estufa para a nuvem, para ela poder autorizar comandos
-  /// deste aparelho sem depender da chave global.
+  /// Registra na nuvem a chave obtida presencialmente no aparelho.
   ///
-  /// O produtor le a chave no modo de configuracao - presenca fisica na frente do
-  /// aparelho - e e esse ato que ancora a confianca. O app so faz o transporte.
-  /// O aparelho tambem registra a propria chave por conta dele; os dois caminhos
-  /// convergem no mesmo TOFU e o primeiro que chegar resolve.
-  ///
-  /// Vai SEMPRE na nuvem, nunca no endereco local: a rota e do servidor, e o ESP
-  /// nao a serve. Melhor esforco - falhar aqui nao pode atrapalhar o cadastro,
-  /// que e o que o produtor esta fazendo.
-  /// [chaveNova] registra uma chave DIFERENTE da que autentica esta chamada.
-  ///
-  /// A distincao e o que faz trocar de chave funcionar. Uma chave recem-inventada
-  /// nao autentica em nada - foi assim que trocar a chave do simulador o deixou
-  /// offline: o app mandava a chave nova como credencial E como conteudo, e a
-  /// nuvem recusava as duas pontas. Quem autentica e sempre a credencial que a
-  /// nuvem JA aceita (a atual do app); a nova viaja no corpo.
+  /// [chaveNova] segue no corpo; a credencial atual autentica a rotação.
   Future<ResultadoChaveNuvem> registrarChaveNaNuvem({String? chaveNova}) async {
     final base = cloudBaseUrl;
     final id = idHardware;

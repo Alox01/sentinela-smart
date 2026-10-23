@@ -59,17 +59,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   static const _pdfService = RelatorioPdfService();
   final RelatorioEstufadaRepository _relatorioRepository =
       RelatorioEstufadaRepository(IsarService.instance);
-  // Com id E chave, e as duas por motivos diferentes.
-  //
-  // Sem o `idHardware`, `/historico` na nuvem caia no aparelho padrao e devolvia
-  // o historico do SIMULADOR. Sem o `tokenAcesso`, a nuvem responde 401 antes
-  // disso: a rota exige a chave DO APARELHO, e esta tela nascia sem nenhuma —
-  // entao o historico remoto nunca chegou, e o relatorio mostrava so o que o
-  // app tinha gravado no celular. Com o app fechado por um dia, isso e quase
-  // nada.
-  //
-  // Os dois vem por copia da tela de monitoramento, que os rele do banco ao
-  // abrir (ver `credenciais_de_agora.dart`) — entao chegam aqui frescos.
+  // Identifica e autoriza a consulta do histórico desta estufa na nuvem.
   late final ApiService _api = ApiService(
     widget.ipEstufa,
     token: widget.tokenAcesso,
@@ -103,13 +93,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   @override
   void initState() {
     super.initState();
-    // Aproveita o relatorio que o monitoramento adiantou. Sem ele, e a carga
-    // normal: nada aqui depende da precarga ter acontecido.
-    //
-    // A precarga passa POR DENTRO da carga, e nao no lugar dela. Ate 14/09/2026
-    // ela entrava no lugar, e a busca da nuvem - que so existia la dentro - nao
-    // acontecia: abrir o relatorio pelo caminho de sempre (monitoramento, depois
-    // Relatorios) dava so o que o celular gravou, desde 04/08/2026.
+    // Usa a pré-carga quando disponível, sem dispensar a busca na nuvem.
     _dadosFuture = _carregarDadosRelatorio(
       precarga: _relatorioRepository.consumirPrecarga(widget.ipEstufa),
     );
@@ -481,24 +465,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
               final temperaturaAjusteFinal = ultimaLeitura.temperaturaMeta;
               final umidadeAjusteInicial = primeiraLeitura.umidadeMeta;
               final umidadeAjusteFinal = ultimaLeitura.umidadeMeta;
-              // Conta EPISODIOS, e nao leituras.
-              //
-              // Antes era `leituras.where((e) => e.alertaIncendio)`, o que dava
-              // o numero de LEITURAS gravadas com a sirene ligada — o campo,
-              // apesar do nome, guarda `alarmeAtivo`, que e temperatura ou fogo.
-              // "ALARMES: 17" nao eram 17 alarmes: era duracao disfarcada de
-              // contagem, numa unidade que ninguem adivinha (leituras, cuja
-              // cadencia depende de afinamento e de fonte).
-              //
-              // Os eventos ja registram a BORDA — `alarme_processo` e
-              // `alerta_incendio` nascem quando a sirene liga, uma vez por
-              // episodio. E o numero passa a bater com o que o produtor consegue
-              // contar a mao na lista logo abaixo, que e a unica conferencia que
-              // ele tem.
-              //
-              // Oscilacao NAO entra: ela e desvio detectado pelo app, e a sirene
-              // tem margem e janela de acomodacao. Uma estufada pode ter varias
-              // oscilacoes e nenhum alarme — e ai zero e a resposta certa.
+              // Conta episódios de alarme registrados, não leituras nem oscilações.
               final totalAlarmes = _aplicarFiltroEventos(_eventos)
                   .where(
                     (e) =>
@@ -766,10 +733,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       }
       messenger.hideCurrentSnackBar();
     }
-    // Inteiras, e nao as afinadas do grafico. O afinamento (5 min ou mudanca de
-    // 5) existe para o desenho nao embolar; no arquivo ele sumia com leitura de
-    // verdade — em 14/09 o CSV saiu sem a leitura das 23:21 de 12/09, a que
-    // trazia o ajuste novo. A tabela do PDF ja escolhe as suas (uma por hora).
+    // A exportação usa os dados completos; apenas o gráfico aplica redução.
     return _aplicarRecorteCiclo(_leiturasCompletasAtuais);
   }
 
@@ -855,20 +819,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     List<EventoCicloEntity> eventos, {
     bool filtrarDia = true,
   }) {
-    // Umidade fora do ajuste nao e evento de relatorio: numa estufa de secagem
-    // ficar muito abaixo e o objetivo do processo, e a linha se repetia a
-    // estufada inteira, empurrando para fora da tela o que diz alguma coisa. O
-    // app parou de gravar essas linhas em 11/08/2026 — o filtro aqui e para as
-    // estufadas que ja tinham as suas guardadas.
-    //
-    // Os de "ajuste alterado" guardados sao trocados pelos tirados das leituras
-    // (`eventos_de_ajuste.dart`, D7): os guardados so conheciam o que o app
-    // mandou, uma linha por pausa. As estufadas antigas ganham a versao nova
-    // sem mexer no banco.
-    //
-    // E os alarmes que so as leituras viram — com o app fechado nao ha evento
-    // guardado (`eventos_de_alarme.dart`). Os que o app gravou ficam, e o
-    // derivado do mesmo episodio nao se repete.
+    // Exclui oscilações de umidade e recompõe ajustes e alarmes pelas leituras.
     final leiturasDoPeriodo = filtrarDia
         ? _aplicarFiltro(_leiturasCompletasAtuais)
         : _aplicarRecorteCiclo(_leiturasCompletasAtuais);

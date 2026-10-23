@@ -1,34 +1,11 @@
 const crypto = require('crypto');
 
-/// Id do aparelho de demonstracao. Duplicado de `routes/estado_estufa.js` de
-/// proposito: a porteira nao pode depender das rotas, que dependem dela.
+// Identificador do simulador. Mantido localmente para evitar dependência das rotas.
 const ID_SIMULADOR = 'ESP32_REALISTIC_V2';
 const { log } = require('./log');
 
-// [chaveDoAparelho] permite autorizar uma requisicao pela chave DAQUELE aparelho,
-// alem da chave global. Ela e consultada com o idHardware que a propria
-// requisicao menciona, e esse detalhe e o ponto todo: a chave do aparelho A nao
-// pode comandar o aparelho B. Sem essa amarracao, "chave por aparelho" nao
-// separaria nada - qualquer chave registrada abriria qualquer estufa.
-//
-// A chave global continua valendo. Enquanto os aparelhos em campo nao tiverem
-// registrado a sua, tirar a global deixaria o produtor sem acesso remoto a um
-// sistema que funciona.
-// [exigirChaveDoAparelho] separa as credenciais por ESTRAGO, nao por etapa.
-//
-// A chave universal fica compilada em clientes antigos, entao ela nao e
-// segredo: quem tiver o binario ou acesso a flash a extrai. Tratar como
-// credencial seria mentira. Ela e um portao para rotas de baixo impacto. O
-// primeiro registro de um aparelho e TOFU e mora na propria rota; depois dele,
-// leitura e comandos usam a chave individual.
-//
-// Registrar com ela e o que tira o beco sem saida: um aparelho que perde a chave
-// propria ainda consegue voltar, em vez de ficar na rede funcionando e mudo para
-// a nuvem, sem nada explicando.
-//
-// Mudar ajuste, silenciar sirene, agendar e ler a estufa exigem a chave DAQUELE
-// aparelho. Quem extrair a universal consegue empurrar leitura falsa; nao
-// consegue mexer na estufa de ninguem.
+// Autoriza pela chave vinculada ao idHardware. A chave global permanece apenas
+// para compatibilidade e rotas de baixo impacto; comandos exigem a chave própria.
 function createAuthMiddleware(
   apiToken,
   { chaveDoAparelho, exigirChaveDoAparelho = false } = {},
@@ -42,13 +19,7 @@ function createAuthMiddleware(
     const tokenRecebido = extrairToken(req);
     const idHardware = idHardwareDaRequisicao(req);
 
-    // O simulador nao pede credencial nenhuma. Ele e uma DEMONSTRACAO: os
-    // valores sao inventados pelo proprio servidor, nao ha estufa por tras, e
-    // comandar so mexe na demonstracao. Exigir segredo para ver dado falso nao
-    // protege nada e cobra o preco todo — foi o que impediu o produtor de
-    // cadastrar o simulador sem decorar uma chave.
-    //
-    // Vale so para ESTE id. Os aparelhos reais seguem a regra de sempre.
+    // O simulador não representa um aparelho físico e dispensa autenticação.
     if (idHardware === ID_SIMULADOR) {
       next();
       return;
@@ -71,10 +42,7 @@ function createAuthMiddleware(
       }
     }
 
-    // A universal serve aqui quando a rota nao e de comando; e tambem quando o
-    // aparelho AINDA nao registrou a sua, senao adotar esta separacao derrubaria
-    // na hora todo aparelho que ainda nao passou pelo registro. Transitorio: cai
-    // fora quando os aparelhos em campo tiverem a sua.
+    // Mantém compatibilidade com aparelhos que ainda não registraram chave própria.
     const universalBasta = !exigirChaveDoAparelho || chaveRegistrada == null;
     if (universalBasta && token && tokensIguais(tokenRecebido, token)) {
       next();

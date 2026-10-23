@@ -8,22 +8,10 @@ import 'package:http/http.dart' as http;
 import '../../../services/api_service.dart';
 import '../prefixo_da_rede.dart';
 
-/// Configura a rede do aparelho pelo app, sem digitar endereco.
+/// Configura a rede e o acesso ao aparelho pelo aplicativo.
 ///
-/// ## Nao ha campo de chave de acesso, e nao deve voltar a haver
-///
-/// A chave e do APARELHO: ele a gera, o app a le pela rota de identidade e a
-/// leva ao cadastro. O produtor nunca a viu e nao tem como saber o que digitar
-/// ali — um campo pedindo por ela so podia ser lido como app quebrado, e o que
-/// fosse digitado seria gravado por cima da chave boa. Aparelho velho demais
-/// para entregar a chave nao e configurado por aqui: ver [_cartaoFirmwareAntigo].
-///
-/// O aparelho tambem serve a mesma pagina em `192.168.4.1`, e o portal cativo
-/// tenta abri-la sozinha — mas quem decide isso e o Android, e nao ha garantia.
-/// Esta tela e o caminho que sempre funciona: o produtor ja tem o app, e um
-/// toque no menu basta.
-/// De onde a configuracao foi aberta. Muda o que a tela de sucesso oferece
-/// depois, porque o produtor esta em situacoes diferentes em cada caso.
+/// A chave é gerada pelo controlador e obtida pela rota de identidade. Versões
+/// antigas do firmware devem ser configuradas pelo portal em `192.168.4.1`.
 enum UsoDaConfiguracao {
   /// Estufa nova: leva endereco e chave para o formulario de cadastro.
   cadastro,
@@ -32,25 +20,10 @@ enum UsoDaConfiguracao {
   /// comandos passariam a ser recusados. Oferece atualizar.
   atualizacao,
 
-  /// Segundo celular pegando acesso a um aparelho JA configurado.
-  ///
-  /// Ele nao quer reconfigurar nada — a rede do aparelho esta certa, os ajustes
-  /// estao certos. Quer so a chave, e a chave so sai daqui, com o PIN do visor.
-  /// Sem este modo, o caminho existia mas cobrava um pedagio absurdo: preencher
-  /// a rede e a senha do Wi-Fi de novo, e gravar por cima de uma configuracao
-  /// que ja estava boa, correndo o risco de estraga-la.
-  ///
-  /// E o unico caminho para um segundo celular — e o que faz "so comanda quem
-  /// esteve na frente do aparelho" valer sem excecao.
+  /// Autoriza outro celular por presença física e PIN, sem alterar a rede.
   apenasAcesso,
 
-  /// Tirar o acesso dos outros celulares: o aparelho gera uma chave nova, e
-  /// toda chave entregue antes deixa de valer.
-  ///
-  /// Reaproveita esta tela inteira porque o caminho e o mesmo — presenca fisica,
-  /// PIN do visor, gravacao — mudando so o que se pede e o que se diz. A rede
-  /// Wi-Fi nem aparece: ela nao muda, e o aparelho devolve a atual em
-  /// `/config/identidade` para o app reenviar igual.
+  /// Revoga acessos anteriores pela geração de uma nova chave no aparelho.
   revogacao,
 }
 
@@ -94,35 +67,21 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
 
   /// Faixa da rede da casa (ex.: "192.168.0."), aprendida pelo aparelho.
   String? _prefixoDaRede;
+
   /// Gateway da ultima rede em que o aparelho entrou. So vale para ela — ver
   /// `prefixo_da_rede.dart`.
   String? _gatewayAprendido;
   final _pin = TextEditingController();
 
-  /// Ultimo PIN enviado, para a repeticao automatica nao gastar as tentativas.
-  /// TODO os PINs que ja falharam nesta visita, e nao so o ultimo.
-  ///
-  /// Guardando so o ultimo, alternar dois numeros errados reenviava cada um: o
-  /// produtor digitava 1111, depois 0000, e o 0000 gastava uma SEGUNDA tentativa
-  /// no aparelho por um numero que ele ja sabia estar errado. Cinco tentativas
-  /// existem para o produtor acertar, nao para o app gastar.
+  /// PINs recusados nesta sessão, usados para evitar novas tentativas inválidas.
   final Set<String> _pinsQueFalharam = {};
 
-  /// Qual PIN produziu a mensagem que esta na tela agora.
-  ///
-  /// Sem isto, apertar "concluido" de novo logo depois de errar — que e o que
-  /// acontece so de fechar o teclado em boa parte dos celulares — trocava
-  /// "restam 4 tentativas" por "este PIN ja falhou", e o produtor perdia o
-  /// numero que importa sem ter feito nada.
+  /// PIN associado à mensagem de erro exibida.
   String? _pinDoErro;
   String? _pinTentado;
   String? _erroPin;
 
-  /// O que este celular vai levar, e o que ele NAO vai mexer.
-  ///
-  /// A duvida natural de quem chega aqui e "vou estragar a configuracao que ja
-  /// esta funcionando?". A resposta e nao, e ela precisa estar escrita: o
-  /// aparelho nao e gravado neste modo.
+  /// Informa o que será alterado em cada modo de configuração.
   Widget _cartaoPegarAcesso() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -147,14 +106,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
           SizedBox(height: 8),
-          // O aparelho NAO reinicia neste modo — nada foi gravado nele. Entao
-          // ele fica no modo de configuracao, com o PIN no visor, ate alguem
-          // tirar. Sem esta linha, parece que travou.
-          //
-          // "2 segundos" e o firmware espera 1,5: numero quebrado nao se manda
-          // para quem esta contando na cabeca, e arredondar PARA CIMA sempre
-          // funciona — quem segura 2 ja passou de 1,5. Para baixo e que seria
-          // erro, porque a pessoa soltaria antes da hora.
+          // Este modo não reinicia o aparelho; a saída exige manter o botão por 2 s.
           Text(
             'Depois de tocar o botão abaixo, o aparelho continua no modo de '
             'configuração: segure qualquer botão por 2 segundos para ele voltar '
@@ -170,10 +122,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   /// configuracao, entao nao ha mais nada a fazer nesta tela sem voltar ate ele.
   bool _pinBloqueado = false;
 
-  /// O aparelho respondeu, mas nao serve a rota da identidade — firmware
-  /// anterior a 1.20.0. So entao o campo da chave volta a existir: sem isso, ele
-  /// aparecia enquanto o celular nem estava na rede do aparelho, e sumia depois
-  /// do PIN, o que parecia defeito.
+  /// Indica firmware sem suporte à rota de identidade.
   bool _firmwareSemIdentidade = false;
 
   /// O aparelho se apresentou e entregou a chave. So entao ha o que preencher:
@@ -190,22 +139,14 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   String? _erro;
   bool _concluido = false;
 
-  /// Ja houve uma gravacao bem-sucedida nesta visita. Guardado a parte de
-  /// [_concluido] porque o produtor pode voltar da tela de sucesso para o
-  /// formulario — e dai precisa de um caminho de volta ao resultado, que ele nao
-  /// consegue reproduzir: o aparelho ja reiniciou e saiu do modo de
-  /// configuracao, entao salvar de novo nao funciona.
+  /// Mantém o resultado disponível após o retorno da tela de sucesso.
   bool _jaGravou = false;
   // Nome local do aparelho (ex.: sentinela-a1b2c3.local). E o endereco que o
   // produtor cadastra na estufa, e ate a versao 1.10 do firmware ele so
   // aparecia no Monitor Serial - inutil para quem nao tem a IDE do Arduino.
   String? _nomeLocal;
 
-  /// A rede em que o aparelho ja esta, lida da identidade.
-  ///
-  /// So serve a revogacao: `/salvar` recusa SSID vazio, entao trocar a chave sem
-  /// mexer no Wi-Fi exige reenviar a MESMA rede — e no modo de configuracao o
-  /// celular esta na rede do aparelho, sem como descobrir a de casa.
+  /// Rede atual, reenviada durante a revogação para preservar a configuração.
   String? _ssidDoAparelho;
 
   bool get _revogando => widget.uso == UsoDaConfiguracao.revogacao;
@@ -229,10 +170,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
   @override
   void initState() {
     super.initState();
-    // Insiste enquanto nao conhecer o aparelho. A tela manda conectar na rede
-    // dele DEPOIS de abrir, entao uma leitura unica no init falha justamente na
-    // ordem que a propria instrucao ensina - e nada tentava de novo: ficava sem
-    // nome, sem id e sem a chave, e o formulario voltava a pedir a chave a mao.
+    // Repete a consulta enquanto o celular ainda está entrando na rede do aparelho.
     unawaited(_lerNomeDoAparelho());
     _tentativas = Timer.periodic(const Duration(seconds: 3), (_) {
       if (_concluido || _chaveDoAparelho != null) return;
@@ -241,11 +179,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     _rede.addListener(_aoTrocarDeRede);
   }
 
-  /// A faixa que o aparelho ensinou so vale se ele vai voltar para a MESMA rede.
-  ///
-  /// O `gatewayAprendido` e a ultima rede em que ele conseguiu entrar. Levar o
-  /// aparelho para outro lugar torna esse numero mentira — e foi assim que um IP
-  /// fixo da rede de origem viajou junto e deixou o aparelho mudo na rede nova.
+  /// Reutiliza a faixa aprendida somente quando a rede doméstica não mudou.
   bool get _prefixoAindaVale =>
       prefixoOferecido(
         gatewayAprendido: _gatewayAprendido,
@@ -311,20 +245,9 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     await _lerIdentidadeDoAparelho();
   }
 
-  /// Le a chave do proprio aparelho, para o produtor nunca precisar ve-la nem
-  /// digita-la. Ela fica so aqui em memoria e segue direto para o cadastro.
+  /// Obtém a identidade e a chave do aparelho enquanto ele está em configuração.
   ///
-  /// A rota so responde no modo de configuracao — estar na frente do aparelho é
-  /// o que autoriza. Firmware anterior a 1.20.0 não a serve, e para esse caso
-  /// esta tela nao tem saida: ver [_marcarFirmwareAntigoSePreciso].
-  /// [pedidoDoProdutor] separa "ele apertou agora" de "o relogio de 3 s bateu".
-  ///
-  /// A insistencia automatica existe porque a tela manda conectar na rede do
-  /// aparelho DEPOIS de abrir. Mas ela nao pode falar por cima do que o produtor
-  /// esta lendo: a mensagem com as tentativas restantes durava 3 segundos e era
-  /// substituida sozinha pelo aviso de PIN repetido — ele via "perdi uma
-  /// tentativa" sumir sem ter tocado em nada, e ficava sem saber quantas
-  /// sobravam.
+  /// [pedidoDoProdutor] distingue uma ação manual da repetição automática.
   Future<void> _lerIdentidadeDoAparelho({bool pedidoDoProdutor = false}) async {
     final pin = _pin.text.trim();
     // Sem os 4 digitos nao ha o que pedir: o aparelho recusa, e insistir so
@@ -333,12 +256,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     // Bloqueado: o aparelho reiniciou e nao esta mais ouvindo. Insistir so
     // produziria "nao achei o aparelho", que manda conferir a coisa errada.
     if (_pinBloqueado) return;
-    // E nunca reenviar um PIN que ja falhou. A leitura se repete a cada 3 s, e
-    // sem isto um PIN errado consumiria as 5 tentativas do aparelho em 15
-    // segundos - o proprio app bloquearia o emparelhamento.
-    // Nenhum PIN ja recusado volta ao aparelho. A leitura se repete a cada 3 s,
-    // e sem isto um PIN errado consumiria as 5 tentativas em 15 segundos. Nao
-    // fazer nada visivel, porem, parecia app travado - entao ele diz.
+    // Não reenvia PINs recusados durante as consultas automáticas.
     if (_pinsQueFalharam.contains(pin)) {
       // So responde a quem apertou. Vindo do relogio, fica calado: a contagem
       // de tentativas ja esta na tela e e ela que interessa.
@@ -425,55 +343,24 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         }
       });
     } catch (_) {
-      // A requisicao nem chegou ao aparelho — o celular ainda nao esta na rede
-      // dele. Isso NAO e uma tentativa gasta, entao o PIN volta a valer.
-      //
-      // Sem isto, digitar o PIN antes de entrar no "Sentinela-Config" queimava
-      // aquele numero para sempre: a guarda que impede reenviar o mesmo PIN
-      // existe para nao consumir as 5 tentativas DO APARELHO, e passava a valer
-      // para uma tentativa que o aparelho nunca viu. O relogio de 3 s nunca mais
-      // tentava, a tela dizia "nao achei o aparelho com esse PIN", e so sair e
-      // voltar resolvia — parecendo PIN errado quando era rede.
+      // Falhas de rede não consomem uma tentativa de PIN no aparelho.
       _pinTentado = null;
       _marcarFirmwareAntigoSePreciso();
     }
   }
 
-  /// O aparelho atendeu em `/dados` mas nao entregou identidade: ou a rota nao
-  /// existe (firmware anterior a 1.20.0), ou ela devolveu algo que nao e o JSON
-  /// esperado. Havia aqui um campo para o produtor digitar a chave a mao. Ele
-  /// saiu: a chave e do APARELHO, gerada por ele, e o produtor nunca a viu — o
-  /// campo so podia ser lido como app quebrado, e o que ele digitasse ia ser
-  /// gravado por cima da chave boa. Sem chave nao ha o que salvar por aqui, e a
-  /// tela passa a dizer isso e a apontar o caminho pelo navegador.
-  ///
-  /// So conclui com o aparelho ja respondendo em `/dados`. Enquanto o celular
-  /// nem o alcanca, "firmware antigo" e "nao conectei" sao a mesma tela.
+  /// Identifica firmware incompatível após confirmar a comunicação com o aparelho.
   void _marcarFirmwareAntigoSePreciso() {
     if (!mounted || _nomeLocal == null || _erroPin != null) return;
     if (_firmwareSemIdentidade) return;
     setState(() => _firmwareSemIdentidade = true);
   }
 
-  /// Confere se o aparelho voltou a ser alcancavel pelo nome, agora que os dois
-  /// deviam estar na rede de casa. Sem isto o produtor podia terminar com uma
-  /// estufa cadastrada num endereco que nunca responde — o mDNS falha em parte
-  /// dos celulares e roteadores, e o erro so apareceria muito depois.
-  /// Confere o alcance e so entao devolve os dados. Na primeira tentativa que
-  /// falha, avisa e deixa o produtor decidir: apertar de novo segue assim
-  /// mesmo. Nao barra o cadastro - o aparelho pode so estar demorando a
-  /// reiniciar, e travar o fluxo seria pior do que uma estufa a conferir depois.
+  /// Verifica o endereço após o retorno do aparelho à rede doméstica.
+  ///
+  /// A primeira falha solicita confirmação; uma nova tentativa permite continuar.
   Future<void> _confirmarEUsar() async {
-    // Revogacao nao passa pelo teste de alcance, e isto impede o pior acidente
-    // desta tela.
-    //
-    // O teste existe para nao cadastrar uma estufa num endereco que nunca
-    // responde. Na revogacao o endereco nao mudou — o que mudou foi a CHAVE, e
-    // ela so existe aqui, na memoria desta tela: o aparelho ja reiniciou e nao
-    // devolve de novo. Como o celular ainda esta na rede "Sentinela-Config",
-    // que acabou de sumir, a sonda falharia, a funcao sairia sem devolver nada,
-    // e a chave nova morreria com a tela — deixando ESTE celular trancado para
-    // fora junto com os outros, depois de uma acao que parecia ter dado certo.
+    // Na revogação, devolve a nova chave sem exigir uma sonda de alcance.
     if (_alcancou == null && !_revogando && !_apenasAcesso) {
       await _conferirAlcance();
       if (!mounted || _alcancou == false) return;
@@ -528,12 +415,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     return texto;
   }
 
-  /// Confirma que a rede e mesmo aberta, antes de gravar senha vazia.
-  ///
-  /// Nao e cerimonia: o erro que ela evita nao aparece na hora. O aparelho
-  /// aceita, reinicia, tenta entrar na rede de casa sem senha, nao consegue, e o
-  /// produtor so descobre quando a estufa aparece SEM SINAL — sem nenhuma pista
-  /// de que a causa foi um campo deixado em branco minutos antes.
+  /// Confirma explicitamente o uso de uma rede sem senha.
   Future<bool> _confirmarRedeSemSenha() async {
     final confirmou = await showDialog<bool>(
       context: context,
@@ -588,11 +470,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
     if (!_revogando && _senha.text.isEmpty && !await _confirmarRedeSemSenha()) {
       return;
     }
-    // A senha NAO e exigida, de proposito: rede aberta existe, e barrar o
-    // salvamento deixaria essa propriedade sem caminho pelo app. O que mudou foi
-    // a legenda — ela dizia "deixe vazio para manter a senha atual", que so
-    // valia para quem volta aqui so para trocar o nome da rede, e na primeira
-    // configuracao convidava a pular o campo.
+    // Senha vazia é aceita somente após a confirmação de rede aberta.
 
     setState(() {
       _enviando = true;
@@ -657,7 +535,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           // O aparelho nao devolveu a chave: e firmware anterior a esta rota.
           // Rotacionou de verdade — a chave velha ja nao vale —, mas o app ficou
           // sem a nova, e dizer "pronto" seria mentira.
-          _revogouSemChave = _revogando && (chaveNova == null || chaveNova.isEmpty);
+          _revogouSemChave =
+              _revogando && (chaveNova == null || chaveNova.isEmpty);
         });
       } else {
         setState(
@@ -960,8 +839,11 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.lock_clock_outlined,
-                  color: Colors.orangeAccent, size: 20),
+              Icon(
+                Icons.lock_clock_outlined,
+                color: Colors.orangeAccent,
+                size: 20,
+              ),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1175,30 +1057,34 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // pedir de novo o que acabou de ser feito, e empurra para baixo o que
         // interessa agora.
         if (!_aparelhoRespondeu)
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Text(
-            // "Antes de preencher" nao serve a quem nao vai preencher nada.
-            '${_revogando ? "Antes de trocar a chave" : _apenasAcesso ? "Para pegar o acesso" : "Antes de preencher"}:'
-            '\n\n'
-            '1. No aparelho, segure os três botões por 3 segundos, até apitar e '
-            'os LEDs piscarem.\n'
-            '2. No Wi-Fi do celular, conecte na rede "Sentinela-Config".\n'
-            '3. O Android avisa que a rede não tem internet — aceite continuar '
-            'conectado.\n'
-            '4. Digite abaixo os 4 números que aparecem no visor do aparelho.',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              height: 1.5,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Text(
+              // "Antes de preencher" nao serve a quem nao vai preencher nada.
+              '${_revogando
+                  ? "Antes de trocar a chave"
+                  : _apenasAcesso
+                  ? "Para pegar o acesso"
+                  : "Antes de preencher"}:'
+              '\n\n'
+              '1. No aparelho, segure os três botões por 3 segundos, até apitar e '
+              'os LEDs piscarem.\n'
+              '2. No Wi-Fi do celular, conecte na rede "Sentinela-Config".\n'
+              '3. O Android avisa que a rede não tem internet — aceite continuar '
+              'conectado.\n'
+              '4. Digite abaixo os 4 números que aparecem no visor do aparelho.',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 12),
         // O aviso vem DEPOIS das instrucoes, e nao antes: no topo ele era a
         // primeira coisa lida e anunciava falha antes de o produtor ter feito
@@ -1280,7 +1166,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           _campo(
             controlador: _senha,
             rotulo: 'Senha do Wi-Fi',
-            dica: 'Informe a senha do Wi-Fi. Se a rede não tiver senha, não '
+            dica:
+                'Informe a senha do Wi-Fi. Se a rede não tiver senha, não '
                 'preencha nada.',
             senha: !_senhaVisivel,
             // Senha de Wi-Fi rural costuma ser longa e cheia de numero: digitar as

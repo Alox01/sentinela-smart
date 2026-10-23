@@ -2,20 +2,9 @@ const { iniciarWatchdog } = require('../watchdog');
 const { log } = require('../log');
 const { ID_SIMULADOR } = require('./estado_estufa');
 
-// Quem decide se o celular toca. Separado das rotas de push (que so cadastram e
-// descadastram token) porque este e o outro lado do assunto: aqui e a leitura
-// que chega que vira aviso, e quem chama e a rota de leitura.
-// De quanto em quanto tempo um aviso volta a tocar enquanto o problema DURA.
-//
-// Avisar so na subida deixava um buraco caro: quem nao ouviu o primeiro toque
-// nao ouve mais nada, e a estufa passa a noite fria. Pior no fogo, onde o
-// primeiro aviso perdido e o unico que existia.
-//
-// Fogo e superaquecimento repetem de minuto em minuto porque a resposta e sair
-// agora. Temperatura fora da faixa espera 30 min: e o tempo de ir ate a estufa,
-// mexer na fornalha e o calor responder — cobrar antes disso e cobrar por algo
-// que ja esta a caminho. Mais curto que isso vira alarme de carro, e o desfecho
-// pior de todos e o produtor desligar a notificacao inteira.
+// Intervalos de repetição enquanto a condição crítica permanecer ativa.
+// Incêndio e superaquecimento exigem resposta imediata; desvios comuns aguardam
+// o tempo previsto para a intervenção e a estabilização da estufa.
 const REPETICAO_MS = {
   incendio: 60 * 1000,
   temperaturaMuitoAlta: 60 * 1000,
@@ -33,14 +22,8 @@ function criarAlertasPush({ db, push, estado }) {
   // Chave: `idHardware|evento`.
   const repeticoes = new Map();
 
-  /// O aviso deve sair agora? Cobre a subida (problema comecando) e a
-  /// repeticao (problema durando sem ninguem dar sinal de vida).
-  ///
-  /// `reconhecido` vem de o produtor abrir o app na estufa que esta alarmando —
-  /// ver a rota `/push/reconhecer`. Nao da para saber que ele DISPENSOU a
-  /// notificacao: com o app fechado quem a desenha e o Android, e deslizar para
-  /// o lado nao avisa ninguem. Abrir o app e o sinal mais proximo de "eu vi" que
-  /// existe sem inventar certeza.
+  /// Decide entre o primeiro aviso e sua repetição periódica.
+  /// A abertura da estufa no aplicativo reconhece o episódio atual.
   function deveAvisar({ idHardware, evento, ativo, subida, agoraMs }) {
     const chave = `${idHardware}|${evento}`;
     if (!ativo) {
@@ -108,13 +91,8 @@ function criarAlertasPush({ db, push, estado }) {
     // a estufa esta, entao para de fingir que sabe. Esquecer faz o retorno
     // contar como subida nova.
     //
-    // Sem isto, um aparelho que fica horas desligado e volta AINDA fora da faixa
-    // nao avisa ninguem: a comparacao e com o que o servidor sabia antes de ele
-    // sumir, conclui "ja estava assim" e cala. Aconteceu em campo — estufa
-    // desligada de noite, religada fria de manha, nenhum aviso.
-    //
-    // Antes do `push.habilitado`: isto e sobre o que o servidor SABE, e nao
-    // sobre conseguir avisar.
+    // Remove o estado anterior para que o retorno do aparelho seja avaliado
+    // como uma nova transição. Isso independe da disponibilidade do push.
     if (evento === 'semComunicacao' && critico === true) {
       ultimoEstadoNotificado.delete(idHardware);
     }
@@ -200,28 +178,15 @@ function criarAlertasPush({ db, push, estado }) {
   async function avaliarAlertas(idHardware, status, config) {
     if (!idHardware || idHardware === ID_SIMULADOR) return;
 
-    // Silencio momentaneo apertado no aparelho vale como "eu vi": ninguem aperta
-    // silenciar sem o alarme estar tocando na frente dele. Para de insistir no
-    // celular pelo episodio em curso.
-    //
-    // Diferente de DESLIGAR o buzzer (`buzzerAtivo`), que e preferencia e pode
-    // ter sido decidida semanas atras — nao diz nada sobre este alarme. Um vale
-    // como reacao; o outro, nao.
+    // O silêncio temporário reconhece o episódio atual. A preferência permanente
+    // do buzzer não representa reconhecimento de um alarme específico.
     if (config?.modoSilencioso === true) reconhecer(idHardware);
 
     const fogoSensor = status.perigoChama === true;
     const tempMuitoAlta = status.riscoIncendio === true;
     const fogo = fogoSensor || tempMuitoAlta || status.alertaIncendio === true;
-    // A CONDICAO de temperatura fora da faixa, nao "a sirene esta tocando".
-    // `alarmeAtivo` fica false quando o produtor desliga a sirene daquele
-    // aparelho (ou pede os 10 min de silencio), e usar isso aqui fazia a sirene
-    // da estufa decidir se o celular avisava - apagando, sem dizer nada, as
-    // preferencias de notificacao que o produtor tinha configurado. Sao canais
-    // diferentes: desligar o barulho na estufa e um pedido sobre o barulho ali.
-    //
-    // `alertaTemperatura` chega da v1.19.0 em diante; antes dela so havia
-    // `alarmeAtivo`, e um aparelho com firmware velho continua avisando como
-    // antes em vez de parar de avisar.
+    // A condição térmica é independente da sirene local. Firmwares anteriores
+    // utilizam `alarmeAtivo` como compatibilidade.
     const alarme = status.alertaTemperatura != null
       ? status.alertaTemperatura === true
       : status.alarmeAtivo === true;

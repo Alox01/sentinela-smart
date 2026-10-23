@@ -8,36 +8,10 @@ import '../../notificacoes/services/push_notification_service.dart';
 import '../../notificacoes/services/silenciamento_estufas.dart';
 import 'itens_menu_estufa.dart';
 
-/// A casca do menu (gaveta) da tela de monitoramento, com todos os seus itens.
+/// Menu da tela de monitoramento.
 ///
-/// ## Por que dois objetos em vez de treze parâmetros
-///
-/// O menu lia 5 valores da tela, chamava 3 métodos dela e ainda gerenciava
-/// estufadas. Extraí-lo item a item dava um construtor com ~13 posições soltas,
-/// onde trocar dois `String?` de lugar compila e só quebra em campo.
-///
-/// A saída escolhida foi **agrupar**: [DadosMenuEstufa] é o que o menu desenha,
-/// [AcoesMenuEstufa] é o que ele pede de volta à tela. Sobram duas posições, e a
-/// própria assinatura passa a dizer onde está o acoplamento — três callbacks, e
-/// nenhum a mais.
-///
-/// A alternativa era deixar na tela os itens que mexem em estado e passá-los
-/// prontos como `Widget`. Foi descartada por dois motivos:
-///
-/// 1. Os itens da gaveta ficariam divididos entre dois arquivos, e ninguém
-///    lendo um deles veria o menu inteiro. O risco desta extração é justamente
-///    **sumir um item sem ninguém notar** — a forma que esconde isso é a pior
-///    das duas.
-/// 2. O caso tido como claro (silenciar avisos) não mexe em estado da tela: ele
-///    lê os *singletons* [SilenciamentoEstufas] e
-///    [PreferenciasNotificacaoService] e chama um serviço, sem tocar em nenhum
-///    campo do `State` nem chamar `setState`. Pelo mesmo motivo veio junto
-///    "Apagar estufadas": também é função apenas dos valores acima.
-///
-/// O que ficou na tela ficou porque depende mesmo dela: os detalhes da conexão
-/// (leem pendências e o `ApiService`), a reconfiguração do aparelho (grava a
-/// estufa e volta para a lista) e o reinício de ajustes (abre diálogo e agenda
-/// o envio com *debounce*).
+/// [DadosMenuEstufa] reúne os valores exibidos e [AcoesMenuEstufa] concentra
+/// as operações que dependem da tela principal.
 class MenuEstufa extends StatelessWidget {
   final DadosMenuEstufa dados;
   final AcoesMenuEstufa acoes;
@@ -125,21 +99,7 @@ class MenuEstufa extends StatelessWidget {
                 acoes.aoConfigurarAparelho();
               },
             ),
-            // Quem alcanca este aparelho, e como. Compartilhar e tirar acesso
-            // moravam em AVISOS — posicao herdada da tela antiga, preservada
-            // sem discussao quando a gaveta foi extraida. Nao e assunto de
-            // aviso: os dois decidem QUEM COMANDA a estufa, que e do que esta
-            // secao trata. E ficam juntos porque um desfaz o outro.
-            // A outra metade de "so comanda quem esteve na frente do
-            // aparelho": presenca fisica para dar o acesso ("pegar acesso", com
-            // o PIN do visor) e presenca fisica para tirar. E a resposta para
-            // "e se o senhor vender o aparelho?" — sem ela, a pergunta fica sem
-            // resposta.
-            //
-            // Em CONEXAO, junto de "Reconfigurar aparelho": os dois decidem
-            // quem comanda a estufa, o que nao e assunto de aviso. Ate agora a
-            // revogacao existia so no formulario do navegador do aparelho,
-            // atras de "avancado" — o caminho existia e era invisivel.
+            // O acesso exige presença física e o PIN exibido pelo aparelho.
             ListTile(
               leading: const Icon(
                 Icons.person_remove_outlined,
@@ -155,7 +115,7 @@ class MenuEstufa extends StatelessWidget {
                 // sempre foi verdade nos dois escopos: todo celular que tinha
                 // acesso perde, independente de como o conseguiu.
                 'Gera uma chave nova no aparelho. Todos os outros '
-                    'celulares perdem o controle',
+                'celulares perdem o controle',
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
               onTap: () {
@@ -176,12 +136,6 @@ class MenuEstufa extends StatelessWidget {
               semIdHardware: (dados.idHardware?.trim() ?? '').isEmpty,
             ),
             ItemSireneDoAparelho(ativa: dados.buzzerAparelhoAtivo),
-            // A secao ACOES RAPIDAS saiu desta versao: agendar ajuste,
-            // reiniciar ajustes e apagar estufadas. O agendamento nao esta
-            // em nenhum dos cinco objetivos; reiniciar ajustes e atalho para
-            // o + e o - da tela principal; e apagar estufadas ja existe na
-            // propria tela de relatorios, na lixeira da barra. Nenhuma
-            // capacidade se perde - uma porta a menos, so.
           ],
         ),
       ),
@@ -286,7 +240,9 @@ class _ItemSilenciarAvisos extends StatelessWidget {
             style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
           value: silenciada,
-          onChanged: idHw == null ? null : (v) => unawaited(_silenciar(idHw, v)),
+          onChanged: idHw == null
+              ? null
+              : (v) => unawaited(_silenciar(idHw, v)),
         );
       },
     );
@@ -328,4 +284,3 @@ class _ItemSilenciarAvisos extends StatelessWidget {
     );
   }
 }
-

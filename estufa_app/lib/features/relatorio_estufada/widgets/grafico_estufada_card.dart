@@ -21,14 +21,8 @@ class GraficoEstufadaCard extends StatelessWidget {
     required this.onGraficoChanged,
   });
 
-  /// Uma secagem passa de 100h, e desenhar tudo de uma vez e o que amassava o
-  /// cartao: ou a largura crescia sem fim, ou um teto espremia a estufada
-  /// inteira num punhado de pixels. Quem recorta agora e a tela, que entrega um
-  /// dia de cada vez — nada e apagado, e o cartao nao precisa mais de janela
-  /// propria.
-  /// Quanto tempo cabe em uma tela. Fixo de proposito: uma hora de secagem ocupa
-  /// o mesmo espaco tenha a estufada 3h ou 100h, e o grafico deixa de apertar
-  /// conforme a secagem cresce.
+  /// Mantém duas horas por tela para preservar a legibilidade em secagens longas.
+  /// A seleção diária é realizada pela tela que contém o gráfico.
   static const double _horasPorTela = 2;
 
   @override
@@ -127,17 +121,7 @@ class GraficoEstufadaCard extends StatelessWidget {
     );
   }
 
-  /// Largura interna do grafico, que o arraste horizontal percorre.
-  ///
-  /// Densidade fixa: [_horasPorTela] de secagem por tela, sempre. Antes a conta
-  /// pedia 120px a cada 10 minutos e terminava num teto de 1800px — uma estufada
-  /// de 26h pedia 18.840px e recebia 1.800, dez vezes mais apertada do que a
-  /// propria conta mandava. Amarrando a densidade a largura da tela, o aperto
-  /// deixa de existir: o que cresce com a secagem e o quanto se arrasta, nao o
-  /// quanto se espreme.
-  ///
-  /// Sem filtro isso da ~12 telas, porque a janela e de um dia. Com filtro da o
-  /// que o produtor pediu — foi escolha dele.
+  /// Calcula a largura rolável com densidade constante de [_horasPorTela].
   double _larguraGraficoMobile(
     double larguraDisponivel,
     List<HistoricoLeituraEntity> visiveis,
@@ -368,18 +352,7 @@ class _CabecalhoGrafico extends StatelessWidget {
   }
 }
 
-/// Diz que o grafico nao esta mostrando a secagem inteira.
-///
-/// Sem isto o recorte seria silencioso, e quem abrisse o relatorio de uma
-/// secagem de quatro dias concluiria que ela durou um. Um recorte que se anuncia
-/// e escolha informada; um recorte calado e informacao errada.
-/// Diz o que e a linha tracejada.
-///
-/// Sem isto, o cinza pontilhado ao lado da leitura nao se explica: quem nao
-/// construiu o app nao tem como saber que aquilo e o ajuste, e um gráfico com
-/// duas linhas sem legenda convida a interpretar a errada. O balao de toque ja
-/// mostrava "Leitura" e "Ajuste", mas so depois de tocar — e ninguem toca no que
-/// nao entende.
+/// Identifica a linha tracejada utilizada para representar o valor de ajuste.
 class _LegendaDoGrafico extends StatelessWidget {
   const _LegendaDoGrafico();
 
@@ -388,16 +361,13 @@ class _LegendaDoGrafico extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Dois tracinhos, e nao uma linha inteira: o simbolo tem de PARECER o
-        // que esta no grafico, senao a legenda vira mais uma coisa a decifrar.
+        // Reproduz o padrão tracejado apresentado no gráfico.
         for (var i = 0; i < 2; i++) ...[
           Container(width: 7, height: 1.5, color: Colors.white38),
           const SizedBox(width: 3),
         ],
         const SizedBox(width: 3),
-        // Flexivel porque em tela de 360dp a frase nao cabe na linha e o Row
-        // estourava — em release nao aparece listra nenhuma, o texto so era
-        // cortado calado.
+        // Permite a adaptação do texto em telas estreitas.
         const Flexible(
           child: Text(
             'linha tracejada = ajuste programado',
