@@ -29,3 +29,8 @@ CLAUDE.md
 # da maquina - o que so vale nesta maquina. Declarado aqui para o repositorio
 # nao depender do ambiente de quem clona.
 .claude/settings.local.json
+
+# Saida de script: o PDF do guia de estudo da banca e o que foi usado para
+# gerar (script, PNGs renderizados). Reproduzivel, pesado, e nao e fonte.
+output/
+tmp/
