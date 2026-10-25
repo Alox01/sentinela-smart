@@ -119,20 +119,6 @@ create table if not exists comandos_pendentes (
   updated_at timestamptz not null default now()
 );
 
--- Ajustes marcados para uma hora futura.
-create table if not exists comandos_agendados (
-  id bigserial primary key,
-  identificador_hardware text not null,
-  aplicar_em_ms bigint not null,
-  payload jsonb not null,
-  criado_em timestamptz not null default now()
-);
-
--- O agendador varre por vencimento a cada 30 s; sem indice isso seria uma
--- varredura completa da tabela toda vez.
-create index if not exists comandos_agendados_aplicar_em_ms_idx
-  on comandos_agendados (aplicar_em_ms);
-
 create index if not exists idx_leituras_dispositivo_timestamp
   on leituras (dispositivo_id, timestamp_leitura desc);
 
@@ -188,10 +174,10 @@ on conflict (dispositivo_id) do nothing;
 -- `anon`. Sem RLS, quem tiver essa chave le e ESCREVE nestas tabelas **por fora
 -- do servidor** — e portanto por fora de toda a autenticacao do projeto.
 --
--- O que doi nao e o cadastro de push: e `comandos_pendentes` e
--- `comandos_agendados`, que sao a caixa de comandos que o aparelho busca e
--- obedece. Escrever ali seria comandar a estufa sem chave, sem PIN e sem estar
--- na frente do aparelho — furando a regra central do trabalho.
+-- O que doi nao e o cadastro de push: e `comandos_pendentes`, a caixa de
+-- comandos que o aparelho busca e obedece. Escrever ali seria comandar a estufa
+-- sem chave, sem PIN e sem estar na frente do aparelho — furando a regra
+-- central do trabalho.
 --
 -- **Sem politica nenhuma, de proposito.** Ligar RLS e nao criar policy fecha a
 -- API REST por completo, e o servidor nao sente: ele conecta como `postgres`
@@ -207,7 +193,6 @@ alter table leituras            enable row level security;
 alter table comandos_sync       enable row level security;
 alter table push_dispositivos   enable row level security;
 alter table comandos_pendentes  enable row level security;
-alter table comandos_agendados  enable row level security;
 
 -- Conferencia: tudo tem de voltar com `rowsecurity = true`.
 --   select tablename, rowsecurity
