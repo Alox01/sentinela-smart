@@ -29,6 +29,35 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ## Depois do 1.0, por motivo
 
+### 25/10/2026 — o prazo entre partidas volta, com 5 s e só para ligar
+
+Quatro dias depois de sair, o prazo voltou — e voltou pelo motivo que ficou
+escrito aqui quando ele saiu: *"se o contator começar a bater seguido, é aqui
+que se volta, e um prazo curto de uns 5 s cortaria a batida sem o atraso"*.
+
+O que ninguém previu foi **quem** produziria a batida. O caso imaginado era a
+temperatura parada na fronteira da histerese. O que aconteceu em campo foi mais
+direto: o botão preto inverte a trava da ventoinha a cada toque, então dois
+toques em poucos segundos abrem e fecham o contator na mão do produtor. Duas
+partidas de um motor de 1 a 3 CV a centímetros da placa, e o ESP32 travava — os
+dois pontos do visor paravam e só a tomada trazia de volta (D23 na auditoria).
+
+**Cinco segundos, e não trinta.** O que incomodava no prazo antigo era atrasar
+o que o produtor acabara de mandar pelo botão. Cinco segundos não se percebem no
+uso e não deixam a batida nascer.
+
+**Só para ligar.** Desligar continua instantâneo, sempre. A assimetria é
+deliberada: parar é o lado da segurança — fogo, temperatura acima do teto,
+sensor mudo — e nenhum desses pode esperar na fila. E não entrou estado novo: a
+volta seguinte do laço tenta de novo, e a ventoinha parte sozinha quando o prazo
+vence.
+
+**O que o prazo não resolve:** o transitório. Uma partida isolada continua
+produzindo o mesmo pico, e é por isso que `forcarReescritaVisor()` é chamada
+logo depois do `digitalWrite` do relé. A causa elétrica segue aberta — fiação de
+220 V perto da placa e alimentação do ESP32 são os suspeitos. O supressor de
+15/10 está na bobina do contator; a partida do motor é outro evento.
+
 ### 21/10/2026 — piso de 50 °F, e o prazo de 30 s entre partidas saiu
 
 **O piso.** `definirTemperaturaAlvo()` limitava só o teto, e os botões levaram o

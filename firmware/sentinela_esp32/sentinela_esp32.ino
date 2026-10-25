@@ -203,6 +203,23 @@ bool ventoinhaBloqueada = false;
 // pela temperatura, como se o produtor tivesse apertado o botao de novo. Se a
 // estufa estiver quente, ela segue parada.
 const unsigned long TEMPO_MAXIMO_TRAVA_VENTOINHA_MS = 5UL * 60 * 1000;
+
+// Espera minima entre PARTIDAS do contator. So para ligar: desligar e
+// instantaneo, sempre, porque desligar e o lado da seguranca.
+//
+// Voltou em 25/10/2026, depois de o produtor travar o aparelho em campo. O
+// prazo de 30 s que existia aqui saiu em 21/10 a pedido dele, e o historico do
+// firmware registrou o risco: "se o contator comecar a bater seguido, e aqui
+// que se volta, e um prazo curto de uns 5 s cortaria a batida sem o atraso".
+// O caso previsto era a temperatura parada na fronteira da histerese. O que
+// aconteceu foi mais direto: dois toques no botao preto em poucos segundos
+// invertem a trava duas vezes, abrindo e fechando o contator - duas partidas
+// de um motor de 1 a 3 CV a centimetros da placa. O transitorio travava o
+// ESP32, e so saia tirando da tomada.
+//
+// Cinco segundos, e nao trinta: o que incomodava era atrasar o que o produtor
+// acabara de mandar. Cinco nao se percebe no uso e nao deixa a batida nascer.
+const unsigned long ESPERA_ENTRE_PARTIDAS_MS = 5000;
 // Instante em que a trava foi posta. Zero quer dizer destravada, mesmo idioma
 // de ultimaTrocaVentoinhaMs.
 unsigned long ventoinhaBloqueadaDesdeMs = 0;
@@ -2961,10 +2978,20 @@ void aplicarVentoinha() {
                   && !quenteDemais;
   if (desejado == ventoinhaLigada) return;
 
-  // Sem prazo nenhum, nem para ligar nem para desligar: quem segura o
-  // liga-desliga e a histerese de atualizarEstadoTemperatura(). O carimbo
-  // continua sendo guardado - ele nao decide mais nada, mas diz no /dados ha
-  // quanto tempo a ventoinha esta no estado em que esta.
+  // LIGAR espera o prazo entre partidas; DESLIGAR nunca espera. A assimetria e
+  // deliberada: parar e o lado da seguranca - fogo, temperatura acima do teto,
+  // sensor mudo - e nenhum desses pode ficar na fila. Comparacao a prova de
+  // rollover do millis(), como no resto do arquivo.
+  if (desejado && ultimaTrocaVentoinhaMs != 0 &&
+      (long)(millis() - (ultimaTrocaVentoinhaMs + ESPERA_ENTRE_PARTIDAS_MS)) < 0) {
+    // Sem marcar nada: a proxima volta do laco tenta de novo, e a ventoinha
+    // parte sozinha assim que o prazo vencer.
+    return;
+  }
+
+  // A histerese de atualizarEstadoTemperatura() e quem segura o liga-desliga no
+  // uso normal; o prazo acima so impede a batida rapida. O carimbo diz no
+  // /dados ha quanto tempo a ventoinha esta no estado em que esta.
   ventoinhaLigada = desejado;
   ultimaTrocaVentoinhaMs = millis();
   digitalWrite(RELE_VENTOINHA, ventoinhaLigada ? HIGH : LOW);

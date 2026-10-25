@@ -1007,6 +1007,60 @@ funciona:
   `pilhaNuvemLivre` existiam para descartar memória e pilha de cara. Os dois
   entraram ontem. Instrumento vale mais que palpite.
 
+### 2.17 Achado em campo (25/10/2026)
+
+- [x] **D23. Dois toques seguidos no botão preto travam o aparelho, e só a
+  tomada o traz de volta.**
+
+  Sintoma, relatado pelo produtor: o botão preto "às vezes não funciona". O
+  verde e o vermelho seguem respondendo, e **os dois pontos do visor param de
+  piscar** quando o preto é apertado mais de uma vez. Tirar e recolocar na
+  tomada resolve.
+
+  **O que os três fatos juntos provam.** Pontos parados = o laço de controle
+  morreu, não está apenas ocupado. Verde e vermelho funcionando = o problema
+  não é o laço em geral, é o que **aquele** botão dispara. Voltar só pela
+  tomada = travamento, não reinício: um *reset* se recuperaria sozinho.
+
+  **A causa.** O botão preto é o único que mexe no relé — o verde troca o que o
+  visor mostra, o vermelho abre o ajuste. Cada toque inverte a trava da
+  ventoinha, então dois toques em poucos segundos **abrem e fecham o contator**:
+  duas partidas de um motor de 1 a 3 CV a centímetros da placa, com corrente de
+  partida de 5 a 7 vezes a nominal. O transitório trava o ESP32.
+
+  O firmware já registrava a vizinhança disso, em `aplicarVentoinha()`, logo
+  após o `digitalWrite` do relé: *"o chaveamento é o momento em que o visor
+  costuma perder o quadro"*. O visor perdendo o quadro é a versão leve do mesmo
+  transitório; o travamento é a versão grave.
+
+  **De onde veio.** Em 21/10 o prazo de 30 s entre partidas foi removido a
+  pedido do produtor — a histerese já atrasa o religamento, e o prazo só adiava
+  o que ele acabara de mandar pelo botão. O `HISTORICO_FIRMWARE.md` registrou o
+  risco na mesma entrada: *"se o contator começar a bater seguido, é aqui que se
+  volta, e um prazo curto de uns 5 s cortaria a batida sem o atraso"*. O caso
+  previsto era a temperatura parada na fronteira da histerese. O que aconteceu
+  foi mais direto: o próprio produtor produz a batida apertando o botão duas
+  vezes.
+
+  *Conserto:* `ESPERA_ENTRE_PARTIDAS_MS = 5000`, só no sentido de **ligar**.
+  Desligar nunca espera — fogo, temperatura acima do teto e sensor mudo são o
+  lado da segurança e não podem entrar em fila. Sem estado novo: a volta
+  seguinte do laço tenta de novo e a ventoinha parte sozinha quando o prazo
+  vence.
+
+  **Aberto, e maior que este conserto:** o prazo impede a batida rápida, não o
+  transitório. Uma partida isolada continua produzindo o mesmo pico, e o visor
+  continua perdendo o quadro — por isso a reescrita forçada existe. Vale olhar o
+  hardware: distância entre a fiação de 220 V e a placa, e a alimentação do
+  ESP32. O supressor instalado em 15/10 está na **bobina do contator**; a
+  partida do **motor** é outro evento, bem maior.
+
+  **Lição de método:** a pergunta que resolveu foi *"os dois pontos ainda
+  piscam?"*. Três observações do produtor — pontos parados, outros botões vivos,
+  volta só pela tomada — fecharam o diagnóstico antes de qualquer leitura de
+  código. E o conserto estava escrito no histórico havia quatro dias, por quem
+  removeu a proteção.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com
