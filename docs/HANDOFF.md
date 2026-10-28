@@ -64,7 +64,7 @@ sobe mais sozinha: ver `HISTORICO_FIRMWARE.md`.
 O aparelho foi **regravado em 04/08/2026** e está com a 1.0. Conferência de um
 segundo, sem sair do lugar: "Detalhes da conexão" no menu da estufa deve mostrar
 **Firmware 1.0**. Se ainda disser 1.24.0, a gravação não pegou.
-- **Configuração sem computador:** segurar os 3 botões por 3 s abre o ponto de
+- **Configuração sem computador:** segurar o verde e o vermelho por 3 s abre o ponto de
   acesso `Sentinela-Config`, com portal cativo (a página abre sozinha ao
   conectar) e a opção de IP fixo/gateway/máscara; Wi-Fi e chave saem da NVS.
   Trocar de roteador não exige mais regravar. Fecha sozinho após 5 min ocioso, e

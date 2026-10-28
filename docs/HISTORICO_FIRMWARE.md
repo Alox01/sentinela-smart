@@ -29,6 +29,37 @@ número: cada uma foi uma estufa real se comportando diferente do esperado.
 
 ## Depois do 1.0, por motivo
 
+### 28/10/2026 — o modo de configuração sai do botão preto
+
+Pedido do produtor: *"o botão do buzzer não responde direito"*. A combinação dos
+**três** botões era a porta de entrada do modo de configuração, e dependia
+justamente do botão de pior contato — o mesmo que o D23 acabara de mostrar ser o
+que chaveia o relé. Passou a ser **verde + vermelho por 3 s**.
+
+**Os três continuam abrindo.** Verde e vermelho estão entre eles, então quem
+aprendeu o gesto antigo não precisou desaprender nada. Não havia motivo para
+proibir o que já funcionava.
+
+**O preço: os dois que sobraram são os botões de ajuste.** Apertar dois botões
+nunca é simultâneo. O primeiro a fechar contato abre a janela de ajuste — ou
+mexe no alvo, se a janela já estava aberta — antes de existir combinação
+nenhuma. Com os três botões isso era acidente de borda; agora acontece em toda
+tentativa, e foi onde o conserto deu trabalho de verdade:
+
+- a gravação na NVS fica **suspensa enquanto a combinação conta**. Ela grava
+  1,5 s depois da última mudança, ou seja, no meio dos 3 s do gesto — e o
+  descarte, que é reler a NVS, releria o próprio acidente;
+- **soltar antes dos 3 s** passa a descartar também. Quem desiste não passa por
+  `entrarModoConfig()`, e o alvo ficava com o toque que abriu o gesto;
+- o descarte voltou a ler os **carimbos de tempo** junto com os valores. Sem
+  isso o alvo antigo voltava com a hora do toque acidental e venceria, no
+  *Last-Writer-Wins*, um comando remoto legítimo mais velho que o toque — mas
+  mais novo que o alvo que estava voltando.
+
+**O que não mudou:** sair do modo continua sendo qualquer botão por 1,5 s, e
+segurar só o preto por 3 s continua alternando a sirene de temperatura. O preto
+não saiu do aparelho; saiu da porta de entrada.
+
 ### 25/10/2026 — o prazo entre partidas volta, com 5 s e só para ligar
 
 Quatro dias depois de sair, o prazo voltou — e voltou pelo motivo que ficou

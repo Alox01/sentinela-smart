@@ -157,7 +157,7 @@ caminho existe e é invisível.
    perdem o controle**, e vão precisar de um QR novo. E, explicitamente: **as
    estufadas e os relatórios continuam** — só a credencial muda. "Revogar acesso"
    soa como perder dados.
-3. Pede para colocar o aparelho no modo de configuração (3 botões, 3 s) e
+3. Pede para colocar o aparelho no modo de configuração (verde + vermelho, 3 s) e
    conectar o celular na rede `Sentinela-Config`.
 4. Pede o **PIN do visor**, como o fluxo de configuração já faz. O app **nunca**
    preenche o PIN: a presença física é o que impede alguém só com o aplicativo de

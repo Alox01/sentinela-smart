@@ -19,9 +19,9 @@
   ATENCAO:
     1. WIFI_SSID e WIFI_PASS abaixo sao apenas o valor DE FABRICA, usado ate
        alguem configurar o aparelho.
-    2. Depois de gravado, da para trocar de rede sem computador: segure os TRES
-       botoes por 3 s, conecte na rede "Sentinela-Config" e abra o app (ou o
-       navegador). O que for salvo ali fica na NVS e tem precedencia.
+    2. Depois de gravado, da para trocar de rede sem computador: segure o VERDE
+       e o VERMELHO juntos por 3 s, conecte na rede "Sentinela-Config" e abra o
+       app (ou o navegador). O que for salvo ali fica na NVS e tem precedencia.
     3. NAO ha o que preencher em DEVICE_TOKEN. O aparelho gera a propria chave
        no primeiro boot e o app a le dele, com o PIN do visor. Ninguem digita
        chave em lugar nenhum.
@@ -478,9 +478,9 @@ String gatewayAprendido;
 String mascaraAprendida;
 
 // --- Modo de configuracao (ponto de acesso) ---
-// Entra segurando os TRES botoes por 3 s: quem nao esta na frente do aparelho
-// nao abre a pagina. Sai sozinho depois de um tempo ocioso, para um modo aberto
-// por engano nao ficar exposto ate alguem lembrar.
+// Entra segurando o VERDE e o VERMELHO juntos por 3 s: quem nao esta na frente
+// do aparelho nao abre a pagina. Sai sozinho depois de um tempo ocioso, para um
+// modo aberto por engano nao ficar exposto ate alguem lembrar.
 // Responder a QUALQUER consulta de nome com o proprio IP e o que faz o celular
 // abrir a pagina sozinho ("conectar-se a rede"), como num Wi-Fi de hotel. Sem
 // isto o produtor teria que digitar 192.168.4.1 de cabeca.
@@ -488,16 +488,16 @@ DNSServer dnsServer;
 const byte PORTA_DNS = 53;
 const char* NOME_AP_CONFIG = "Sentinela-Config";
 const unsigned long TEMPO_SEGURAR_CONFIG_MS = 3000;
-// Quanto tempo os tres podem parecer soltos sem que a contagem recomece. Um
+// Quanto tempo os dois podem parecer soltos sem que a contagem recomece. Um
 // unico digitalRead solto zerava tudo, e sem nada na tela dizendo - a pessoa
 // continuava segurando achando que estava em 2,5 s quando estava em 0,3.
 const unsigned long TOLERANCIA_SOLTURA_MS = 150;
 // Quanto tempo segurar QUALQUER botao para sair do modo de configuracao. Nao e
 // toque: o aparelho fica na estufa, e um esbarrao no meio do preenchimento
-// custaria refazer os 3 s dos tres botoes e reconectar o celular na rede dele.
+// custaria refazer os 3 s da combinacao e reconectar o celular na rede dele.
 const unsigned long TEMPO_SAIR_CONFIG_MS = 1500;
 unsigned long algumBotaoDesdeMs = 0;
-// Entrar exige segurar os tres botoes por 3 s, entao no instante em que o modo
+// Entrar exige segurar dois botoes por 3 s, entao no instante em que o modo
 // abre a mao AINDA esta em cima deles. Sem esperar a soltura, os mesmos dedos
 // que abriram fechariam 1,5 s depois - o modo piscaria e ninguem entenderia por
 // que. So conta para sair depois que todos ficarem soltos uma vez.
@@ -516,10 +516,10 @@ bool modoConfig = false;
 int pinConfig = -1;
 int tentativasPin = 0;
 const int MAX_TENTATIVAS_PIN = 5;
-unsigned long tresBotoesDesdeMs = 0;
-// Ultima vez que os tres estavam mesmo apertados. Serve para nao desistir da
+unsigned long comboConfigDesdeMs = 0;
+// Ultima vez que os dois estavam mesmo apertados. Serve para nao desistir da
 // contagem por causa de um chacoalho do contato ou de um dedo que escorrega.
-unsigned long ultimoTodosPressionadosMs = 0;
+unsigned long ultimoComboPressionadoMs = 0;
 unsigned long ultimaAtividadeConfig = 0;
 
 // --- Liga/desliga a sirene de temperatura no proprio aparelho ---
@@ -559,6 +559,8 @@ void iniciarMdns();
 void aplicarIpFixoSeCouberNaRede();
 void verificarModoConfig();
 void entrarModoConfig();
+void descartarAjusteAcidental();
+void sairModoAjuste();
 void handleConfigPagina();
 void handleConfigSalvar();
 void guardarRedeAprendida();
@@ -753,14 +755,14 @@ void tarefaNuvem(void* _) {
     // internet: tentar falar com a nuvem so gastaria tempo em conexoes fadadas
     // a falhar.
     //
-    // Com os tres botoes na mao, a nuvem espera. Sao 20 s ate a proxima busca e
+    // Com a combinacao na mao, a nuvem espera. Sao 20 s ate a proxima busca e
     // 60 ate o proximo envio - nada que se perca. Hoje um handshake preso no
     // outro nucleo nao atrasa mais a contagem dos 3 s, mas a regra fica: o que
     // se quer ali e entrar na configuracao, nao conversar com o servidor.
     //
     // E quem esta ajustando o alvo tambem espera: um alvo que ainda esta sendo
     // movido nao e ajuste, e cada valor intermediario seria ruido na nuvem.
-    if (!modoConfig && tresBotoesDesdeMs == 0) {
+    if (!modoConfig && comboConfigDesdeMs == 0) {
       // Durante o ajuste, alerta nenhum sai daqui - nem fogo - ate o produtor
       // terminar, com teto de 30 s. A regra e o motivo estao em
       // estadoDeAlertaMudou().
@@ -1086,7 +1088,7 @@ void iniciarMdns() {
 //  MODO DE CONFIGURACAO
 // ============================================================
 
-// Vigia a combinacao dos tres botoes e o tempo ocioso do modo aberto.
+// Vigia a combinacao de botoes e o tempo ocioso do modo aberto.
 void verificarModoConfig() {
   if (modoConfig) {
     // PIN queimado: o modo nao serve mais para NADA - as duas rotas que fazem
@@ -1137,29 +1139,80 @@ void verificarModoConfig() {
     return;
   }
 
-  bool todosPressionados = digitalRead(BOTAO_BUZZER) == LOW &&
-                           digitalRead(BOTAO_VERDE) == LOW &&
-                           digitalRead(BOTAO_VERMELHO) == LOW;
-  if (!todosPressionados) {
+  // Verde e vermelho juntos. Eram os TRES, e o botao do buzzer responde de
+  // forma intermitente - a combinacao dependia justamente do botao menos
+  // confiavel do aparelho, e quem segurava os 3 s nao tinha como saber se
+  // errou o gesto ou se o botao nao desceu.
+  //
+  // Segurar os tres continua abrindo o modo, porque verde e vermelho estao
+  // entre eles: quem aprendeu o gesto antigo nao fica de fora.
+  //
+  // O preco e que os dois que sobraram sao justamente os de ajuste de alvo. O
+  // primeiro a fechar contato mexe no alvo antes de a combinacao ser
+  // reconhecida - entrarModoConfig() descarta isso recarregando o que esta
+  // gravado.
+  bool comboPressionado = digitalRead(BOTAO_VERDE) == LOW &&
+                          digitalRead(BOTAO_VERMELHO) == LOW;
+  if (!comboPressionado) {
     // Uma leitura solta nao cancela nada: contato de botao chacoalha, e a mao
-    // que segura tres botoes de uma vez inevitavelmente escorrega. So desiste
-    // depois de TOLERANCIA_SOLTURA_MS realmente sem os tres.
-    if (tresBotoesDesdeMs != 0
-        && millis() - ultimoTodosPressionadosMs < TOLERANCIA_SOLTURA_MS) {
+    // que segura dois botoes de uma vez inevitavelmente escorrega. So desiste
+    // depois de TOLERANCIA_SOLTURA_MS realmente sem os dois.
+    if (comboConfigDesdeMs != 0
+        && millis() - ultimoComboPressionadoMs < TOLERANCIA_SOLTURA_MS) {
       return;
     }
-    tresBotoesDesdeMs = 0;
+    if (comboConfigDesdeMs != 0) {
+      // Desistiu no meio dos 3 s. Quem descarta o ajuste acidental e
+      // entrarModoConfig(), e aqui ele nunca vai ser chamado - sem este
+      // descarte o alvo ficaria com o toque que abriu a combinacao.
+      comboConfigDesdeMs = 0;
+      descartarAjusteAcidental();
+      return;
+    }
+    comboConfigDesdeMs = 0;
     return;
   }
-  ultimoTodosPressionadosMs = millis();
+  ultimoComboPressionadoMs = millis();
 
-  if (tresBotoesDesdeMs == 0) {
-    tresBotoesDesdeMs = millis();
+  if (comboConfigDesdeMs == 0) {
+    comboConfigDesdeMs = millis();
     return;
   }
-  if (millis() - tresBotoesDesdeMs >= TEMPO_SEGURAR_CONFIG_MS) {
+  if (millis() - comboConfigDesdeMs >= TEMPO_SEGURAR_CONFIG_MS) {
     entrarModoConfig();
   }
+}
+
+// Desfaz o ajuste de alvo que o primeiro botao da combinacao fez sem querer.
+//
+// Apertar dois botoes quase nunca e simultaneo, e desde que a combinacao e
+// verde + vermelho os dois SAO os botoes de ajuste: o que desce primeiro abre a
+// janela de ajuste ou mexe no alvo antes de existir combinacao nenhuma. Isso
+// deixou de ser acidente de borda - como era com os tres botoes - e passou a
+// acontecer em toda tentativa.
+//
+// Reler a NVS devolve o ultimo valor que o produtor realmente confirmou, e nada
+// legitimo se perde porque salvarConfigSeNecessario() nao grava enquanto a
+// combinacao esta contando.
+void descartarAjusteAcidental() {
+  prefs.begin("sentinela", true);
+  const int tempGravada = prefs.getInt("tempAlvo", temperaturaAlvoF);
+  const int umidGravada = prefs.getInt("umidAlvo", umidadeAlvo);
+  const long long tempTsGravado = prefs.getLong64("tempTs", tempTimestamp);
+  const long long umidTsGravado = prefs.getLong64("umidTs", umidTimestamp);
+  prefs.end();
+
+  travarEstado();
+  temperaturaAlvoF = tempGravada;
+  umidadeAlvo = umidGravada;
+  // Os carimbos voltam junto com os valores. Sem isso o alvo antigo ficaria com
+  // a hora do toque acidental e venceria, no LWW, um comando remoto legitimo
+  // mais velho que o toque - mas mais novo que o alvo que esta voltando.
+  tempTimestamp = tempTsGravado;
+  umidTimestamp = umidTsGravado;
+  soltarEstado();
+
+  if (modoAjuste) sairModoAjuste();
 }
 
 // Abre o ponto de acesso "Sentinela-Config" e sorteia o PIN do visor. Enquanto
@@ -1167,7 +1220,7 @@ void verificarModoConfig() {
 // sozinho por inatividade.
 void entrarModoConfig() {
   modoConfig = true;
-  tresBotoesDesdeMs = 0;
+  comboConfigDesdeMs = 0;
   botoesSoltosDesdeQueEntrou = false;
   algumBotaoDesdeMs = 0;
   ultimaAtividadeConfig = millis();
@@ -1179,7 +1232,7 @@ void entrarModoConfig() {
   // Toca DE PROPOSITO mesmo com a sirene de temperatura desligada, e isso nao e
   // descuido: o interruptor e sobre o ALARME, nao sobre todo som do aparelho.
   // Isto e resposta a uma acao que o produtor acabou de fazer, com ele na frente
-  // segurando os botoes. Calar aqui deixaria segurar os 3 botoes sem retorno
+  // segurando os botoes. Calar aqui deixaria segurar os dois sem retorno
   // nenhum, e a instrucao da tela ("segure ate apitar") viraria mentira.
   // PIN novo a cada entrada: um PIN fixo viraria segredo permanente de 4
   // digitos, que e fraco. Sorteado por entrada, ele so vale para esta sessao.
@@ -1196,15 +1249,8 @@ void entrarModoConfig() {
   digitalWrite(LED_UMIDADE, LOW);
   digitalWrite(LED_CONTROLE_TEMP, LOW);
 
-  // Apertar tres botoes quase nunca e simultaneo: o primeiro a fechar contato
-  // pode ter entrado no modo de ajuste e mexido no alvo. Descarta essas
-  // alteracoes acidentais recarregando o que esta gravado.
-  modoAjuste = false;
   configSuja = false;
-  prefs.begin("sentinela", true);
-  temperaturaAlvoF = prefs.getInt("tempAlvo", temperaturaAlvoF);
-  umidadeAlvo = prefs.getInt("umidAlvo", umidadeAlvo);
-  prefs.end();
+  descartarAjusteAcidental();
 
   if (mdnsAtivo) {
     MDNS.end();
@@ -1355,7 +1401,7 @@ void handleConfigPagina() {
       "\"></details>"
       "<button type=\"submit\">Salvar e reiniciar</button></form>"
       // Gravar firmware sem cabo. Fica aqui, dentro do modo de configuracao,
-      // porque entrar nele exige segurar os tres botoes: so troca o firmware
+      // porque entrar nele exige a combinacao de botoes: so troca o firmware
       // quem esta na frente do aparelho. O PIN do visor fecha o resto.
       "<details><summary>Atualizar o firmware (avan&ccedil;ado)</summary>"
       "<p class=\"aviso\">Envie o arquivo <b>.bin</b> gerado no Arduino por "
@@ -1383,7 +1429,7 @@ void handleConfigPagina() {
 //
 // Recebe o .bin pela pagina do modo de configuracao e grava na particao OTA. A
 // seguranca e a mesma do resto dessa pagina, e por isso ela vive aqui: entrar no
-// modo exige segurar os tres botoes do aparelho, e o PIN do visor confirma.
+// modo exige segurar dois botoes do aparelho, e o PIN do visor confirma.
 //
 // O PIN so pode ser conferido DEPOIS do upload - os campos do formulario chegam
 // junto com o arquivo, e recusar no meio deixaria a particao pela metade. Por
@@ -1469,7 +1515,7 @@ bool pinDoVisorConfere() {
 
 // Entrega ao app a identidade do aparelho, incluindo a CHAVE. So responde no
 // modo de configuracao, e essa restricao e a seguranca inteira: entrar nele
-// exige segurar os tres botoes, ou seja, estar na frente do aparelho, e ele sai
+// exige segurar dois botoes juntos, ou seja, estar na frente do aparelho, e sai
 // sozinho por inatividade. Em operacao normal a rota nao existe - `/status` diz
 // apenas se ha chave, nunca qual.
 //
@@ -1601,7 +1647,7 @@ void handleConfigSalvar() {
   //
   // O aparelho reinicia logo abaixo e sai do modo de configuracao: nao ha
   // segunda chance de ler. Sem devolve-la agora, trocar a chave pelo app exigiria
-  // voltar ate a estufa, segurar os tres botoes de novo e digitar um PIN novo —
+  // voltar ate a estufa, refazer a combinacao de botoes e digitar um PIN novo —
   // duas idas para uma operacao so.
   //
   // So sai quando a chave ACABOU de ser gerada nesta chamada. A chave em uso nao
@@ -1815,6 +1861,10 @@ void salvarConfigSeNecessario() {
   const bool precisaSalvar = configSuja;
   soltarEstado();
   if (!precisaSalvar) return;
+  // Combinacao em contagem: o alvo pode ter andado no primeiro botao a fechar
+  // contato, e o descarte dele e reler a NVS. Gravar agora tornaria o acidente
+  // permanente, e o descarte leria de volta exatamente o que quer jogar fora.
+  if (comboConfigDesdeMs != 0) return;
   // Espera o produtor parar de mexer, nao terminar de ajustar. Durante o ajuste
   // ultimoTempoAjuste anda a cada toque e a cada repeticao, entao isto libera
   // 1,5 s depois da ULTIMA mudanca - com o visor ainda piscando.
@@ -2653,8 +2703,8 @@ bool botaoRepetindo(int pino, unsigned long &ultimaRepeticao) {
 }
 
 // Segurar SO o botao do buzzer por 3 s liga/desliga a sirene de temperatura
-// deste aparelho. Exige os outros dois soltos: com os tres apertados quem manda
-// e o modo de configuracao.
+// deste aparelho. Exige os outros dois soltos: verde e vermelho juntos sao a
+// combinacao do modo de configuracao.
 //
 // O aperto CURTO ja disparou no instante em que o botao desceu (silencia por 10
 // min, e so quando ha alarme tocando). Nao ha conflito: os dois apontam para o
@@ -2727,10 +2777,10 @@ void confirmarAlternanciaBuzzer(bool ligou) {
 // Le os tres botoes a cada volta do loop: ajuste de alvo, silencio e as
 // combinacoes. Toda interacao fisica do produtor passa por aqui.
 void verificarBotoes() {
-  // Enquanto os tres estao apertados (ou ja no modo de configuracao), nenhum
-  // botao age sozinho: senao a combinacao silenciaria o alarme e mexeria no
-  // alvo no caminho.
-  if (modoConfig || tresBotoesDesdeMs != 0) return;
+  // Enquanto a combinacao esta sendo contada (ou ja no modo de configuracao),
+  // nenhum botao age sozinho: senao verde e vermelho ficariam mexendo no alvo
+  // no caminho para a configuracao.
+  if (modoConfig || comboConfigDesdeMs != 0) return;
 
   verificarSegurarBuzzer();
 
@@ -3032,8 +3082,8 @@ void atualizarSaidas() {
   // quando conseguiu.
   //
   // Sobrescreve os LEDs, nunca o buzzer: o resto da funcao segue e o fogo toca
-  // igual com os tres botoes na mao.
-  if (tresBotoesDesdeMs != 0) {
+  // igual com os botoes na mao.
+  if (comboConfigDesdeMs != 0) {
     digitalWrite(LED_ALERTA, HIGH);
     digitalWrite(LED_UMIDADE, HIGH);
     digitalWrite(LED_CONTROLE_TEMP, HIGH);

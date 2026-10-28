@@ -1061,6 +1061,55 @@ funciona:
   código. E o conserto estava escrito no histórico havia quatro dias, por quem
   removeu a proteção.
 
+### 2.18 Pedido do produtor (28/10/2026)
+
+- [x] **D24. O modo de configuração dependia do botão menos confiável do
+  aparelho.**
+
+  Pedido do produtor, com o motivo: *"o botão do buzzer não responde direito"*.
+  Entrar no modo de configuração exigia os **três** botões, e um deles é o preto
+  — o mesmo que o D23 mostrou ser o que mexe no relé, e que ele já vinha
+  descrevendo como intermitente.
+
+  **Por que isso é pior do que parece.** O gesto não dava retorno sobre *qual*
+  parte falhou. Segurar os 3 s e não acontecer nada era indistinguível de errar
+  o gesto, e a única saída era tentar de novo — na frente da estufa, com o
+  celular na mão esperando a rede `Sentinela-Config` aparecer. Uma prova de
+  presença física não deveria depender do botão de pior contato.
+
+  *Conserto:* a combinação passa a ser **verde + vermelho por 3 s**. Segurar os
+  três continua abrindo, porque verde e vermelho estão entre eles — quem
+  aprendeu o gesto antigo não fica de fora, e não houve o que desaprender.
+
+  **O que o conserto trouxe de novo, e precisou ser tratado.** Verde e vermelho
+  *são* os botões de ajuste de alvo. Apertar dois botões nunca é simultâneo, e o
+  primeiro a fechar contato mexe no alvo antes de existir combinação nenhuma —
+  o que era acidente de borda com os três botões passou a acontecer em **toda**
+  tentativa. O descarte já existia ao entrar no modo (recarregar os alvos da
+  NVS), mas não cobria dois caminhos:
+
+  1. **A gravação podia acontecer durante a contagem.** `salvarConfigSeNecessario()`
+     grava 1,5 s depois da última mudança — ou seja, no meio dos 3 s do gesto.
+     O descarte então releria da NVS exatamente o acidente que queria jogar
+     fora. Agora a gravação fica suspensa enquanto a combinação conta.
+  2. **Desistir no meio não descartava nada.** Quem solta antes dos 3 s nunca
+     passa por `entrarModoConfig()`, e o alvo ficava com o toque que abriu o
+     gesto. Agora soltar antes do tempo chama o mesmo descarte.
+
+  O descarte voltou a ler também os **carimbos de tempo** (`tempTs`/`umidTs`), e
+  não só os valores: sem isso o alvo antigo voltava com a hora do toque
+  acidental e venceria, no *Last-Writer-Wins*, um comando remoto legítimo mais
+  velho que o toque — mas mais novo que o alvo que estava voltando.
+
+  **Onde mais mudou:** as quatro instruções da tela de configuração do app, que
+  mandavam segurar três botões, e `CONFIGURACAO_ESP32.md`, `MAPA_DO_CODIGO.md`,
+  `HANDOFF.md`, `ROTEIRO_BANCA.md` e `SEGURANCA_COMANDOS.md`. Documento que
+  ensina um gesto que o firmware não aceita mais é pior que documento nenhum.
+
+  **Não mudou:** sair do modo continua sendo **qualquer** botão por 1,5 s (o
+  preto só adiciona uma saída, nunca tira), e segurar **só** o preto por 3 s
+  continua ligando e desligando a sirene de temperatura.
+
 ### 2.3 Baixa — higiene
 
 - [x] **C1. Ruído de log** (no servidor). *Feito: `estufa_server/log.js` com

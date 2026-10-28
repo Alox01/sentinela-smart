@@ -88,7 +88,7 @@ servidor e no `/sincronizar` do firmware.
 
 ### "Como o aparelho é configurado sem computador?"
 
-Segurar os **três botões por 3 segundos** abre um ponto de acesso
+Segurar o **botão verde e o vermelho juntos por 3 segundos** abre um ponto de acesso
 (`Sentinela-Config`). O celular conecta nele e configura a rede pelo app. Está em
 `verificarModoConfig()` e `handleConfigSalvar()`.
 
@@ -96,7 +96,7 @@ Segurar os **três botões por 3 segundos** abre um ponto de acesso
 
 Comandar exige uma chave. Ela é **gerada pelo próprio aparelho** e nunca é
 digitada por ninguém. Para obtê-la, o celular precisa estar fisicamente na frente
-do aparelho: três botões e o **PIN de 4 dígitos do visor**.
+do aparelho: a combinação de botões e o **PIN de 4 dígitos do visor**.
 
 Os 4 dígitos bastam por três motivos, todos no firmware: **sorteado a cada
 entrada**, **morre em 5 erros**, e **só existe no modo de configuração**, que

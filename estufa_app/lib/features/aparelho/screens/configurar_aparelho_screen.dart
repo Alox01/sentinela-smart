@@ -716,7 +716,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
         // Nao ha "Voltar" aqui, e nao deve voltar a haver. Ele saia da
         // configuracao inteira e jogava fora TUDO: o PIN, a rede, a senha, o
         // endereco que o aparelho acabou de entregar. E o pior e que refazer nao
-        // e digitar de novo - e ir ate a estufa, segurar os tres botoes por 3 s,
+        // e digitar de novo - e ir ate a estufa, segurar o verde e o vermelho,
         // reconectar o celular no "Sentinela-Config" e recomecar. Um botao
         // discreto, ao lado do que continua o processo, custava isso.
         //
@@ -865,8 +865,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
           ),
           SizedBox(height: 10),
           Text(
-            'Vá até o aparelho, segure os 3 botões por 3 s de novo e refaça. O '
-            'visor mostra um PIN novo.',
+            'Vá até o aparelho, segure o botão verde e o vermelho juntos por '
+            '3 s de novo e refaça. O visor mostra um PIN novo.',
             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
         ],
@@ -1072,8 +1072,8 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
                   ? "Para pegar o acesso"
                   : "Antes de preencher"}:'
               '\n\n'
-              '1. No aparelho, segure os três botões por 3 segundos, até apitar e '
-              'os LEDs piscarem.\n'
+              '1. No aparelho, segure o botão verde e o vermelho juntos por 3 '
+              'segundos, até apitar e os LEDs piscarem.\n'
               '2. No Wi-Fi do celular, conecte na rede "Sentinela-Config".\n'
               '3. O Android avisa que a rede não tem internet — aceite continuar '
               'conectado.\n'
@@ -1121,7 +1121,7 @@ class _ConfigurarAparelhoScreenState extends State<ConfigurarAparelhoScreen> {
             // pessoa acabou de fazer, serve aos tres usos desta tela.
             dica:
                 _erroPin ??
-                'Aparecem no visor depois que você segura os 3 botões',
+                'Aparecem no visor depois que você segura o verde e o vermelho',
             numerico: true,
             // Confirma em vez de disparar sozinho no 4o digito: a busca comecava
             // com o teclado ainda aberto por cima, sem nada dizendo que ja tinha

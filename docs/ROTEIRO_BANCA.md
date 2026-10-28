@@ -121,7 +121,7 @@ período.
 ### 3.5 Segurança — quem pode comandar a estufa
 
 - Cada controlador tem a **sua chave**. O app só consegue a chave estando **na
-  frente do aparelho**: segurando os 3 botões (modo de configuração) e digitando
+  frente do aparelho**: segurando dois botões (modo de configuração) e digitando
   o **PIN que aparece no visor**. Ou seja, parear exige **presença física**.
 - Comandar (mudar ajuste, silenciar) exige a chave **daquele** aparelho. A chave
   de um não abre outro.

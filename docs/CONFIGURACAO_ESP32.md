@@ -183,9 +183,11 @@ estiver gravado na NVS tem precedencia.
 > formulario e o mesmo, sem digitar endereco nenhum. Os passos abaixo (rede e
 > navegador) continuam valendo para quem nao tem o app instalado.
 
-1. **Segure os tres botoes ao mesmo tempo por 3 segundos** (buzzer, verde e
-   vermelho). O aparelho **apita e pisca os tres LEDs** ao entrar; o visor passa
-   a mostrar `----`.
+1. **Segure o botao verde e o vermelho juntos por 3 segundos.** O aparelho
+   **apita e pisca os tres LEDs** ao entrar; o visor passa a mostrar `----`.
+   Segurar os **tres** tambem abre, porque verde e vermelho estao entre eles —
+   mas nao e mais necessario, e o botao do buzzer deixou de fazer parte do
+   gesto (28/10/2026).
 2. O aparelho cria a rede Wi-Fi **`Sentinela-Config`**.
 3. Conecte o celular nela. O aparelho responde **qualquer consulta de nome com
    o proprio IP**, entao o celular costuma abrir a pagina sozinho ("conectar-se
@@ -200,10 +202,16 @@ estiver gravado na NVS tem precedencia.
 
 ### Decisoes de projeto
 
-- **Por que tres botoes, e nao um PIN no visor.** Segurar tres botoes ja e prova
-  de presenca fisica, que era o que o PIN buscava garantir. Um PIN adicionaria
-  atrito sem mudar quem consegue abrir o modo: em ambos os casos, so quem esta
-  na frente do aparelho.
+- **Por que uma combinacao de botoes, e nao um PIN no visor.** Segurar dois
+  botoes ja e prova de presenca fisica, que era o que o PIN buscava garantir. Um
+  PIN adicionaria atrito sem mudar quem consegue abrir o modo: em ambos os
+  casos, so quem esta na frente do aparelho.
+- **Por que verde + vermelho, e nao os tres** (28/10/2026). O botao do buzzer
+  responde de forma intermitente no aparelho do produtor, e com ele na
+  combinacao o gesto dependia justamente do botao menos confiavel: segurar os
+  3 s nao abria nada e nao havia como saber se o gesto estava errado ou se o
+  botao nao tinha descido. Os dois que sobraram sao os de ajuste de alvo — o
+  preco esta no bullet seguinte.
 - **O que sobra de risco.** Enquanto o modo esta aberto, a rede fica sem senha e
   qualquer um no alcance pode abrir a pagina. Duas coisas limitam isso: o modo
   so abre por acao fisica deliberada, e **se fecha sozinho apos 5 minutos** sem
@@ -211,10 +219,16 @@ estiver gravado na NVS tem precedencia.
 - **O alarme continua funcionando durante a configuracao.** Sensor, sirene, LEDs
   e visor seguem ativos; so a rede muda. Uma estufa nao pode ficar sem vigilancia
   porque alguem foi mexer no Wi-Fi.
-- **Nenhum botao age sozinho durante a combinacao.** Sem isso, apertar os tres
-  silenciaria o alarme e mexeria no alvo no caminho — os contatos nunca fecham
-  ao mesmo tempo. Ao entrar no modo, os ajustes sao recarregados da NVS para
-  descartar qualquer toque acidental.
+- **Nenhum botao age sozinho durante a combinacao.** Sem isso, apertar os dois
+  mexeria no alvo no caminho — os contatos nunca fecham ao mesmo tempo. Ao
+  entrar no modo, os ajustes sao recarregados da NVS para descartar qualquer
+  toque acidental.
+- **O descarte do toque acidental agora cobre tambem quem desiste** (28/10/2026).
+  Com verde + vermelho, o primeiro contato a fechar *sempre* cai nos botoes de
+  ajuste, e nao mais por acidente de borda. Duas travas: a gravacao na NVS fica
+  suspensa enquanto a combinacao conta (senao o acidente viraria permanente e o
+  descarte releria justamente ele), e soltar antes dos 3 s recarrega os alvos e
+  os carimbos de tempo da NVS, o mesmo que entrar no modo faz.
 - **A nuvem e ignorada no modo de configuracao.** Como ponto de acesso o
   aparelho nao tem saida para a internet; tentar falar com a nuvem so gastaria
   segundos do loop em conexoes fadadas a falhar.
@@ -288,7 +302,7 @@ inatividade. Duas coisas apareceram em teste de campo:
   confirmacao.
 
 **Segurar, e nao tocar**, de proposito: o aparelho fica na estufa e um esbarrao
-no meio do preenchimento custaria refazer os 3 s dos tres botoes e reconectar o
+no meio do preenchimento custaria refazer os 3 s da combinacao e reconectar o
 celular na rede dele. E so conta depois que os botoes ficarem **soltos uma vez** —
 entrar exige segura-los, entao no instante em que o modo abre a mao ainda esta em
 cima: sem esperar a soltura, os mesmos dedos que abriram fechariam 1,5 s depois.
