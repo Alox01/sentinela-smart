@@ -141,15 +141,23 @@ Agora o **footprint**: a pegada de cada componente na placa, os furos.
 | Peça | Footprint |
 |---|---|
 | ESP32 | `sentinela:ESP32-DevKitV1-30P` |
-| borne de 2 vias | `TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal` |
-| borne de 3 vias | o mesmo, trocando `-2-` por `-3-` e `1x02` por `1x03` |
-| borne de 4 vias | idem, `-4-` e `1x04` |
+| borne de 2 vias | `Connector_Phoenix_MSTB:PhoenixContact_MSTBA_2,5_2-G-5,08_1x02_P5.08mm_Horizontal` |
+| borne de 3 vias | o mesmo, trocando `_2-G` por `_3-G` e `1x02` por `1x03` |
+| borne de 4 vias | idem, `_4-G` e `1x04` |
 | resistores | `Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal` |
 | 100 nF | `Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm` |
 | 100 µF | `Capacitor_THT:CP_Radial_D6.3mm_P2.50mm` |
 
-Esse borne Phoenix é o desenho do KRE que você tem: mesmo passo de 5,08 mm. Os
-de 3 e 4 vias são os seus KRE de 2 vias encaixados lado a lado.
+Esse é o **borne plugável** — na loja, "borne plugável 5,08" ou `KF2EDG`. São
+duas peças: a base fica soldada na placa e o **plugue sai inteiro**, com os
+parafusos virados para cima. Você fia o plugue na bancada e encaixa de volta.
+
+O passo é 5,08 mm, o mesmo do KRE que você já tem, então o furo é idêntico: se
+um dia faltar plugável, um KRE comum entra no mesmo lugar.
+
+**Se preferir a base em pé**, com o plugue saindo para cima em vez de para o
+lado, troque `MSTBA` por `MSTBVA` e `Horizontal` por `Vertical` no nome. Decide
+o que sobra de espaço na caixa: deitada come largura, em pé come altura.
 
 Salve. **Acabou a etapa 1** — e ela é a que tem decisão. O resto é braço.
 

@@ -72,7 +72,8 @@ reset.
 | **4,7 kΩ em `D35`** | o `GPIO 35` não tem pull-up interno. Cabo do sensor de chama rompido deixa o pino flutuando e o aparelho grita incêndio sem incêndio. Com o resistor, a falha fica silenciosa em vez de falsa |
 | **100 nF em cada conector de sensor** | cinco metros de cabo fazem a alimentação balançar na ponta a cada transmissão de Wi-Fi ou toque de buzina |
 | **100 µF na entrada de 5 V** | segura a trilha durante o pico de transmissão e no chaveamento do contator |
-| **Borne para o módulo de relé** | hoje não sobrou via, e os três fios dele iriam soldados direto. Na PCB é um KRE de 3 vias e pronto |
+| **Borne para o módulo de relé** | hoje não sobrou via, e os três fios dele iriam soldados direto. Na PCB é um borne de 3 vias e pronto |
+| **Bornes plugáveis no lugar dos KRE** | mesmo passo de 5,08 mm, mesmo furo. A base fica na placa e o plugue sai inteiro: trocar um sensor no meio de uma estufada passa a ser fiar o plugue na bancada, em vez de chave de fenda dentro da caixa |
 | **Furos M3 nos quatro cantos** | para os espaçadores de nylon, que é o que mantém a face de cobre longe de tudo |
 | **Serigrafia com o nome de cada borne** | `U — botão preto`, `F — CLK`. É a tabela de montagem impressa na própria placa; daqui a dois anos, com a caixa aberta na estufa, ninguém vai procurar documento |
 

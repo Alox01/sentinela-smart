@@ -63,23 +63,25 @@ separado da caixa, atrás da divisória.
 | Ref | O que é | Peça escolhida |
 |---|---|---|
 | `U1` | ESP32 | DOIT DevKit V1, 30 pinos, em barra fêmea |
-| `J1` | alimentação 5 V | borne de 2 vias, passo 5,08 mm |
-| `J2` | display TM1637 | borne de 4 vias |
-| `J3` | DHT22 — umidade | borne de 3 vias |
-| `J4` | DS18B20 — temperatura | borne de 3 vias |
-| `J5` | sensor de chama | borne de 3 vias |
-| `J6` | buzina | borne de 2 vias |
-| `J7` | LEDs do painel | borne de 3 vias |
-| `J8` | botões do painel | borne de 4 vias |
-| `J9` | módulo de relé | borne de 3 vias |
+| `J1` | alimentação 5 V | borne plugável de 2 vias, passo 5,08 mm |
+| `J2` | display TM1637 | borne plugável de 4 vias |
+| `J3` | DHT22 — umidade | borne plugável de 3 vias |
+| `J4` | DS18B20 — temperatura | borne plugável de 3 vias |
+| `J5` | sensor de chama | borne plugável de 3 vias |
+| `J6` | buzina | borne plugável de 2 vias |
+| `J7` | LEDs do painel | borne plugável de 3 vias |
+| `J8` | botões do painel | borne plugável de 4 vias |
+| `J9` | módulo de relé | borne plugável de 3 vias |
 | `R1` `R2` | 220 Ω dos dois LEDs | resistor de furo |
 | `R3` | 4,7 kΩ do DHT22 | resistor de furo |
 | `R4` | 4,7 kΩ do sensor de chama | resistor de furo |
 | `C1` | 100 µF na entrada de 5 V | eletrolítico |
 | `C2` `C3` `C4` | 100 nF nos sensores | cerâmico |
 
-Os **bornes de 3 e 4 vias** são os KRE de 2 vias que você já tem, encaixados
-lado a lado — eles deslizam e viram uma régua só, no mesmo passo de 5,08 mm.
+Os bornes são **plugáveis** (`KF2EDG` / Phoenix MSTB): a base fica soldada na
+placa e o plugue sai inteiro, com os parafusos para cima, para ser fiado na
+bancada. O passo é 5,08 mm — o mesmo do KRE que já existe na gaveta, então o
+furo serve para os dois.
 
 Os **botões não têm resistor** aqui: eles usam o pull-up de dentro do próprio
 ESP32, que é o que o firmware pede com `INPUT_PULLUP`.
