@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "sentinela")(type "KiCad")(uri "${KIPRJMOD}/sentinela.pretty")(options "")(descr "Footprints proprios do Sentinela"))
+)
